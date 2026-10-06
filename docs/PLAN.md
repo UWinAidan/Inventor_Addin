@@ -5,7 +5,7 @@ Owned by the parent session (see `docs/WORKFLOW.md`). Feature behaviour lives in
 ## Where the project stands
 
 - Solution with two projects: `InventorAddin.Core` (plain .NET 8, builds anywhere) and `InventorAddin` (the add-in, .NET 8 for Windows, built against Inventor 2026).
-- The add-in registers a "Workflow Tools" tab with two developer buttons that dump the active document and the asset libraries to JSON.
+- The add-in registers an "AWB Addin" tab with two developer buttons that dump the active document and the asset libraries to JSON.
 - The extraction layer reads iProperties, parameters, iLogic rules, material and appearance, mass properties, sheet metal data, holes and threads, finishes, assembly structure, and drawing sheets, views, title blocks and tables.
 - Not there yet: tests, anything that writes to a document, any feature UI, settings, icons.
 
@@ -30,6 +30,7 @@ Planned 2026-10-06. Run in number order; each task depends only on lower numbers
 | 007 | cloud, add-in not compiled | 004, 005 | 006 |
 | 008 | cloud, add-in not compiled | 002, 007 | none |
 | 009 | cloud, add-in not compiled | 008 | none |
+| 010 | cloud, add-in not compiled | 009 | none |
 
 - [x] 001 Core test project
 - [x] 002 Settings model and JSON store (Core)
@@ -40,6 +41,7 @@ Planned 2026-10-06. Run in number order; each task depends only on lower numbers
 - [x] 007 Ribbon built from the Core layout
 - [x] 008 Settings window
 - [x] 009 About window
+- [x] 010 Rebrand to "AWB Addin"
 
 No spike task: M0 uses only documented Inventor API members (`TransactionManager`, `Application.MainFrameHWND`, `CommandControls.AddButton`). The transaction base (006) has no command to exercise it until M1; the first M1 editing command is its Inventor test.
 
@@ -78,3 +80,4 @@ Blocked on questions 1 and 2 of the spec.
 | 2026-10-06 | Target Inventor 2026, C#, .NET 8 |
 | 2026-10-06 | Reference screenshots stay local in `ADDIN_PICS/` (gitignored); specs describe behaviour in our own words |
 | 2026-10-06 | Parent session plans and commits; `implementer` and `reviewer` subagents do and check the work |
+| 2026-10-06 | Rebrand to "AWB Addin": tab and product name "AWB Addin", id prefix `Awb`, data folder `AwbAddin`, log file `awbaddin.log`, all held in `Branding` in Core (task 010). Project, assembly and namespace names and the add-in GUID stay |

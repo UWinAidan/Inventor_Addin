@@ -1,4 +1,4 @@
-# Inventor Workflow Tools: agent guide
+# AWB Addin: agent guide
 
 An Autodesk Inventor add-in (C#, .NET 8, built against Inventor 2026) that automates part creation and numbering, iLogic injection, a material and finish library, and drawing tools such as hole tables.
 
@@ -55,7 +55,7 @@ This is a personal, public repository.
 - Do not put company names, real part numbers, title blocks, customer names or any employer data in code, docs, tests or fixtures.
 - Test fixtures exported with *Export Model Data* must come from Aidan's personal models only.
 - `docs/ui-mockups/` is for our own mockups, not for screenshots of other software.
-- Our names: ribbon tab "Workflow Tools", command prefix `WorkflowTools_`.
+- Our names: ribbon tab and product name "AWB Addin", id prefix `Awb` (commands `Awb_`), data folder `%APPDATA%\AwbAddin`, log file `awbaddin.log`. They live in `Branding` in Core; nothing else in `src/` repeats them.
 
 ## Working rules
 

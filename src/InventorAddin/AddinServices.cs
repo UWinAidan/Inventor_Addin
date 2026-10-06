@@ -1,4 +1,5 @@
 using System;
+using InventorAddin.Core;
 using InventorAddin.Core.Logging;
 using InventorAddin.Core.Settings;
 using IOPath = System.IO.Path;
@@ -14,9 +15,6 @@ namespace InventorAddin
     /// </summary>
     public static class AddinServices
     {
-        /// <summary>Folder name under %APPDATA% for settings and log files.</summary>
-        public const string DataFolderName = "InventorWorkflowTools";
-
         /// <summary>The data folder, or null before initialisation or when it could not be determined.</summary>
         public static string? DataFolder { get; private set; }
 
@@ -68,13 +66,13 @@ namespace InventorAddin
 
         internal static void Shutdown() => Reset();
 
-        /// <summary>%APPDATA%\InventorWorkflowTools.</summary>
+        /// <summary>%APPDATA%\<see cref="Branding.DataFolderName"/>.</summary>
         private static string GetDataFolder()
         {
             string appData = SysEnvironment.GetFolderPath(SysEnvironment.SpecialFolder.ApplicationData);
             if (string.IsNullOrEmpty(appData))
                 throw new InvalidOperationException("The user's application data folder could not be found.");
-            return IOPath.Combine(appData, DataFolderName);
+            return IOPath.Combine(appData, Branding.DataFolderName);
         }
 
         private static void Reset()

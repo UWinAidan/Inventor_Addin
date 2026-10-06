@@ -13,7 +13,7 @@ public sealed class FileLogTests : IDisposable
 
     public FileLogTests()
     {
-        _root = Path.Combine(Path.GetTempPath(), "WorkflowToolsTests", Guid.NewGuid().ToString("N"));
+        _root = Path.Combine(Path.GetTempPath(), "InventorAddinTests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_root);
         _folder = Path.Combine(_root, "logs");
     }
@@ -24,8 +24,12 @@ public sealed class FileLogTests : IDisposable
             Directory.Delete(_root, recursive: true);
     }
 
-    private string LogPath => Path.Combine(_folder, "workflowtools.log");
-    private string RolledPath(int index) => Path.Combine(_folder, $"workflowtools.{index}.log");
+    // The log file names follow the brand; BrandingTests pins the brand itself.
+    private const string Base = Branding.LogFileBaseName;
+    private const string Current = $"{Base}.log";
+
+    private string LogPath => Path.Combine(_folder, Current);
+    private string RolledPath(int index) => Path.Combine(_folder, $"{Base}.{index}.log");
 
     private FileLog CreateLog(long maxFileSizeBytes = FileLog.DefaultMaxFileSizeBytes, int keepCount = FileLog.DefaultKeepCount) =>
         new(_folder, maxFileSizeBytes, keepCount, () => FixedTime);
@@ -38,7 +42,7 @@ public sealed class FileLogTests : IDisposable
     // ---- construction ----
 
     [Fact]
-    public void Constructor_UsesWorkflowToolsLogInGivenFolder_WithDefaults()
+    public void Constructor_UsesBrandedLogFileInGivenFolder_WithDefaults()
     {
         var log = new FileLog(_folder);
 
@@ -89,7 +93,7 @@ public sealed class FileLogTests : IDisposable
 
         log.Info("hello");
 
-        Assert.True(File.Exists(Path.Combine(nested, "workflowtools.log")));
+        Assert.True(File.Exists(Path.Combine(nested, Current)));
     }
 
     [Fact]
@@ -257,7 +261,7 @@ public sealed class FileLogTests : IDisposable
 
         log.Info("this entry is longer than five bytes");
 
-        Assert.Equal(new[] { "workflowtools.log" }, LogFileNames());
+        Assert.Equal(new[] { Current }, LogFileNames());
         Assert.Single(File.ReadAllLines(LogPath));
     }
 
@@ -269,7 +273,7 @@ public sealed class FileLogTests : IDisposable
         for (var i = 1; i <= 6; i++)
             log.Info($"m{i}");
 
-        Assert.Equal(new[] { "workflowtools.1.log", "workflowtools.2.log", "workflowtools.log" }, LogFileNames());
+        Assert.Equal(new[] { $"{Base}.1.log", $"{Base}.2.log", Current }, LogFileNames());
         Assert.Equal($"{FixedStamp} INFO m6", File.ReadAllLines(LogPath).Single());
         Assert.Equal($"{FixedStamp} INFO m5", File.ReadAllLines(RolledPath(1)).Single());
         Assert.Equal($"{FixedStamp} INFO m4", File.ReadAllLines(RolledPath(2)).Single());
@@ -284,7 +288,7 @@ public sealed class FileLogTests : IDisposable
         log.Info("m2");
         log.Info("m3");
 
-        Assert.Equal(new[] { "workflowtools.log" }, LogFileNames());
+        Assert.Equal(new[] { Current }, LogFileNames());
         Assert.Equal($"{FixedStamp} INFO m3", File.ReadAllLines(LogPath).Single());
     }
 
@@ -295,14 +299,14 @@ public sealed class FileLogTests : IDisposable
         File.WriteAllText(RolledPath(4), "old 4");
         File.WriteAllText(RolledPath(9), "old 9");
         File.WriteAllText(Path.Combine(_folder, "settings.json"), "{}");
-        File.WriteAllText(Path.Combine(_folder, "workflowtools.notes.log"), "not a rolled file");
+        File.WriteAllText(Path.Combine(_folder, $"{Base}.notes.log"), "not a rolled file");
         var log = CreateLog(maxFileSizeBytes: 1, keepCount: 2);
 
         log.Info("m1");
         log.Info("m2");
 
         Assert.Equal(
-            new[] { "settings.json", "workflowtools.1.log", "workflowtools.log", "workflowtools.notes.log" },
+            new[] { "settings.json", $"{Base}.1.log", Current, $"{Base}.notes.log" }.OrderBy(n => n, StringComparer.Ordinal),
             LogFileNames());
     }
 

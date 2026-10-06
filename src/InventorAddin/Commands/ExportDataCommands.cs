@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using Inventor;
+using InventorAddin.Core;
 using InventorAddin.Core.Ribbon;
 using InventorAddin.Core.Serialization;
 using InventorAddin.Extraction;
@@ -45,7 +46,7 @@ namespace InventorAddin.Commands
     {
         public static void WriteAndOpen(string baseName, string json)
         {
-            string dir = IOPath.Combine(IOPath.GetTempPath(), "InventorWorkflowTools");
+            string dir = IOPath.Combine(IOPath.GetTempPath(), Branding.DataFolderName);
             System.IO.Directory.CreateDirectory(dir);
             string path = IOPath.Combine(dir, $"{baseName}_{DateTime.Now:yyyyMMdd_HHmmss}.json");
             IOFile.WriteAllText(path, json);

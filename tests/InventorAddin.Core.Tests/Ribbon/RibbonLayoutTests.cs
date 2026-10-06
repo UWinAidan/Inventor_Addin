@@ -34,23 +34,23 @@ public sealed class RibbonLayoutTests
     [Fact]
     public void TabAndPanelConstants()
     {
-        Assert.Equal("id_Tab_WorkflowTools", RibbonIds.TabId);
-        Assert.Equal("Workflow Tools", RibbonIds.TabName);
-        Assert.Equal("id_Panel_WorkflowTools_Dev", RibbonIds.DeveloperPanelId);
+        Assert.Equal($"id_Tab_{Branding.IdPrefix}", RibbonIds.TabId);
+        Assert.Equal(Branding.TabName, RibbonIds.TabName);
+        Assert.Equal($"id_Panel_{Branding.IdPrefix}_Dev", RibbonIds.DeveloperPanelId);
         Assert.Equal("Developer", RibbonIds.DeveloperPanelName);
-        Assert.Equal("id_Panel_WorkflowTools_CadAutomation", RibbonIds.CadAutomationPanelId);
+        Assert.Equal($"id_Panel_{Branding.IdPrefix}_CadAutomation", RibbonIds.CadAutomationPanelId);
         Assert.Equal("CAD Automation", RibbonIds.CadAutomationPanelName);
-        Assert.Equal("id_Panel_WorkflowTools_DrawingTools", RibbonIds.DrawingToolsPanelId);
+        Assert.Equal($"id_Panel_{Branding.IdPrefix}_DrawingTools", RibbonIds.DrawingToolsPanelId);
         Assert.Equal("Drawing Tools", RibbonIds.DrawingToolsPanelName);
     }
 
     [Fact]
     public void CommandNames_MatchExistingCommands()
     {
-        Assert.Equal("WorkflowTools_ExportModelData", CommandNames.ExportModelData);
-        Assert.Equal("WorkflowTools_ExportLibraries", CommandNames.ExportLibraries);
-        Assert.Equal("WorkflowTools_Settings", CommandNames.Settings);
-        Assert.Equal("WorkflowTools_About", CommandNames.About);
+        Assert.Equal($"{Branding.IdPrefix}_ExportModelData", CommandNames.ExportModelData);
+        Assert.Equal($"{Branding.IdPrefix}_ExportLibraries", CommandNames.ExportLibraries);
+        Assert.Equal($"{Branding.IdPrefix}_Settings", CommandNames.Settings);
+        Assert.Equal($"{Branding.IdPrefix}_About", CommandNames.About);
     }
 
     public static TheoryData<RibbonEnvironment, bool> DocumentEnvironmentsAndSetting()
@@ -70,13 +70,13 @@ public sealed class RibbonLayoutTests
     {
         var panel = RibbonLayout.For(environment, showDeveloperTools)[0];
 
-        Assert.Equal("id_Panel_WorkflowTools_CadAutomation", panel.Id);
+        Assert.Equal($"id_Panel_{Branding.IdPrefix}_CadAutomation", panel.Id);
         Assert.Equal("CAD Automation", panel.DisplayName);
         Assert.Equal(
             new[]
             {
-                new ButtonLayout("WorkflowTools_Settings", ButtonSize.Small),
-                new ButtonLayout("WorkflowTools_About", ButtonSize.Small),
+                new ButtonLayout($"{Branding.IdPrefix}_Settings", ButtonSize.Small),
+                new ButtonLayout($"{Branding.IdPrefix}_About", ButtonSize.Small),
             },
             panel.Buttons);
     }
@@ -132,14 +132,14 @@ public sealed class RibbonLayoutTests
     {
         var panel = Assert.Single(
             RibbonLayout.For(environment, showDeveloperTools: true),
-            p => p.Id == "id_Panel_WorkflowTools_Dev");
+            p => p.Id == $"id_Panel_{Branding.IdPrefix}_Dev");
 
         Assert.Equal("Developer", panel.DisplayName);
         Assert.Equal(
             new[]
             {
-                new ButtonLayout("WorkflowTools_ExportModelData", ButtonSize.Small),
-                new ButtonLayout("WorkflowTools_ExportLibraries", ButtonSize.Small),
+                new ButtonLayout($"{Branding.IdPrefix}_ExportModelData", ButtonSize.Small),
+                new ButtonLayout($"{Branding.IdPrefix}_ExportLibraries", ButtonSize.Small),
             },
             panel.Buttons);
     }
@@ -149,10 +149,10 @@ public sealed class RibbonLayoutTests
     {
         var panel = Assert.Single(RibbonLayout.For(RibbonEnvironment.ZeroDoc, showDeveloperTools: true));
 
-        Assert.Equal("id_Panel_WorkflowTools_Dev", panel.Id);
+        Assert.Equal($"id_Panel_{Branding.IdPrefix}_Dev", panel.Id);
         Assert.Equal("Developer", panel.DisplayName);
         Assert.Equal(
-            new[] { new ButtonLayout("WorkflowTools_ExportLibraries", ButtonSize.Small) },
+            new[] { new ButtonLayout($"{Branding.IdPrefix}_ExportLibraries", ButtonSize.Small) },
             panel.Buttons);
     }
 

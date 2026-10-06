@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Reflection;
+using InventorAddin.Core;
 using InventorAddin.Core.Ribbon;
 using InventorAddin.Core.Settings;
 using InventorAddin.Core.ViewModels;
@@ -14,7 +15,7 @@ namespace InventorAddin.Commands
     {
         public override string InternalName => CommandNames.Settings;
         public override string DisplayName => "Settings";
-        public override string Description => "Edit Workflow Tools settings.";
+        public override string Description => $"Edit {Branding.ProductName} settings.";
 
         protected override void Execute()
         {
@@ -43,7 +44,7 @@ namespace InventorAddin.Commands
     {
         public override string InternalName => CommandNames.About;
         public override string DisplayName => "About";
-        public override string Description => "Show the Workflow Tools version and build date.";
+        public override string Description => $"Show the {Branding.ProductName} version and build date.";
 
         protected override void Execute()
         {
