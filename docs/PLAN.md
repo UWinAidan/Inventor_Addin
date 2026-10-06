@@ -68,7 +68,7 @@ Planned 2026-10-06. Run in number order; each task depends only on lower numbers
 
 - [x] 011 Agent definitions use the product name
 - [x] 012 Part type list (Core)
-- [ ] 013 Property value normalisation and validation (Core)
+- [x] 013 Property value normalisation and validation (Core)
 - [ ] 014 Part properties model, storage map and write plan (Core)
 - [ ] 015 Default designer setting
 - [ ] 016 Part properties view-model (Core)
