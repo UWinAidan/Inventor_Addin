@@ -75,7 +75,7 @@ namespace InventorAddin.Extraction
             _ => null,
         };
 
-        private static bool IsFileReadOnly(string path) =>
+        internal static bool IsFileReadOnly(string path) =>
             System.IO.File.Exists(path) && new System.IO.FileInfo(path).IsReadOnly;
     }
 }

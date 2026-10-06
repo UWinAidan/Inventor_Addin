@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Inventor;
 using InventorAddin.Core.Models;
+using InventorAddin.Core.PartProperties;
 
 namespace InventorAddin.Extraction
 {
@@ -9,10 +10,10 @@ namespace InventorAddin.Extraction
     public static class PropertyReader
     {
         // Internal (language-independent) property set names
-        public const string SummarySet = "Inventor Summary Information";
-        public const string DocumentSummarySet = "Inventor Document Summary Information";
-        public const string DesignTrackingSet = "Design Tracking Properties";
-        public const string UserDefinedSet = "Inventor User Defined Properties";
+        public const string SummarySet = PropertySetNames.Summary;
+        public const string DocumentSummarySet = PropertySetNames.DocumentSummary;
+        public const string DesignTrackingSet = PropertySetNames.DesignTracking;
+        public const string UserDefinedSet = PropertySetNames.UserDefined;
 
         /// <summary>All property sets: display name → property name → value. Non-primitive values (thumbnails) are skipped.</summary>
         public static Dictionary<string, Dictionary<string, object?>> ReadAll(Document doc, List<string> warnings)

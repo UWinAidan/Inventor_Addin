@@ -81,11 +81,11 @@ public sealed class SettingsViewModelTests : IDisposable
     }
 
     [Fact]
-    public void RestartNotice_SaysNextStart()
+    public void RestartNotice_AppliesOnlyToDeveloperTools()
     {
         var vm = Create();
 
-        Assert.Equal("Changes take effect the next time Inventor starts.", vm.RestartNotice);
+        Assert.Equal("Showing or hiding developer tools takes effect the next time Inventor starts.", vm.RestartNotice);
     }
 
     [Fact]
@@ -304,5 +304,310 @@ public sealed class SettingsViewModelTests : IDisposable
         Assert.Null(vm.ErrorText);
         Assert.False(vm.HasError);
         Assert.True(new SettingsStore(_folder).Load().Settings.ShowDeveloperTools);
+    }
+
+    // ---- Default designer ----
+
+    private static string LongText(int length) => new('x', length);
+
+    [Fact]
+    public void DefaultDesigner_StartsWithGivenValue()
+    {
+        var vm = Create(new AddinSettings { DefaultDesigner = "A. Person" });
+
+        Assert.Equal("A. Person", vm.DefaultDesigner);
+        Assert.False(vm.IsDirty);
+        Assert.False(vm.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void DefaultDesigner_Changing_MakesDirty_AndEnablesSave()
+    {
+        var vm = Create();
+
+        vm.DefaultDesigner = "A. Person";
+
+        Assert.True(vm.IsDirty);
+        Assert.True(vm.SaveCommand.CanExecute(null));
+        Assert.Null(vm.ErrorText);
+    }
+
+    [Fact]
+    public void DefaultDesigner_ChangingBack_ClearsDirty()
+    {
+        var vm = Create(new AddinSettings { DefaultDesigner = "A. Person" });
+
+        vm.DefaultDesigner = "B. Person";
+        vm.DefaultDesigner = "A. Person";
+
+        Assert.False(vm.IsDirty);
+        Assert.False(vm.SaveCommand.CanExecute(null));
+    }
+
+    [Theory]
+    [InlineData(" ")]
+    [InlineData("   ")]
+    [InlineData("\t ")]
+    public void DefaultDesigner_OnlySpacesIntoEmpty_IsNotDirty(string typed)
+    {
+        var vm = Create();
+
+        vm.DefaultDesigner = typed;
+
+        Assert.Equal(typed, vm.DefaultDesigner);
+        Assert.False(vm.IsDirty);
+        Assert.False(vm.SaveCommand.CanExecute(null));
+        Assert.Null(vm.ErrorText);
+    }
+
+    [Fact]
+    public void DefaultDesigner_SurroundingSpacesOnSavedValue_IsNotDirty()
+    {
+        var vm = Create(new AddinSettings { DefaultDesigner = "A. Person" });
+
+        vm.DefaultDesigner = "  A. Person ";
+
+        Assert.False(vm.IsDirty);
+    }
+
+    [Fact]
+    public void DefaultDesigner_UntrimmedValueFromFile_IsNotDirty_AndShownAsGiven()
+    {
+        var vm = Create(new AddinSettings { DefaultDesigner = " A. Person " });
+
+        Assert.Equal(" A. Person ", vm.DefaultDesigner);
+        Assert.False(vm.IsDirty);
+
+        vm.DefaultDesigner = "A. Person";
+        Assert.False(vm.IsDirty);
+    }
+
+    [Fact]
+    public void DefaultDesigner_Null_IsTreatedAsEmpty()
+    {
+        var vm = Create(new AddinSettings { DefaultDesigner = "A. Person" });
+
+        vm.DefaultDesigner = null!;
+
+        Assert.Equal("", vm.DefaultDesigner);
+        Assert.True(vm.IsDirty);
+    }
+
+    [Fact]
+    public void DefaultDesigner_Save_WritesTrimmedValue()
+    {
+        var vm = Create();
+        vm.DefaultDesigner = "  A.  Person  ";
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.Equal("A.  Person", new SettingsStore(_folder).Load().Settings.DefaultDesigner);
+        Assert.Equal("A.  Person", vm.SavedSettings!.DefaultDesigner);
+        Assert.Equal("A.  Person", vm.DefaultDesigner);
+        Assert.False(vm.IsDirty);
+    }
+
+    [Fact]
+    public void DefaultDesigner_Save_RaisesDefaultDesignerChanged_WhenTrimmed()
+    {
+        var vm = Create();
+        vm.DefaultDesigner = " A. Person ";
+        var changed = RecordPropertyChanges(vm);
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.Contains(nameof(SettingsViewModel.DefaultDesigner), changed);
+    }
+
+    [Fact]
+    public void DefaultDesigner_Clearing_SavesEmpty()
+    {
+        var vm = Create(new AddinSettings { DefaultDesigner = "A. Person" });
+
+        vm.DefaultDesigner = "  ";
+        Assert.True(vm.IsDirty);
+        vm.SaveCommand.Execute(null);
+
+        Assert.Equal("", new SettingsStore(_folder).Load().Settings.DefaultDesigner);
+    }
+
+    [Fact]
+    public void DefaultDesigner_Changing_RaisesPropertyChanged_ForValueAndIsDirty()
+    {
+        var vm = Create();
+        var changed = RecordPropertyChanges(vm);
+        int canExecuteChanged = 0;
+        vm.SaveCommand.CanExecuteChanged += (_, _) => canExecuteChanged++;
+
+        vm.DefaultDesigner = "A. Person";
+
+        Assert.Equal(new[] { nameof(SettingsViewModel.DefaultDesigner), nameof(SettingsViewModel.IsDirty) }, changed);
+        Assert.Equal(1, canExecuteChanged);
+    }
+
+    [Fact]
+    public void DefaultDesigner_SettingSameText_RaisesNothing()
+    {
+        var vm = Create(new AddinSettings { DefaultDesigner = "A. Person" });
+        var changed = RecordPropertyChanges(vm);
+
+        vm.DefaultDesigner = "A. Person";
+
+        Assert.Empty(changed);
+    }
+
+    [Fact]
+    public void DefaultDesigner_AddingSpaces_RaisesValueChanged_ButStaysClean()
+    {
+        // The text box shows what was typed, so the raw text still changes.
+        var vm = Create();
+        var changed = RecordPropertyChanges(vm);
+
+        vm.DefaultDesigner = " ";
+
+        Assert.Contains(nameof(SettingsViewModel.DefaultDesigner), changed);
+        Assert.False(vm.IsDirty);
+    }
+
+    [Fact]
+    public void DefaultDesigner_EditsACopy()
+    {
+        var original = new AddinSettings { DefaultDesigner = "A. Person" };
+        var vm = Create(original);
+
+        vm.DefaultDesigner = "B. Person";
+
+        Assert.Equal("A. Person", original.DefaultDesigner);
+    }
+
+    [Fact]
+    public void DefaultDesigner_AtLengthLimit_IsValid()
+    {
+        var vm = Create();
+
+        vm.DefaultDesigner = LongText(255);
+
+        Assert.Null(vm.ErrorText);
+        Assert.True(vm.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void DefaultDesigner_OverLengthLimitOnlyBySpaces_IsValid()
+    {
+        var vm = Create();
+
+        vm.DefaultDesigner = "  " + LongText(255) + "  ";
+
+        Assert.Null(vm.ErrorText);
+        Assert.True(vm.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void DefaultDesigner_OverLengthLimit_SetsErrorText_AndDisablesSave()
+    {
+        var vm = Create();
+
+        vm.DefaultDesigner = LongText(256);
+
+        Assert.Equal("Default designer must be 255 characters or fewer.", vm.ErrorText);
+        Assert.True(vm.HasError);
+        Assert.True(vm.IsDirty);
+        Assert.False(vm.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void DefaultDesigner_OverLengthLimit_RaisesErrorTextAndHasError()
+    {
+        var vm = Create();
+        var changed = RecordPropertyChanges(vm);
+
+        vm.DefaultDesigner = LongText(256);
+
+        Assert.Equal(
+            new[]
+            {
+                nameof(SettingsViewModel.DefaultDesigner),
+                nameof(SettingsViewModel.ErrorText),
+                nameof(SettingsViewModel.HasError),
+                nameof(SettingsViewModel.IsDirty),
+            },
+            changed);
+    }
+
+    [Fact]
+    public void DefaultDesigner_FixingLength_ClearsErrorText_AndEnablesSave()
+    {
+        var vm = Create();
+        vm.DefaultDesigner = LongText(256);
+
+        vm.DefaultDesigner = LongText(255);
+
+        Assert.Null(vm.ErrorText);
+        Assert.False(vm.HasError);
+        Assert.True(vm.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void DefaultDesigner_Invalid_ExecuteWritesNothing()
+    {
+        var vm = Create();
+        int saved = 0;
+        vm.Saved += (_, _) => saved++;
+        vm.DefaultDesigner = LongText(256);
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.False(File.Exists(SettingsPath));
+        Assert.Equal(0, saved);
+        Assert.Null(vm.SavedSettings);
+    }
+
+    [Fact]
+    public void DefaultDesigner_InvalidWhileOtherSettingChanged_SaveStaysDisabled()
+    {
+        var vm = Create();
+        vm.ShowDeveloperTools = true;
+
+        vm.DefaultDesigner = LongText(256);
+
+        Assert.False(vm.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void DefaultDesigner_TooLongValueFromFile_ShowsErrorAtOnce()
+    {
+        var vm = Create(new AddinSettings { DefaultDesigner = LongText(300) });
+
+        Assert.NotNull(vm.ErrorText);
+        Assert.False(vm.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void DefaultDesigner_LineBreak_SetsErrorText()
+    {
+        var vm = Create();
+
+        vm.DefaultDesigner = "A.\nPerson";
+
+        Assert.NotNull(vm.ErrorText);
+        Assert.False(vm.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void ValidationError_TakesPrecedenceOverSaveError_AndSaveErrorReturnsWhenFixed()
+    {
+        Directory.CreateDirectory(SettingsPath);
+        var vm = Create();
+        vm.ShowDeveloperTools = true;
+        vm.SaveCommand.Execute(null);
+        var saveError = vm.ErrorText;
+        Assert.NotNull(saveError);
+
+        vm.DefaultDesigner = LongText(256);
+        Assert.Equal("Default designer must be 255 characters or fewer.", vm.ErrorText);
+
+        vm.DefaultDesigner = "";
+        Assert.Equal(saveError, vm.ErrorText);
+        Assert.True(vm.HasError);
     }
 }

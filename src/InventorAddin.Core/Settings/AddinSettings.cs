@@ -16,4 +16,16 @@ public sealed record AddinSettings
 
     /// <summary>Shows the Developer panel (model data export buttons). Off for end users.</summary>
     public bool ShowDeveloperTools { get; set; }
+
+    /// <summary>
+    /// Filled in as Designer in Part Properties when a file has none. <c>""</c> means no default.
+    /// A null (for example <c>"defaultDesigner": null</c> in the file) is stored as <c>""</c>.
+    /// </summary>
+    public string DefaultDesigner
+    {
+        get => _defaultDesigner;
+        set => _defaultDesigner = value ?? string.Empty;
+    }
+
+    private string _defaultDesigner = string.Empty;
 }

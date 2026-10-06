@@ -2,7 +2,7 @@
 
 - **Milestone:** M1
 - **Feature spec:** `docs/features/07-part-properties.md` (Add-in side; Notes for planning: unconfirmed API behaviour)
-- **Status:** todo
+- **Status:** done (add-in code not compiled)
 - **Depends on:** 014
 - **Needs:** cloud (writes add-in code that is not compiled here; Aidan builds it)
 - **Parallel-safe with:** 011, 012, 015, 016, 017
@@ -43,7 +43,7 @@ Writer: `PropertyWriter.Apply(Document doc, IReadOnlyList<PropertyWrite> writes)
 - [ ] Remove on a standard property throws `ArgumentException` (the plan never produces one)
 - [ ] Any COM failure is rethrown wrapped in `InvalidOperationException` whose message names the property, so the status line can say which write failed. No `ComSafe` around writes: a failed write must abort the caller's transaction
 - [ ] `PropertyReader`'s four set name constants equal the `PropertySetNames` constants (assign them, do not retype the strings)
-- [ ] `dotnet test tests/InventorAddin.Core.Tests` passes; the verification section lists every add-in file as not compiled
+- [x] `dotnet test tests/InventorAddin.Core.Tests` passes; the verification section lists every add-in file as not compiled
 
 ## Notes for the implementer
 
@@ -56,11 +56,25 @@ Writer: `PropertyWriter.Apply(Document doc, IReadOnlyList<PropertyWrite> writes)
 
 Filled in by the implementer.
 
-- **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):**
-- **Inventor API members not confirmed:**
-- **Manual checklist for Inventor:** none here; 019 carries the checks, because nothing calls the reader or writer until then.
+- **Ran:** nothing. The brief for this run said not to run `dotnet build`/`dotnet test` on Core, because task 015 was being edited in Core at the same time. This task changes no Core file and adds no Core test; the parent session should run `dotnet test tests/InventorAddin.Core.Tests` once 015 is done. Parent: Core at the commit after task 015 (which 018 does not change) passed 488 of 488 in the 015 review.
+- **Not compiled (changed under `src/InventorAddin`, cloud session):**
+  - `src/InventorAddin/Extraction/PartPropertiesReader.cs` (new)
+  - `src/InventorAddin/Extraction/PropertyWriter.cs` (new)
+  - `src/InventorAddin/Extraction/PropertyReader.cs` (set name constants now assigned from `PropertySetNames`)
+  - `src/InventorAddin/Extraction/ModelExtractor.cs` (`IsFileReadOnly` made `internal static` so the reader can reuse it)
+- **Inventor API members not confirmed** (no existing usage in the repo, and no API reference available in this session):
+  - `Document.IsModifiable` (read as `bool`)
+  - `Property.Delete()`
+  - `PropertySet.Add(value, name)`: argument order taken from `PropertyReader.Set`, which has never been run against Inventor either
+  - Setting the standard Cost property's `Value` to a boxed `decimal`. .NET marshals a boxed `decimal` as `VT_DECIMAL`, not `VT_CY` (currency). Whether Inventor accepts that, or needs a `double` or a `System.Runtime.InteropServices.CurrencyWrapper`, is open; no fallback was added.
+  - Confirmed by existing usage: `doc.PropertySets[set][name].Value` (get and set), `PartDocument.ActiveMaterial.DisplayName`, `PartComponentDefinition.MassProperties`, `AssemblyComponentDefinition.MassProperties`, `Document.FullFileName`.
+- **Manual checklist for Inventor:** none here; 019 carries the checks, because nothing calls the reader or writer until then. 019's checklist should include: setting Cost (the decimal question above), adding, updating and deleting a custom property, opening a read-only file and a library file (the `EditBlock` line), and whether Part Number reads as the file name when none is set.
 
 ## Follow-ups
 
 Things noticed but not done.
+
+- `PropertyReader.Set` has no callers (`grep` finds none) and `PropertyWriter` now covers what it did, with the error wrapping the write plan needs. It can be deleted.
+- Weight goes through `PartExtractor.ReadMass`, which also reads volume, area and centre of mass. On a large assembly that is more work than the window needs. If the window opens slowly on big assemblies, either read only `MassProperties.Mass` (formatted by `UnitsFormatter.Mass`) or make weight optional / lazy.
+- `PropertyWriter` logs each write at Info as `Property write: <Action> <set>/<name>` (no value, per 014's follow-up). If 019 wants the log quieter, drop it to the failure path only.
+- Material for a non-part reads as `""` (empty), and as null when a part's material cannot be read. 016/019 should show both the same way.
