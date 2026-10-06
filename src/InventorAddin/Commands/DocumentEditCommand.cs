@@ -52,7 +52,7 @@ namespace InventorAddin.Commands
             }
 
             // The transaction's display name is what appears in Inventor's Undo list.
-            Transaction transaction = InventorHost.App.TransactionManager.StartTransaction(doc, DisplayName);
+            Transaction transaction = InventorHost.App.TransactionManager.StartTransaction((_Document)doc, DisplayName);
             try
             {
                 Execute(doc);
