@@ -73,7 +73,7 @@ Planned 2026-10-06. Run in number order; each task depends only on lower numbers
 - [x] 015 Default designer setting
 - [ ] 016 Part properties view-model (Core)
 - [x] 017 Editing command base: input step and per-edit transactions
-- [ ] 018 Read the snapshot from Inventor and write property changes
+- [x] 018 Read the snapshot from Inventor and write property changes
 - [ ] 019 Part Properties command, window and ribbon button
 
 No spike task. The approach (read and write iProperties through `PropertySets`, one transaction per Apply) uses documented API and does not change with the four behaviours the spec lists as unconfirmed; those decide details only (the value type Cost accepts, `Property.Delete`, `Document.IsModifiable`, whether Part Number falls back to the file name). Each is a numbered step in task 019's manual checklist, so Aidan's first build and test settles them. Undo during in-place edit is checked the same way (019, step 13).
