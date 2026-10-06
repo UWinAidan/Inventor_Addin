@@ -17,11 +17,33 @@ The order below is a draft for Aidan to confirm or change.
 
 Makes the cloud workflow work and gives later features what they share.
 
+Planned 2026-10-06. Run in number order; each task depends only on lower numbers.
+
+| Task | Needs | Depends on | Parallel-safe with |
+|---|---|---|---|
+| 001 | cloud | none | none |
+| 002 | cloud | 001 | 003, 004 |
+| 003 | cloud | 001 | 002, 004 |
+| 004 | cloud | 001 | 002, 003 |
+| 005 | cloud, add-in not compiled | 002, 003 | none |
+| 006 | cloud, add-in not compiled | 005 | 007 |
+| 007 | cloud, add-in not compiled | 004, 005 | 006 |
+| 008 | cloud, add-in not compiled | 002, 007 | none |
+| 009 | cloud, add-in not compiled | 008 | none |
+
 - [ ] 001 Core test project
-- [ ] Settings model and JSON store in Core
-- [ ] Editing-command base: transaction, command type, error reporting, log file
-- [ ] Ribbon layout per environment, driven by a description in Core (spec 01)
-- [ ] Settings and About windows
+- [ ] 002 Settings model and JSON store (Core)
+- [ ] 003 Rolling log file (Core)
+- [ ] 004 Ribbon layout description (Core)
+- [ ] 005 Add-in startup services and command error reporting
+- [ ] 006 Editing command base: transaction and command type
+- [ ] 007 Ribbon built from the Core layout
+- [ ] 008 Settings window
+- [ ] 009 About window
+
+No spike task: M0 uses only documented Inventor API members (`TransactionManager`, `Application.MainFrameHWND`, `CommandControls.AddButton`). The transaction base (006) has no command to exercise it until M1; the first M1 editing command is its Inventor test.
+
+Scoped around spec 01's open questions: settings are limited to `ShowDeveloperTools` (question 3), About shows the version only (question 2), and ZeroDoc keeps only the Developer panel (question 4). Settings changes take effect at the next Inventor start.
 
 ### M1: Material and finish (spec 03)
 
@@ -47,6 +69,7 @@ Blocked on questions 1 and 2 of the spec.
 
 1. Confirm or reorder the milestones.
 2. Answer the open questions in the spec for whichever milestone comes after M0.
+3. M0 runs without them, but spec 01 questions 2 to 4 decide what M0 leaves out: update checks in About, settings beyond the developer toggle, and Settings/About on the no-document ribbon.
 
 ## Decisions made
 
