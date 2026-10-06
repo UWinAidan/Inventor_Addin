@@ -17,7 +17,7 @@ The order below is a draft for Aidan to confirm or change.
 
 Makes the cloud workflow work and gives later features what they share.
 
-- [ ] 001 Core test project
+- [x] 001 Core test project
 - [ ] Settings model and JSON store in Core
 - [ ] Editing-command base: transaction, command type, error reporting, log file
 - [ ] Ribbon layout per environment, driven by a description in Core (spec 01)
