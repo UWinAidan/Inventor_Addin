@@ -32,7 +32,7 @@ Planned 2026-10-06. Run in number order; each task depends only on lower numbers
 | 009 | cloud, add-in not compiled | 008 | none |
 
 - [x] 001 Core test project
-- [ ] 002 Settings model and JSON store (Core)
+- [x] 002 Settings model and JSON store (Core)
 - [ ] 003 Rolling log file (Core)
 - [ ] 004 Ribbon layout description (Core)
 - [ ] 005 Add-in startup services and command error reporting
