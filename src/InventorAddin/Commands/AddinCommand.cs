@@ -12,6 +12,13 @@ namespace InventorAddin.Commands
         public virtual string Description => DisplayName;
         public virtual string Tooltip => Description;
 
+        /// <summary>
+        /// What the command changes, passed to Inventor when the button is defined.
+        /// Query-only by default; commands that edit documents override this
+        /// (see <see cref="DocumentEditCommand"/>).
+        /// </summary>
+        protected virtual CommandTypesEnum CommandType => CommandTypesEnum.kQueryOnlyCmdType;
+
         public ButtonDefinition? Definition { get; private set; }
 
         public void Register(Application app, string clientId)
@@ -21,7 +28,7 @@ namespace InventorAddin.Commands
             // Re-use an existing definition if the add-in was reloaded in the same session
             Definition = ComSafe.Get(() => (ButtonDefinition)defs[InternalName])
                 ?? defs.AddButtonDefinition(
-                    DisplayName, InternalName, CommandTypesEnum.kQueryOnlyCmdType, clientId,
+                    DisplayName, InternalName, CommandType, clientId,
                     Description, Tooltip, Type.Missing, Type.Missing, ButtonDisplayEnum.kAlwaysDisplayText);
 
             Definition.OnExecute += OnExecute;

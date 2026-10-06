@@ -36,7 +36,7 @@ Planned 2026-10-06. Run in number order; each task depends only on lower numbers
 - [x] 003 Rolling log file (Core)
 - [x] 004 Ribbon layout description (Core)
 - [x] 005 Add-in startup services and command error reporting
-- [ ] 006 Editing command base: transaction and command type
+- [x] 006 Editing command base: transaction and command type
 - [x] 007 Ribbon built from the Core layout
 - [ ] 008 Settings window
 - [ ] 009 About window
