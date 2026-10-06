@@ -2,7 +2,7 @@
 
 - **Milestone:** M0
 - **Feature spec:** none (foundations)
-- **Status:** todo
+- **Status:** done
 - **Depends on:** none
 - **Needs:** cloud
 - **Parallel-safe with:** none
@@ -26,11 +26,11 @@ Out of scope:
 
 ## Acceptance criteria
 
-- [ ] `dotnet test tests/InventorAddin.Core.Tests` passes in a cloud session
-- [ ] A `PartData`, an `AssemblyData` and a `DrawingData` each survive `ModelJson.Serialize` then `ModelJson.DeserializeModel` as the same subclass with their fields intact
-- [ ] The serialized JSON contains the `$type` discriminator, enums as strings, and omits null properties
-- [ ] `BoundingBox` length properties are covered
-- [ ] The solution file lists the test project
+- [x] `dotnet test tests/InventorAddin.Core.Tests` passes in a cloud session
+- [x] A `PartData`, an `AssemblyData` and a `DrawingData` each survive `ModelJson.Serialize` then `ModelJson.DeserializeModel` as the same subclass with their fields intact
+- [x] The serialized JSON contains the `$type` discriminator, enums as strings, and omits null properties
+- [x] `BoundingBox` length properties are covered
+- [x] The solution file lists the test project
 
 ## Notes for the implementer
 
@@ -39,9 +39,15 @@ Out of scope:
 
 ## Verification
 
-- **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):**
-- **Inventor API members not confirmed:**
+- **Ran (cloud, Linux, .NET SDK 10.0.112 with the 8.0.31 runtime):**
+  - `dotnet build src/InventorAddin.Core`: succeeded, 0 warnings, 0 errors.
+  - `dotnet test tests/InventorAddin.Core.Tests`: NuGet restore succeeded. 11 passed, 0 failed, 0 skipped. The test project builds with 0 warnings.
+  - `dotnet build InventorAddin.slnx` was not run (it cannot build in the cloud).
+- **Not compiled (changed under `src/InventorAddin`):** none. Nothing under `src/` was changed.
+- **Inventor API members not confirmed:** none. No Inventor API code was written.
 - **Manual checklist for Inventor:** none, this task does not touch the add-in. On Windows, `dotnet build InventorAddin.slnx` should still succeed with the test project added.
 
 ## Follow-ups
+
+- There is no `global.json`, so the cloud session builds with .NET SDK 10.0.112 (targeting `net8.0`) while Windows may use another SDK. Consider pinning the SDK if builds start to differ.
+- `BoundingBox.LengthX/Y/Z` are computed, read-only properties, yet `ModelJson` writes them into every exported JSON file (they are ignored when read back). A test now records that behaviour. If exports should not carry derived values, mark them `[JsonIgnore]` in a separate task.

@@ -3,4 +3,7 @@
     <Project Path="src/InventorAddin.Core/InventorAddin.Core.csproj" />
     <Project Path="src/InventorAddin/InventorAddin.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/InventorAddin.Core.Tests/InventorAddin.Core.Tests.csproj" />
+  </Folder>
 </Solution>
