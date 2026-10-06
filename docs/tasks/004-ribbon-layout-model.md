@@ -2,7 +2,7 @@
 
 - **Milestone:** M0
 - **Feature spec:** `docs/features/01-ribbon-and-shell.md` (Target)
-- **Status:** todo
+- **Status:** done
 - **Depends on:** 001
 - **Needs:** cloud
 - **Parallel-safe with:** 002, 003
@@ -24,16 +24,16 @@ Out of scope:
 
 ## Acceptance criteria
 
-- [ ] An enum for the environments: `ZeroDoc`, `Part`, `Assembly`, `Drawing`, each mapping to the Inventor ribbon name of the same spelling
-- [ ] Description types: a panel has an internal id, a display name and an ordered list of buttons; a button has the command internal name and a size (`Large` or `Small`)
-- [ ] `RibbonLayout.For(environment, showDeveloperTools)` returns the ordered panels for that environment
-- [ ] With today's commands the layout is: a "Developer" panel (`id_Panel_WorkflowTools_Dev`) holding `WorkflowTools_ExportModelData` (Part, Assembly, Drawing only) and `WorkflowTools_ExportLibraries` (all four environments), both small
-- [ ] The Developer panel is absent when `showDeveloperTools` is false
-- [ ] Panels with no buttons are never returned. `RibbonLayout` exposes whether an environment has any panels, so the add-in can skip creating an empty tab
-- [ ] Tab id and name are constants in Core: `id_Tab_WorkflowTools`, "Workflow Tools"
-- [ ] Panel ids for the target layout that will be needed are constants now (`id_Panel_WorkflowTools_CadAutomation` "CAD Automation", `id_Panel_WorkflowTools_DrawingTools` "Drawing Tools"), so later tasks only add buttons. Constants only; no empty panels are returned
-- [ ] Tests cover every environment with the developer setting on and off, and that no panel is empty
-- [ ] `dotnet test tests/InventorAddin.Core.Tests` passes
+- [x] An enum for the environments: `ZeroDoc`, `Part`, `Assembly`, `Drawing`, each mapping to the Inventor ribbon name of the same spelling
+- [x] Description types: a panel has an internal id, a display name and an ordered list of buttons; a button has the command internal name and a size (`Large` or `Small`)
+- [x] `RibbonLayout.For(environment, showDeveloperTools)` returns the ordered panels for that environment
+- [x] With today's commands the layout is: a "Developer" panel (`id_Panel_WorkflowTools_Dev`) holding `WorkflowTools_ExportModelData` (Part, Assembly, Drawing only) and `WorkflowTools_ExportLibraries` (all four environments), both small
+- [x] The Developer panel is absent when `showDeveloperTools` is false
+- [x] Panels with no buttons are never returned. `RibbonLayout` exposes whether an environment has any panels, so the add-in can skip creating an empty tab
+- [x] Tab id and name are constants in Core: `id_Tab_WorkflowTools`, "Workflow Tools"
+- [x] Panel ids for the target layout that will be needed are constants now (`id_Panel_WorkflowTools_CadAutomation` "CAD Automation", `id_Panel_WorkflowTools_DrawingTools` "Drawing Tools"), so later tasks only add buttons. Constants only; no empty panels are returned
+- [x] Tests cover every environment with the developer setting on and off, and that no panel is empty
+- [x] `dotnet test tests/InventorAddin.Core.Tests` passes
 
 ## Notes for the implementer
 
@@ -45,9 +45,18 @@ Out of scope:
 
 ## Verification
 
-- **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):** none expected
-- **Inventor API members not confirmed:** none expected
+- **Ran:** `dotnet build src/InventorAddin.Core`: 0 warnings, 0 errors. `dotnet test tests/InventorAddin.Core.Tests`: 122 passed, 0 failed, 0 skipped (57 of them in `RibbonLayoutTests`).
+- **Not compiled (changed under `src/InventorAddin`):** none. Nothing under `src/InventorAddin` was changed.
+- **Inventor API members not confirmed:** none. No Inventor API is used.
 - **Manual checklist for Inventor:** none, Core only.
 
+Notes for task 007:
+
+- `CommandNames` lives in `RibbonModels.cs` to stay inside this task's file list. The add-in commands should switch to these constants in 007.
+- The description records are named `PanelLayout` and `ButtonLayout`, not `RibbonPanel` and `RibbonButton`. `RibbonSetup.cs` has `using Inventor;`, and `Inventor.RibbonPanel` would clash.
+- Behaviour change once 007 uses this: with `ShowDeveloperTools` off (the default), no environment has any panels today, so `HasPanels` is false everywhere and no "Workflow Tools" tab is created at all. The current `RibbonSetup` always shows the Developer panel.
+
 ## Follow-ups
+
+- Open question 4 in spec 01 (Settings and About on ZeroDoc) decides whether ZeroDoc gets a CAD Automation panel. The layout has no entries for it until that is answered.
+- No panel id constant for "Modelling" yet. Its only button, Mass Update, is open question 1 in spec 01.

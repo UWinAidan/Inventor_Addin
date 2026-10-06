@@ -1,0 +1,68 @@
+namespace InventorAddin.Core.Ribbon;
+
+/// <summary>
+/// Decides which panels and buttons the "Workflow Tools" tab shows in each environment.
+/// The add-in draws exactly what this returns.
+/// </summary>
+/// <remarks>
+/// A button is listed only once its command exists (spec 01). Feature tasks add their own entries to
+/// <see cref="Definitions"/>. Panel order follows the spec: CAD Automation, Drawing Tools, Modelling, Developer last.
+/// </remarks>
+public static class RibbonLayout
+{
+    private sealed record ButtonDefinition(string CommandInternalName, ButtonSize Size, RibbonEnvironment[] Environments);
+
+    private sealed record PanelDefinition(string Id, string DisplayName, bool DeveloperOnly, ButtonDefinition[] Buttons);
+
+    private static readonly RibbonEnvironment[] AllEnvironments = RibbonEnvironments.All.ToArray();
+
+    private static readonly RibbonEnvironment[] DocumentEnvironments =
+    {
+        RibbonEnvironment.Part,
+        RibbonEnvironment.Assembly,
+        RibbonEnvironment.Drawing,
+    };
+
+    private static readonly PanelDefinition[] Definitions =
+    {
+        new(RibbonIds.CadAutomationPanelId, RibbonIds.CadAutomationPanelName, DeveloperOnly: false, Array.Empty<ButtonDefinition>()),
+        new(RibbonIds.DrawingToolsPanelId, RibbonIds.DrawingToolsPanelName, DeveloperOnly: false, Array.Empty<ButtonDefinition>()),
+        new(RibbonIds.DeveloperPanelId, RibbonIds.DeveloperPanelName, DeveloperOnly: true, new ButtonDefinition[]
+        {
+            new(CommandNames.ExportModelData, ButtonSize.Small, DocumentEnvironments),
+            new(CommandNames.ExportLibraries, ButtonSize.Small, AllEnvironments),
+        }),
+    };
+
+    /// <summary>
+    /// The panels to show on <paramref name="environment"/>'s tab, in display order.
+    /// Never contains a panel without buttons.
+    /// </summary>
+    public static IReadOnlyList<PanelLayout> For(RibbonEnvironment environment, bool showDeveloperTools)
+    {
+        if (!Enum.IsDefined(environment))
+            throw new ArgumentOutOfRangeException(nameof(environment), environment, "Unknown ribbon environment.");
+
+        var panels = new List<PanelLayout>();
+        foreach (var panel in Definitions)
+        {
+            if (panel.DeveloperOnly && !showDeveloperTools)
+                continue;
+
+            var buttons = panel.Buttons
+                .Where(b => b.Environments.Contains(environment))
+                .Select(b => new ButtonLayout(b.CommandInternalName, b.Size))
+                .ToArray();
+
+            if (buttons.Length > 0)
+                panels.Add(new PanelLayout(panel.Id, panel.DisplayName, buttons));
+        }
+        return panels;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="environment"/> has any panels. When false the add-in should not create the tab there.
+    /// </summary>
+    public static bool HasPanels(RibbonEnvironment environment, bool showDeveloperTools) =>
+        For(environment, showDeveloperTools).Count > 0;
+}
