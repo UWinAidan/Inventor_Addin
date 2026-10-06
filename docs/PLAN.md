@@ -66,13 +66,13 @@ Planned 2026-10-06. Run in number order; each task depends only on lower numbers
 | 018 | cloud, add-in not compiled | 014 | 011, 012, 015, 016, 017 |
 | 019 | cloud, add-in not compiled | 015, 016, 017, 018 | none |
 
-- [ ] 011 Agent definitions use the product name
-- [ ] 012 Part type list (Core)
+- [x] 011 Agent definitions use the product name
+- [x] 012 Part type list (Core)
 - [ ] 013 Property value normalisation and validation (Core)
 - [ ] 014 Part properties model, storage map and write plan (Core)
 - [ ] 015 Default designer setting
 - [ ] 016 Part properties view-model (Core)
-- [ ] 017 Editing command base: input step and per-edit transactions
+- [x] 017 Editing command base: input step and per-edit transactions
 - [ ] 018 Read the snapshot from Inventor and write property changes
 - [ ] 019 Part Properties command, window and ribbon button
 

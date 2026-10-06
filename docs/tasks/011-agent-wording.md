@@ -2,7 +2,7 @@
 
 - **Milestone:** M1
 - **Feature spec:** `docs/features/07-part-properties.md` (Notes for planning: carry-over)
-- **Status:** todo
+- **Status:** done
 - **Depends on:** none
 - **Needs:** cloud
 - **Parallel-safe with:** 012, 013, 014, 015, 016, 017, 018
@@ -36,7 +36,7 @@ Out of scope:
 
 Filled in by the implementer.
 
-- **Ran:**
+- **Ran:** `grep -riE 'workflow ?tools' .claude` finds nothing. `git diff -- .claude` shows one line changed in each file, and the front matter is unchanged. `dotnet test tests/InventorAddin.Core.Tests`: 214 passed, 0 failed (the working tree also held uncommitted changes from tasks running at the same time).
 - **Not compiled (changed under `src/InventorAddin`):** none
 - **Inventor API members not confirmed:** none
 - **Manual checklist for Inventor:** none
@@ -44,3 +44,5 @@ Filled in by the implementer.
 ## Follow-ups
 
 Things noticed but not done.
+
+- The replacement reads "for the AWB Addin add-in", which says "add-in" twice. It could become "for AWB Addin, an Inventor add-in". That rewording was out of scope here.

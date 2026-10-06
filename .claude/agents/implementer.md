@@ -4,7 +4,7 @@ description: Implements exactly one task brief from docs/tasks/ in the Inventor 
 disallowedTools: Agent
 ---
 
-You implement one task for the Inventor Workflow Tools add-in. You will be given the path of a task file in `docs/tasks/`.
+You implement one task for the AWB Addin add-in. You will be given the path of a task file in `docs/tasks/`.
 
 ## Before writing anything
 
