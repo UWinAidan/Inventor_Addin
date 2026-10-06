@@ -19,6 +19,8 @@ Reference screenshot (local only): `matterial and finish custom library.png`.
 
 - **Materials come from a custom `.adsklib` library that Aidan supplies.** The add-in does not ship a library and the file is never committed to this repository (`*.adsklib` is gitignored). Its location is a setting.
 - **Finishes are processes**, as defined above. They are not stored in the material library, so the add-in needs its own finish list.
+- **This window is the way to set material and finish.** It lists only the materials in Aidan's library, in place of choosing from Inventor's own material list. The part properties window (spec 07) shows both values read-only and opens this window through a Change button.
+- **Aidan will create the finish list himself, later.** Until it exists the Finishes side of the window has nothing to offer, so this milestone should not be planned before the list is ready or its format is agreed.
 
 ## What the library looks like
 
@@ -89,9 +91,10 @@ No code in the repo opens a library by file path or assigns a material, so these
 These block planning for this feature.
 
 1. **Hardening: finish or material?** The library already has hardened variants as separate materials. Either keep picking those as materials, or pick the base material and add hardening as a finish. Doing both gives two ways to say the same thing.
-2. **What finishes go in the first list?** Names, codes, and which materials each applies to. Aidan needs to write this list; nothing in the library provides it.
+2. **What finishes go in the first list?** Names, codes, and which materials each applies to. Aidan will write it; nothing in the library provides it.
 3. **How is the finish stored on the part?** Custom iProperties, an Inventor finish feature, or both.
 4. **Does a finish change the part's appearance**, for example anodize colours or paint?
 5. **What does "preferred" mean**, and where is it recorded: a list in settings, or a marker in the material name?
 6. **In an assembly**, does the command act on the selected components, on the assembly itself, or is it disabled? The reference shows the dialog open with an assembly active.
 7. Is *Enable Filters* wanted at all?
+8. **Inventor's own material list still exists.** The add-in cannot remove it. Is it enough that our window is the route Aidan uses, or should the add-in also warn when a part's material is not from his library?
