@@ -1,7 +1,7 @@
 namespace InventorAddin.Core.Ribbon;
 
 /// <summary>
-/// Decides which panels and buttons the "Workflow Tools" tab shows in each environment.
+/// Decides which panels and buttons the add-in's tab (<see cref="RibbonIds.TabName"/>) shows in each environment.
 /// The add-in draws exactly what this returns.
 /// </summary>
 /// <remarks>

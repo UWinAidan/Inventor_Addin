@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 using Inventor;
+using InventorAddin.Core;
 using InventorAddin.UI;
 
 namespace InventorAddin
@@ -26,7 +27,7 @@ namespace InventorAddin
             var version = typeof(StandardAddInServer).Assembly.GetName().Version;
             int? inventorMajor = ComSafe.Get(() => (int?)InventorHost.MajorVersion);
             AddinServices.Log.Info(
-                $"Workflow Tools {version?.ToString() ?? "unknown"} started in Inventor major version {inventorMajor?.ToString() ?? "unknown"}.");
+                $"{Branding.ProductName} {version?.ToString() ?? "unknown"} started in Inventor major version {inventorMajor?.ToString() ?? "unknown"}.");
 
             _ribbon = new RibbonSetup(InventorHost.App, ClientId, AddinServices.Settings, AddinServices.Log);
             _ribbon.Create();
@@ -37,7 +38,7 @@ namespace InventorAddin
             _ribbon?.Dispose();
             _ribbon = null;
 
-            AddinServices.Log.Info("Workflow Tools stopped.");
+            AddinServices.Log.Info($"{Branding.ProductName} stopped.");
             AddinServices.Shutdown();
             InventorHost.Shutdown();
 

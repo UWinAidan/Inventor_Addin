@@ -54,17 +54,19 @@ public sealed record PanelLayout(string Id, string DisplayName, IReadOnlyList<Bu
 /// <summary>Ids and display names for the add-in's tab and panels.</summary>
 public static class RibbonIds
 {
-    public const string TabId = "id_Tab_WorkflowTools";
-    public const string TabName = "Workflow Tools";
+    public const string TabId = "id_Tab_" + Branding.IdPrefix;
+    public const string TabName = Branding.TabName;
 
-    public const string CadAutomationPanelId = "id_Panel_WorkflowTools_CadAutomation";
+    public const string CadAutomationPanelId = PanelIdPrefix + "CadAutomation";
     public const string CadAutomationPanelName = "CAD Automation";
 
-    public const string DrawingToolsPanelId = "id_Panel_WorkflowTools_DrawingTools";
+    public const string DrawingToolsPanelId = PanelIdPrefix + "DrawingTools";
     public const string DrawingToolsPanelName = "Drawing Tools";
 
-    public const string DeveloperPanelId = "id_Panel_WorkflowTools_Dev";
+    public const string DeveloperPanelId = PanelIdPrefix + "Dev";
     public const string DeveloperPanelName = "Developer";
+
+    private const string PanelIdPrefix = "id_Panel_" + Branding.IdPrefix + "_";
 }
 
 /// <summary>
@@ -73,8 +75,10 @@ public static class RibbonIds
 /// </summary>
 public static class CommandNames
 {
-    public const string ExportModelData = "WorkflowTools_ExportModelData";
-    public const string ExportLibraries = "WorkflowTools_ExportLibraries";
-    public const string Settings = "WorkflowTools_Settings";
-    public const string About = "WorkflowTools_About";
+    public const string ExportModelData = Prefix + "ExportModelData";
+    public const string ExportLibraries = Prefix + "ExportLibraries";
+    public const string Settings = Prefix + "Settings";
+    public const string About = Prefix + "About";
+
+    private const string Prefix = Branding.IdPrefix + "_";
 }

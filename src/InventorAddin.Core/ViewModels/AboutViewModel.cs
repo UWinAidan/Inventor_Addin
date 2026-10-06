@@ -8,7 +8,7 @@ namespace InventorAddin.Core.ViewModels;
 /// </summary>
 public sealed class AboutViewModel : ObservableObject
 {
-    public const string TitleText = "Inventor Workflow Tools";
+    public const string TitleText = Branding.ProductName;
     public const string Unknown = "unknown";
     public const string BuildDateFormat = "yyyy-MM-dd HH:mm";
 

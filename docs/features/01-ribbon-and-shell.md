@@ -6,7 +6,8 @@ Reference screenshots (local only): `addin tab.png`, `print tab and features.png
 
 ## What exists today
 
-- A "Workflow Tools" tab on the ZeroDoc, Part, Assembly and Drawing ribbons with one "Developer" panel (`UI/RibbonSetup.cs`).
+- An "AWB Addin" tab on the ZeroDoc, Part, Assembly and Drawing ribbons with one "Developer" panel (`UI/RibbonSetup.cs`).
+- The brand (tab name, product name, id prefix `Awb`, data folder `AwbAddin`, log file `awbaddin.log`) lives in `Branding` in Core.
 - `AddinCommand` base class: registers a text-only button and shows a message box on an unhandled exception.
 - Two developer commands: *Export Model Data* and *Export Libraries*.
 
@@ -49,7 +50,7 @@ A button appears only once its command exists. Do not add placeholder buttons.
 
 ## Shared plumbing
 
-- **Settings.** Per-user JSON file, proposed location `%APPDATA%\InventorWorkflowTools\settings.json`. The model, defaults and load/save logic live in Core. The Settings button opens a window for it.
+- **Settings.** Per-user JSON file, location `%APPDATA%\AwbAddin\settings.json`. The model, defaults and load/save logic live in Core. The Settings button opens a window for it.
 - **About / Version.** Shows the add-in version and build date.
 - **Command base.** Editing commands run inside one transaction and use a command type that matches what they change.
 - **Icons.** 16 px and 32 px per button. Text-only is acceptable until icons exist.

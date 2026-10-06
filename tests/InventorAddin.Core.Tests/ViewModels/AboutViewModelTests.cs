@@ -5,7 +5,7 @@ namespace InventorAddin.Core.Tests.ViewModels;
 
 public sealed class AboutViewModelTests
 {
-    private const string LogFolder = @"C:\Users\someone\AppData\Roaming\InventorWorkflowTools";
+    private const string LogFolder = @"C:\Users\someone\AppData\Roaming\" + Branding.DataFolderName;
 
     // Fixed zones so the tests do not depend on the machine's local zone.
     private static readonly TimeZoneInfo PlusTen =
@@ -25,7 +25,7 @@ public sealed class AboutViewModelTests
     [Fact]
     public void Title_IsAddinName()
     {
-        Assert.Equal("Inventor Workflow Tools", Create().Title);
+        Assert.Equal(Branding.ProductName, Create().Title);
     }
 
     [Fact]

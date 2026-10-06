@@ -12,7 +12,7 @@ public sealed class SettingsViewModelTests : IDisposable
 
     public SettingsViewModelTests()
     {
-        _root = Path.Combine(Path.GetTempPath(), "WorkflowToolsTests", Guid.NewGuid().ToString("N"));
+        _root = Path.Combine(Path.GetTempPath(), "InventorAddinTests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_root);
         _folder = Path.Combine(_root, "settings");
     }

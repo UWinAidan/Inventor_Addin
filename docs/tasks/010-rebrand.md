@@ -2,7 +2,7 @@
 
 - **Milestone:** M0
 - **Feature spec:** `docs/features/01-ribbon-and-shell.md`
-- **Status:** todo
+- **Status:** done
 - **Depends on:** 009
 - **Needs:** cloud (writes add-in code that is not compiled here; Aidan builds it)
 - **Parallel-safe with:** none
@@ -40,12 +40,12 @@ Out of scope:
 
 ## Acceptance criteria
 
-- [ ] `Branding` in Core holds the tab name, product name, id prefix, data folder name and log file name. Nothing else in `src/` repeats those strings; ids are built from the prefix
-- [ ] A search of `src/`, `tests/`, `README.md` and `CLAUDE.md` for `WorkflowTools`, `Workflow Tools` and `workflowtools` finds nothing
-- [ ] Task files for finished tasks (`docs/tasks/001` to `009`) are left as written; they are history
-- [ ] The `.addin` file shows the new display name, and its `ClassId`, `ClientId` and `Assembly` path are unchanged
-- [ ] Layout and log tests pass with the new names
-- [ ] `dotnet test tests/InventorAddin.Core.Tests` passes; the verification section lists every changed add-in file as not compiled
+- [x] `Branding` in Core holds the tab name, product name, id prefix, data folder name and log file name. Nothing else in `src/` repeats those strings; ids are built from the prefix
+- [x] A search of `src/`, `tests/`, `README.md` and `CLAUDE.md` for `WorkflowTools`, `Workflow Tools` and `workflowtools` finds nothing
+- [x] Task files for finished tasks (`docs/tasks/001` to `009`) are left as written; they are history
+- [x] The `.addin` file shows the new display name, and its `ClassId`, `ClientId` and `Assembly` path are unchanged
+- [x] Layout and log tests pass with the new names
+- [x] `dotnet test tests/InventorAddin.Core.Tests` passes; the verification section lists every changed add-in file as not compiled
 
 ## Notes for the implementer
 
@@ -54,14 +54,30 @@ Out of scope:
 
 ## Verification
 
-- **Ran:**
+- **Ran:** in the cloud (`CLAUDE_CODE_REMOTE=true`).
+  - `dotnet build src/InventorAddin.Core`: succeeded, 0 warnings, 0 errors.
+  - `dotnet test tests/InventorAddin.Core.Tests`: 214 passed, 0 failed, 0 skipped. Includes the new `BrandingTests` (literal names and the ids Inventor sees) and the layout, log, About and error-message tests, now building their expected names from `Branding`.
+  - Case-insensitive search of `src/`, `tests/`, `README.md` and `CLAUDE.md` (excluding `bin/` and `obj/`) for `workflow ?tools` (covers `WorkflowTools`, `Workflow Tools`, `workflowtools`, `InventorWorkflowTools`, `workflow tools`): no matches.
+  - Search of `src/` for `AWB`, `Awb` and `awbaddin` outside `Branding.cs`: only the `.addin` `DisplayName`, which is static XML (commented to match `Branding.ProductName`).
+  - `src/InventorAddin` was not built: it needs `Autodesk.Inventor.Interop.dll`, which the cloud does not have.
 - **Not compiled (changed under `src/InventorAddin`):**
-- **Inventor API members not confirmed:**
+  - `src/InventorAddin/AddinServices.cs` (removed `AddinServices.DataFolderName`; uses `Branding.DataFolderName`)
+  - `src/InventorAddin/StandardAddInServer.cs` (start and stop log lines use `Branding.ProductName`)
+  - `src/InventorAddin/Commands/ShellCommands.cs` (Settings and About descriptions)
+  - `src/InventorAddin/Commands/ExportDataCommands.cs` (temp export folder is `%TEMP%\AwbAddin`)
+  - `src/InventorAddin/UI/SettingsWindow.xaml` and `SettingsWindow.xaml.cs` (title attribute removed from XAML; set in the constructor as "AWB Addin Settings")
+  - `src/InventorAddin/UI/AboutWindow.xaml` and `AboutWindow.xaml.cs` (same; "About AWB Addin")
+  - `src/InventorAddin/InventorAddin.addin` (`DisplayName` only; `ClassId`, `ClientId`, `Assembly` and `Description` unchanged)
+  - `RibbonSetup.cs` needed no change: it already uses `RibbonIds` from Core and has no copies of the tab or panel ids.
+- **Inventor API members not confirmed:** none. No Inventor API member was added or changed. The add-in now references `InventorAddin.Core.Branding` in files that also have `using Inventor;`; no `Inventor.Branding` type is known, but an ambiguity would show up as a compile error on Windows.
 - **Manual checklist for Inventor:**
   1. Close Inventor. Delete `%APPDATA%\InventorWorkflowTools` if it exists. Build.
   2. Start Inventor and open a part. The tab reads "AWB Addin" and there is no "Workflow Tools" tab. If an old tab is still shown, note it under Follow-ups.
   3. Tools > Add-Ins lists "AWB Addin" as loaded.
   4. `%APPDATA%\AwbAddin\awbaddin.log` exists with a start line naming "AWB Addin".
-  5. Settings and About open, and About shows "AWB Addin".
+  5. Settings and About open, and About shows "AWB Addin". The Settings window title reads "AWB Addin Settings" and the About window title reads "About AWB Addin".
+  6. With developer tools on, *Export Model Data* writes its JSON under `%TEMP%\AwbAddin`.
 
 ## Follow-ups
+
+- `.claude/agents/implementer.md` and `.claude/agents/reviewer.md` still say "Inventor Workflow Tools add-in". They were outside this task's file list.

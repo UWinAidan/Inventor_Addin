@@ -5,7 +5,7 @@ namespace InventorAddin.Core.Tests.Logging;
 
 public sealed class ErrorMessagesTests
 {
-    private const string LogPath = @"C:\Users\someone\AppData\Roaming\InventorWorkflowTools\workflowtools.log";
+    private const string LogPath = @"C:\Users\someone\AppData\Roaming\" + Branding.DataFolderName + @"\" + Branding.LogFileName;
 
     private static string[] Lines(string text) => text.Split(Environment.NewLine);
 

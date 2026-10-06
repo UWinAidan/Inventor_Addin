@@ -30,4 +30,4 @@ Run the Core tests (works on any OS, no Inventor needed):
 dotnet test tests/InventorAddin.Core.Tests
 ```
 
-In Inventor, the **Workflow Tools** tab has developer buttons — *Export Model Data* dumps everything extracted from the active document to JSON, *Export Libraries* lists material/appearance libraries.
+In Inventor, the **AWB Addin** tab has developer buttons — *Export Model Data* dumps everything extracted from the active document to JSON, *Export Libraries* lists material/appearance libraries.

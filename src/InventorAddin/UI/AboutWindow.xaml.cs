@@ -1,5 +1,6 @@
 using System;
 using System.Windows;
+using InventorAddin.Core;
 using InventorAddin.Core.ViewModels;
 
 namespace InventorAddin.UI
@@ -13,6 +14,7 @@ namespace InventorAddin.UI
                 throw new ArgumentNullException(nameof(viewModel));
 
             InitializeComponent();
+            Title = $"About {Branding.ProductName}";
             DataContext = viewModel;
         }
     }

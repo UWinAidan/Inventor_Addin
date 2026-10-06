@@ -4,17 +4,17 @@ using System.Text;
 namespace InventorAddin.Core.Logging;
 
 /// <summary>
-/// Appends entries to <c>workflowtools.log</c> in a folder chosen by the caller, rolling the file over by size.
+/// Appends entries to the log file (<see cref="Branding.LogFileName"/>) in a folder chosen by the caller, rolling the file over by size.
 /// The file is opened, appended to and closed on every write, so it can be read while the add-in runs.
 /// </summary>
 public sealed class FileLog : ILog
 {
-    public const string FileName = "workflowtools.log";
+    public const string FileName = Branding.LogFileName;
     public const long DefaultMaxFileSizeBytes = 1024 * 1024;
     public const int DefaultKeepCount = 5;
     public const string TimestampFormat = "yyyy-MM-dd HH:mm:ss.fff";
 
-    private const string BaseName = "workflowtools";
+    private const string BaseName = Branding.LogFileBaseName;
     private const string Extension = ".log";
 
     private static readonly Encoding Utf8NoBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
@@ -24,7 +24,7 @@ public sealed class FileLog : ILog
 
     /// <param name="folder">Folder for the log files. Created on first write if it does not exist.</param>
     /// <param name="maxFileSizeBytes">Size the current file may reach before it rolls over.</param>
-    /// <param name="keepCount">Number of rolled-over files to keep (<c>workflowtools.1.log</c> and up). Zero keeps none.</param>
+    /// <param name="keepCount">Number of rolled-over files to keep (<c>{base name}.1.log</c> and up). Zero keeps none.</param>
     /// <param name="clock">Source of the local timestamp on each entry. Defaults to <see cref="DateTime.Now"/>.</param>
     public FileLog(
         string folder,
@@ -125,7 +125,7 @@ public sealed class FileLog : ILog
         }
     }
 
-    // Shifts workflowtools.log -> .1 -> .2 ... and deletes anything numbered beyond KeepCount.
+    // Shifts the current .log -> .1 -> .2 ... and deletes anything numbered beyond KeepCount.
     private void Roll()
     {
         DeleteRolledFilesBeyondKeepCount();
