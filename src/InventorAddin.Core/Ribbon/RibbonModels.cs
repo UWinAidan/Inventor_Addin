@@ -75,4 +75,5 @@ public static class CommandNames
 {
     public const string ExportModelData = "WorkflowTools_ExportModelData";
     public const string ExportLibraries = "WorkflowTools_ExportLibraries";
+    public const string Settings = "WorkflowTools_Settings";
 }

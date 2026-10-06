@@ -38,7 +38,7 @@ Planned 2026-10-06. Run in number order; each task depends only on lower numbers
 - [x] 005 Add-in startup services and command error reporting
 - [x] 006 Editing command base: transaction and command type
 - [x] 007 Ribbon built from the Core layout
-- [ ] 008 Settings window
+- [x] 008 Settings window
 - [ ] 009 About window
 
 No spike task: M0 uses only documented Inventor API members (`TransactionManager`, `Application.MainFrameHWND`, `CommandControls.AddButton`). The transaction base (006) has no command to exercise it until M1; the first M1 editing command is its Inventor test.
