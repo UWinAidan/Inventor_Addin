@@ -2,7 +2,7 @@
 
 - **Milestone:** M1
 - **Feature spec:** `docs/features/07-part-properties.md` (Rules: Part type, Part type default for assemblies)
-- **Status:** todo
+- **Status:** done
 - **Depends on:** none
 - **Needs:** cloud
 - **Parallel-safe with:** 011, 013, 014, 015, 017, 018
@@ -23,13 +23,13 @@ Out of scope:
 
 ## Acceptance criteria
 
-- [ ] A `PartType` record with `Code` and `FullName`, and a `DisplayText` of the form `"PM: Purchased, modified"` for dropdown entries
-- [ ] `PartTypes.All` lists the eight codes from the spec's table in the spec's order, with the spec's full names word for word
-- [ ] `PartTypes.Find(string? code)` returns the entry or null. Matching ignores surrounding whitespace and case (`" pm "` finds PM); null and blank return null
-- [ ] `PartTypes.DefaultFor(DocumentKind kind)` returns A for `Assembly`, W for `WeldmentAssembly`, and null for every other kind
-- [ ] `PartTypes.FullNameFor(string? code)` returns the full name, an empty string for blank, and `"Unknown code"` for a code not in the list (a file can hold any text if someone edited it in Inventor's own dialog)
-- [ ] Tests cover every code, lookup normalisation, the defaults for every `DocumentKind` member, blank and unknown codes, and that codes are unique
-- [ ] `dotnet test tests/InventorAddin.Core.Tests` passes
+- [x] A `PartType` record with `Code` and `FullName`, and a `DisplayText` of the form `"PM: Purchased, modified"` for dropdown entries
+- [x] `PartTypes.All` lists the eight codes from the spec's table in the spec's order, with the spec's full names word for word
+- [x] `PartTypes.Find(string? code)` returns the entry or null. Matching ignores surrounding whitespace and case (`" pm "` finds PM); null and blank return null
+- [x] `PartTypes.DefaultFor(DocumentKind kind)` returns A for `Assembly`, W for `WeldmentAssembly`, and null for every other kind
+- [x] `PartTypes.FullNameFor(string? code)` returns the full name, an empty string for blank, and `"Unknown code"` for a code not in the list (a file can hold any text if someone edited it in Inventor's own dialog)
+- [x] Tests cover every code, lookup normalisation, the defaults for every `DocumentKind` member, blank and unknown codes, and that codes are unique
+- [x] `dotnet test tests/InventorAddin.Core.Tests` passes
 
 ## Notes for the implementer
 
@@ -41,7 +41,7 @@ Out of scope:
 
 Filled in by the implementer.
 
-- **Ran:**
+- **Ran:** `dotnet build src/InventorAddin.Core`: 0 warnings, 0 errors. `dotnet test tests/InventorAddin.Core.Tests`: 266 passed, 0 failed (52 of them in `PartTypesTests`). Cloud session; `src/InventorAddin` was not touched or built.
 - **Not compiled (changed under `src/InventorAddin`):** none
 - **Inventor API members not confirmed:** none
 - **Manual checklist for Inventor:** none (covered by 019)
