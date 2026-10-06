@@ -35,7 +35,7 @@ Planned 2026-10-06. Run in number order; each task depends only on lower numbers
 - [x] 002 Settings model and JSON store (Core)
 - [x] 003 Rolling log file (Core)
 - [x] 004 Ribbon layout description (Core)
-- [ ] 005 Add-in startup services and command error reporting
+- [x] 005 Add-in startup services and command error reporting
 - [ ] 006 Editing command base: transaction and command type
 - [ ] 007 Ribbon built from the Core layout
 - [ ] 008 Settings window

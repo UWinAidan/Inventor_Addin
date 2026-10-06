@@ -20,6 +20,14 @@ namespace InventorAddin
         {
             InventorHost.Initialize(addInSiteObject.Application);
 
+            // Never throws; falls back to NullLog and default settings.
+            AddinServices.Initialize();
+
+            var version = typeof(StandardAddInServer).Assembly.GetName().Version;
+            int? inventorMajor = ComSafe.Get(() => (int?)InventorHost.MajorVersion);
+            AddinServices.Log.Info(
+                $"Workflow Tools {version?.ToString() ?? "unknown"} started in Inventor major version {inventorMajor?.ToString() ?? "unknown"}.");
+
             _ribbon = new RibbonSetup(InventorHost.App, ClientId);
             _ribbon.Create();
         }
@@ -28,6 +36,9 @@ namespace InventorAddin
         {
             _ribbon?.Dispose();
             _ribbon = null;
+
+            AddinServices.Log.Info("Workflow Tools stopped.");
+            AddinServices.Shutdown();
             InventorHost.Shutdown();
 
             GC.Collect();
