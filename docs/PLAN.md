@@ -66,7 +66,7 @@ Planned 2026-10-06. Run in number order; each task depends only on lower numbers
 | 018 | cloud, add-in not compiled | 014 | 011, 012, 015, 016, 017 |
 | 019 | cloud, add-in not compiled | 015, 016, 017, 018 | none |
 
-- [ ] 011 Agent definitions use the product name
+- [x] 011 Agent definitions use the product name
 - [ ] 012 Part type list (Core)
 - [ ] 013 Property value normalisation and validation (Core)
 - [ ] 014 Part properties model, storage map and write plan (Core)
