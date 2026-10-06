@@ -1,5 +1,6 @@
 using System;
 using Inventor;
+using InventorAddin.Core.Logging;
 
 namespace InventorAddin.Commands
 {
@@ -28,13 +29,18 @@ namespace InventorAddin.Commands
 
         private void OnExecute(NameValueMap context)
         {
+            var log = AddinServices.Log;
+            log.Info($"Command {InternalName} ({DisplayName}) started.");
+
             try
             {
                 Execute();
             }
             catch (Exception ex)
             {
-                System.Windows.Forms.MessageBox.Show(ex.ToString(), DisplayName,
+                log.Error($"Command {InternalName} failed.", ex);
+                string text = InventorAddin.Core.Logging.ErrorMessages.CommandFailed(DisplayName, ex, AddinServices.LogFilePath);
+                System.Windows.Forms.MessageBox.Show(text, DisplayName,
                     System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
             }
         }

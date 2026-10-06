@@ -59,4 +59,5 @@ A button appears only once its command exists. Do not add placeholder buttons.
 
 1. What should "Mass Update" do? The reference button's behaviour is not known.
 2. Should the About button also check for a newer version somewhere, or only display the current one?
-3. Which settings does the first version need? Candidates: designer name, library file locations, template folder, default sheet size.
+3. Which settings does the first version need? Candidates: designer name, library file locations, template folder, default sheet size. Until answered, M0 builds only `ShowDeveloperTools` (default off).
+4. Should Settings and About also appear on the ZeroDoc ribbon (Inventor with no document open)? Until answered, ZeroDoc keeps only the Developer panel.
