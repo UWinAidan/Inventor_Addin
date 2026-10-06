@@ -52,6 +52,34 @@ Scoped around spec 01's open questions: settings are limited to `ShowDeveloperTo
 
 One window to view and edit a part's or assembly's information, stored as iProperties. The first command that edits a document, so it is also the Inventor test for the transaction base from task 006. Not blocked: every open question in the spec has a default.
 
+Planned 2026-10-06. Run in number order; each task depends only on lower numbers.
+
+| Task | Needs | Depends on | Parallel-safe with |
+|---|---|---|---|
+| 011 | cloud | none | 012 to 018 |
+| 012 | cloud | none | 011, 013, 014, 015, 017, 018 |
+| 013 | cloud | none | 011, 012, 017 |
+| 014 | cloud | 013 | 011, 012, 015, 017 |
+| 015 | cloud, add-in not compiled | 013 | 011, 012, 014, 016, 017, 018 |
+| 016 | cloud | 012, 014 | 011, 015, 017, 018 |
+| 017 | cloud, add-in not compiled | none | 011 to 016, 018 |
+| 018 | cloud, add-in not compiled | 014 | 011, 012, 015, 016, 017 |
+| 019 | cloud, add-in not compiled | 015, 016, 017, 018 | none |
+
+- [ ] 011 Agent definitions use the product name
+- [ ] 012 Part type list (Core)
+- [ ] 013 Property value normalisation and validation (Core)
+- [ ] 014 Part properties model, storage map and write plan (Core)
+- [ ] 015 Default designer setting
+- [ ] 016 Part properties view-model (Core)
+- [ ] 017 Editing command base: input step and per-edit transactions
+- [ ] 018 Read the snapshot from Inventor and write property changes
+- [ ] 019 Part Properties command, window and ribbon button
+
+No spike task. The approach (read and write iProperties through `PropertySets`, one transaction per Apply) uses documented API and does not change with the four behaviours the spec lists as unconfirmed; those decide details only (the value type Cost accepts, `Property.Delete`, `Document.IsModifiable`, whether Part Number falls back to the file name). Each is a numbered step in task 019's manual checklist, so Aidan's first build and test settles them. Undo during in-place edit is checked the same way (019, step 13).
+
+Two spec questions were added while planning, each with a default the tasks build: blank cost is stored as 0 (question 4), and pre-fills count as pending changes (question 5).
+
 ### M2: Part creation and numbering (spec 02)
 
 Blocked on the spec's open questions. Aidan will decide the numbering configuration, including whether assemblies and parts are numbered differently, when this milestone is planned. This milestone also adds the "Generate part number" button to the M1 window.
@@ -78,7 +106,7 @@ An installer and a download page so other people can install the add-in. No spec
 
 ## Blocked on Aidan
 
-1. M1 is not blocked. Its spec lists three optional questions with defaults.
+1. M1 is not blocked. Its spec lists five optional questions with defaults; questions 4 (blank cost) and 5 (pre-fills count as changes) were added while planning and are worth a look before the run.
 2. M2 needs the numbering decisions in spec 02 before it can be planned.
 3. Spec 01 questions 2 to 4 are still open: update checks in About, settings beyond those built so far, and Settings/About on the no-document ribbon.
 
