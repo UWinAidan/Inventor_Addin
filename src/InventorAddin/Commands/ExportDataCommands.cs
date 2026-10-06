@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using Inventor;
+using InventorAddin.Core.Ribbon;
 using InventorAddin.Core.Serialization;
 using InventorAddin.Extraction;
 using IOFile = System.IO.File;
@@ -11,7 +12,7 @@ namespace InventorAddin.Commands
     /// <summary>Developer tool: dumps everything extracted from the active document to JSON and opens it.</summary>
     public sealed class ExportModelDataCommand : AddinCommand
     {
-        public override string InternalName => "WorkflowTools_ExportModelData";
+        public override string InternalName => CommandNames.ExportModelData;
         public override string DisplayName => "Export Model Data";
         public override string Description => "Extract all data from the active document to a JSON file (developer tool).";
 
@@ -29,7 +30,7 @@ namespace InventorAddin.Commands
     /// <summary>Developer tool: dumps all loaded material/appearance libraries to JSON.</summary>
     public sealed class ExportLibrariesCommand : AddinCommand
     {
-        public override string InternalName => "WorkflowTools_ExportLibraries";
+        public override string InternalName => CommandNames.ExportLibraries;
         public override string DisplayName => "Export Libraries";
         public override string Description => "List all loaded material and appearance libraries to a JSON file (developer tool).";
 
