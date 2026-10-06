@@ -1,0 +1,19 @@
+# Build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo
+
+# Inventor scratch files
+OldVersions/
+*.lck
+
+# Reference screenshots (kept local, not for the public repo)
+ADDIN_PICS/

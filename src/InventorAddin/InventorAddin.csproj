@@ -1,0 +1,59 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The Inventor add-in. Inventor 2025+ loads add-ins on .NET 8.
+    Building requires Inventor installed (for Autodesk.Inventor.Interop.dll).
+    Override the install location with: dotnet build -p:InventorInstallDir="D:\Autodesk\Inventor 2026"
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>InventorAddin</RootNamespace>
+    <AssemblyName>InventorAddin</AssemblyName>
+    <PlatformTarget>x64</PlatformTarget>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+
+    <InventorVersion>2026</InventorVersion>
+    <InventorInstallDir Condition="'$(InventorInstallDir)' == ''">C:\Program Files\Autodesk\Inventor $(InventorVersion)</InventorInstallDir>
+    <InventorAddinsDir>$(APPDATA)\Autodesk\Inventor $(InventorVersion)\Addins</InventorAddinsDir>
+    <!-- Copy the build into Inventor's per-user add-in folder after each build. Disable with -p:DeployToInventor=false -->
+    <DeployToInventor Condition="'$(DeployToInventor)' == ''">true</DeployToInventor>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Autodesk.Inventor.Interop">
+      <HintPath>$(InventorInstallDir)\Bin\Public Assemblies\Autodesk.Inventor.Interop.dll</HintPath>
+      <EmbedInteropTypes>false</EmbedInteropTypes>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\InventorAddin.Core\InventorAddin.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="InventorAddin.addin" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!--
+    Deploy layout:
+      %APPDATA%\Autodesk\Inventor 2026\Addins\InventorAddin.addin
+      %APPDATA%\Autodesk\Inventor 2026\Addins\InventorAddin\*.dll
+    Close Inventor before building or the DLL will be locked (the build still succeeds, deploy is skipped with a warning).
+  -->
+  <Target Name="DeployToInventor" AfterTargets="Build" Condition="'$(DeployToInventor)' == 'true' And '$(OS)' == 'Windows_NT'">
+    <ItemGroup>
+      <_DeployFiles Include="$(OutDir)**\*.*" Exclude="$(OutDir)InventorAddin.addin" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_DeployFiles)" DestinationFolder="$(InventorAddinsDir)\InventorAddin\%(RecursiveDir)" SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" />
+    <Copy SourceFiles="$(OutDir)InventorAddin.addin" DestinationFolder="$(InventorAddinsDir)" SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" />
+    <Message Importance="high" Text="Deployed add-in to $(InventorAddinsDir)" />
+  </Target>
+
+</Project>

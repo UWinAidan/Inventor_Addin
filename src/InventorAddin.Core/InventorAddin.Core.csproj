@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Plain data models and helpers with NO dependency on Inventor.
+    This project builds anywhere (including Linux / cloud) so UI and logic
+    can be developed and tested without Inventor installed.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>InventorAddin.Core</RootNamespace>
+  </PropertyGroup>
+
+</Project>

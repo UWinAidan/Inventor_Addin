@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Addin Type="Standard">
+  <!-- ClassId / ClientId must match StandardAddInServer.AddInGuid -->
+  <ClassId>{09DB1FA1-9732-4FA2-9975-44316FEEA4CE}</ClassId>
+  <ClientId>{09DB1FA1-9732-4FA2-9975-44316FEEA4CE}</ClientId>
+  <DisplayName>Inventor Workflow Tools</DisplayName>
+  <Description>Part numbering, iLogic injection, material/finish library and print automation.</Description>
+  <!-- Relative to this .addin file -->
+  <Assembly>InventorAddin\InventorAddin.dll</Assembly>
+  <LoadOnStartUp>1</LoadOnStartUp>
+  <UserUnloadable>1</UserUnloadable>
+  <Hidden>0</Hidden>
+  <!-- 29 = Inventor 2025; .NET 8 add-ins require 2025 or newer -->
+  <SupportedSoftwareVersionGreaterThan>28..</SupportedSoftwareVersionGreaterThan>
+  <DataVersion>1</DataVersion>
+  <UserInterfaceVersion>1</UserInterfaceVersion>
+</Addin>

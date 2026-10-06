@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/InventorAddin.Core/InventorAddin.Core.csproj" />
+    <Project Path="src/InventorAddin/InventorAddin.csproj" />
+  </Folder>
+</Solution>
