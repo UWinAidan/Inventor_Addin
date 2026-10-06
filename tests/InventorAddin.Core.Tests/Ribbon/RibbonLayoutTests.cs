@@ -51,6 +51,7 @@ public sealed class RibbonLayoutTests
         Assert.Equal($"{Branding.IdPrefix}_ExportLibraries", CommandNames.ExportLibraries);
         Assert.Equal($"{Branding.IdPrefix}_Settings", CommandNames.Settings);
         Assert.Equal($"{Branding.IdPrefix}_About", CommandNames.About);
+        Assert.Equal($"{Branding.IdPrefix}_PartProperties", CommandNames.PartProperties);
     }
 
     public static TheoryData<RibbonEnvironment, bool> DocumentEnvironmentsAndSetting()
@@ -64,11 +65,41 @@ public sealed class RibbonLayoutTests
         return data;
     }
 
+    public static TheoryData<RibbonEnvironment, bool> ModelEnvironmentsAndSetting()
+    {
+        var data = new TheoryData<RibbonEnvironment, bool>();
+        foreach (var environment in new[] { RibbonEnvironment.Part, RibbonEnvironment.Assembly })
+        {
+            data.Add(environment, false);
+            data.Add(environment, true);
+        }
+        return data;
+    }
+
     [Theory]
-    [MemberData(nameof(DocumentEnvironmentsAndSetting))]
-    public void DocumentEnvironments_FirstPanelIsCadAutomation_WithSmallSettingsThenAboutButtons(RibbonEnvironment environment, bool showDeveloperTools)
+    [MemberData(nameof(ModelEnvironmentsAndSetting))]
+    public void PartAndAssembly_FirstPanelIsCadAutomation_WithSmallPartPropertiesThenSettingsThenAbout(RibbonEnvironment environment, bool showDeveloperTools)
     {
         var panel = RibbonLayout.For(environment, showDeveloperTools)[0];
+
+        Assert.Equal($"id_Panel_{Branding.IdPrefix}_CadAutomation", panel.Id);
+        Assert.Equal("CAD Automation", panel.DisplayName);
+        Assert.Equal(
+            new[]
+            {
+                new ButtonLayout($"{Branding.IdPrefix}_PartProperties", ButtonSize.Small),
+                new ButtonLayout($"{Branding.IdPrefix}_Settings", ButtonSize.Small),
+                new ButtonLayout($"{Branding.IdPrefix}_About", ButtonSize.Small),
+            },
+            panel.Buttons);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Drawing_FirstPanelIsCadAutomation_WithSmallSettingsThenAboutButtons(bool showDeveloperTools)
+    {
+        var panel = RibbonLayout.For(RibbonEnvironment.Drawing, showDeveloperTools)[0];
 
         Assert.Equal($"id_Panel_{Branding.IdPrefix}_CadAutomation", panel.Id);
         Assert.Equal("CAD Automation", panel.DisplayName);
@@ -79,6 +110,19 @@ public sealed class RibbonLayoutTests
                 new ButtonLayout($"{Branding.IdPrefix}_About", ButtonSize.Small),
             },
             panel.Buttons);
+    }
+
+    [Theory]
+    [MemberData(nameof(EveryEnvironmentAndSetting))]
+    public void PartProperties_OnlyOnPartAndAssembly(RibbonEnvironment environment, bool showDeveloperTools)
+    {
+        var names = RibbonLayout.For(environment, showDeveloperTools)
+            .SelectMany(p => p.Buttons)
+            .Select(b => b.CommandInternalName)
+            .ToList();
+
+        bool expected = environment is RibbonEnvironment.Part or RibbonEnvironment.Assembly;
+        Assert.Equal(expected, names.Contains(CommandNames.PartProperties));
     }
 
     [Theory]
