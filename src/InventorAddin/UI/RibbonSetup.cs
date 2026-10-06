@@ -39,6 +39,7 @@ namespace InventorAddin.UI
         /// <summary>Every command the add-in provides. Each is registered once, whether or not the layout shows it.</summary>
         private static IEnumerable<AddinCommand> CreateCommands()
         {
+            yield return new PartPropertiesCommand();
             yield return new SettingsCommand();
             yield return new AboutCommand();
             yield return new ExportModelDataCommand();

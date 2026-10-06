@@ -79,6 +79,7 @@ public static class CommandNames
     public const string ExportLibraries = Prefix + "ExportLibraries";
     public const string Settings = Prefix + "Settings";
     public const string About = Prefix + "About";
+    public const string PartProperties = Prefix + "PartProperties";
 
     private const string Prefix = Branding.IdPrefix + "_";
 }
