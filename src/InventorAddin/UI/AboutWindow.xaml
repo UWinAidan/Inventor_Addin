@@ -1,0 +1,30 @@
+<Window x:Class="InventorAddin.UI.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="About Workflow Tools"
+        SizeToContent="WidthAndHeight"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False">
+    <!-- DataContext is an AboutViewModel (InventorAddin.Core.ViewModels), set in the constructor. -->
+    <StackPanel Margin="16" MinWidth="320" MaxWidth="560">
+        <TextBlock FontSize="16" FontWeight="SemiBold" Text="{Binding Title, Mode=OneTime}" />
+
+        <TextBlock Margin="0,12,0,0" Text="{Binding VersionLine, Mode=OneTime}" />
+        <TextBlock Margin="0,4,0,0" Text="{Binding BuildDateLine, Mode=OneTime}" />
+        <TextBlock Margin="0,4,0,0" Text="{Binding InventorVersionLine, Mode=OneTime}" />
+
+        <!-- Read-only text box so the path can be selected and copied. -->
+        <TextBox Margin="0,4,0,0"
+                 IsReadOnly="True"
+                 BorderThickness="0"
+                 Background="Transparent"
+                 Padding="0"
+                 TextWrapping="Wrap"
+                 Text="{Binding LogFolderLine, Mode=OneTime}" />
+
+        <StackPanel Margin="0,16,0,0" Orientation="Horizontal" HorizontalAlignment="Right">
+            <!-- IsCancel closes a dialog shown with ShowDialog; IsDefault lets Enter close it too. -->
+            <Button Content="Close" MinWidth="80" IsDefault="True" IsCancel="True" />
+        </StackPanel>
+    </StackPanel>
+</Window>

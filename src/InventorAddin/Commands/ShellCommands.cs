@@ -1,7 +1,11 @@
+using System;
+using System.Linq;
+using System.Reflection;
 using InventorAddin.Core.Ribbon;
 using InventorAddin.Core.Settings;
 using InventorAddin.Core.ViewModels;
 using InventorAddin.UI;
+using IOPath = System.IO.Path;
 
 namespace InventorAddin.Commands
 {
@@ -31,6 +35,31 @@ namespace InventorAddin.Commands
             AddinSettings? saved = viewModel.SavedSettings;
             if (saved != null)
                 AddinServices.UpdateSettings(saved);
+        }
+    }
+
+    /// <summary>Shows the add-in version and build date, so it is clear which build Inventor loaded. Query-only.</summary>
+    public sealed class AboutCommand : AddinCommand
+    {
+        public override string InternalName => CommandNames.About;
+        public override string DisplayName => "About";
+        public override string Description => "Show the Workflow Tools version and build date.";
+
+        protected override void Execute()
+        {
+            Assembly assembly = typeof(AboutCommand).Assembly;
+
+            string? version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+            string? buildDate = assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
+                .FirstOrDefault(a => string.Equals(a.Key, "BuildDate", StringComparison.Ordinal))
+                ?.Value;
+            int? inventorMajor = ComSafe.Get(() => (int?)InventorHost.MajorVersion);
+
+            string? logFilePath = AddinServices.LogFilePath;
+            string? logFolder = logFilePath == null ? null : IOPath.GetDirectoryName(logFilePath);
+
+            var viewModel = new AboutViewModel(version, buildDate, inventorMajor, logFolder);
+            WindowHost.ShowDialog(new AboutWindow(viewModel));
         }
     }
 }

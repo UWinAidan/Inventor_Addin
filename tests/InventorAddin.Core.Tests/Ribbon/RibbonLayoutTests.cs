@@ -50,6 +50,7 @@ public sealed class RibbonLayoutTests
         Assert.Equal("WorkflowTools_ExportModelData", CommandNames.ExportModelData);
         Assert.Equal("WorkflowTools_ExportLibraries", CommandNames.ExportLibraries);
         Assert.Equal("WorkflowTools_Settings", CommandNames.Settings);
+        Assert.Equal("WorkflowTools_About", CommandNames.About);
     }
 
     public static TheoryData<RibbonEnvironment, bool> DocumentEnvironmentsAndSetting()
@@ -65,13 +66,19 @@ public sealed class RibbonLayoutTests
 
     [Theory]
     [MemberData(nameof(DocumentEnvironmentsAndSetting))]
-    public void DocumentEnvironments_FirstPanelIsCadAutomation_WithSmallSettingsButton(RibbonEnvironment environment, bool showDeveloperTools)
+    public void DocumentEnvironments_FirstPanelIsCadAutomation_WithSmallSettingsThenAboutButtons(RibbonEnvironment environment, bool showDeveloperTools)
     {
         var panel = RibbonLayout.For(environment, showDeveloperTools)[0];
 
         Assert.Equal("id_Panel_WorkflowTools_CadAutomation", panel.Id);
         Assert.Equal("CAD Automation", panel.DisplayName);
-        Assert.Equal(new[] { new ButtonLayout("WorkflowTools_Settings", ButtonSize.Small) }, panel.Buttons);
+        Assert.Equal(
+            new[]
+            {
+                new ButtonLayout("WorkflowTools_Settings", ButtonSize.Small),
+                new ButtonLayout("WorkflowTools_About", ButtonSize.Small),
+            },
+            panel.Buttons);
     }
 
     [Theory]
@@ -106,13 +113,15 @@ public sealed class RibbonLayoutTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void ZeroDoc_HasNoSettingsButton(bool showDeveloperTools)
+    public void ZeroDoc_HasNoSettingsOrAboutButton(bool showDeveloperTools)
     {
         var names = RibbonLayout.For(RibbonEnvironment.ZeroDoc, showDeveloperTools)
             .SelectMany(p => p.Buttons)
-            .Select(b => b.CommandInternalName);
+            .Select(b => b.CommandInternalName)
+            .ToList();
 
         Assert.DoesNotContain(CommandNames.Settings, names);
+        Assert.DoesNotContain(CommandNames.About, names);
     }
 
     [Theory]

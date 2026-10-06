@@ -40,6 +40,7 @@ namespace InventorAddin.UI
         private static IEnumerable<AddinCommand> CreateCommands()
         {
             yield return new SettingsCommand();
+            yield return new AboutCommand();
             yield return new ExportModelDataCommand();
             yield return new ExportLibrariesCommand();
         }

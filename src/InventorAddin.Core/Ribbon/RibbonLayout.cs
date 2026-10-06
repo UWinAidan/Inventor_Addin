@@ -27,8 +27,9 @@ public static class RibbonLayout
     {
         new(RibbonIds.CadAutomationPanelId, RibbonIds.CadAutomationPanelName, DeveloperOnly: false, new ButtonDefinition[]
         {
-            // ZeroDoc gets no Settings button until spec 01 open question 4 is answered.
+            // ZeroDoc gets no Settings or About button until spec 01 open question 4 is answered.
             new(CommandNames.Settings, ButtonSize.Small, DocumentEnvironments),
+            new(CommandNames.About, ButtonSize.Small, DocumentEnvironments),
         }),
         new(RibbonIds.DrawingToolsPanelId, RibbonIds.DrawingToolsPanelName, DeveloperOnly: false, Array.Empty<ButtonDefinition>()),
         new(RibbonIds.DeveloperPanelId, RibbonIds.DeveloperPanelName, DeveloperOnly: true, new ButtonDefinition[]
