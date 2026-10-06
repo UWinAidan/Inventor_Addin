@@ -57,6 +57,15 @@ namespace InventorAddin
             }
         }
 
+        /// <summary>
+        /// Replaces the session's settings after the user saved new ones. The ribbon is not rebuilt;
+        /// a changed setting takes effect at the next start.
+        /// </summary>
+        internal static void UpdateSettings(AddinSettings settings)
+        {
+            Settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        }
+
         internal static void Shutdown() => Reset();
 
         /// <summary>%APPDATA%\InventorWorkflowTools.</summary>

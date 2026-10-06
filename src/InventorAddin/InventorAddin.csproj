@@ -18,6 +18,9 @@
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
 
+    <!-- Shown in the About window. The SDK may append "+<commit>" to the informational version. -->
+    <Version>0.1.0</Version>
+
     <InventorVersion>2026</InventorVersion>
     <InventorInstallDir Condition="'$(InventorInstallDir)' == ''">C:\Program Files\Autodesk\Inventor $(InventorVersion)</InventorInstallDir>
     <InventorAddinsDir>$(APPDATA)\Autodesk\Inventor $(InventorVersion)\Addins</InventorAddinsDir>
@@ -31,6 +34,18 @@
       <EmbedInteropTypes>false</EmbedInteropTypes>
       <Private>false</Private>
     </Reference>
+  </ItemGroup>
+
+  <!--
+    UTC build time in ISO 8601, read by the About window through AssemblyMetadataAttribute("BuildDate").
+    The value changes on every build, so the add-in assembly always recompiles.
+    The colons are escaped because an unescaped ':' is the culture's time separator ('.' in some locales).
+  -->
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>BuildDate</_Parameter1>
+      <_Parameter2>$([System.DateTime]::UtcNow.ToString("yyyy-MM-ddTHH\:mm\:ssZ"))</_Parameter2>
+    </AssemblyAttribute>
   </ItemGroup>
 
   <ItemGroup>

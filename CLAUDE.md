@@ -44,6 +44,7 @@ The split exists so that most of the work can be built and tested without Invent
 - **Wrap document edits in one transaction** so a single undo reverts the command, and abort it on failure.
 - **Pick the command type that matches what the command changes.** The developer export buttons are query-only; commands that edit documents are not.
 - **Namespace clashes.** The `Inventor` namespace defines `File`, `Path`, `Environment` and `Application`. The add-in project has implicit usings off for that reason. Alias the System types (`using IOPath = System.IO.Path;`).
+- **`Document` is not `_Document`.** Some API parameters are typed `_Document`, for example `TransactionManager.StartTransaction`. A `Document` does not convert implicitly, so cast it: `(_Document)doc`.
 
 ## What must stay out of the repo
 

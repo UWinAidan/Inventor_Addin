@@ -28,7 +28,7 @@ namespace InventorAddin
             AddinServices.Log.Info(
                 $"Workflow Tools {version?.ToString() ?? "unknown"} started in Inventor major version {inventorMajor?.ToString() ?? "unknown"}.");
 
-            _ribbon = new RibbonSetup(InventorHost.App, ClientId);
+            _ribbon = new RibbonSetup(InventorHost.App, ClientId, AddinServices.Settings, AddinServices.Log);
             _ribbon.Create();
         }
 
