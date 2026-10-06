@@ -105,8 +105,10 @@ Standard properties are used wherever Inventor has one.
 
 ## Open questions
 
-None of these block planning; each has a default above.
+None of these block planning; each has a default above or in the question.
 
 1. Are there more fields to add? Candidates: revision, vendor and vendor part number for purchased parts, project, notes.
 2. Should assemblies show a different set of fields from parts?
 3. A file that has never been saved has no file name. Default: the part name shows as blank and Description is left alone until the file is saved.
+4. Blank cost. The standard Cost property is a currency value and probably cannot be empty. Default: a stored cost of 0 shows as a blank field, and clearing the field writes 0. (Added while planning M1.)
+5. Do pre-fills count as changes? Opening a file whose Designer, Detailer or Part Type is blank, or whose Description differs from the file name, shows values the file does not hold yet. Default: they count as pending changes, so Apply is enabled when the window opens, the status line says that pre-filled values will be written on Apply, OK writes them, and Cancel writes nothing. "OK without changes writes nothing" then holds for a file that already matches what the window shows. (Added while planning M1.)
