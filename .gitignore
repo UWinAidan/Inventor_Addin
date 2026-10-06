@@ -17,3 +17,6 @@ OldVersions/
 
 # Reference screenshots (kept local, not for the public repo)
 ADDIN_PICS/
+
+# Material libraries are supplied by the user and never committed
+*.adsklib

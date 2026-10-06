@@ -50,6 +50,7 @@ The split exists so that most of the work can be built and tested without Invent
 This is a personal, public repository.
 
 - `ADDIN_PICS/` holds reference screenshots of another company's add-in. It is gitignored and is not available in cloud sessions. The specs in `docs/features/` describe the behaviour we want in our own words.
+- Material library files (`*.adsklib`) are gitignored. The add-in reads the library from a path in settings; it never ships one. Do not copy material names from a library into code, docs, tests or fixtures. Invent test data.
 - Do not put company names, real part numbers, title blocks, customer names or any employer data in code, docs, tests or fixtures.
 - Test fixtures exported with *Export Model Data* must come from Aidan's personal models only.
 - `docs/ui-mockups/` is for our own mockups, not for screenshots of other software.
