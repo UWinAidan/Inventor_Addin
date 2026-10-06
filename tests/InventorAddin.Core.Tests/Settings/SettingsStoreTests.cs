@@ -38,6 +38,62 @@ public sealed class SettingsStoreTests : IDisposable
         Assert.Equal(1, AddinSettings.CurrentSchemaVersion);
         Assert.Equal(1, settings.SchemaVersion);
         Assert.False(settings.ShowDeveloperTools);
+        Assert.Equal("", settings.DefaultDesigner);
+    }
+
+    [Fact]
+    public void Load_FileWrittenBeforeDefaultDesigner_LoadsItAsEmpty()
+    {
+        WriteSettingsFile("""
+            {
+              "schemaVersion": 1,
+              "showDeveloperTools": true
+            }
+            """);
+
+        var result = new SettingsStore(_folder).Load();
+
+        Assert.Empty(result.Warnings);
+        Assert.Equal("", result.Settings.DefaultDesigner);
+        Assert.True(result.Settings.ShowDeveloperTools);
+        Assert.Equal(1, result.Settings.SchemaVersion);
+    }
+
+    [Fact]
+    public void Load_NullDefaultDesigner_LoadsAsEmpty()
+    {
+        WriteSettingsFile("{ \"defaultDesigner\": null }");
+
+        var result = new SettingsStore(_folder).Load();
+
+        Assert.Empty(result.Warnings);
+        Assert.Equal("", result.Settings.DefaultDesigner);
+        Assert.Equal(new AddinSettings(), result.Settings);
+    }
+
+    [Fact]
+    public void DefaultDesigner_SetToNull_StoresEmpty()
+    {
+        var settings = new AddinSettings { DefaultDesigner = null! };
+
+        Assert.Equal("", settings.DefaultDesigner);
+    }
+
+    [Fact]
+    public void Equality_ComparesDefaultDesigner()
+    {
+        Assert.Equal(new AddinSettings { DefaultDesigner = "A. Person" }, new AddinSettings { DefaultDesigner = "A. Person" });
+        Assert.NotEqual(new AddinSettings { DefaultDesigner = "A. Person" }, new AddinSettings());
+    }
+
+    [Fact]
+    public void Save_WritesDefaultDesignerInCamelCase()
+    {
+        new SettingsStore(_folder).Save(new AddinSettings { DefaultDesigner = "A. Person" });
+
+        var json = JsonNode.Parse(File.ReadAllText(SettingsPath))!.AsObject();
+
+        Assert.Equal("A. Person", json["defaultDesigner"]!.GetValue<string>());
     }
 
     [Fact]
@@ -215,13 +271,20 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Theory]
-    [InlineData(false, 1)]
-    [InlineData(true, 1)]
-    [InlineData(true, 3)]
-    public void SaveThenLoad_RoundTrips(bool showDeveloperTools, int schemaVersion)
+    [InlineData(false, 1, "")]
+    [InlineData(true, 1, "")]
+    [InlineData(true, 3, "")]
+    [InlineData(false, 1, "A. Person")]
+    [InlineData(true, 1, "Ünïcode Désigner \"quoted\"")]
+    public void SaveThenLoad_RoundTrips(bool showDeveloperTools, int schemaVersion, string defaultDesigner)
     {
         var store = new SettingsStore(_folder);
-        var original = new AddinSettings { ShowDeveloperTools = showDeveloperTools, SchemaVersion = schemaVersion };
+        var original = new AddinSettings
+        {
+            ShowDeveloperTools = showDeveloperTools,
+            SchemaVersion = schemaVersion,
+            DefaultDesigner = defaultDesigner,
+        };
 
         store.Save(original);
         var result = store.Load();

@@ -70,7 +70,7 @@ Planned 2026-10-06. Run in number order; each task depends only on lower numbers
 - [x] 012 Part type list (Core)
 - [x] 013 Property value normalisation and validation (Core)
 - [x] 014 Part properties model, storage map and write plan (Core)
-- [ ] 015 Default designer setting
+- [x] 015 Default designer setting
 - [ ] 016 Part properties view-model (Core)
 - [x] 017 Editing command base: input step and per-edit transactions
 - [ ] 018 Read the snapshot from Inventor and write property changes
