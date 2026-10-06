@@ -24,4 +24,10 @@ The build copies the add-in to `%APPDATA%\Autodesk\Inventor 2026\Addins` so it l
 
 `InventorAddin.Core` alone builds without Inventor: `dotnet build src/InventorAddin.Core`.
 
+Run the Core tests (works on any OS, no Inventor needed):
+
+```
+dotnet test tests/InventorAddin.Core.Tests
+```
+
 In Inventor, the **Workflow Tools** tab has developer buttons — *Export Model Data* dumps everything extracted from the active document to JSON, *Export Libraries* lists material/appearance libraries.
