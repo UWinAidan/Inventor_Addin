@@ -2,7 +2,10 @@
 
 An Autodesk Inventor add-in (C#, .NET 8, built against Inventor 2026) that automates part creation and numbering, iLogic injection, a material and finish library, and drawing tools such as hole tables.
 
-- Roadmap: `docs/PLAN.md`
+- Where each big item stands: `STATUS.md`
+- What needs doing next, and what is waiting on Aidan: `TODO.md`
+- Decisions made, and who made them: `DECISIONS.md`
+- Roadmap, milestones and task lists: `docs/PLAN.md`
 - Feature specs (the source of truth for behaviour): `docs/features/`
 - Units of work: `docs/tasks/NNN-slug.md`
 - How planning and delegation run: `docs/WORKFLOW.md`
@@ -44,6 +47,7 @@ The split exists so that most of the work can be built and tested without Invent
 - **Wrap document edits in one transaction** so a single undo reverts the command, and abort it on failure.
 - **Pick the command type that matches what the command changes.** The developer export buttons are query-only; commands that edit documents are not.
 - **Namespace clashes.** The `Inventor` namespace defines `File`, `Path`, `Environment` and `Application`. The add-in project has implicit usings off for that reason. Alias the System types (`using IOPath = System.IO.Path;`).
+- **Confirmed in Inventor 2026.** These were tested by Aidan and need no further checking: property writes made inside a transaction are reverted by one Undo; the standard Cost property accepts a .NET `decimal`; Inventor reports the file name as the Part Number when none has been set; WPF windows shown through `WindowHost` load without extra assembly resolution.
 - **`Document` is not `_Document`.** Some API parameters are typed `_Document`, for example `TransactionManager.StartTransaction`. A `Document` does not convert implicitly, so cast it: `(_Document)doc`.
 
 ## What must stay out of the repo
@@ -56,6 +60,22 @@ This is a personal, public repository.
 - Test fixtures exported with *Export Model Data* must come from Aidan's personal models only.
 - `docs/ui-mockups/` is for our own mockups, not for screenshots of other software.
 - Our names: ribbon tab and product name "AWB Addin", id prefix `Awb` (commands `Awb_`), data folder `%APPDATA%\AwbAddin`, log file `awbaddin.log`. They live in `Branding` in Core; nothing else in `src/` repeats them.
+
+## Tracking files
+
+Three files at the repo root keep the project legible between sessions. Each has one job, so nothing is recorded twice.
+
+| File | Holds | Changes when |
+|---|---|---|
+| `STATUS.md` | the state of each big item, and what works in Inventor today | an item changes state |
+| `TODO.md` | what is next, what is waiting on Aidan, proposed work, follow-ups from finished tasks | something comes up, gets done, or becomes a task |
+| `DECISIONS.md` | every decision, with who made it | a decision is made. Append only |
+
+- **Only the parent session edits these three files.** Implementers and reviewers do not, so tasks running at the same time never collide on them. An implementer records what it notices under "Follow-ups" in its task file; the parent copies anything still open into `TODO.md` when it commits the task.
+- **Read all three before planning.** Do not plan against a decision without checking `DECISIONS.md`, and do not re-ask a question it already answers.
+- **A default is not a decision by Aidan.** When an agent has to pick a behaviour to keep work moving, log it in `DECISIONS.md` as "Default" and put the question in the spec. Aidan can overturn it.
+- **When Aidan decides something**, in a session or through a spec edit, add it to `DECISIONS.md` as "Aidan" and remove the matching line from `TODO.md`.
+- Planned tasks live in `docs/PLAN.md`, not in `TODO.md`. When a to-do item becomes a task, delete it from `TODO.md`.
 
 ## Working rules
 

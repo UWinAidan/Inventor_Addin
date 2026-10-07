@@ -1,14 +1,6 @@
 # Roadmap
 
-Owned by the parent session (see `docs/WORKFLOW.md`). Feature behaviour lives in `docs/features/`; this file tracks order and status only.
-
-## Where the project stands
-
-- Solution with three projects: `InventorAddin.Core` (plain .NET 8, builds anywhere), `InventorAddin` (the add-in, .NET 8 for Windows, built against Inventor 2026) and `InventorAddin.Core.Tests`.
-- The add-in registers an "AWB Addin" tab with Settings and About windows, and a Developer panel (off by default) with two buttons that dump the active document and the asset libraries to JSON.
-- Foundations are in place: per-user settings, a rolling log, a ribbon drawn from a Core layout, error reporting, and a base class that runs editing commands inside one transaction.
-- The extraction layer reads iProperties, parameters, iLogic rules, material and appearance, mass properties, sheet metal data, holes and threads, finishes, assembly structure, and drawing sheets, views, title blocks and tables.
-- Not there yet: anything that writes to a document, any feature UI, icons.
+Owned by the parent session (see `docs/WORKFLOW.md`). This file holds the milestones, their order and their task lists. Feature behaviour lives in `docs/features/`. The state of each item is in `STATUS.md`, open items and what is waiting on Aidan are in `TODO.md`, and decisions are in `DECISIONS.md`.
 
 ## Milestones
 
@@ -100,25 +92,10 @@ Blocked on question 1 of the spec, which decides which commands exist at all.
 
 Blocked on questions 1 and 2 of the spec.
 
+### Proposed: window styling and icons
+
+One shared look for every window and icons for the ribbon buttons. Raised by Aidan on 2026-10-06. No spec yet; see `TODO.md`. Do not plan it until Aidan agrees the look.
+
 ### Parked: distribution
 
 An installer and a download page so other people can install the add-in. No spec yet. Aidan will decide whether and when to add it at the point the part number generator (M2) is planned. Do not plan or build any of it before then.
-
-## Blocked on Aidan
-
-1. M1 is not blocked. Its spec lists five optional questions with defaults; questions 4 (blank cost) and 5 (pre-fills count as changes) were added while planning and are worth a look before the run.
-2. M2 needs the numbering decisions in spec 02 before it can be planned.
-3. Spec 01 questions 2 to 4 are still open: update checks in About, settings beyond those built so far, and Settings/About on the no-document ribbon.
-
-## Decisions made
-
-| Date | Decision |
-|---|---|
-| 2026-10-06 | Target Inventor 2026, C#, .NET 8 |
-| 2026-10-06 | Reference screenshots stay local in `ADDIN_PICS/` (gitignored); specs describe behaviour in our own words |
-| 2026-10-06 | Parent session plans and commits; `implementer` and `reviewer` subagents do and check the work |
-| 2026-10-06 | Rebrand to "AWB Addin": tab and product name "AWB Addin", id prefix `Awb`, data folder `AwbAddin`, log file `awbaddin.log`, all held in `Branding` in Core (task 010). Project, assembly and namespace names and the add-in GUID stay |
-| 2026-10-06 | Part information is edited in an add-in window, not an iLogic form. The data is stored as iProperties (spec 07) |
-| 2026-10-06 | Part numbers are assigned when the CAD file is created and are never editable in the properties window. A file with no number can have one generated; a file that has one cannot (specs 02 and 07) |
-| 2026-10-06 | Milestones reordered: part properties window is M1, numbering M2, material and finish M3, hole table M4, drawing tools M5, iLogic M6 |
-| 2026-10-06 | Distribution (installer and download page) is parked until the part number generator is planned |
