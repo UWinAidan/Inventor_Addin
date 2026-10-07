@@ -10,7 +10,7 @@ Last updated: 2026-10-07
 |---|---|---|---|
 | Foundations (M0) | 01 | **Done, tested in Inventor** | Settings, log, ribbon, error reporting, Settings and About windows, editing-command base, "AWB Addin" branding |
 | Part properties window (M1) | 07 | **Built and merged, partly tested in Inventor** | Opens on parts and assemblies, pre-fills, writes and undoes correctly. Some checklist steps not yet reported; see `TODO.md` |
-| Window style and icons (M1b) | 08 | Planned | Tasks 020 to 031. Cloud run 1 (021 to 025) can start now; the rest waits on Aidan's Windows spike, task 020 |
+| Window style and icons (M1b) | 08 | In progress | Cloud run 1 done (021 to 025): Core text and theme logic, icon drawings, build deploy line. 026 to 031 wait on Aidan's Windows spike, task 020 |
 | Part creation and numbering (M2) | 02 | Not started | Waiting on Aidan's numbering decisions |
 | Material and finish (M3) | 03 | Not started | Waiting on Aidan's finish list and a Windows spike |
 | Hole table wizard (M4) | 04 | Not started | Core half needs three answers; add-in half needs a Windows spike |
@@ -30,5 +30,5 @@ States used: Not started, Planned, In progress, Built (merged, not tested in Inv
 
 ## Numbers
 
-- Tasks finished: 19 (001 to 019)
+- Tasks finished: 24 (001 to 019, 021 to 025)
 - Core tests: see the latest task file's verification section; they run in the cloud and on Windows with `dotnet test tests/InventorAddin.Core.Tests`

@@ -6,8 +6,8 @@ Last updated: 2026-10-07
 
 ## Next up
 
-1. M1b, window style and icons (spec 08), is planned. Run cloud run 1: "Run milestone M1b following docs/WORKFLOW.md" (does 021 to 025).
-2. Aidan runs spike task 020 on Windows and commits its Results. Then cloud run 2 does 026 to 031.
+1. Aidan builds the M1b run 1 branch on Windows and checks the deploy line (task 025 checklist below), and looks at `docs/ui-mockups/ribbon-icons.png`.
+2. Aidan runs spike task 020 on Windows and commits its Results. Then cloud run 2 does 026 to 031: "Run tasks 026 to 031 following docs/WORKFLOW.md".
 3. Aidan finishes the Part Properties checks listed below.
 4. Aidan decides the numbering configuration (spec 02), then: plan M2.
 
@@ -22,6 +22,16 @@ From the Part Properties checklist (task 019). Confirmed so far: the window open
 - [ ] A new, never-saved part: header says "Not saved yet", part name blank, Apply still writes Designer and Detailer
 - [ ] Part type dropdown: the blank entry at the top can be clicked
 - [ ] With "Show developer tools" switched off and Inventor restarted: is the Developer panel gone, or does Inventor keep showing it? (open since task 007)
+
+From the build deploy line (task 025):
+
+- [ ] With Inventor closed, `dotnet build InventorAddin.slnx`: the last lines include `Deployed add-in to ...`, and About shows this build's time
+- [ ] With Inventor open, build again: the build succeeds, prints the `NOT deployed` warning and no `Deployed` line
+- [ ] `dotnet build InventorAddin.slnx -p:DeployToInventor=false`: neither line is printed
+
+From the ribbon icons (task 024):
+
+- [ ] Look at `docs/ui-mockups/ribbon-icons.png`: do the icons read, and is a light and a dark set right (spec 08, question 3)?
 
 ## Waiting on Aidan: decisions
 
