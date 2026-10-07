@@ -20,7 +20,7 @@ Requires Windows + Inventor 2026 (for `Autodesk.Inventor.Interop.dll`).
 dotnet build InventorAddin.slnx
 ```
 
-The build copies the add-in to `%APPDATA%\Autodesk\Inventor 2026\Addins` so it loads next time Inventor starts (close Inventor first). Pass `-p:DeployToInventor=false` to skip.
+The build copies the add-in to `%APPDATA%\Autodesk\Inventor 2026\Addins` so it loads next time Inventor starts (close Inventor first). Pass `-p:DeployToInventor=false` to skip. The build ends with one line saying whether it deployed: `Deployed add-in to ...`, or a `NOT deployed` warning when the files are locked because Inventor is running.
 
 `InventorAddin.Core` alone builds without Inventor: `dotnet build src/InventorAddin.Core`.
 

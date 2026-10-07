@@ -60,15 +60,26 @@
     Deploy layout:
       %APPDATA%\Autodesk\Inventor 2026\Addins\InventorAddin.addin
       %APPDATA%\Autodesk\Inventor 2026\Addins\InventorAddin\*.dll
-    Close Inventor before building or the DLL will be locked (the build still succeeds, deploy is skipped with a warning).
+    Close Inventor before building or the DLL will be locked. A locked file does not fail the build:
+    each Copy turns its error into a warning, its result is captured from MSBuildLastTaskResult,
+    and the target ends with exactly one line: "Deployed add-in to ..." (message) or "NOT deployed: ..." (warning).
+    The first Copy uses DestinationFiles with a transform rather than DestinationFolder with %(RecursiveDir),
+    so it runs once instead of once per subfolder and its result covers every file.
   -->
   <Target Name="DeployToInventor" AfterTargets="Build" Condition="'$(DeployToInventor)' == 'true' And '$(OS)' == 'Windows_NT'">
     <ItemGroup>
       <_DeployFiles Include="$(OutDir)**\*.*" Exclude="$(OutDir)InventorAddin.addin" />
     </ItemGroup>
-    <Copy SourceFiles="@(_DeployFiles)" DestinationFolder="$(InventorAddinsDir)\InventorAddin\%(RecursiveDir)" SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" />
+    <Copy SourceFiles="@(_DeployFiles)" DestinationFiles="@(_DeployFiles->'$(InventorAddinsDir)\InventorAddin\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" />
+    <PropertyGroup>
+      <_DeployFilesCopied>$(MSBuildLastTaskResult)</_DeployFilesCopied>
+    </PropertyGroup>
     <Copy SourceFiles="$(OutDir)InventorAddin.addin" DestinationFolder="$(InventorAddinsDir)" SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" />
-    <Message Importance="high" Text="Deployed add-in to $(InventorAddinsDir)" />
+    <PropertyGroup>
+      <_DeployManifestCopied>$(MSBuildLastTaskResult)</_DeployManifestCopied>
+    </PropertyGroup>
+    <Message Importance="high" Condition="'$(_DeployFilesCopied)' == 'true' And '$(_DeployManifestCopied)' == 'true'" Text="Deployed add-in to $(InventorAddinsDir). Start Inventor to load this build." />
+    <Warning Condition="'$(_DeployFilesCopied)' != 'true' Or '$(_DeployManifestCopied)' != 'true'" Text="NOT deployed: the add-in files in $(InventorAddinsDir) are locked, probably because Inventor is running. Close Inventor and build again." />
   </Target>
 
 </Project>

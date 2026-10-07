@@ -70,6 +70,7 @@ Small things noticed while building. None is urgent. The parent turns these into
 
 **Build and workflow**
 - There is no `global.json`, so the cloud and Windows may build with different .NET SDKs. Pin it if builds start to differ. (task 001)
+- With Inventor open, the deploy `Copy` may retry for about 10 s before the `NOT deployed` line appears. If that is annoying, set `Retries` low on both copies. Any copy failure is reported as a lock; the MSBuild warning above it shows the real cause. (task 025)
 
 **Ribbon and shell**
 - The agent definitions say "the AWB Addin add-in", which repeats "add-in". (task 011)
