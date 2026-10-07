@@ -6,7 +6,7 @@ Last updated: 2026-10-07
 
 ## Next up
 
-1. Aidan builds the M1b run 1 branch on Windows and checks the deploy line (task 025 checklist below), and looks at `docs/ui-mockups/ribbon-icons.png`.
+1. Aidan builds the M1b run 1 branch on Windows and checks the deploy line (task 025 checklist below).
 2. Cloud run 2 does 026 to 031 (in progress).
 3. Aidan finishes the Part Properties checks listed below.
 4. Aidan decides the numbering configuration (spec 02), then: plan M2.
@@ -29,9 +29,6 @@ From the build deploy line (task 025):
 - [ ] With Inventor open, build again: the build succeeds, prints the `NOT deployed` warning and no `Deployed` line
 - [ ] `dotnet build InventorAddin.slnx -p:DeployToInventor=false`: neither line is printed
 
-From the ribbon icons (task 024):
-
-- [ ] Look at `docs/ui-mockups/ribbon-icons.png`: do the icons read, and is a light and a dark set right (spec 08, question 3)?
 
 ## Waiting on Aidan: decisions
 
@@ -87,10 +84,7 @@ Small things noticed while building. None is urgent. The parent turns these into
 
 **Ribbon icons**
 - The deployed add-in on Aidan's PC is still the spike 020 build. Rebuild with Inventor closed to replace it. (task 020)
-- Aidan asked whether the ribbon icons could be based on his website favicon, in blue shades instead of green. Consider it when the icon set is reviewed; he is happy with other designs too. (task 020)
 - Task 030: embed only `UI/Icons/*.png`. The `.svg` sources sit in the same folder and must stay out of the build. (task 024)
-- The 32 px icons use 1.5 px strokes, so one edge of each line is half-shaded. If they look soft in Inventor, switch the 32 px drawings to 2 px strokes. (task 024)
-- Export Model Data at 16 px can read as two overlapping squares (a "copy" icon) rather than a box. Deepen the box's offset if Aidan finds it unclear in the preview. (task 024 review)
 
 **Part properties**
 - One Apply writes one log line plus one per property. Keep the summary line and log the per-property lines only on failure. (tasks 018, 019)

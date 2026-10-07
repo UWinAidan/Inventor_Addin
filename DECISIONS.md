@@ -40,3 +40,4 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-10-07 | A Core test checks window XAML against the shared-style rules (task 031) | Default | spec 08, question 8 |
 | 2026-10-07 | Windows refer to shared styles with `DynamicResource`, because `WindowHost` merges the theme after a window is built. Confirmed or replaced by spike 020 | Default | tasks 020, 026 |
 | 2026-10-07 | M1b runs in two cloud runs around the Windows spike: 021 to 025 first, 026 to 031 after the spike's results | Default | `docs/PLAN.md` |
+| 2026-10-07 | The ribbon icons stay as drawn in task 024; they are not redrawn | Aidan | task 024, spec 08 |
