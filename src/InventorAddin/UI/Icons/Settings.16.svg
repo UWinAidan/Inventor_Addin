@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#3B4350" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter" shape-rendering="crispEdges">
+  <title>Settings, 16 px: three sliders</title>
+  <line x1="1.5" y1="3.5" x2="8.5" y2="3.5"/>
+  <rect x="9.5" y="2.5" width="2" height="2"/>
+  <line x1="12.5" y1="3.5" x2="14.5" y2="3.5"/>
+  <line x1="1.5" y1="8.5" x2="3.5" y2="8.5"/>
+  <rect x="4.5" y="7.5" width="2" height="2"/>
+  <line x1="7.5" y1="8.5" x2="14.5" y2="8.5"/>
+  <line x1="1.5" y1="13.5" x2="6.5" y2="13.5"/>
+  <rect x="7.5" y="12.5" width="2" height="2"/>
+  <line x1="10.5" y1="13.5" x2="14.5" y2="13.5"/>
+</svg>

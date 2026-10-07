@@ -148,4 +148,46 @@ public sealed class AboutViewModelTests
     {
         Assert.Equal("Log folder: unknown", Create(logFolder: logFolder).LogFolderLine);
     }
+
+    [Fact]
+    public void HeaderSubline_IsVersion()
+    {
+        Assert.Equal("Version 0.1.0", Create().HeaderSubline);
+        Assert.Equal(
+            "Version 0.1.0+62a79bf41cf20c42c0cc4c8d88ee762837230799",
+            Create(version: "0.1.0+62a79bf41cf20c42c0cc4c8d88ee762837230799").HeaderSubline);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("  ")]
+    public void HeaderSubline_VersionMissing_IsVersionUnknown(string? version)
+    {
+        Assert.Equal("Version unknown", Create(version: version).HeaderSubline);
+    }
+
+    [Theory]
+    [InlineData(30, "2026")]
+    [InlineData(29, "2025")]
+    [InlineData(13, "2009")]
+    [InlineData(12, "unknown")]
+    [InlineData(0, "unknown")]
+    [InlineData(-1, "unknown")]
+    [InlineData(int.MinValue, "unknown")]
+    [InlineData(int.MaxValue, "2147485643")]
+    [InlineData(null, "unknown")]
+    public void InventorRelease_IsYearFromMajorVersion(int? major, string expected)
+    {
+        Assert.Equal(expected, Create(inventorMajorVersion: major).InventorRelease);
+    }
+
+    [Fact]
+    public void BuiltAndLogFolderRows_AreBuildDateAndLogFolder()
+    {
+        var vm = Create();
+
+        Assert.Equal("2026-10-06 15:48", vm.BuildDate);
+        Assert.Equal(LogFolder, vm.LogFolder);
+    }
 }

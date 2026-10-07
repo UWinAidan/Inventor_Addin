@@ -593,21 +593,122 @@ public sealed class SettingsViewModelTests : IDisposable
         Assert.False(vm.SaveCommand.CanExecute(null));
     }
 
-    [Fact]
-    public void ValidationError_TakesPrecedenceOverSaveError_AndSaveErrorReturnsWhenFixed()
+    // ---- Save error cleared by the next edit ----
+
+    private SettingsViewModel CreateWithFailedSave()
     {
+        // A directory where settings.json should be makes the store's final replace step fail.
         Directory.CreateDirectory(SettingsPath);
         var vm = Create();
         vm.ShowDeveloperTools = true;
         vm.SaveCommand.Execute(null);
-        var saveError = vm.ErrorText;
-        Assert.NotNull(saveError);
+        Assert.NotNull(vm.ErrorText);
+        Assert.Contains(SettingsPath, vm.ErrorText);
+        Assert.True(vm.HasError);
+        return vm;
+    }
+
+    [Fact]
+    public void EditAfterFailedSave_ClearsErrorText()
+    {
+        var vm = CreateWithFailedSave();
+
+        vm.DefaultDesigner = "A. Person";
+
+        Assert.Null(vm.ErrorText);
+        Assert.False(vm.HasError);
+        Assert.True(vm.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void EditAfterFailedSave_RaisesErrorTextAndHasErrorChanged()
+    {
+        var vm = CreateWithFailedSave();
+        var changed = RecordPropertyChanges(vm);
+
+        vm.DefaultDesigner = "A. Person";
+
+        Assert.Equal(
+            new[]
+            {
+                nameof(SettingsViewModel.DefaultDesigner),
+                nameof(SettingsViewModel.ErrorText),
+                nameof(SettingsViewModel.HasError),
+                nameof(SettingsViewModel.IsDirty),
+            },
+            changed);
+    }
+
+    [Fact]
+    public void InvalidEditAfterFailedSave_ShowsValidationError()
+    {
+        var vm = CreateWithFailedSave();
+        var changed = RecordPropertyChanges(vm);
 
         vm.DefaultDesigner = LongText(256);
+
         Assert.Equal("Default designer must be 255 characters or fewer.", vm.ErrorText);
+        Assert.True(vm.HasError);
+        // The text changed but there was an error before and after.
+        Assert.Contains(nameof(SettingsViewModel.ErrorText), changed);
+        Assert.DoesNotContain(nameof(SettingsViewModel.HasError), changed);
+    }
+
+    [Fact]
+    public void FixingInvalidEditAfterFailedSave_DoesNotBringBackSaveError()
+    {
+        var vm = CreateWithFailedSave();
+        vm.DefaultDesigner = LongText(256);
 
         vm.DefaultDesigner = "";
-        Assert.Equal(saveError, vm.ErrorText);
-        Assert.True(vm.HasError);
+
+        Assert.Null(vm.ErrorText);
+        Assert.False(vm.HasError);
+    }
+
+    [Fact]
+    public void EditBackToSavedValueAfterFailedSave_ClearsErrorText()
+    {
+        var vm = CreateWithFailedSave();
+        var changed = RecordPropertyChanges(vm);
+
+        vm.ShowDeveloperTools = false;
+
+        Assert.Null(vm.ErrorText);
+        Assert.False(vm.HasError);
+        Assert.False(vm.IsDirty);
+        Assert.Contains(nameof(SettingsViewModel.ErrorText), changed);
+        Assert.Contains(nameof(SettingsViewModel.HasError), changed);
+    }
+
+    [Fact]
+    public void SettingSameValueAfterFailedSave_KeepsErrorText()
+    {
+        var vm = CreateWithFailedSave();
+        var error = vm.ErrorText;
+
+        vm.ShowDeveloperTools = true;
+
+        Assert.Equal(error, vm.ErrorText);
+    }
+
+    // ---- Window text ----
+
+    [Fact]
+    public void Header_IsSettingsOverProductName()
+    {
+        var vm = Create();
+
+        Assert.Equal("Settings", vm.HeaderTitle);
+        Assert.Equal(Branding.ProductName, vm.HeaderSubline);
+    }
+
+    [Fact]
+    public void DefaultDesignerHelp_IsTheExplanation()
+    {
+        const string expected = "Filled in as Designer in Part Properties when a file has none.";
+
+        Assert.Equal(expected, SettingsViewModel.DefaultDesignerHelpText);
+        Assert.Equal(expected, Create().DefaultDesignerHelp);
     }
 }

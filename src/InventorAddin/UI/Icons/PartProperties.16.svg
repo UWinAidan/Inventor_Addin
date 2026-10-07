@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#3B4350" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter" shape-rendering="crispEdges">
+  <title>Part Properties, 16 px: a sheet with a folded corner and lines of text</title>
+  <polygon points="3.5,1.5 9.5,1.5 12.5,4.5 12.5,14.5 3.5,14.5"/>
+  <polyline points="9.5,1.5 9.5,4.5 12.5,4.5"/>
+  <line x1="5.5" y1="7.5" x2="10.5" y2="7.5"/>
+  <line x1="5.5" y1="9.5" x2="10.5" y2="9.5"/>
+  <line x1="5.5" y1="11.5" x2="8.5" y2="11.5"/>
+</svg>

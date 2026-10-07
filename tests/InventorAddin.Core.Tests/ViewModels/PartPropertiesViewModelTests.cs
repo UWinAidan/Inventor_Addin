@@ -141,6 +141,103 @@ public sealed class PartPropertiesViewModelTests
         Assert.Equal(expected, vm.FileName);
     }
 
+    // Display text for the restyled window (spec 08)
+
+    [Theory]
+    [InlineData(@"C:\Work\Bracket.ipt", DocumentKind.Part, "Bracket", "Part · Bracket.ipt")]
+    [InlineData(@"C:\Work\Cover.ipt", DocumentKind.SheetMetalPart, "Cover", "Sheet metal part · Cover.ipt")]
+    [InlineData(@"C:\Work\Gearbox.iam", DocumentKind.Assembly, "Gearbox", "Assembly · Gearbox.iam")]
+    [InlineData(@"C:\Work\Frame.v2.iam", DocumentKind.WeldmentAssembly, "Frame.v2", "Weldment · Frame.v2.iam")]
+    [InlineData("", DocumentKind.Part, "New part", "Part · Not saved yet")]
+    [InlineData("  ", DocumentKind.SheetMetalPart, "New sheet metal part", "Sheet metal part · Not saved yet")]
+    [InlineData("", DocumentKind.Assembly, "New assembly", "Assembly · Not saved yet")]
+    [InlineData("", DocumentKind.WeldmentAssembly, "New weldment", "Weldment · Not saved yet")]
+    [InlineData("", DocumentKind.Unknown, "New document", "Document · Not saved yet")]
+    public void Header_TitleAndSubline(string fullFileName, DocumentKind kind, string title, string subline)
+    {
+        var vm = Create(Blank(kind) with { FullFileName = fullFileName });
+
+        Assert.Equal(title, vm.HeaderTitle);
+        Assert.Equal(subline, vm.HeaderSubline);
+    }
+
+    [Fact]
+    public void HeaderSubline_SeparatorIsSpaceMiddleDotSpace()
+    {
+        var vm = Create(Complete());
+
+        Assert.Equal("Part\u0020\u00B7\u0020Bracket.ipt", vm.HeaderSubline);
+        Assert.Equal(" \u00B7 ", PartPropertiesViewModel.HeaderSeparator);
+    }
+
+    [Theory]
+    [InlineData(@"C:\Work\Bracket.ipt", "PN-0001", "PN-0001", true)]
+    [InlineData(@"C:\Work\Bracket.ipt", "  PN-0001  ", "PN-0001", true)]
+    [InlineData(@"C:\Work\Bracket.ipt", "Bracket", "Not assigned", false)]
+    [InlineData(@"C:\Work\Bracket.ipt", " BRACKET ", "Not assigned", false)]
+    [InlineData(@"C:\Work\Bracket.ipt", "", "Not assigned", false)]
+    [InlineData(@"C:\Work\Bracket.ipt", null, "Not assigned", false)]
+    [InlineData(@"C:\Work\Gearbox.iam", "Gearbox", "Not assigned", false)]
+    [InlineData("", "Part1", "Part1", true)]
+    [InlineData("", "", "Not assigned", false)]
+    public void PartNumberDisplay_ShowsNumberOrNotAssigned(
+        string fullFileName, string? partNumber, string expected, bool assigned)
+    {
+        var vm = Create(Blank() with { FullFileName = fullFileName, PartNumber = partNumber });
+
+        Assert.Equal(expected, vm.PartNumberDisplay);
+        Assert.Equal(assigned, vm.IsPartNumberAssigned);
+    }
+
+    [Fact]
+    public void PartNumberDisplay_LeavesPartNumberAsRead()
+    {
+        var vm = Create(Blank() with { PartNumber = "Bracket" });
+
+        Assert.Equal("Bracket", vm.PartNumber);
+        Assert.Equal(PartNumberDisplay.NotAssignedText, vm.PartNumberDisplay);
+    }
+
+    [Theory]
+    [InlineData("Test Steel", "Test Steel", true)]
+    [InlineData("  Test Steel  ", "Test Steel", true)]
+    [InlineData("", "Not set", false)]
+    [InlineData("   ", "Not set", false)]
+    [InlineData(null, "Not set", false)]
+    public void MaterialAndFinishDisplay_ShowValueOrNotSet(string? value, string expected, bool isSet)
+    {
+        var vm = Create(Blank() with { Material = value, Finish = value });
+
+        Assert.Equal(expected, vm.MaterialDisplay);
+        Assert.Equal(isSet, vm.IsMaterialSet);
+        Assert.Equal(expected, vm.FinishDisplay);
+        Assert.Equal(isSet, vm.IsFinishSet);
+    }
+
+    [Fact]
+    public void MaterialAndFinishDisplay_AreIndependent()
+    {
+        var vm = Create(Blank() with { Material = "Test Steel", Finish = null });
+
+        Assert.Equal("Test Steel", vm.MaterialDisplay);
+        Assert.True(vm.IsMaterialSet);
+        Assert.Equal(PartPropertiesViewModel.NotSetText, vm.FinishDisplay);
+        Assert.False(vm.IsFinishSet);
+    }
+
+    [Fact]
+    public void DisplayText_ForAnEmptySnapshot()
+    {
+        var vm = Create(new PartPropertiesSnapshot { EditBlock = EditBlock.ReadOnlyFile });
+
+        Assert.Equal("New document", vm.HeaderTitle);
+        Assert.Equal("Document · Not saved yet", vm.HeaderSubline);
+        Assert.Equal("Not assigned", vm.PartNumberDisplay);
+        Assert.False(vm.IsPartNumberAssigned);
+        Assert.Equal("Not set", vm.MaterialDisplay);
+        Assert.Equal("Not set", vm.FinishDisplay);
+    }
+
     [Fact]
     public void PartTypeOptions_BlankThenTheList()
     {

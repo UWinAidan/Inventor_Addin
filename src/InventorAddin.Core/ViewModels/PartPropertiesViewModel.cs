@@ -37,6 +37,9 @@ public sealed class PartPropertiesViewModel : ObservableObject
 {
     public const string NotSavedFileName = "Not saved yet";
     public const string NoWeightText = "-";
+    public const string NotSetText = "Not set";
+    public const string NewFileTitlePrefix = "New ";
+    public const string HeaderSeparator = " · ";
     public const string PreFillNotice = "Pre-filled values will be written when you apply.";
     public const string SavedNotice = "Saved to the file. Save the document to keep the changes.";
     public const string WriteErrorPrefix = "Could not write the properties: ";
@@ -94,6 +97,24 @@ public sealed class PartPropertiesViewModel : ObservableObject
         Material = snapshot.Material ?? string.Empty;
         Finish = snapshot.Finish ?? string.Empty;
         Weight = snapshot.WeightDisplay ?? NoWeightText;
+
+        // Display text for the restyled window (spec 08). The never-saved title and subline are defaults
+        // (spec 08, open question 4).
+        var saved = !string.IsNullOrWhiteSpace(snapshot.FullFileName);
+        var kindName = DocumentKindNames.For(snapshot.DocumentKind);
+        HeaderTitle = saved ? PartName : NewFileTitlePrefix + kindName.ToLowerInvariant();
+        HeaderSubline = kindName + HeaderSeparator + FileName;
+
+        // PartProperties.PartNumberDisplay: the property of the same name hides the class here.
+        IsPartNumberAssigned = PartProperties.PartNumberDisplay.IsAssigned(snapshot.PartNumber, snapshot.FullFileName);
+        PartNumberDisplay = IsPartNumberAssigned
+            ? PropertyValues.NormaliseText(snapshot.PartNumber)
+            : PartProperties.PartNumberDisplay.NotAssignedText;
+
+        MaterialDisplay = DisplayOrNotSet(snapshot.Material, out var materialSet);
+        IsMaterialSet = materialSet;
+        FinishDisplay = DisplayOrNotSet(snapshot.Finish, out var finishSet);
+        IsFinishSet = finishSet;
 
         // Part type: listed codes in the list's spelling; anything else kept as the file holds it.
         var fileType = PropertyValues.NormaliseText(snapshot.PartType);
@@ -154,6 +175,40 @@ public sealed class PartPropertiesViewModel : ObservableObject
 
     /// <summary>The mass in the document's units, or <see cref="NoWeightText"/> when it could not be read.</summary>
     public string Weight { get; }
+
+    // Display text for the restyled window (spec 08). Each "Is...Set" flag is false when the window shows
+    // placeholder text, so it can use the placeholder colour.
+
+    /// <summary>
+    /// The header title: <see cref="PartName"/> for a saved file; for a never-saved file "New " and the kind name
+    /// in lower case, for example <c>New sheet metal part</c>.
+    /// </summary>
+    public string HeaderTitle { get; }
+
+    /// <summary>
+    /// The line under the header title: the kind name, a middle dot, and <see cref="FileName"/>, for example
+    /// <c>Assembly · Gearbox.iam</c> or <c>Part · Not saved yet</c>.
+    /// </summary>
+    public string HeaderSubline { get; }
+
+    /// <summary>
+    /// The Part Number trimmed, or <see cref="PartProperties.PartNumberDisplay.NotAssignedText"/> when
+    /// <see cref="IsPartNumberAssigned"/> is false.
+    /// </summary>
+    public string PartNumberDisplay { get; }
+
+    /// <summary>The result of <see cref="PartProperties.PartNumberDisplay.IsAssigned"/> for this file.</summary>
+    public bool IsPartNumberAssigned { get; }
+
+    /// <summary>The material trimmed, or <see cref="NotSetText"/> when blank.</summary>
+    public string MaterialDisplay { get; }
+
+    public bool IsMaterialSet { get; }
+
+    /// <summary>The finish trimmed, or <see cref="NotSetText"/> when blank.</summary>
+    public string FinishDisplay { get; }
+
+    public bool IsFinishSet { get; }
 
     /// <summary>False when the file cannot be edited; every editable field binds its enabled state to this.</summary>
     public bool IsEditable { get; }
@@ -310,6 +365,13 @@ public sealed class PartPropertiesViewModel : ObservableObject
             return NotSavedFileName;
 
         return fullFileName[(fullFileName.LastIndexOfAny(new[] { '\\', '/' }) + 1)..];
+    }
+
+    private static string DisplayOrNotSet(string? value, out bool isSet)
+    {
+        var text = PropertyValues.NormaliseText(value);
+        isSet = text.Length > 0;
+        return isSet ? text : NotSetText;
     }
 
     private string? Validate()

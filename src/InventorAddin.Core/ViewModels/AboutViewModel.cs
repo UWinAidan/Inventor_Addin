@@ -12,6 +12,12 @@ public sealed class AboutViewModel : ObservableObject
     public const string Unknown = "unknown";
     public const string BuildDateFormat = "yyyy-MM-dd HH:mm";
 
+    /// <summary>Inventor's major version plus this gives its release year (30 is Inventor 2026).</summary>
+    public const int ReleaseYearOffset = 1996;
+
+    /// <summary>The first major version the year mapping holds for: 13, Inventor 2009.</summary>
+    public const int FirstYearNamedMajorVersion = 13;
+
     /// <param name="version">The add-in's informational version, shown as is (it may carry a <c>+commit</c> suffix).</param>
     /// <param name="buildDate">The UTC build time in ISO 8601, or null. An unparseable value shows as "unknown".</param>
     /// <param name="inventorMajorVersion">Inventor's major version (30 for Inventor 2026), or null when it could not be read.</param>
@@ -27,6 +33,7 @@ public sealed class AboutViewModel : ObservableObject
         Version = OrUnknown(version);
         BuildDate = FormatBuildDate(buildDate, timeZone ?? TimeZoneInfo.Local);
         InventorVersion = inventorMajorVersion?.ToString(CultureInfo.InvariantCulture) ?? Unknown;
+        InventorRelease = FormatRelease(inventorMajorVersion);
         LogFolder = OrUnknown(logFolder);
     }
 
@@ -38,6 +45,15 @@ public sealed class AboutViewModel : ObservableObject
     public string BuildDate { get; }
 
     public string InventorVersion { get; }
+
+    /// <summary>
+    /// Inventor's release year (2026 for major version 30), or "unknown" when the major version could not
+    /// be read or is older than Inventor 2009. Shown in the row labelled "Inventor version".
+    /// </summary>
+    public string InventorRelease { get; }
+
+    /// <summary>The line under the header title.</summary>
+    public string HeaderSubline => $"Version {Version}";
 
     public string LogFolder { get; }
 
@@ -51,6 +67,11 @@ public sealed class AboutViewModel : ObservableObject
 
     private static string OrUnknown(string? value) =>
         string.IsNullOrWhiteSpace(value) ? Unknown : value.Trim();
+
+    private static string FormatRelease(int? majorVersion) =>
+        majorVersion is int major && major >= FirstYearNamedMajorVersion
+            ? ((long)major + ReleaseYearOffset).ToString(CultureInfo.InvariantCulture)
+            : Unknown;
 
     private static string FormatBuildDate(string? buildDate, TimeZoneInfo timeZone)
     {
