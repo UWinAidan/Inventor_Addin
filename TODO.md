@@ -82,6 +82,7 @@ Small things noticed while building. None is urgent. The parent turns these into
 - `PartPropertiesViewModel.Ok()` has no guard for invalid values when called from code. The window cannot reach it today. (task 016)
 - Correcting a part type's case shows the "pre-filled values" wording, which is not quite accurate for it. (task 016)
 - Number parsing accepts oddly placed group separators, so `1,2,3` reads as 123. Tighten only if it confuses anyone. (task 013)
+- `DocumentKindNames` and `PartPropertiesViewModel.HeaderSeparator` exist in Core; the window headers in 026 to 029 should reuse them rather than repeat the strings. (task 022)
 
 **Developer tools**
 - JSON exports include `BoundingBox` lengths, which are derived values. Mark them ignored if exports should not carry them. (task 001)
