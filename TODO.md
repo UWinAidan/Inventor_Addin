@@ -6,10 +6,9 @@ Last updated: 2026-10-07
 
 ## Next up
 
-1. Aidan builds the M1b run 1 branch on Windows and checks the deploy line (task 025 checklist below).
-2. Cloud run 2 does 026 to 031 (in progress).
-3. Aidan finishes the Part Properties checks listed below.
-4. Aidan decides the numbering configuration (spec 02), then: plan M2.
+1. Aidan builds the M1b run 2 branch (`claude/tasks-026-to-031-e9rrxe`) on Windows with Inventor closed, fixes any compile errors, and works through the window style and icon checks below. The build also replaces the spike 020 build still deployed.
+2. Aidan finishes the Part Properties checks listed below.
+3. Aidan decides the numbering configuration (spec 02), then: plan M2.
 
 ## Waiting on Aidan: checks in Inventor
 
@@ -28,6 +27,17 @@ From the build deploy line (task 025):
 - [ ] With Inventor closed, `dotnet build InventorAddin.slnx`: the last lines include `Deployed add-in to ...`, and About shows this build's time
 - [ ] With Inventor open, build again: the build succeeds, prints the `NOT deployed` warning and no `Deployed` line
 - [ ] `dotnet build InventorAddin.slnx -p:DeployToInventor=false`: neither line is printed
+
+From the window style and icons (tasks 026 to 031; full steps in each task file and in the pull request):
+
+- [ ] The add-in builds on Windows (first build of 026 to 030; needs `stdole.dll` in Inventor's `Bin` folder)
+- [ ] `dotnet test tests/InventorAddin.Core.Tests` passes on Windows (the XAML rules test from 031 finds files by path)
+- [ ] About, Settings and Part Properties in the light and the dark theme: shared header, sections and footer, colours as in spec 08, dark title bar in dark, no dark-on-dark text (tasks 026, 028, 029)
+- [ ] Keyboard: Tab order, access keys, Enter and Esc, and the accent focus outline in each window (026, 028, 029)
+- [ ] Part Properties: Not assigned and Not set placeholders, the part type dropdown and its side note and tooltip, the blank entry clickable, no empty band above the buttons (029)
+- [ ] A new, never-saved part: record what the Part number row shows (spec 08, question 5) (029)
+- [ ] Ribbon icons in both themes (restart after switching), with no white edge in dark; header icons in each window; one `INFO` line naming the icon set and no icon warnings in the log (030)
+- [ ] Section headings: does the hair-space letter spacing read as wide spacing? (026)
 
 
 ## Waiting on Aidan: decisions
