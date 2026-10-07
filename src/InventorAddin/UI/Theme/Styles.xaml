@@ -21,7 +21,12 @@
         <Setter Property="SizeToContent" Value="WidthAndHeight" />
         <Setter Property="ResizeMode" Value="NoResize" />
         <Setter Property="ShowInTaskbar" Value="False" />
-        <Setter Property="UseLayoutRounding" Value="True" />
+        <!--
+            No UseLayoutRounding. Seen in Inventor 2026 at 150% display scale: with it on, a row whose bottom gap is an
+            odd number (9 is 13.5 pixels) came out one pixel shorter than the 30-high control inside it, and the row
+            cut off the bottom border of every text box and dropdown. Pixel snapping keeps the lines sharp instead.
+        -->
+        <Setter Property="SnapsToDevicePixels" Value="True" />
     </Style>
 
     <!-- The window's root panel: the content padding (22 left and right, 18 top and bottom) and the width range. -->
@@ -246,8 +251,8 @@
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="4"
                             SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+                        <!-- No Margin from Padding here: WPF passes a text box's Padding to this ScrollViewer itself, so adding it again doubles the indent. -->
                         <ScrollViewer x:Name="PART_ContentHost"
-                                      Margin="{TemplateBinding Padding}"
                                       VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                       Focusable="False"
                                       HorizontalScrollBarVisibility="Hidden"
