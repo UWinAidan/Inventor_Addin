@@ -94,7 +94,7 @@ Planned 2026-10-07. Run in number order; each task depends only on lower numbers
 | 031 | cloud | 026 to 030 | none |
 
 - [ ] 020 Spike: theme, shared styles and icons inside Inventor (Windows)
-- [ ] 021 Theme choice and ribbon icon names (Core)
+- [x] 021 Theme choice and ribbon icon names (Core)
 - [ ] 022 Part Properties display text (Core)
 - [ ] 023 Settings and About view-model text (Core)
 - [ ] 024 Ribbon icon drawings

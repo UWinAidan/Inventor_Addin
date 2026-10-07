@@ -42,8 +42,11 @@ public enum ButtonSize
     Large,
 }
 
-/// <summary>A button on a panel: the internal name of the command it runs, and its size.</summary>
-public sealed record ButtonLayout(string CommandInternalName, ButtonSize Size);
+/// <summary>
+/// A button on a panel: the internal name of the command it runs, its size, and the name of its icon
+/// (one of <see cref="IconNames"/>, a plain file-name stem the add-in builds the image file names from).
+/// </summary>
+public sealed record ButtonLayout(string CommandInternalName, ButtonSize Size, string IconName);
 
 /// <summary>
 /// A ribbon panel: internal id, display name and its buttons in display order.
@@ -82,4 +85,18 @@ public static class CommandNames
     public const string PartProperties = Prefix + "PartProperties";
 
     private const string Prefix = Branding.IdPrefix + "_";
+}
+
+/// <summary>
+/// Icon names for the ribbon buttons, one per command (spec 08, "Ribbon icons").
+/// Each is the command name without the <c>Awb_</c> prefix, so it is a plain file-name stem;
+/// the add-in adds the size and theme to find the image.
+/// </summary>
+public static class IconNames
+{
+    public const string PartProperties = "PartProperties";
+    public const string Settings = "Settings";
+    public const string About = "About";
+    public const string ExportModelData = "ExportModelData";
+    public const string ExportLibraries = "ExportLibraries";
 }

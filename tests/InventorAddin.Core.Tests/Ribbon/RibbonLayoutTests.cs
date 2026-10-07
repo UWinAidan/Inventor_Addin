@@ -87,9 +87,9 @@ public sealed class RibbonLayoutTests
         Assert.Equal(
             new[]
             {
-                new ButtonLayout($"{Branding.IdPrefix}_PartProperties", ButtonSize.Small),
-                new ButtonLayout($"{Branding.IdPrefix}_Settings", ButtonSize.Small),
-                new ButtonLayout($"{Branding.IdPrefix}_About", ButtonSize.Small),
+                new ButtonLayout($"{Branding.IdPrefix}_PartProperties", ButtonSize.Small, IconNames.PartProperties),
+                new ButtonLayout($"{Branding.IdPrefix}_Settings", ButtonSize.Small, IconNames.Settings),
+                new ButtonLayout($"{Branding.IdPrefix}_About", ButtonSize.Small, IconNames.About),
             },
             panel.Buttons);
     }
@@ -106,8 +106,8 @@ public sealed class RibbonLayoutTests
         Assert.Equal(
             new[]
             {
-                new ButtonLayout($"{Branding.IdPrefix}_Settings", ButtonSize.Small),
-                new ButtonLayout($"{Branding.IdPrefix}_About", ButtonSize.Small),
+                new ButtonLayout($"{Branding.IdPrefix}_Settings", ButtonSize.Small, IconNames.Settings),
+                new ButtonLayout($"{Branding.IdPrefix}_About", ButtonSize.Small, IconNames.About),
             },
             panel.Buttons);
     }
@@ -182,8 +182,8 @@ public sealed class RibbonLayoutTests
         Assert.Equal(
             new[]
             {
-                new ButtonLayout($"{Branding.IdPrefix}_ExportModelData", ButtonSize.Small),
-                new ButtonLayout($"{Branding.IdPrefix}_ExportLibraries", ButtonSize.Small),
+                new ButtonLayout($"{Branding.IdPrefix}_ExportModelData", ButtonSize.Small, IconNames.ExportModelData),
+                new ButtonLayout($"{Branding.IdPrefix}_ExportLibraries", ButtonSize.Small, IconNames.ExportLibraries),
             },
             panel.Buttons);
     }
@@ -196,7 +196,7 @@ public sealed class RibbonLayoutTests
         Assert.Equal($"id_Panel_{Branding.IdPrefix}_Dev", panel.Id);
         Assert.Equal("Developer", panel.DisplayName);
         Assert.Equal(
-            new[] { new ButtonLayout($"{Branding.IdPrefix}_ExportLibraries", ButtonSize.Small) },
+            new[] { new ButtonLayout($"{Branding.IdPrefix}_ExportLibraries", ButtonSize.Small, IconNames.ExportLibraries) },
             panel.Buttons);
     }
 
@@ -254,6 +254,58 @@ public sealed class RibbonLayoutTests
             .ToList();
 
         Assert.Equal(names.Count, names.Distinct().Count());
+    }
+
+    [Theory]
+    [MemberData(nameof(EveryEnvironmentAndSetting))]
+    public void EveryButton_HasAnIconName(RibbonEnvironment environment, bool showDeveloperTools)
+    {
+        Assert.All(
+            RibbonLayout.For(environment, showDeveloperTools).SelectMany(p => p.Buttons),
+            b => Assert.False(string.IsNullOrWhiteSpace(b.IconName), $"{b.CommandInternalName} has no icon name."));
+    }
+
+    [Theory]
+    [InlineData(CommandNames.PartProperties, IconNames.PartProperties)]
+    [InlineData(CommandNames.Settings, IconNames.Settings)]
+    [InlineData(CommandNames.About, IconNames.About)]
+    [InlineData(CommandNames.ExportModelData, IconNames.ExportModelData)]
+    [InlineData(CommandNames.ExportLibraries, IconNames.ExportLibraries)]
+    public void EachCommand_UsesItsIconName_InEveryEnvironment(string command, string iconName)
+    {
+        var buttons = RibbonEnvironments.All
+            .SelectMany(e => RibbonLayout.For(e, showDeveloperTools: true))
+            .SelectMany(p => p.Buttons)
+            .Where(b => b.CommandInternalName == command)
+            .ToList();
+
+        Assert.NotEmpty(buttons);
+        Assert.All(buttons, b => Assert.Equal(iconName, b.IconName));
+    }
+
+    [Fact]
+    public void IconNames_AreCommandNamesWithoutPrefix()
+    {
+        string prefix = Branding.IdPrefix + "_";
+        Assert.Equal(CommandNames.PartProperties, prefix + IconNames.PartProperties);
+        Assert.Equal(CommandNames.Settings, prefix + IconNames.Settings);
+        Assert.Equal(CommandNames.About, prefix + IconNames.About);
+        Assert.Equal(CommandNames.ExportModelData, prefix + IconNames.ExportModelData);
+        Assert.Equal(CommandNames.ExportLibraries, prefix + IconNames.ExportLibraries);
+    }
+
+    [Fact]
+    public void IconNames_AreDistinct()
+    {
+        var iconNames = RibbonEnvironments.All
+            .SelectMany(e => RibbonLayout.For(e, showDeveloperTools: true))
+            .SelectMany(p => p.Buttons)
+            .GroupBy(b => b.CommandInternalName)
+            .Select(g => g.First().IconName)
+            .ToList();
+
+        Assert.Equal(5, iconNames.Count);
+        Assert.Equal(iconNames.Count, iconNames.Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
 
     [Fact]

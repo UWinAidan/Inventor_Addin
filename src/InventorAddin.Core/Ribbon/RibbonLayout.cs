@@ -10,7 +10,7 @@ namespace InventorAddin.Core.Ribbon;
 /// </remarks>
 public static class RibbonLayout
 {
-    private sealed record ButtonDefinition(string CommandInternalName, ButtonSize Size, RibbonEnvironment[] Environments);
+    private sealed record ButtonDefinition(string CommandInternalName, ButtonSize Size, string IconName, RibbonEnvironment[] Environments);
 
     private sealed record PanelDefinition(string Id, string DisplayName, bool DeveloperOnly, ButtonDefinition[] Buttons);
 
@@ -34,16 +34,16 @@ public static class RibbonLayout
         new(RibbonIds.CadAutomationPanelId, RibbonIds.CadAutomationPanelName, DeveloperOnly: false, new ButtonDefinition[]
         {
             // Spec 07: parts and assemblies only, not drawings and not with no document open.
-            new(CommandNames.PartProperties, ButtonSize.Small, ModelEnvironments),
+            new(CommandNames.PartProperties, ButtonSize.Small, IconNames.PartProperties, ModelEnvironments),
             // ZeroDoc gets no Settings or About button until spec 01 open question 4 is answered.
-            new(CommandNames.Settings, ButtonSize.Small, DocumentEnvironments),
-            new(CommandNames.About, ButtonSize.Small, DocumentEnvironments),
+            new(CommandNames.Settings, ButtonSize.Small, IconNames.Settings, DocumentEnvironments),
+            new(CommandNames.About, ButtonSize.Small, IconNames.About, DocumentEnvironments),
         }),
         new(RibbonIds.DrawingToolsPanelId, RibbonIds.DrawingToolsPanelName, DeveloperOnly: false, Array.Empty<ButtonDefinition>()),
         new(RibbonIds.DeveloperPanelId, RibbonIds.DeveloperPanelName, DeveloperOnly: true, new ButtonDefinition[]
         {
-            new(CommandNames.ExportModelData, ButtonSize.Small, DocumentEnvironments),
-            new(CommandNames.ExportLibraries, ButtonSize.Small, AllEnvironments),
+            new(CommandNames.ExportModelData, ButtonSize.Small, IconNames.ExportModelData, DocumentEnvironments),
+            new(CommandNames.ExportLibraries, ButtonSize.Small, IconNames.ExportLibraries, AllEnvironments),
         }),
     };
 
@@ -64,7 +64,7 @@ public static class RibbonLayout
 
             var buttons = panel.Buttons
                 .Where(b => b.Environments.Contains(environment))
-                .Select(b => new ButtonLayout(b.CommandInternalName, b.Size))
+                .Select(b => new ButtonLayout(b.CommandInternalName, b.Size, b.IconName))
                 .ToArray();
 
             if (buttons.Length > 0)
