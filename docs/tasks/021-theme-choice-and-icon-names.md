@@ -2,7 +2,7 @@
 
 - **Milestone:** M1b
 - **Feature spec:** `docs/features/08-window-style.md` (Following Inventor's theme; Ribbon icons; Core logic)
-- **Status:** todo
+- **Status:** done
 - **Depends on:** none
 - **Needs:** cloud
 - **Parallel-safe with:** 022, 023, 024, 025
@@ -51,10 +51,10 @@ Icon names
 
 Filled in by the implementer.
 
-- **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):** none expected
-- **Inventor API members not confirmed:** none
-- **Manual checklist for Inventor:** none (covered by 026 and 030)
+- **Ran:** `dotnet build src/InventorAddin.Core`: 0 warnings, 0 errors. `dotnet test tests/InventorAddin.Core.Tests`: 586 passed, 0 failed, 0 skipped (cloud session).
+- **Not compiled (changed under `src/InventorAddin`):** none. Searched the add-in for `ButtonLayout`: `UI/RibbonSetup.cs` only iterates `panelLayout.Buttons` and reads `Size`; nothing outside Core constructs a `ButtonLayout`, so the new parameter needs no add-in change.
+- **Inventor API members not confirmed:** none (no Inventor API used)
+- **Manual checklist for Inventor:** none (covered by 026 and 030). The ribbon is unchanged in Inventor by this task.
 
 ## Follow-ups
 
