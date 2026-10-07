@@ -91,9 +91,7 @@ public sealed class PartPropertiesViewModel : ObservableObject
         IsEditable = snapshot.EditBlock == EditBlock.None;
         EditBlockMessage = PartPropertiesSnapshot.EditBlockMessage(snapshot.EditBlock);
 
-        FileName = FileNameFrom(snapshot.FullFileName);
         PartNumber = snapshot.PartNumber ?? string.Empty;
-        PartName = PartProperties.PartName.FromFileName(snapshot.FullFileName);
         Material = snapshot.Material ?? string.Empty;
         Finish = snapshot.Finish ?? string.Empty;
         Weight = snapshot.WeightDisplay ?? NoWeightText;
@@ -102,8 +100,10 @@ public sealed class PartPropertiesViewModel : ObservableObject
         // (spec 08, open question 4).
         var saved = !string.IsNullOrWhiteSpace(snapshot.FullFileName);
         var kindName = DocumentKindNames.For(snapshot.DocumentKind);
-        HeaderTitle = saved ? PartName : NewFileTitlePrefix + kindName.ToLowerInvariant();
-        HeaderSubline = kindName + HeaderSeparator + FileName;
+        HeaderTitle = saved
+            ? PartName.FromFileName(snapshot.FullFileName)
+            : NewFileTitlePrefix + kindName.ToLowerInvariant();
+        HeaderSubline = kindName + HeaderSeparator + FileNameFrom(snapshot.FullFileName);
 
         // PartProperties.PartNumberDisplay: the property of the same name hides the class here.
         IsPartNumberAssigned = PartProperties.PartNumberDisplay.IsAssigned(snapshot.PartNumber, snapshot.FullFileName);
@@ -161,13 +161,7 @@ public sealed class PartPropertiesViewModel : ObservableObject
 
     // Read-only display.
 
-    /// <summary>The header: the file name with its extension, or <see cref="NotSavedFileName"/>.</summary>
-    public string FileName { get; }
-
     public string PartNumber { get; }
-
-    /// <summary>The file name without its extension; blank for a never-saved file.</summary>
-    public string PartName { get; }
 
     public string Material { get; }
 
@@ -180,13 +174,14 @@ public sealed class PartPropertiesViewModel : ObservableObject
     // placeholder text, so it can use the placeholder colour.
 
     /// <summary>
-    /// The header title: <see cref="PartName"/> for a saved file; for a never-saved file "New " and the kind name
-    /// in lower case, for example <c>New sheet metal part</c>.
+    /// The header title: the file name without its extension (<see cref="PartName.FromFileName"/>) for a saved
+    /// file; for a never-saved file "New " and the kind name in lower case, for example <c>New sheet metal part</c>.
     /// </summary>
     public string HeaderTitle { get; }
 
     /// <summary>
-    /// The line under the header title: the kind name, a middle dot, and <see cref="FileName"/>, for example
+    /// The line under the header title: the kind name (<see cref="DocumentKindNames"/>), <see cref="HeaderSeparator"/>,
+    /// and the file name with its extension or <see cref="NotSavedFileName"/>, for example
     /// <c>Assembly · Gearbox.iam</c> or <c>Part · Not saved yet</c>.
     /// </summary>
     public string HeaderSubline { get; }
@@ -239,12 +234,19 @@ public sealed class PartPropertiesViewModel : ObservableObject
             _partType = normalised;
             OnPropertyChanged();
             OnPropertyChanged(nameof(PartTypeFullName));
+            OnPropertyChanged(nameof(PartTypeToolTip));
             OnEditChanged();
         }
     }
 
-    /// <summary>The full name of <see cref="PartType"/>, for the field's tooltip.</summary>
+    /// <summary>The full name of <see cref="PartType"/>, shown beside the dropdown; empty for a blank code.</summary>
     public string PartTypeFullName => PartTypes.FullNameFor(_partType);
+
+    /// <summary>
+    /// The dropdown's tooltip: <see cref="PartTypeFullName"/>, or null for a blank code so the window shows no
+    /// tooltip rather than an empty one.
+    /// </summary>
+    public string? PartTypeToolTip => _partType.Length == 0 ? null : PartTypeFullName;
 
     /// <summary>The designer as typed. While the Detailer follows, setting this sets the Detailer too.</summary>
     public string Designer
