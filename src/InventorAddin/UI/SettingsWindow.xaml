@@ -16,7 +16,9 @@
         as its control would centre the row's label on the pair instead of on the control.
     -->
     <StackPanel Style="{DynamicResource DialogContent}">
-        <controls:DialogHeader Title="{Binding HeaderTitle, Mode=OneTime}"
+        <!-- The header icon is put in the window's resources by WindowHost (HeaderIcon), in the window's theme. -->
+        <controls:DialogHeader Icon="{DynamicResource HeaderIcon}"
+                               Title="{Binding HeaderTitle, Mode=OneTime}"
                                Subline="{Binding HeaderSubline, Mode=OneTime}" />
 
         <controls:FormSection Heading="General">

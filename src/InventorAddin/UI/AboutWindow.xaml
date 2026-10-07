@@ -12,7 +12,9 @@
         DialogWindow style so the window still sizes to its content if the shared styles fail to load.
     -->
     <StackPanel Style="{DynamicResource DialogContent}">
-        <controls:DialogHeader Title="{Binding Title, Mode=OneTime}"
+        <!-- The header icon is put in the window's resources by WindowHost (HeaderIcon), in the window's theme. -->
+        <controls:DialogHeader Icon="{DynamicResource HeaderIcon}"
+                               Title="{Binding Title, Mode=OneTime}"
                                Subline="{Binding HeaderSubline, Mode=OneTime}" />
 
         <controls:FormSection>

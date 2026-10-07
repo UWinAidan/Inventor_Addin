@@ -27,7 +27,10 @@ namespace InventorAddin.UI.Controls
             KeyboardNavigation.IsTabStopProperty.OverrideMetadata(typeof(DialogHeader), new FrameworkPropertyMetadata(false));
         }
 
-        /// <summary>The picture in the icon tile. Empty until the header icons are added (task 030); the tile is drawn either way.</summary>
+        /// <summary>
+        /// The picture in the icon tile. Windows bind it to the <c>HeaderIcon</c> resource that <c>WindowHost</c> supplies;
+        /// when it is null the tile is drawn empty.
+        /// </summary>
         public ImageSource? Icon
         {
             get => (ImageSource?)GetValue(IconProperty);

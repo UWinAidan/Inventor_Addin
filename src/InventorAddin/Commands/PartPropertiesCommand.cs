@@ -40,7 +40,7 @@ namespace InventorAddin.Commands
                 CultureInfo.CurrentCulture,
                 AddinServices.Log);
 
-            WindowHost.ShowDialog(new PartPropertiesWindow(viewModel));
+            WindowHost.ShowDialog(new PartPropertiesWindow(viewModel), IconNames.PartProperties);
         }
 
         /// <summary>Not used: <see cref="Run"/> writes through <see cref="TransactionWriteTarget"/> instead.</summary>

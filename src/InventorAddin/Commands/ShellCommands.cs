@@ -30,7 +30,7 @@ namespace InventorAddin.Commands
             }
 
             var viewModel = new SettingsViewModel(AddinServices.Settings, new SettingsStore(folder), AddinServices.Log);
-            WindowHost.ShowDialog(new SettingsWindow(viewModel));
+            WindowHost.ShowDialog(new SettingsWindow(viewModel), IconNames.Settings);
 
             // Set only by a successful save; null after Cancel or closing the window.
             AddinSettings? saved = viewModel.SavedSettings;
@@ -60,7 +60,7 @@ namespace InventorAddin.Commands
             string? logFolder = logFilePath == null ? null : IOPath.GetDirectoryName(logFilePath);
 
             var viewModel = new AboutViewModel(version, buildDate, inventorMajor, logFolder);
-            WindowHost.ShowDialog(new AboutWindow(viewModel));
+            WindowHost.ShowDialog(new AboutWindow(viewModel), IconNames.About);
         }
     }
 }
