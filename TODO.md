@@ -7,7 +7,7 @@ Last updated: 2026-10-07
 ## Next up
 
 1. Aidan builds the M1b run 1 branch on Windows and checks the deploy line (task 025 checklist below), and looks at `docs/ui-mockups/ribbon-icons.png`.
-2. Aidan runs spike task 020 on Windows and commits its Results. Then cloud run 2 does 026 to 031: "Run tasks 026 to 031 following docs/WORKFLOW.md".
+2. Cloud run 2 does 026 to 031 (in progress).
 3. Aidan finishes the Part Properties checks listed below.
 4. Aidan decides the numbering configuration (spec 02), then: plan M2.
 
@@ -86,6 +86,8 @@ Small things noticed while building. None is urgent. The parent turns these into
 - The agent definitions say "the AWB Addin add-in", which repeats "add-in". (task 011)
 
 **Ribbon icons**
+- The deployed add-in on Aidan's PC is still the spike 020 build. Rebuild with Inventor closed to replace it. (task 020)
+- Aidan asked whether the ribbon icons could be based on his website favicon, in blue shades instead of green. Consider it when the icon set is reviewed; he is happy with other designs too. (task 020)
 - Task 030: embed only `UI/Icons/*.png`. The `.svg` sources sit in the same folder and must stay out of the build. (task 024)
 - The 32 px icons use 1.5 px strokes, so one edge of each line is half-shaded. If they look soft in Inventor, switch the 32 px drawings to 2 px strokes. (task 024)
 - Export Model Data at 16 px can read as two overlapping squares (a "copy" icon) rather than a box. Deepen the box's offset if Aidan finds it unclear in the preview. (task 024 review)
