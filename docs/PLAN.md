@@ -4,7 +4,7 @@ Owned by the parent session (see `docs/WORKFLOW.md`). This file holds the milest
 
 ## Milestones
 
-Order set by Aidan on 2026-10-06: the part properties window first, then numbering. The order after M2 is still a draft.
+Order set by Aidan on 2026-10-06: the part properties window first, then window style, then numbering. The order after M2 is still a draft.
 
 ### M0: Foundations
 
@@ -72,6 +72,10 @@ No spike task. The approach (read and write iProperties through `PropertySets`, 
 
 Two spec questions were added while planning, each with a default the tasks build: blank cost is stored as 0 (question 4), and pre-fills count as pending changes (question 5).
 
+### M1b: Window style and icons (spec 08)
+
+One shared look for every window, following Inventor's light or dark theme, plus ribbon icons. Aidan chose the look on 2026-10-06 and wants it done before numbering, so later windows inherit it. Not blocked. Starts with a Windows spike, described in the spec.
+
 ### M2: Part creation and numbering (spec 02)
 
 Blocked on the spec's open questions. Aidan will decide the numbering configuration, including whether assemblies and parts are numbered differently, when this milestone is planned. This milestone also adds the "Generate part number" button to the M1 window.
@@ -91,10 +95,6 @@ Blocked on question 1 of the spec, which decides which commands exist at all.
 ### M6: iLogic injection (spec 06)
 
 Blocked on questions 1 and 2 of the spec.
-
-### Proposed: window styling and icons
-
-One shared look for every window and icons for the ribbon buttons. Raised by Aidan on 2026-10-06. No spec yet; see `TODO.md`. Do not plan it until Aidan agrees the look.
 
 ### Parked: distribution
 

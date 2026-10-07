@@ -10,12 +10,12 @@ Last updated: 2026-10-06
 |---|---|---|---|
 | Foundations (M0) | 01 | **Done, tested in Inventor** | Settings, log, ribbon, error reporting, Settings and About windows, editing-command base, "AWB Addin" branding |
 | Part properties window (M1) | 07 | **Built and merged, partly tested in Inventor** | Opens on parts and assemblies, pre-fills, writes and undoes correctly. Some checklist steps not yet reported; see `TODO.md` |
+| Window style and icons (M1b) | 08 | Not started | Look chosen by Aidan; spec written; next to be planned |
 | Part creation and numbering (M2) | 02 | Not started | Waiting on Aidan's numbering decisions |
 | Material and finish (M3) | 03 | Not started | Waiting on Aidan's finish list and a Windows spike |
 | Hole table wizard (M4) | 04 | Not started | Core half needs three answers; add-in half needs a Windows spike |
 | Drawing tools (M5) | 05 | Not started | Waiting on which commands Aidan wants |
 | iLogic injection (M6) | 06 | Not started | Waiting on which rules |
-| Window styling and icons | none yet | Proposed | Raised by Aidan 2026-10-06; no spec yet |
 | Distribution (installer, download page) | none yet | Parked | To be decided when the part number generator is planned |
 
 States used: Not started, Planned, In progress, Built (merged, not tested in Inventor), Partly tested, Done (tested in Inventor), Parked, Proposed.

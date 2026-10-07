@@ -6,9 +6,9 @@ Last updated: 2026-10-06
 
 ## Next up
 
-1. Aidan finishes the Part Properties checks listed below.
-2. Aidan decides the numbering configuration (spec 02), then: plan M2.
-3. Aidan decides whether window styling comes before M2 (see "Proposed work").
+1. Plan and run M1b, window style and icons (spec 08). It starts with a spike Aidan runs on Windows.
+2. Aidan finishes the Part Properties checks listed below.
+3. Aidan decides the numbering configuration (spec 02), then: plan M2.
 
 ## Waiting on Aidan: checks in Inventor
 
@@ -49,6 +49,9 @@ Each spec lists its own open questions in full. These are the ones that block pl
 **iLogic (spec 06), blocks M6**
 - Which rules, and whether they are internal or external
 
+**Window style (spec 08), not blocking**
+- The accent colour (default blue), whether to darken the title bar, and the icon style
+
 **Smaller, not blocking**
 - Should Settings and About appear with no document open? (spec 01, question 4)
 - Should About check for a newer version? (spec 01, question 2)
@@ -57,7 +60,8 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Proposed work, not yet agreed
 
-- **Window styling and icons.** One shared look for every window (spacing, fonts, colours, buttons), following Inventor's light or dark theme, plus icons for the ribbon buttons. Cheapest to do now, while there are only three windows, so later windows inherit it. Needs a short spec and Aidan's say on the look.
+- **Reviewer styling checklist and a Windows build script.** Both are written into spec 08 as proposed additions to M1b. Aidan has not said yes or no.
+- **Part name editable in the properties window.** Aidan asked on 2026-10-06 whether the name can be edited. Today it is display-only because it is linked to the file name, and changing it means renaming the file (the Rename command, planned with M2). Waiting on Aidan: keep it that way, or make the name editable now and let it differ from the file name.
 
 ## Follow-ups from finished tasks
 

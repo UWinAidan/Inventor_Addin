@@ -28,3 +28,7 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-10-06 | Values the window pre-fills count as pending changes: OK writes them, Cancel writes nothing | Default | spec 07, question 5 |
 | 2026-10-06 | A part type stored in the wrong case (`m`) is shown and rewritten as the listed code (`M`) | Default | spec 07, question 6 |
 | 2026-10-06 | The project keeps three tracking files at the repo root: `TODO.md`, `STATUS.md` and `DECISIONS.md`. The parent session maintains them | Aidan | `CLAUDE.md` |
+| 2026-10-06 | Every window uses one shared look, "grouped sections": fields in named sections, read-only values as text, light and dark following Inventor | Aidan | spec 08 |
+| 2026-10-06 | Window style is done before numbering, as milestone M1b | Aidan | `docs/PLAN.md` |
+| 2026-10-06 | A file with no assigned part number shows "Not assigned", never its name. Until numbering exists, a Part Number equal to the file name counts as none | Aidan | specs 07, 08 |
+| 2026-10-06 | No new agent roles for now. The limit on speed is the steps only Aidan can do, not the agents | Aidan and Claude | `TODO.md` |
