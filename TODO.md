@@ -6,8 +6,7 @@ Last updated: 2026-10-07
 
 ## Next up
 
-1. Aidan builds the M1b run 2 branch (`claude/tasks-026-to-031-e9rrxe`) on Windows with Inventor closed, fixes any compile errors, and works through the window style and icon checks below. The build also replaces the spike 020 build still deployed.
-2. Aidan finishes the Part Properties checks listed below.
+1. Aidan finishes the remaining window style checks and the Part Properties checks listed below.
 3. Aidan decides the numbering configuration (spec 02), then: plan M2.
 
 ## Waiting on Aidan: checks in Inventor
@@ -28,15 +27,13 @@ From the build deploy line (task 025):
 - [ ] With Inventor open, build again: the build succeeds, prints the `NOT deployed` warning and no `Deployed` line
 - [ ] `dotnet build InventorAddin.slnx -p:DeployToInventor=false`: neither line is printed
 
-From the window style and icons (tasks 026 to 031; full steps in each task file and in the pull request):
+From the window style and icons (tasks 026 to 031; full steps in each task file and in PR #14). Confirmed on 2026-10-07: the add-in builds and deploys; About, Settings and Part Properties look right in light and dark with the dark title bar; Not assigned and Not set show correctly; ribbon icons are right in both themes after a restart. A clipping bug at 150% display scale was found and fixed on `main`.
 
-- [ ] The add-in builds on Windows (first build of 026 to 030; needs `stdole.dll` in Inventor's `Bin` folder)
 - [ ] `dotnet test tests/InventorAddin.Core.Tests` passes on Windows (the XAML rules test from 031 finds files by path)
-- [ ] About, Settings and Part Properties in the light and the dark theme: shared header, sections and footer, colours as in spec 08, dark title bar in dark, no dark-on-dark text (tasks 026, 028, 029)
 - [ ] Keyboard: Tab order, access keys, Enter and Esc, and the accent focus outline in each window (026, 028, 029)
-- [ ] Part Properties: Not assigned and Not set placeholders, the part type dropdown and its side note and tooltip, the blank entry clickable, no empty band above the buttons (029)
+- [ ] Part Properties: the blank Part type entry can be clicked (029)
 - [ ] A new, never-saved part: record what the Part number row shows (spec 08, question 5) (029)
-- [ ] Ribbon icons in both themes (restart after switching), with no white edge in dark; header icons in each window; one `INFO` line naming the icon set and no icon warnings in the log (030)
+- [ ] The log has one `INFO` line naming the ribbon icon set, and no icon warnings (030)
 - [ ] Section headings: does the hair-space letter spacing read as wide spacing? (026)
 
 
@@ -93,7 +90,6 @@ Small things noticed while building. None is urgent. The parent turns these into
 - The agent definitions say "the AWB Addin add-in", which repeats "add-in". (task 011)
 
 **Ribbon icons**
-- The deployed add-in on Aidan's PC is still the spike 020 build. Rebuild with Inventor closed to replace it. (task 020)
 - Task 030: embed only `UI/Icons/*.png`. The `.svg` sources sit in the same folder and must stay out of the build. (task 024)
 
 **Window style**
@@ -108,6 +104,7 @@ Small things noticed while building. None is urgent. The parent turns these into
 - Ribbon: one command failing to register still stops the whole ribbon build; only per-ribbon failures are now caught. (task 030)
 - Developer commands get no icon while developer tools are off. (task 030)
 
+- XAML rules test: make `UseLayoutRounding` in window XAML or `UI/Theme/` fail the test, so the 150% scale clipping cannot come back. (Aidan's fix, 2026-10-07)
 - XAML rules test: C# in `UI/Controls/` is not checked, `DynamicResource` keys are not checked to exist, and a size binding with a typed `FallbackValue` passes. (task 031)
 
 **Part properties**
