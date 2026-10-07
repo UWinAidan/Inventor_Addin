@@ -34,6 +34,24 @@
       <EmbedInteropTypes>false</EmbedInteropTypes>
       <Private>false</Private>
     </Reference>
+    <!--
+      ButtonDefinition.StandardIcon and LargeIcon are typed stdole.IPictureDisp (spike 020); without this
+      reference the build fails with CS0012. Inventor ships stdole.dll and loads it, so it is not copied.
+    -->
+    <Reference Include="stdole">
+      <HintPath>$(InventorInstallDir)\Bin\stdole.dll</HintPath>
+      <EmbedInteropTypes>false</EmbedInteropTypes>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!--
+    Ribbon and header icons (task 024), found by IconLoader as "InventorAddin.UI.Icons.{Name}.{Light|Dark}.{16|32}.png".
+    Only the PNGs are embedded; the .svg sources in the same folder stay out of the build.
+  -->
+  <ItemGroup>
+    <None Remove="UI\Icons\*.png" />
+    <EmbeddedResource Include="UI\Icons\*.png" LogicalName="InventorAddin.UI.Icons.%(Filename)%(Extension)" />
   </ItemGroup>
 
   <!--

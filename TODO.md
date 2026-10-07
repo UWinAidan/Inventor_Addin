@@ -94,6 +94,10 @@ Small things noticed while building. None is urgent. The parent turns these into
 - Settings: "Show developer tools" has no access key; D is taken by Default designer. Alt+S is free. (task 028)
 - A cloud check project that compiles the add-in's XAML and WPF code against stub Inventor types would catch XAML errors before Aidan builds. Proposed, not agreed. (task 026)
 
+- Ribbon: if `AddButtonDefinition` with icons throws after Inventor created the definition, the text-only retry fails on the duplicate name. Re-check `defs[InternalName]` before retrying. (task 030 review)
+- Ribbon: one command failing to register still stops the whole ribbon build; only per-ribbon failures are now caught. (task 030)
+- Developer commands get no icon while developer tools are off. (task 030)
+
 **Part properties**
 - One Apply writes one log line plus one per property. Keep the summary line and log the per-property lines only on failure. (tasks 018, 019)
 - Weight is read through code that also computes volume, area and centre of mass. On a large assembly the window may open slowly; read only the mass, or read it after the window opens. (task 018)

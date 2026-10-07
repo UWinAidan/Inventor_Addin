@@ -2,6 +2,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
+using InventorAddin.Core.Ribbon;
 using InventorAddin.Core.Theming;
 
 namespace InventorAddin.UI
@@ -18,8 +19,18 @@ namespace InventorAddin.UI
 
         private static bool _darkTitleBarFailureLogged;
 
-        /// <summary>Shows <paramref name="window"/> modally over Inventor and returns its dialog result.</summary>
-        public static bool? ShowDialog(Window window)
+        /// <summary>
+        /// Resource key of the header icon, which <see cref="ShowDialog"/> puts in the window's resources.
+        /// A window's <c>DialogHeader</c> shows it with <c>Icon="{DynamicResource HeaderIcon}"</c>.
+        /// </summary>
+        public const string HeaderIconKey = "HeaderIcon";
+
+        /// <summary>
+        /// Shows <paramref name="window"/> modally over Inventor and returns its dialog result.
+        /// <paramref name="headerIconName"/> (one of <c>IconNames</c>) is the icon shown in the window's header tile,
+        /// in the theme the window opens in; with none, the tile stays empty.
+        /// </summary>
+        public static bool? ShowDialog(Window window, string? headerIconName = null)
         {
             if (window == null)
                 throw new ArgumentNullException(nameof(window));
@@ -38,7 +49,9 @@ namespace InventorAddin.UI
             }
 
             window.ShowInTaskbar = false;
-            ApplyTheme(window);
+            UiTheme theme = ApplyTheme(window);
+            if (headerIconName != null)
+                SetHeaderIcon(window, headerIconName, theme);
             return window.ShowDialog();
         }
 
@@ -46,8 +59,9 @@ namespace InventorAddin.UI
         /// Merges the colour set for Inventor's theme and the shared styles into the window's resources and gives the
         /// window the dialog style. The window is already built, so it refers to shared styles with DynamicResource.
         /// If the dictionaries fail to load, the window keeps the default WPF look (the error is logged).
+        /// Returns the theme used.
         /// </summary>
-        private static void ApplyTheme(Window window)
+        private static UiTheme ApplyTheme(Window window)
         {
             UiTheme theme = ThemeResources.ReadInventorTheme();
 
@@ -56,6 +70,26 @@ namespace InventorAddin.UI
 
             if (theme == UiTheme.Dark)
                 UseDarkTitleBar(window);
+
+            return theme;
+        }
+
+        /// <summary>
+        /// Puts the 32 px icon <paramref name="iconName"/> for <paramref name="theme"/> in the window's resources under
+        /// <see cref="HeaderIconKey"/>. A failure leaves the header tile empty and is logged; the window still opens.
+        /// </summary>
+        private static void SetHeaderIcon(Window window, string iconName, UiTheme theme)
+        {
+            try
+            {
+                window.Resources[HeaderIconKey] = IconLoader.LoadImageSource(iconName, theme, RibbonIcons.LargeSizePx);
+            }
+            catch (Exception ex)
+            {
+                AddinServices.Log.Warn(
+                    $"Header icon {iconName} ({UiThemes.ResourceSuffix(theme)}) could not be loaded for '{window.Title}'; " +
+                    $"the icon tile stays empty. {ex.Message}");
+            }
         }
 
         /// <summary>
