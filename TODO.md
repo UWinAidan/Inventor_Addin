@@ -98,6 +98,8 @@ Small things noticed while building. None is urgent. The parent turns these into
 - Ribbon: one command failing to register still stops the whole ribbon build; only per-ribbon failures are now caught. (task 030)
 - Developer commands get no icon while developer tools are off. (task 030)
 
+- XAML rules test: C# in `UI/Controls/` is not checked, `DynamicResource` keys are not checked to exist, and a size binding with a typed `FallbackValue` passes. (task 031)
+
 **Part properties**
 - One Apply writes one log line plus one per property. Keep the summary line and log the per-property lines only on failure. (tasks 018, 019)
 - Weight is read through code that also computes volume, area and centre of mass. On a large assembly the window may open slowly; read only the mass, or read it after the window opens. (task 018)

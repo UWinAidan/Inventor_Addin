@@ -104,7 +104,7 @@ Planned 2026-10-07. Run in number order; each task depends only on lower numbers
 - [x] 028 Settings window on the shared look
 - [x] 029 Part Properties window on the shared look
 - [x] 030 Icons on the ribbon buttons and window headers
-- [ ] 031 A test that keeps windows on the shared styles
+- [x] 031 A test that keeps windows on the shared styles
 
 **Two runs.** Spike 020 settles the three unconfirmed API behaviours in the spec (dictionaries loading inside Inventor, reading the theme, icons on a button definition) plus the dark title bar. Nothing is planned on top of an unproven assumption, so the work splits:
 
