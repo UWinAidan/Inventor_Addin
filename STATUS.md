@@ -2,7 +2,7 @@
 
 Where each big item stands. One line per item, kept current by the parent session. For the order of work and the task lists see `docs/PLAN.md`; for what needs doing next see `TODO.md`.
 
-Last updated: 2026-10-06
+Last updated: 2026-10-07
 
 ## Big items
 
@@ -10,7 +10,7 @@ Last updated: 2026-10-06
 |---|---|---|---|
 | Foundations (M0) | 01 | **Done, tested in Inventor** | Settings, log, ribbon, error reporting, Settings and About windows, editing-command base, "AWB Addin" branding |
 | Part properties window (M1) | 07 | **Built and merged, partly tested in Inventor** | Opens on parts and assemblies, pre-fills, writes and undoes correctly. Some checklist steps not yet reported; see `TODO.md` |
-| Window style and icons (M1b) | 08 | Not started | Look chosen by Aidan; spec written; next to be planned |
+| Window style and icons (M1b) | 08 | Planned | Tasks 020 to 031. Cloud run 1 (021 to 025) can start now; the rest waits on Aidan's Windows spike, task 020 |
 | Part creation and numbering (M2) | 02 | Not started | Waiting on Aidan's numbering decisions |
 | Material and finish (M3) | 03 | Not started | Waiting on Aidan's finish list and a Windows spike |
 | Hole table wizard (M4) | 04 | Not started | Core half needs three answers; add-in half needs a Windows spike |
