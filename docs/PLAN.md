@@ -74,7 +74,46 @@ Two spec questions were added while planning, each with a default the tasks buil
 
 ### M1b: Window style and icons (spec 08)
 
-One shared look for every window, following Inventor's light or dark theme, plus ribbon icons. Aidan chose the look on 2026-10-06 and wants it done before numbering, so later windows inherit it. Not blocked. Starts with a Windows spike, described in the spec.
+One shared look for every window, following Inventor's light or dark theme, plus ribbon icons. Aidan chose the look on 2026-10-06 and wants it done before numbering, so later windows inherit it. Not blocked.
+
+Planned 2026-10-07. Run in number order; each task depends only on lower numbers.
+
+| Task | Needs | Depends on | Parallel-safe with |
+|---|---|---|---|
+| 020 | **windows** (spike, Aidan) | none | every cloud task |
+| 021 | cloud | none | 022, 023, 024, 025 |
+| 022 | cloud | none | 021, 023, 024, 025 |
+| 023 | cloud | none | 021, 022, 024, 025 |
+| 024 | cloud | none | 021, 022, 023, 025 |
+| 025 | cloud, add-in not compiled | none | 021 to 029 |
+| 026 | cloud, add-in not compiled | 020, 021, 023 | 025 |
+| 027 | cloud, add-in not compiled | 026 | 025 |
+| 028 | cloud, add-in not compiled | 023, 027 | 025, 029 |
+| 029 | cloud, add-in not compiled | 022, 027 | 025, 028 |
+| 030 | cloud, add-in not compiled | 020, 021, 024, 025, 026, 028, 029 | none |
+| 031 | cloud | 026 to 030 | none |
+
+- [ ] 020 Spike: theme, shared styles and icons inside Inventor (Windows)
+- [ ] 021 Theme choice and ribbon icon names (Core)
+- [ ] 022 Part Properties display text (Core)
+- [ ] 023 Settings and About view-model text (Core)
+- [ ] 024 Ribbon icon drawings
+- [ ] 025 Build says plainly whether the add-in was deployed
+- [ ] 026 Shared look, theme from Inventor, and the About window
+- [ ] 027 Input control styles: text box, dropdown, checkbox
+- [ ] 028 Settings window on the shared look
+- [ ] 029 Part Properties window on the shared look
+- [ ] 030 Icons on the ribbon buttons and window headers
+- [ ] 031 A test that keeps windows on the shared styles
+
+**Two runs.** Spike 020 settles the three unconfirmed API behaviours in the spec (dictionaries loading inside Inventor, reading the theme, icons on a button definition) plus the dark title bar. Nothing is planned on top of an unproven assumption, so the work splits:
+
+1. Cloud run 1: 021 to 025. None depends on the spike. Aidan runs 020 on Windows at any point.
+2. Cloud run 2, after 020's Results are committed: 026 to 031. 026 and 030 read the Results first and follow them where they differ from the brief.
+
+Folded in from `TODO.md` follow-ups: the empty gap in Part Properties (029), the Settings error that stays visible (023, 028), the build's deploy message (025), and one ribbon failure stopping the rest (030).
+
+Left out until Aidan agrees: the reviewer styling checklist and the PowerShell build script that spec 08 proposes. Task 031 checks the window rules with a test instead of a reviewer checklist; it is a default Aidan can drop.
 
 ### M2: Part creation and numbering (spec 02)
 

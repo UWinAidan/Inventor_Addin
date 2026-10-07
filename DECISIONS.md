@@ -32,3 +32,11 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-10-06 | Window style is done before numbering, as milestone M1b | Aidan | `docs/PLAN.md` |
 | 2026-10-06 | A file with no assigned part number shows "Not assigned", never its name. Until numbering exists, a Part Number equal to the file name counts as none | Aidan | specs 07, 08 |
 | 2026-10-06 | No new agent roles for now. The limit on speed is the steps only Aidan can do, not the agents | Aidan and Claude | `TODO.md` |
+| 2026-10-07 | Ribbon icons come in a light-theme and a dark-theme set; the ribbon uses the set for the theme Inventor has at start | Default | spec 08, question 3 |
+| 2026-10-07 | A never-saved file's header reads "New part" (or the kind) with "Part · Not saved yet" under it | Default | spec 08, question 4 |
+| 2026-10-07 | For a never-saved file, any non-blank Part Number counts as assigned | Default | spec 08, question 5 |
+| 2026-10-07 | A theme name containing "dark" selects the dark colours; anything else, or no name, selects light | Default | spec 08, question 6 |
+| 2026-10-07 | About shows the Inventor release year (major version + 1996) | Default | spec 08, question 7 |
+| 2026-10-07 | A Core test checks window XAML against the shared-style rules (task 031) | Default | spec 08, question 8 |
+| 2026-10-07 | Windows refer to shared styles with `DynamicResource`, because `WindowHost` merges the theme after a window is built. Confirmed or replaced by spike 020 | Default | tasks 020, 026 |
+| 2026-10-07 | M1b runs in two cloud runs around the Windows spike: 021 to 025 first, 026 to 031 after the spike's results | Default | `docs/PLAN.md` |

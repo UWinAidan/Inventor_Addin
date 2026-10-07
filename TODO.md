@@ -2,13 +2,14 @@
 
 Everything that needs doing and is not already a task in `docs/PLAN.md`. Kept current by the parent session: items are added when they come up and removed when they are done or turned into a task. Where the project stands is in `STATUS.md`; why things are the way they are is in `DECISIONS.md`.
 
-Last updated: 2026-10-06
+Last updated: 2026-10-07
 
 ## Next up
 
-1. Plan and run M1b, window style and icons (spec 08). It starts with a spike Aidan runs on Windows.
-2. Aidan finishes the Part Properties checks listed below.
-3. Aidan decides the numbering configuration (spec 02), then: plan M2.
+1. M1b, window style and icons (spec 08), is planned. Run cloud run 1: "Run milestone M1b following docs/WORKFLOW.md" (does 021 to 025).
+2. Aidan runs spike task 020 on Windows and commits its Results. Then cloud run 2 does 026 to 031.
+3. Aidan finishes the Part Properties checks listed below.
+4. Aidan decides the numbering configuration (spec 02), then: plan M2.
 
 ## Waiting on Aidan: checks in Inventor
 
@@ -50,7 +51,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Which rules, and whether they are internal or external
 
 **Window style (spec 08), not blocking**
-- The accent colour (default blue), whether to darken the title bar, and the icon style
+- Questions 1 to 8 in spec 08: accent colour, dark title bar, icon style, and five defaults added while planning (never-saved header and part number, theme names, Inventor version row, the XAML rules test)
 
 **Smaller, not blocking**
 - Should Settings and About appear with no document open? (spec 01, question 4)
@@ -68,16 +69,12 @@ Each spec lists its own open questions in full. These are the ones that block pl
 Small things noticed while building. None is urgent. The parent turns these into tasks when planning a milestone that touches the same code.
 
 **Build and workflow**
-- The build skips copying the add-in into Inventor's folder when Inventor is running, and says so only in a warning that is easy to miss. Make it print one plain line: deployed, or not deployed because Inventor is open. (Aidan hit this on 2026-10-06.)
 - There is no `global.json`, so the cloud and Windows may build with different .NET SDKs. Pin it if builds start to differ. (task 001)
 
 **Ribbon and shell**
-- `RibbonSetup.Create` does not catch a failure for one ribbon, so one failure stops the rest and is not logged. Wrap each ribbon and log the error. (tasks 005, 007)
-- In the Settings window an error message stays visible after a failed save until the next save. (task 008)
 - The agent definitions say "the AWB Addin add-in", which repeats "add-in". (task 011)
 
 **Part properties**
-- The window has a large empty gap between Weight and the buttons, where the status line sits. (seen in Aidan's test)
 - One Apply writes one log line plus one per property. Keep the summary line and log the per-property lines only on failure. (tasks 018, 019)
 - Weight is read through code that also computes volume, area and centre of mass. On a large assembly the window may open slowly; read only the mass, or read it after the window opens. (task 018)
 - `PropertyReader.Set` has no callers now that `PropertyWriter` exists. Delete it. (task 018)
