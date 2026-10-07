@@ -18,6 +18,11 @@ public sealed class SettingsViewModel : ObservableObject
 
     public const string DefaultDesignerFieldName = "Default designer";
 
+    public const string HeaderTitleText = "Settings";
+
+    /// <summary>The one-line explanation shown under the default designer box.</summary>
+    public const string DefaultDesignerHelpText = "Filled in as Designer in Part Properties when a file has none.";
+
     private readonly SettingsStore _store;
     private readonly ILog _log;
 
@@ -95,11 +100,18 @@ public sealed class SettingsViewModel : ObservableObject
 
     public string RestartNotice => RestartNoticeText;
 
+    public string HeaderTitle => HeaderTitleText;
+
+    public string HeaderSubline => Branding.ProductName;
+
+    public string DefaultDesignerHelp => DefaultDesignerHelpText;
+
     /// <summary>Where the settings are written, for display.</summary>
     public string SettingsFilePath => _store.FilePath;
 
     /// <summary>
     /// Why a value cannot be saved, or else why the last save failed, or null when neither applies.
+    /// A save error lasts until the next edit or the next save.
     /// </summary>
     public string? ErrorText => _validationError ?? _saveError;
 
@@ -171,6 +183,8 @@ public sealed class SettingsViewModel : ObservableObject
 
     private void OnEditChanged()
     {
+        // A failed save's reason no longer describes what is on screen once the user edits again.
+        SetSaveError(null);
         OnPropertyChanged(nameof(IsDirty));
         SaveCommand.RaiseCanExecuteChanged();
     }

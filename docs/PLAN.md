@@ -96,7 +96,7 @@ Planned 2026-10-07. Run in number order; each task depends only on lower numbers
 - [ ] 020 Spike: theme, shared styles and icons inside Inventor (Windows)
 - [x] 021 Theme choice and ribbon icon names (Core)
 - [x] 022 Part Properties display text (Core)
-- [ ] 023 Settings and About view-model text (Core)
+- [x] 023 Settings and About view-model text (Core)
 - [ ] 024 Ribbon icon drawings
 - [x] 025 Build says plainly whether the add-in was deployed
 - [ ] 026 Shared look, theme from Inventor, and the About window

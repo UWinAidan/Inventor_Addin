@@ -2,7 +2,7 @@
 
 - **Milestone:** M1b
 - **Feature spec:** `docs/features/08-window-style.md` (The three windows: Settings, About)
-- **Status:** todo
+- **Status:** done
 - **Depends on:** none
 - **Needs:** cloud
 - **Parallel-safe with:** 021, 022, 024, 025
@@ -26,18 +26,18 @@ Out of scope:
 
 Settings
 
-- [ ] `HeaderTitle` is `"Settings"` and `HeaderSubline` is `Branding.ProductName`
-- [ ] `DefaultDesignerHelp` is `"Filled in as Designer in Part Properties when a file has none."` (the text now typed in the window's XAML), as a public constant and a property
-- [ ] Editing either setting after a failed save clears the save error: `ErrorText` falls back to the validation error or null, and `PropertyChanged` is raised for `ErrorText` and `HasError` when they change. A validation error is still shown as now
-- [ ] Tests: a failed save shows the error; a following edit clears it; a following edit that is itself invalid shows the validation error instead; an edit back to the saved value also clears it
+- [x] `HeaderTitle` is `"Settings"` and `HeaderSubline` is `Branding.ProductName`
+- [x] `DefaultDesignerHelp` is `"Filled in as Designer in Part Properties when a file has none."` (the text now typed in the window's XAML), as a public constant and a property
+- [x] Editing either setting after a failed save clears the save error: `ErrorText` falls back to the validation error or null, and `PropertyChanged` is raised for `ErrorText` and `HasError` when they change. A validation error is still shown as now
+- [x] Tests: a failed save shows the error; a following edit clears it; a following edit that is itself invalid shows the validation error instead; an edit back to the saved value also clears it
 
 About
 
-- [ ] `HeaderSubline` is `"Version {Version}"` (`Version unknown` when unknown)
-- [ ] `InventorRelease` is the release year from the major version: major + 1996, so 30 gives `2026`; `unknown` when the major version is null or below 13 (Inventor 2009). The row is labelled "Inventor version" in the window
-- [ ] `BuildDate` and `LogFolder` stay as they are and are the values of the Built and Log folder rows
-- [ ] Tests for `HeaderSubline` and `InventorRelease`, including 30, 29, 13, 12, 0, negative and null
-- [ ] `dotnet test tests/InventorAddin.Core.Tests` passes
+- [x] `HeaderSubline` is `"Version {Version}"` (`Version unknown` when unknown)
+- [x] `InventorRelease` is the release year from the major version: major + 1996, so 30 gives `2026`; `unknown` when the major version is null or below 13 (Inventor 2009). The row is labelled "Inventor version" in the window
+- [x] `BuildDate` and `LogFolder` stay as they are and are the values of the Built and Log folder rows
+- [x] Tests for `HeaderSubline` and `InventorRelease`, including 30, 29, 13, 12, 0, negative and null
+- [x] `dotnet test tests/InventorAddin.Core.Tests` passes
 
 ## Notes for the implementer
 
@@ -49,7 +49,9 @@ About
 
 Filled in by the implementer.
 
-- **Ran:**
+- **Ran:** `dotnet build src/InventorAddin.Core`: 0 warnings, 0 errors. `dotnet test tests/InventorAddin.Core.Tests`: 662 passed, 0 failed, 0 skipped.
+- **Changed behaviour in an existing test:** `ValidationError_TakesPrecedenceOverSaveError_AndSaveErrorReturnsWhenFixed` asserted that a save error came back once a validation error was fixed. That contradicts this task (any edit clears the save error), so it was replaced by `InvalidEditAfterFailedSave_ShowsValidationError` and `FixingInvalidEditAfterFailedSave_DoesNotBringBackSaveError`.
+- **Notes:** `InventorRelease` adds in `long`, so an absurd major version cannot overflow into a negative year. Setting a setting to the value it already has is not an edit and leaves a save error in place.
 - **Not compiled (changed under `src/InventorAddin`):** none
 - **Inventor API members not confirmed:** none
 - **Manual checklist for Inventor:** none (covered by 026 and 028)
@@ -57,3 +59,5 @@ Filled in by the implementer.
 ## Follow-ups
 
 Things noticed but not done.
+
+None.
