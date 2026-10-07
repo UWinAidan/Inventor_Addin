@@ -35,6 +35,7 @@ Standard properties are used wherever Inventor has one.
 ## Rules
 
 - **Part number is read-only in this window, always.** A number is assigned when the CAD file is created (spec 02) and does not change afterwards. This version only displays it.
+- **A file with no number shows "Not assigned".** Inventor reports the file name as the Part Number when none has been set, and the window must not show the name as if it were a number. The exact rule is in spec 08, "Part number display".
 - **"Generate part number" comes later.** When numbering exists (spec 02), the window gains a button that assigns a number, shown only when the file does not already have one. It is not part of this feature, and no placeholder button is added now.
 - **Part name is linked to the file name.** The part name is the file name without its extension, and the window shows it read-only. When the user applies, the standard Description property is set to the same text if it differs, so drawings and parts lists show the same name as the file. Changing the name means renaming the file, which is a separate Rename command planned with spec 02, because a rename has to update every assembly and drawing that references the file. When that command exists, a Rename button beside this field opens it; no placeholder button is added now. Once numbering puts the part number in new file names, spec 02 decides how the name is read out of the file name.
 - **Part type** is chosen from a list of short codes. The field shows the code, each entry in the dropdown shows the code and its full name, and hovering over the field shows the full name of the current code beneath it. The short code is what is stored.
@@ -63,8 +64,10 @@ Standard properties are used wherever Inventor has one.
 
 ## The window
 
-- Title: "Part Properties". A header line shows the file name.
-- Fields in the order of the table above, read-only ones visibly different from editable ones.
+The layout and look are defined in spec 08 (window style): a header with the part name, sections for Identity, People, and Cost and make-up, and a footer with the status line and buttons. What the window must contain:
+
+- Title: "Part Properties". The header shows the part name and the file name.
+- Every field in the table above. Fields the user cannot change are shown as text, not as disabled boxes.
 - Buttons: **Apply** (writes, stays open), **OK** (writes if needed, closes), **Cancel** (discards, closes). Apply is enabled only when something changed and everything is valid.
 - A status line for validation messages and write errors.
 
