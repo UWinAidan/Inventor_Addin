@@ -89,6 +89,9 @@ Small things noticed while building. None is urgent. The parent turns these into
 **Window style**
 - The remark in `UiTheme.cs` still says the dark-theme rule waits for spike 020; name the confirmed `LightTheme` and `DarkTheme`. (task 026)
 - Section headings use a hair space (U+200A) between letters. If it does not read as wide spacing in Inventor, try a thin space (U+2009). (task 026)
+- Settings: the gap between a control and its note is the full row gap (9). If it looks loose, add a shared `HelpText` style. (task 028)
+- Settings: the restart note lines up with the checkbox's box, not its label text. (task 028)
+- Settings: "Show developer tools" has no access key; D is taken by Default designer. Alt+S is free. (task 028)
 - A cloud check project that compiles the add-in's XAML and WPF code against stub Inventor types would catch XAML errors before Aidan builds. Proposed, not agreed. (task 026)
 
 **Part properties**

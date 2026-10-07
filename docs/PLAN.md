@@ -101,7 +101,7 @@ Planned 2026-10-07. Run in number order; each task depends only on lower numbers
 - [x] 025 Build says plainly whether the add-in was deployed
 - [x] 026 Shared look, theme from Inventor, and the About window
 - [x] 027 Input control styles: text box, dropdown, checkbox
-- [ ] 028 Settings window on the shared look
+- [x] 028 Settings window on the shared look
 - [ ] 029 Part Properties window on the shared look
 - [ ] 030 Icons on the ribbon buttons and window headers
 - [ ] 031 A test that keeps windows on the shared styles
