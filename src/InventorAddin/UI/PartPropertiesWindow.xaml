@@ -1,147 +1,156 @@
 <Window x:Class="InventorAddin.UI.PartPropertiesWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+        xmlns:controls="clr-namespace:InventorAddin.UI.Controls"
         SizeToContent="WidthAndHeight"
         ResizeMode="NoResize"
         ShowInTaskbar="False">
-    <!-- DataContext is a PartPropertiesViewModel (InventorAddin.Core.ViewModels), set in the constructor. -->
+    <!--
+        DataContext is a PartPropertiesViewModel (InventorAddin.Core.ViewModels), set in the constructor.
+        Layout and bindings only: the look comes from UI/Theme, applied by WindowHost after the window is built,
+        so shared styles are referred to with DynamicResource. SizeToContent and ResizeMode are repeated from the
+        DialogWindow style so the window still sizes to its content if the shared styles fail to load.
+        Spec 08, "The three windows: Part Properties".
+    -->
     <Window.Resources>
-        <!-- Read-only fields: grey, but the text can still be selected and copied. -->
-        <Style x:Key="ReadOnlyField" TargetType="TextBox">
-            <Setter Property="IsReadOnly" Value="True" />
+        <!--
+            A read-only value that is either text or a placeholder ("Not set", "Not assigned"). Content is the text
+            to show (the view-model has it ready); Tag is true when it is a real value. An inline Style on a
+            TextBlock would replace the shared one, so the shared style is chosen by swapping the template instead.
+            Not a focus or Tab stop: only boxes are.
+        -->
+        <Style x:Key="ValueOrPlaceholder" TargetType="{x:Type ContentControl}">
+            <Setter Property="Focusable" Value="False" />
             <Setter Property="IsTabStop" Value="False" />
-            <Setter Property="Background" Value="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" />
-            <Setter Property="Margin" Value="0,0,0,6" />
+            <Setter Property="ContentTemplate">
+                <Setter.Value>
+                    <DataTemplate>
+                        <TextBlock Style="{DynamicResource PlaceholderText}" Text="{Binding Mode=OneWay}" />
+                    </DataTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="Tag">
+                    <Trigger.Value>
+                        <sys:Boolean>True</sys:Boolean>
+                    </Trigger.Value>
+                    <Setter Property="ContentTemplate">
+                        <Setter.Value>
+                            <DataTemplate>
+                                <TextBlock Style="{DynamicResource ValueText}" Text="{Binding Mode=OneWay}" />
+                            </DataTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+            </Style.Triggers>
         </Style>
-        <Style x:Key="EditableField" TargetType="TextBox">
-            <Setter Property="Margin" Value="0,0,0,6" />
-        </Style>
-        <Style x:Key="FieldLabel" TargetType="Label">
-            <Setter Property="Padding" Value="0,2,12,0" />
-            <Setter Property="VerticalAlignment" Value="Top" />
+
+        <!-- The same for the part number: a real number is selectable (so it can be copied) in the identifier font. -->
+        <Style x:Key="IdentifierOrPlaceholder" TargetType="{x:Type ContentControl}" BasedOn="{StaticResource ValueOrPlaceholder}">
+            <Style.Triggers>
+                <Trigger Property="Tag">
+                    <Trigger.Value>
+                        <sys:Boolean>True</sys:Boolean>
+                    </Trigger.Value>
+                    <Setter Property="ContentTemplate">
+                        <Setter.Value>
+                            <DataTemplate>
+                                <TextBox Style="{DynamicResource SelectableIdentifierText}" Text="{Binding Mode=OneWay}" />
+                            </DataTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+            </Style.Triggers>
         </Style>
     </Window.Resources>
 
-    <StackPanel Margin="16" Width="420">
-        <TextBlock Margin="0,0,0,12"
-                   FontWeight="SemiBold"
-                   TextTrimming="CharacterEllipsis"
-                   Text="{Binding FileName, Mode=OneWay}"
-                   ToolTip="{Binding FileName, Mode=OneWay}" />
+    <StackPanel Style="{DynamicResource DialogContent}">
+        <controls:DialogHeader Title="{Binding HeaderTitle, Mode=OneTime}"
+                               Subline="{Binding HeaderSubline, Mode=OneTime}" />
 
-        <!-- Fields in the order of spec 07's table. -->
-        <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
+        <controls:FormSection Heading="Identity">
+            <controls:FieldRow Label="Part number">
+                <ContentControl Style="{StaticResource IdentifierOrPlaceholder}"
+                                Content="{Binding PartNumberDisplay, Mode=OneTime}"
+                                Tag="{Binding IsPartNumberAssigned, Mode=OneTime}" />
+            </controls:FieldRow>
+            <controls:FieldRow Label="Part _type" Target="{Binding ElementName=PartTypeBox}">
+                <StackPanel Orientation="Horizontal">
+                    <!--
+                        Not editable. The closed box shows the code; each dropdown entry shows "code: full name".
+                        The template tells the two apart by whether it sits inside a ComboBoxItem (only dropdown
+                        entries do). The tooltip is null for a blank code, so none is shown rather than an empty one.
+                    -->
+                    <ComboBox x:Name="PartTypeBox"
+                              Style="{DynamicResource CodeComboBox}"
+                              IsEditable="False"
+                              IsEnabled="{Binding IsEditable, Mode=OneWay}"
+                              ItemsSource="{Binding PartTypeOptions, Mode=OneWay}"
+                              SelectedValuePath="Code"
+                              SelectedValue="{Binding PartType, Mode=TwoWay}"
+                              ToolTip="{Binding PartTypeToolTip, Mode=OneWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock x:Name="OptionText" Text="{Binding DisplayText, Mode=OneWay}" />
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ComboBoxItem}}" Value="{x:Null}">
+                                        <Setter TargetName="OptionText" Property="Text" Value="{Binding Code, Mode=OneWay}" />
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding PartTypeFullName, Mode=OneWay}" />
+                </StackPanel>
+            </controls:FieldRow>
+        </controls:FormSection>
 
-            <Label Grid.Row="0" Grid.Column="0" Style="{StaticResource FieldLabel}" Content="Part number" />
-            <TextBox Grid.Row="0" Grid.Column="1" Style="{StaticResource ReadOnlyField}"
-                     Text="{Binding PartNumber, Mode=OneWay}" />
+        <controls:FormSection Heading="People">
+            <controls:FieldRow Label="_Designer" Target="{Binding ElementName=DesignerBox}">
+                <TextBox x:Name="DesignerBox"
+                         IsEnabled="{Binding IsEditable, Mode=OneWay}"
+                         Text="{Binding Designer, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            </controls:FieldRow>
+            <controls:FieldRow Label="D_etailer" Target="{Binding ElementName=DetailerBox}">
+                <TextBox x:Name="DetailerBox"
+                         IsEnabled="{Binding IsEditable, Mode=OneWay}"
+                         Text="{Binding Detailer, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            </controls:FieldRow>
+        </controls:FormSection>
 
-            <Label Grid.Row="1" Grid.Column="0" Style="{StaticResource FieldLabel}" Content="Part name" />
-            <TextBox Grid.Row="1" Grid.Column="1" Style="{StaticResource ReadOnlyField}"
-                     Text="{Binding PartName, Mode=OneWay}" />
+        <controls:FormSection Heading="Cost and make-up">
+            <controls:FieldRow Label="_Cost" Target="{Binding ElementName=CostBox}">
+                <TextBox x:Name="CostBox"
+                         Style="{DynamicResource NarrowTextBox}"
+                         IsEnabled="{Binding IsEditable, Mode=OneWay}"
+                         Text="{Binding CostText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            </controls:FieldRow>
+            <controls:FieldRow Label="Material">
+                <ContentControl Style="{StaticResource ValueOrPlaceholder}"
+                                Content="{Binding MaterialDisplay, Mode=OneTime}"
+                                Tag="{Binding IsMaterialSet, Mode=OneTime}" />
+            </controls:FieldRow>
+            <controls:FieldRow Label="Finish">
+                <ContentControl Style="{StaticResource ValueOrPlaceholder}"
+                                Content="{Binding FinishDisplay, Mode=OneTime}"
+                                Tag="{Binding IsFinishSet, Mode=OneTime}" />
+            </controls:FieldRow>
+            <controls:FieldRow Label="Weight">
+                <!-- The view-model gives a dash when the weight could not be read. -->
+                <TextBlock Style="{DynamicResource ValueText}" Text="{Binding Weight, Mode=OneTime}" />
+            </controls:FieldRow>
+        </controls:FormSection>
 
-            <Label Grid.Row="2" Grid.Column="0" Style="{StaticResource FieldLabel}"
-                   Content="Part _type" Target="{Binding ElementName=PartTypeBox}" />
-            <!--
-                Not editable. The closed box shows the code; each dropdown entry shows "code: full name".
-                The template tells the two apart by whether it sits inside a ComboBoxItem (only dropdown entries do).
-            -->
-            <ComboBox x:Name="PartTypeBox" Grid.Row="2" Grid.Column="1" Margin="0,0,0,6"
-                      IsEditable="False"
-                      IsEnabled="{Binding IsEditable, Mode=OneWay}"
-                      ItemsSource="{Binding PartTypeOptions, Mode=OneWay}"
-                      SelectedValuePath="Code"
-                      SelectedValue="{Binding PartType, Mode=TwoWay}">
-                <ComboBox.Style>
-                    <Style TargetType="ComboBox">
-                        <Setter Property="ToolTip" Value="{Binding PartTypeFullName, Mode=OneWay}" />
-                        <Style.Triggers>
-                            <!-- No tooltip for a blank code, rather than an empty one. -->
-                            <DataTrigger Binding="{Binding PartTypeFullName, Mode=OneWay}" Value="">
-                                <Setter Property="ToolTip" Value="{x:Null}" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </ComboBox.Style>
-                <ComboBox.ItemTemplate>
-                    <DataTemplate>
-                        <TextBlock x:Name="OptionText" MinHeight="16" Text="{Binding DisplayText, Mode=OneWay}" />
-                        <DataTemplate.Triggers>
-                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ComboBoxItem}}" Value="{x:Null}">
-                                <Setter TargetName="OptionText" Property="Text" Value="{Binding Code, Mode=OneWay}" />
-                            </DataTrigger>
-                        </DataTemplate.Triggers>
-                    </DataTemplate>
-                </ComboBox.ItemTemplate>
-            </ComboBox>
-
-            <Label Grid.Row="3" Grid.Column="0" Style="{StaticResource FieldLabel}"
-                   Content="_Designer" Target="{Binding ElementName=DesignerBox}" />
-            <TextBox x:Name="DesignerBox" Grid.Row="3" Grid.Column="1" Style="{StaticResource EditableField}"
-                     IsEnabled="{Binding IsEditable, Mode=OneWay}"
-                     Text="{Binding Designer, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-
-            <Label Grid.Row="4" Grid.Column="0" Style="{StaticResource FieldLabel}"
-                   Content="D_etailer" Target="{Binding ElementName=DetailerBox}" />
-            <TextBox x:Name="DetailerBox" Grid.Row="4" Grid.Column="1" Style="{StaticResource EditableField}"
-                     IsEnabled="{Binding IsEditable, Mode=OneWay}"
-                     Text="{Binding Detailer, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-
-            <Label Grid.Row="5" Grid.Column="0" Style="{StaticResource FieldLabel}"
-                   Content="_Cost" Target="{Binding ElementName=CostBox}" />
-            <TextBox x:Name="CostBox" Grid.Row="5" Grid.Column="1" Style="{StaticResource EditableField}"
-                     IsEnabled="{Binding IsEditable, Mode=OneWay}"
-                     Text="{Binding CostText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-
-            <Label Grid.Row="6" Grid.Column="0" Style="{StaticResource FieldLabel}" Content="Material" />
-            <TextBox Grid.Row="6" Grid.Column="1" Style="{StaticResource ReadOnlyField}"
-                     Text="{Binding Material, Mode=OneWay}" />
-
-            <Label Grid.Row="7" Grid.Column="0" Style="{StaticResource FieldLabel}" Content="Finish" />
-            <TextBox Grid.Row="7" Grid.Column="1" Style="{StaticResource ReadOnlyField}"
-                     Text="{Binding Finish, Mode=OneWay}" />
-
-            <Label Grid.Row="8" Grid.Column="0" Style="{StaticResource FieldLabel}" Content="Weight" />
-            <TextBox Grid.Row="8" Grid.Column="1" Style="{StaticResource ReadOnlyField}"
-                     Text="{Binding Weight, Mode=OneWay}" />
-        </Grid>
-
-        <!-- Status line: red for a validation or write error, as in the Settings window. -->
-        <TextBlock Margin="0,8,0,0"
-                   TextWrapping="Wrap"
-                   Text="{Binding StatusText, Mode=OneWay}">
-            <TextBlock.Style>
-                <Style TargetType="TextBlock">
-                    <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}" />
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding HasError}" Value="True">
-                            <Setter Property="Foreground" Value="Firebrick" />
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </TextBlock.Style>
-        </TextBlock>
-
-        <StackPanel Margin="0,16,0,0" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="_Apply" MinWidth="80" Command="{Binding ApplyCommand}" />
-            <Button Content="OK" MinWidth="80" Margin="8,0,0,0" IsDefault="True" Command="{Binding OkCommand}" />
+        <!--
+            Status line and buttons in one row: the status line wraps in the left column and is not drawn when empty,
+            so there is no band between the last row and the buttons. Error style for a validation or write error.
+        -->
+        <controls:DialogFooter Status="{Binding StatusText, Mode=OneWay}" IsError="{Binding HasError, Mode=OneWay}">
+            <Button Content="_Apply" Command="{Binding ApplyCommand}" />
+            <Button Style="{DynamicResource PrimaryButton}" Content="OK" IsDefault="True" Command="{Binding OkCommand}" />
             <!-- IsCancel closes a dialog shown with ShowDialog; nothing is written. -->
-            <Button Content="Cancel" MinWidth="80" Margin="8,0,0,0" IsCancel="True" />
-        </StackPanel>
+            <Button Content="Cancel" IsCancel="True" />
+        </controls:DialogFooter>
     </StackPanel>
 </Window>

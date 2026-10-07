@@ -1,50 +1,49 @@
 <Window x:Class="InventorAddin.UI.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:InventorAddin.UI.Controls"
         SizeToContent="WidthAndHeight"
         ResizeMode="NoResize"
         ShowInTaskbar="False">
-    <!-- DataContext is a SettingsViewModel (InventorAddin.Core.ViewModels), set in the constructor. -->
-    <StackPanel Margin="16" MinWidth="320" MaxWidth="480">
-        <CheckBox Content="Show developer tools"
-                  IsChecked="{Binding ShowDeveloperTools, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+    <!--
+        DataContext is a SettingsViewModel (InventorAddin.Core.ViewModels), set in the constructor.
+        Layout and bindings only: the look comes from UI/Theme, applied by WindowHost after the window is built,
+        so shared styles are referred to with DynamicResource. SizeToContent and ResizeMode are repeated from the
+        DialogWindow style so the window still sizes to its content if the shared styles fail to load.
 
-        <TextBlock Margin="0,4,0,0"
-                   TextWrapping="Wrap"
-                   Foreground="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}"
-                   Text="{Binding RestartNotice}" />
+        The help line under the text box and the note under the checkbox are rows of their own with no label, so
+        they line up with the value column and the row spacing comes from FieldRow. Putting a note in the same row
+        as its control would centre the row's label on the pair instead of on the control.
+    -->
+    <StackPanel Style="{DynamicResource DialogContent}">
+        <controls:DialogHeader Title="{Binding HeaderTitle, Mode=OneTime}"
+                               Subline="{Binding HeaderSubline, Mode=OneTime}" />
 
-        <Label Margin="0,12,0,0"
-               Padding="0,0,0,4"
-               Content="_Default designer"
-               Target="{Binding ElementName=DefaultDesignerBox}" />
-        <TextBox x:Name="DefaultDesignerBox"
-                 Text="{Binding DefaultDesigner, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-        <TextBlock Margin="0,4,0,0"
-                   TextWrapping="Wrap"
-                   Foreground="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}"
-                   Text="Filled in as Designer in Part Properties when a file has none." />
+        <controls:FormSection Heading="General">
+            <controls:FieldRow Label="_Default designer" Target="{Binding ElementName=DefaultDesignerBox}">
+                <TextBox x:Name="DefaultDesignerBox"
+                         Text="{Binding DefaultDesigner, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            </controls:FieldRow>
+            <controls:FieldRow>
+                <TextBlock Style="{DynamicResource MutedText}" Text="{Binding DefaultDesignerHelp, Mode=OneTime}" />
+            </controls:FieldRow>
+        </controls:FormSection>
 
-        <TextBlock Margin="0,12,0,0"
-                   TextWrapping="Wrap"
-                   Foreground="Firebrick"
-                   Text="{Binding ErrorText}">
-            <TextBlock.Style>
-                <Style TargetType="TextBlock">
-                    <Setter Property="Visibility" Value="Collapsed" />
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding HasError}" Value="True">
-                            <Setter Property="Visibility" Value="Visible" />
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </TextBlock.Style>
-        </TextBlock>
+        <controls:FormSection Heading="Developer">
+            <controls:FieldRow>
+                <CheckBox Content="Show developer tools"
+                          IsChecked="{Binding ShowDeveloperTools, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            </controls:FieldRow>
+            <controls:FieldRow>
+                <TextBlock Style="{DynamicResource MutedText}" Text="{Binding RestartNotice, Mode=OneTime}" />
+            </controls:FieldRow>
+        </controls:FormSection>
 
-        <StackPanel Margin="0,16,0,0" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="Save" MinWidth="80" IsDefault="True" Command="{Binding SaveCommand}" />
+        <!-- ErrorText is null when there is no error, which collapses the status line. -->
+        <controls:DialogFooter Status="{Binding ErrorText}" IsError="{Binding HasError}">
+            <Button Style="{DynamicResource PrimaryButton}" Content="Save" IsDefault="True" Command="{Binding SaveCommand}" />
             <!-- IsCancel closes a dialog shown with ShowDialog; nothing is saved. -->
-            <Button Content="Cancel" MinWidth="80" Margin="8,0,0,0" IsCancel="True" />
-        </StackPanel>
+            <Button Content="Cancel" IsCancel="True" />
+        </controls:DialogFooter>
     </StackPanel>
 </Window>

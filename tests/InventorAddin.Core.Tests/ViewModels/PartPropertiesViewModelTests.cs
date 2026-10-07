@@ -91,9 +91,7 @@ public sealed class PartPropertiesViewModelTests
     {
         var vm = Create(Complete());
 
-        Assert.Equal("Bracket.ipt", vm.FileName);
         Assert.Equal("PN-0001", vm.PartNumber);
-        Assert.Equal("Bracket", vm.PartName);
         Assert.Equal("Test Steel", vm.Material);
         Assert.Equal("Test Paint", vm.Finish);
         Assert.Equal("1.234 kg", vm.Weight);
@@ -117,10 +115,7 @@ public sealed class PartPropertiesViewModelTests
     {
         var vm = Create(new PartPropertiesSnapshot { EditBlock = EditBlock.ReadOnlyFile });
 
-        Assert.Equal(PartPropertiesViewModel.NotSavedFileName, vm.FileName);
-        Assert.Equal("Not saved yet", vm.FileName);
         Assert.Equal(string.Empty, vm.PartNumber);
-        Assert.Equal(string.Empty, vm.PartName);
         Assert.Equal(string.Empty, vm.Material);
         Assert.Equal(string.Empty, vm.Finish);
         Assert.Equal("-", vm.Weight);
@@ -133,12 +128,12 @@ public sealed class PartPropertiesViewModelTests
     [Theory]
     [InlineData("/home/work/Bracket.v2.ipt", "Bracket.v2.ipt")]
     [InlineData(@"C:\Work\Frame.iam", "Frame.iam")]
-    [InlineData("   ", "Not saved yet")]
-    public void FileName_IsTheNameWithExtension(string fullFileName, string expected)
+    [InlineData("   ", PartPropertiesViewModel.NotSavedFileName)]
+    public void HeaderSubline_EndsWithTheNameWithExtension(string fullFileName, string expected)
     {
         var vm = Create(Blank() with { FullFileName = fullFileName });
 
-        Assert.Equal(expected, vm.FileName);
+        Assert.Equal("Part" + PartPropertiesViewModel.HeaderSeparator + expected, vm.HeaderSubline);
     }
 
     // Display text for the restyled window (spec 08)
@@ -336,8 +331,23 @@ public sealed class PartPropertiesViewModelTests
 
         Assert.Contains(nameof(PartPropertiesViewModel.PartType), changes);
         Assert.Contains(nameof(PartPropertiesViewModel.PartTypeFullName), changes);
+        Assert.Contains(nameof(PartPropertiesViewModel.PartTypeToolTip), changes);
         Assert.Contains(nameof(PartPropertiesViewModel.HasChanges), changes);
         Assert.Equal("Fastener", vm.PartTypeFullName);
+    }
+
+    [Theory]
+    [InlineData("M", "Manufactured")]
+    [InlineData("zz", PartTypes.UnknownCodeText)]
+    [InlineData("", null)]
+    [InlineData("   ", null)]
+    public void PartTypeToolTip_IsTheFullNameOrNullForABlankCode(string code, string? expected)
+    {
+        var vm = Create(Complete());
+
+        vm.PartType = code;
+
+        Assert.Equal(expected, vm.PartTypeToolTip);
     }
 
     [Theory]

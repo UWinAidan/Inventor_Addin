@@ -6,8 +6,8 @@ Last updated: 2026-10-07
 
 ## Next up
 
-1. Aidan builds the M1b run 1 branch on Windows and checks the deploy line (task 025 checklist below), and looks at `docs/ui-mockups/ribbon-icons.png`.
-2. Aidan runs spike task 020 on Windows and commits its Results. Then cloud run 2 does 026 to 031: "Run tasks 026 to 031 following docs/WORKFLOW.md".
+1. Aidan builds the M1b run 1 branch on Windows and checks the deploy line (task 025 checklist below).
+2. Cloud run 2 does 026 to 031 (in progress).
 3. Aidan finishes the Part Properties checks listed below.
 4. Aidan decides the numbering configuration (spec 02), then: plan M2.
 
@@ -29,9 +29,6 @@ From the build deploy line (task 025):
 - [ ] With Inventor open, build again: the build succeeds, prints the `NOT deployed` warning and no `Deployed` line
 - [ ] `dotnet build InventorAddin.slnx -p:DeployToInventor=false`: neither line is printed
 
-From the ribbon icons (task 024):
-
-- [ ] Look at `docs/ui-mockups/ribbon-icons.png`: do the icons read, and is a light and a dark set right (spec 08, question 3)?
 
 ## Waiting on Aidan: decisions
 
@@ -86,9 +83,16 @@ Small things noticed while building. None is urgent. The parent turns these into
 - The agent definitions say "the AWB Addin add-in", which repeats "add-in". (task 011)
 
 **Ribbon icons**
+- The deployed add-in on Aidan's PC is still the spike 020 build. Rebuild with Inventor closed to replace it. (task 020)
 - Task 030: embed only `UI/Icons/*.png`. The `.svg` sources sit in the same folder and must stay out of the build. (task 024)
-- The 32 px icons use 1.5 px strokes, so one edge of each line is half-shaded. If they look soft in Inventor, switch the 32 px drawings to 2 px strokes. (task 024)
-- Export Model Data at 16 px can read as two overlapping squares (a "copy" icon) rather than a box. Deepen the box's offset if Aidan finds it unclear in the preview. (task 024 review)
+
+**Window style**
+- The remark in `UiTheme.cs` still says the dark-theme rule waits for spike 020; name the confirmed `LightTheme` and `DarkTheme`. (task 026)
+- Section headings use a hair space (U+200A) between letters. If it does not read as wide spacing in Inventor, try a thin space (U+2009). (task 026)
+- Settings: the gap between a control and its note is the full row gap (9). If it looks loose, add a shared `HelpText` style. (task 028)
+- Settings: the restart note lines up with the checkbox's box, not its label text. (task 028)
+- Settings: "Show developer tools" has no access key; D is taken by Default designer. Alt+S is free. (task 028)
+- A cloud check project that compiles the add-in's XAML and WPF code against stub Inventor types would catch XAML errors before Aidan builds. Proposed, not agreed. (task 026)
 
 **Part properties**
 - One Apply writes one log line plus one per property. Keep the summary line and log the per-property lines only on failure. (tasks 018, 019)
@@ -97,7 +101,10 @@ Small things noticed while building. None is urgent. The parent turns these into
 - `PartPropertiesViewModel.Ok()` has no guard for invalid values when called from code. The window cannot reach it today. (task 016)
 - Correcting a part type's case shows the "pre-filled values" wording, which is not quite accurate for it. (task 016)
 - Number parsing accepts oddly placed group separators, so `1,2,3` reads as 123. Tighten only if it confuses anyone. (task 013)
-- `DocumentKindNames` and `PartPropertiesViewModel.HeaderSeparator` exist in Core; the window headers in 026 to 029 should reuse them rather than repeat the strings. (task 022)
+- `PartNumber`, `Material` and `Finish` on `PartPropertiesViewModel` are no longer bound by the window. Remove them, or keep them for a later field. (task 029)
+- The Part Properties window now sizes to its content, so a long status message widens it, up to 560, until the message clears. If that is distracting, fix the width in `UI/Theme/`. (task 029)
+- The window's local `ValueOrPlaceholder` and `IdentifierOrPlaceholder` styles could become shared pieces. (task 029)
+- If the blank Part type entry is too short to click, give the shared `ComboBoxItem` style a minimum height. (task 029)
 
 **Developer tools**
 - JSON exports include `BoundingBox` lengths, which are derived values. Mark them ignored if exports should not carry them. (task 001)

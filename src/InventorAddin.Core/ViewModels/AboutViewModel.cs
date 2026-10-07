@@ -57,14 +57,6 @@ public sealed class AboutViewModel : ObservableObject
 
     public string LogFolder { get; }
 
-    public string VersionLine => $"Version: {Version}";
-
-    public string BuildDateLine => $"Built: {BuildDate}";
-
-    public string InventorVersionLine => $"Inventor major version: {InventorVersion}";
-
-    public string LogFolderLine => $"Log folder: {LogFolder}";
-
     private static string OrUnknown(string? value) =>
         string.IsNullOrWhiteSpace(value) ? Unknown : value.Trim();
 
