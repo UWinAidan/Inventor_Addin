@@ -75,6 +75,11 @@ Small things noticed while building. None is urgent. The parent turns these into
 **Ribbon and shell**
 - The agent definitions say "the AWB Addin add-in", which repeats "add-in". (task 011)
 
+**Ribbon icons**
+- Task 030: embed only `UI/Icons/*.png`. The `.svg` sources sit in the same folder and must stay out of the build. (task 024)
+- The 32 px icons use 1.5 px strokes, so one edge of each line is half-shaded. If they look soft in Inventor, switch the 32 px drawings to 2 px strokes. (task 024)
+- Export Model Data at 16 px can read as two overlapping squares (a "copy" icon) rather than a box. Deepen the box's offset if Aidan finds it unclear in the preview. (task 024 review)
+
 **Part properties**
 - One Apply writes one log line plus one per property. Keep the summary line and log the per-property lines only on failure. (tasks 018, 019)
 - Weight is read through code that also computes volume, area and centre of mass. On a large assembly the window may open slowly; read only the mass, or read it after the window opens. (task 018)

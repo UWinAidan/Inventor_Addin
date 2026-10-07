@@ -2,7 +2,7 @@
 
 - **Milestone:** M1b
 - **Feature spec:** `docs/features/08-window-style.md` (Ribbon icons; open question 3)
-- **Status:** todo
+- **Status:** done
 - **Depends on:** none
 - **Needs:** cloud
 - **Parallel-safe with:** 021, 022, 023, 025
@@ -46,11 +46,15 @@ Out of scope:
 
 Filled in by the implementer.
 
-- **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):** none (image files only, not yet referenced by the project)
+- **Ran:** `python3 tools/icons/render.py` (Python 3.13, Pillow 12.3.0): wrote 20 PNGs and the preview. Ran it a second time: every PNG and the preview byte-identical (sha1 compared). Checked all 20 PNGs with a script: 16×16 or 32×32 as named, colour type RGBA 8-bit (32-bit), only `IHDR`/`IDAT`/`IEND` chunks (no metadata, profile or dpi), and every pixel's RGB is exactly `#3B4350` (Light) or `#E3E7EE` (Dark), with only alpha varying. The renderer refuses any drawing whose stroke reaches outside the frame. Looked at the 16 px set enlarged 12×: horizontal and vertical lines are one pixel, diagonals and the `i` circle step cleanly. ImageMagick here cannot read SVG (no `rsvg-convert` delegate), so the Pillow route was taken; see `tools/icons/README.md`. `dotnet build src/InventorAddin.Core`: 0 errors. `dotnet test tests/InventorAddin.Core.Tests`: 662 passed, 0 failed, 0 skipped (cloud session).
+- **Not compiled (changed under `src/InventorAddin`):** none (image and SVG files only, not yet referenced by the project)
 - **Inventor API members not confirmed:** none
 - **Manual checklist for Inventor:** none (covered by 030). Aidan: look at `docs/ui-mockups/ribbon-icons.png`.
 
 ## Follow-ups
 
 Things noticed but not done.
+
+- Open question 3: I did not find one colour that reads well on both backgrounds. Each set's colour almost disappears on the other theme's background, and a mid grey between them would be low-contrast on both. The two sets stay the default.
+- 030: embed only `UI/Icons/*.png`. The `.svg` sources sit in the same folder; the SDK project treats them as `None` items, so they are neither embedded nor copied unless 030 adds a glob that catches them.
+- The 32 px drawings use 1.5 px strokes, so one edge of each straight line is half a pixel wide by design. If Aidan finds the 32 px set soft in Inventor, switching the 32 px drawings to 2 px strokes on the grid would make them fully sharp at the cost of a heavier look.

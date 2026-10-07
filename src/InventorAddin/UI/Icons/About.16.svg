@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#3B4350" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter" shape-rendering="crispEdges">
+  <title>About, 16 px: a lower-case i in a circle</title>
+  <!-- r is 6.2 rather than 6 so the crisp-edged circle has no doubled pixels on its diagonals -->
+  <circle cx="7.5" cy="7.5" r="6.2"/>
+  <rect x="7" y="4" width="1" height="1" fill="#3B4350" stroke="none"/>
+  <line x1="7.5" y1="6.5" x2="7.5" y2="10.5"/>
+</svg>
