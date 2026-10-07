@@ -1,29 +1,36 @@
 <Window x:Class="InventorAddin.UI.AboutWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:InventorAddin.UI.Controls"
         SizeToContent="WidthAndHeight"
         ResizeMode="NoResize"
         ShowInTaskbar="False">
-    <!-- DataContext is an AboutViewModel (InventorAddin.Core.ViewModels), set in the constructor. -->
-    <StackPanel Margin="16" MinWidth="320" MaxWidth="560">
-        <TextBlock FontSize="16" FontWeight="SemiBold" Text="{Binding Title, Mode=OneTime}" />
+    <!--
+        DataContext is an AboutViewModel (InventorAddin.Core.ViewModels), set in the constructor.
+        Layout and bindings only: the look comes from UI/Theme, applied by WindowHost after the window is built,
+        so shared styles are referred to with DynamicResource. SizeToContent and ResizeMode are repeated from the
+        DialogWindow style so the window still sizes to its content if the shared styles fail to load.
+    -->
+    <StackPanel Style="{DynamicResource DialogContent}">
+        <controls:DialogHeader Title="{Binding Title, Mode=OneTime}"
+                               Subline="{Binding HeaderSubline, Mode=OneTime}" />
 
-        <TextBlock Margin="0,12,0,0" Text="{Binding VersionLine, Mode=OneTime}" />
-        <TextBlock Margin="0,4,0,0" Text="{Binding BuildDateLine, Mode=OneTime}" />
-        <TextBlock Margin="0,4,0,0" Text="{Binding InventorVersionLine, Mode=OneTime}" />
+        <controls:FormSection>
+            <controls:FieldRow Label="Built">
+                <TextBlock Style="{DynamicResource ValueText}" Text="{Binding BuildDate, Mode=OneTime}" />
+            </controls:FieldRow>
+            <controls:FieldRow Label="Inventor version">
+                <TextBlock Style="{DynamicResource ValueText}" Text="{Binding InventorRelease, Mode=OneTime}" />
+            </controls:FieldRow>
+            <controls:FieldRow Label="Log folder">
+                <!-- Selectable so the path can be copied. -->
+                <TextBox Style="{DynamicResource SelectableIdentifierText}" Text="{Binding LogFolder, Mode=OneTime}" />
+            </controls:FieldRow>
+        </controls:FormSection>
 
-        <!-- Read-only text box so the path can be selected and copied. -->
-        <TextBox Margin="0,4,0,0"
-                 IsReadOnly="True"
-                 BorderThickness="0"
-                 Background="Transparent"
-                 Padding="0"
-                 TextWrapping="Wrap"
-                 Text="{Binding LogFolderLine, Mode=OneTime}" />
-
-        <StackPanel Margin="0,16,0,0" Orientation="Horizontal" HorizontalAlignment="Right">
+        <controls:DialogFooter>
             <!-- IsCancel closes a dialog shown with ShowDialog; IsDefault lets Enter close it too. -->
-            <Button Content="Close" MinWidth="80" IsDefault="True" IsCancel="True" />
-        </StackPanel>
+            <Button Style="{DynamicResource PrimaryButton}" Content="Close" IsDefault="True" IsCancel="True" />
+        </controls:DialogFooter>
     </StackPanel>
 </Window>

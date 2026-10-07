@@ -86,6 +86,11 @@ Small things noticed while building. None is urgent. The parent turns these into
 - The deployed add-in on Aidan's PC is still the spike 020 build. Rebuild with Inventor closed to replace it. (task 020)
 - Task 030: embed only `UI/Icons/*.png`. The `.svg` sources sit in the same folder and must stay out of the build. (task 024)
 
+**Window style**
+- The remark in `UiTheme.cs` still says the dark-theme rule waits for spike 020; name the confirmed `LightTheme` and `DarkTheme`. (task 026)
+- Section headings use a hair space (U+200A) between letters. If it does not read as wide spacing in Inventor, try a thin space (U+2009). (task 026)
+- A cloud check project that compiles the add-in's XAML and WPF code against stub Inventor types would catch XAML errors before Aidan builds. Proposed, not agreed. (task 026)
+
 **Part properties**
 - One Apply writes one log line plus one per property. Keep the summary line and log the per-property lines only on failure. (tasks 018, 019)
 - Weight is read through code that also computes volume, area and centre of mass. On a large assembly the window may open slowly; read only the mass, or read it after the window opens. (task 018)

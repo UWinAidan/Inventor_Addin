@@ -1,0 +1,43 @@
+<!--
+    Light colour set (spec 08, "Colours"). One frozen brush per token, keyed <Token>Brush.
+    Colors.Dark.xaml defines exactly the same keys. These two files are the only place a colour value appears;
+    everything else refers to these brushes with DynamicResource. Loaded by ThemeResources.
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                    xmlns:po="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"
+                    mc:Ignorable="po">
+    <!-- window body -->
+    <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#F3F4F6" po:Freeze="True" />
+    <!-- values, button text -->
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#1B2029" po:Freeze="True" />
+    <!-- header title, text inside inputs -->
+    <SolidColorBrush x:Key="TextStrongBrush" Color="#11151C" po:Freeze="True" />
+    <!-- field labels -->
+    <SolidColorBrush x:Key="TextLabelBrush" Color="#4A5361" po:Freeze="True" />
+    <!-- header subline, status line, the full name beside a code -->
+    <SolidColorBrush x:Key="TextMutedBrush" Color="#55606F" po:Freeze="True" />
+    <!-- "Not set", "Not assigned" -->
+    <SolidColorBrush x:Key="TextPlaceholderBrush" Color="#667080" po:Freeze="True" />
+    <!-- section headings -->
+    <SolidColorBrush x:Key="SectionHeadingBrush" Color="#55606F" po:Freeze="True" />
+    <!-- line under a section heading -->
+    <SolidColorBrush x:Key="DividerBrush" Color="#C9CED6" po:Freeze="True" />
+    <!-- text boxes, dropdowns, secondary buttons -->
+    <SolidColorBrush x:Key="InputBackgroundBrush" Color="#FFFFFF" po:Freeze="True" />
+    <!-- text boxes, dropdowns, secondary buttons -->
+    <SolidColorBrush x:Key="InputBorderBrush" Color="#8D96A5" po:Freeze="True" />
+    <!-- header icon tile -->
+    <SolidColorBrush x:Key="IconTileBrush" Color="#DDE1E7" po:Freeze="True" />
+    <!-- disabled button text -->
+    <SolidColorBrush x:Key="DisabledTextBrush" Color="#7A8493" po:Freeze="True" />
+    <!-- disabled button border -->
+    <SolidColorBrush x:Key="DisabledBorderBrush" Color="#C5CAD3" po:Freeze="True" />
+    <!-- primary button fill, focus outline -->
+    <SolidColorBrush x:Key="AccentBrush" Color="#0F6CB0" po:Freeze="True" />
+    <!-- primary button text -->
+    <SolidColorBrush x:Key="OnAccentBrush" Color="#FFFFFF" po:Freeze="True" />
+    <!-- error text in the status line -->
+    <SolidColorBrush x:Key="ErrorBrush" Color="#B3261E" po:Freeze="True" />
+</ResourceDictionary>

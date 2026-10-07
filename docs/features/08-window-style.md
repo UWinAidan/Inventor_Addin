@@ -200,3 +200,7 @@ Added while planning M1b (2026-10-07). Each has a default the tasks build:
 6. Which theme names count as dark. Default: any name containing "dark", until spike 020 records the names Inventor 2026 reports.
 7. The About window's Inventor version row. Default: the release year (2026), worked out from Inventor's major version (30).
 8. A test (task 031) that fails when a window's XAML sets its own colour, font size, margin or fixed size, so the rule does not depend only on review. Default: added.
+
+Added while building M1b (2026-10-07):
+
+9. The secondary button's fill. The spec says "transparent in dark, white in light", but no colour token does both. Default (task 026): the input background, which is white in light and slightly darker than the window in dark. The alternative is a new colour token.
