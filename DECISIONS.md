@@ -75,3 +75,6 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-10-10 | The part number prefix `AWB` is a numbering-format constant in `PartNumber`, not a brand name, so it is the one exception to keeping brand text only in `Branding` | Default | task 033 |
 | 2026-10-10 | A part name containing a comma is refused for a file with no part number, so the name reads back the same | Default | spec 02, question 18 |
 | 2026-10-10 | The add-in refuses to assign a number or sync while the shared register has a row it cannot read or a column missing, and names the lines to fix, so a write never drops rows | Default | spec 02, question 19 |
+| 2026-10-10 | Mass Update replaces Designer and Detailer separately, each only where it equals the Windows user name, with the Default designer from Settings | Default | spec 02, question 20 |
+| 2026-10-10 | When Mass Update finds one unregistered number on two files, the first in scan order keeps it and the other is reported as a duplicate | Default | task 041 |
+| 2026-10-10 | A registered number found on a second file counts as assigned on both; Mass Update does not flag it | Default | spec 02, question 21 |

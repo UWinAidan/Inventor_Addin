@@ -47,7 +47,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Questions 1 to 8 in spec 08: accent colour, dark title bar, icon style, and five defaults added while planning (never-saved header and part number, theme names, Inventor version row, the XAML rules test)
 
 **Numbering (spec 02), not blocking**
-- Questions 13 to 19 in spec 02: a well-formed number not in the register, case in file names, what to do with duplicates, Save As and Replace on every occurrence, opening Part Properties after creating a file, a comma in the name of a file with no number, and a register row that cannot be read. Each has a default the tasks build
+- Questions 13 to 21 in spec 02: a well-formed number not in the register, case in file names, what to do with duplicates, Save As and Replace on every occurrence, opening Part Properties after creating a file, a comma in the name of a file with no number, a register row that cannot be read, Mass Update's Detailer, and a registered number on two files. Each has a default the tasks build
 
 **Distribution, not blocking**
 - Whether and when to add an installer and a download page. It was to be decided when M2 was planned and is still parked
@@ -104,6 +104,10 @@ Small things noticed while building. None is urgent. The parent turns these into
 - The window's local `ValueOrPlaceholder` and `IdentifierOrPlaceholder` styles could become shared pieces. (task 029)
 
 **Numbering**
+- Mass Update: a duplicate unregistered number is only reported after Apply, and Apply stays disabled if that file is the only one ticked. Show the duplicate in the row at scan time and make Register unavailable there. Fold into 048. (task 041)
+- Mass Update: a register-only update writes nothing to the file, so 048 should not save it; the confirmation still counts it as a changed file. (task 041)
+- `ScannedFile.IsWindowsUser` copies the comparison in `PersonNames.IsWindowsUserPlaceholder`; share one helper. (task 041)
+- `ScanFolder` skips hidden and system files and follows directory junctions (the `EnumerationOptions` defaults). Say so in its doc comment or set it deliberately. (task 041)
 - The Metric and Imperial option list is built in both `SettingsViewModel` and `NewPartViewModel`. A shared `UnitsOption.All` would keep the text in one place. (task 040)
 - New Part's folder is checked only for blank and path length. Task 043 should add a full-path and invalid-character check like the register folder's, or make the folder Browse-only. (task 040)
 - `NewPartViewModel.NumberPlaceholder` repeats the `AWB` prefix; build it from `PartNumber.Prefix`. (task 040)
