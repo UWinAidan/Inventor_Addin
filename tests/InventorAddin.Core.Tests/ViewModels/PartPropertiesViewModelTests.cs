@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Globalization;
 using InventorAddin.Core.Logging;
 using InventorAddin.Core.Models;
+using InventorAddin.Core.Numbering;
 using InventorAddin.Core.PartProperties;
 using InventorAddin.Core.ViewModels;
 
@@ -26,6 +27,21 @@ public sealed class PartPropertiesViewModelTests
         }
     }
 
+    private sealed class FakeAssigner : IPartNumberAssigner
+    {
+        public int Calls { get; private set; }
+        public PartNumberAssignment Result { get; set; } = new("AWB-10001", false, []);
+        public Exception? Throw { get; set; }
+
+        public PartNumberAssignment Assign()
+        {
+            Calls++;
+            if (Throw is not null)
+                throw Throw;
+            return Result;
+        }
+    }
+
     private sealed class RecordingLog : ILog
     {
         public List<string> Infos { get; } = new();
@@ -41,7 +57,7 @@ public sealed class PartPropertiesViewModelTests
     {
         FullFileName = @"C:\Work\Bracket.ipt",
         DocumentKind = DocumentKind.Part,
-        PartNumber = "PN-0001",
+        PartNumber = "AWB-10001",
         Description = "Bracket",
         PartType = "M",
         Designer = "Alex Example",
@@ -60,14 +76,28 @@ public sealed class PartPropertiesViewModelTests
         Description = "Bracket",
     };
 
+    /// <summary>A register holding only <c>AWB-10001</c>, as the add-in's <c>RegisterStore.HasNumber</c> would answer.</summary>
+    private static bool RegisteredOnly10001(string? partNumber) =>
+        PartNumber.TryParse(partNumber, out var n) && n.Value == 10001;
+
     private static PartPropertiesViewModel Create(
         PartPropertiesSnapshot snapshot,
         FakeTarget? target = null,
         string? defaultDesigner = DefaultDesigner,
         CultureInfo? culture = null,
         ILog? log = null,
-        string? windowsUserName = null) =>
-        new(snapshot, target ?? new FakeTarget(), defaultDesigner, windowsUserName, culture ?? Invariant, log);
+        string? windowsUserName = null,
+        Func<string?, bool>? hasNumber = null,
+        FakeAssigner? assigner = null) =>
+        new(
+            snapshot,
+            target ?? new FakeTarget(),
+            hasNumber ?? RegisteredOnly10001,
+            assigner ?? new FakeAssigner(),
+            defaultDesigner,
+            windowsUserName,
+            culture ?? Invariant,
+            log);
 
     private static List<string> RecordPropertyChanges(INotifyPropertyChanged source)
     {
@@ -82,9 +112,13 @@ public sealed class PartPropertiesViewModelTests
     public void Constructor_RejectsNulls()
     {
         var target = new FakeTarget();
-        Assert.Throws<ArgumentNullException>(() => new PartPropertiesViewModel(null!, target, null, null, Invariant));
-        Assert.Throws<ArgumentNullException>(() => new PartPropertiesViewModel(Complete(), null!, null, null, Invariant));
-        Assert.Throws<ArgumentNullException>(() => new PartPropertiesViewModel(Complete(), target, null, null, null!));
+        var assigner = new FakeAssigner();
+        Func<string?, bool> hasNumber = _ => false;
+        Assert.Throws<ArgumentNullException>(() => new PartPropertiesViewModel(null!, target, hasNumber, assigner, null, null, Invariant));
+        Assert.Throws<ArgumentNullException>(() => new PartPropertiesViewModel(Complete(), null!, hasNumber, assigner, null, null, Invariant));
+        Assert.Throws<ArgumentNullException>(() => new PartPropertiesViewModel(Complete(), target, null!, assigner, null, null, Invariant));
+        Assert.Throws<ArgumentNullException>(() => new PartPropertiesViewModel(Complete(), target, hasNumber, null!, null, null, Invariant));
+        Assert.Throws<ArgumentNullException>(() => new PartPropertiesViewModel(Complete(), target, hasNumber, assigner, null, null, null!));
     }
 
     [Fact]
@@ -92,9 +126,9 @@ public sealed class PartPropertiesViewModelTests
     {
         var vm = Create(Complete());
 
-        Assert.Equal("PN-0001", vm.PartNumber);
-        Assert.Equal("Test Steel", vm.Material);
-        Assert.Equal("Test Paint", vm.Finish);
+        Assert.Equal("AWB-10001", vm.PartNumberDisplay);
+        Assert.Equal("Test Steel", vm.MaterialDisplay);
+        Assert.Equal("Test Paint", vm.FinishDisplay);
         Assert.Equal("1.234 kg", vm.Weight);
     }
 
@@ -116,9 +150,6 @@ public sealed class PartPropertiesViewModelTests
     {
         var vm = Create(new PartPropertiesSnapshot { EditBlock = EditBlock.ReadOnlyFile });
 
-        Assert.Equal(string.Empty, vm.PartNumber);
-        Assert.Equal(string.Empty, vm.Material);
-        Assert.Equal(string.Empty, vm.Finish);
         Assert.Equal("-", vm.Weight);
         Assert.Equal(string.Empty, vm.PartType);
         Assert.Equal(string.Empty, vm.Designer);
@@ -166,32 +197,66 @@ public sealed class PartPropertiesViewModelTests
         Assert.Equal(" \u00B7 ", PartPropertiesViewModel.HeaderSeparator);
     }
 
+    // Part number display (spec 02, "Display in Part Properties")
+
     [Theory]
-    [InlineData(@"C:\Work\Bracket.ipt", "PN-0001", "PN-0001", true)]
-    [InlineData(@"C:\Work\Bracket.ipt", "  PN-0001  ", "PN-0001", true)]
-    [InlineData(@"C:\Work\Bracket.ipt", "Bracket", "Not assigned", false)]
-    [InlineData(@"C:\Work\Bracket.ipt", " BRACKET ", "Not assigned", false)]
-    [InlineData(@"C:\Work\Bracket.ipt", "", "Not assigned", false)]
-    [InlineData(@"C:\Work\Bracket.ipt", null, "Not assigned", false)]
-    [InlineData(@"C:\Work\Gearbox.iam", "Gearbox", "Not assigned", false)]
-    [InlineData("", "Part1", "Part1", true)]
-    [InlineData("", "", "Not assigned", false)]
-    public void PartNumberDisplay_ShowsNumberOrNotAssigned(
-        string fullFileName, string? partNumber, string expected, bool assigned)
+    [InlineData(@"C:\Work\AWB-10001,bracket.ipt", "AWB-10001", "AWB-10001", true, true, null)]
+    [InlineData(@"C:\Work\AWB-10001,bracket.ipt", "  awb-10001 ", "AWB-10001", true, true, null)]
+    [InlineData(@"C:\Work\bracket.ipt", "AWB-10500", "AWB-10500", true, false, "Not in the register")]
+    [InlineData(@"C:\Work\bracket.ipt", "bracket", "Not assigned", false, false, null)]
+    [InlineData(@"C:\Work\bracket.ipt", "PN-0001", "Not assigned", false, false, null)]
+    [InlineData(@"C:\Work\bracket.ipt", "AWB-1001", "Not assigned", false, false, null)]
+    [InlineData(@"C:\Work\bracket.ipt", "", "Not assigned", false, false, null)]
+    [InlineData(@"C:\Work\bracket.ipt", null, "Not assigned", false, false, null)]
+    [InlineData("", "Part1", "Not assigned", false, false, null)]
+    [InlineData("", "AWB-10500", "AWB-10500", true, false, "Not in the register")]
+    public void PartNumberDisplay_FollowsTheFormatAndTheRegister(
+        string fullFileName, string? partNumber, string display, bool wellFormed, bool assigned, string? note)
     {
         var vm = Create(Blank() with { FullFileName = fullFileName, PartNumber = partNumber });
 
-        Assert.Equal(expected, vm.PartNumberDisplay);
+        Assert.Equal(display, vm.PartNumberDisplay);
+        Assert.Equal(wellFormed, vm.IsPartNumberWellFormed);
         Assert.Equal(assigned, vm.IsPartNumberAssigned);
+        Assert.Equal(wellFormed && !assigned, vm.IsPartNumberUnregistered);
+        Assert.Equal(note, vm.PartNumberNote);
+    }
+
+    /// <summary>
+    /// Inventor reports the file name as the Part Number when none is set. In the new file-name format that is
+    /// <c>AWB-10001,test_plate</c>, which is not a part number, even when the number before the comma is registered.
+    /// </summary>
+    [Theory]
+    [InlineData(@"C:\Work\AWB-10001,test_plate.ipt", "AWB-10001,test_plate")]
+    [InlineData(@"C:\Work\AWB-10001,a,b.ipt", "AWB-10001,a,b")]
+    [InlineData(@"C:\Work\old_bracket.ipt", "old_bracket")]
+    public void PartNumberDisplay_FileNameFallbackIsNotAssigned(string fullFileName, string partNumber)
+    {
+        var vm = Create(Blank() with { FullFileName = fullFileName, PartNumber = partNumber }, hasNumber: _ => false);
+
+        Assert.Equal(PartNumberDisplay.NotAssignedText, vm.PartNumberDisplay);
+        Assert.False(vm.IsPartNumberWellFormed);
+        Assert.False(vm.IsPartNumberAssigned);
+        Assert.Null(vm.PartNumberNote);
+        Assert.True(vm.CanGenerate);
     }
 
     [Fact]
-    public void PartNumberDisplay_LeavesPartNumberAsRead()
+    public void IsPartNumberAssigned_IsWhatHasNumberSays_ForTheRawProperty()
     {
-        var vm = Create(Blank() with { PartNumber = "Bracket" });
+        var asked = new List<string?>();
+        var vm = Create(Blank() with { PartNumber = " AWB-10002 " }, hasNumber: p => { asked.Add(p); return true; });
 
-        Assert.Equal("Bracket", vm.PartNumber);
-        Assert.Equal(PartNumberDisplay.NotAssignedText, vm.PartNumberDisplay);
+        Assert.Equal(new[] { " AWB-10002 " }, asked);
+        Assert.True(vm.IsPartNumberAssigned);
+        Assert.False(vm.IsPartNumberUnregistered);
+        Assert.Null(vm.PartNumberNote);
+    }
+
+    [Fact]
+    public void NotInRegisterNote_Text()
+    {
+        Assert.Equal("Not in the register", PartPropertiesViewModel.NotInRegisterNote);
     }
 
     [Theory]
@@ -230,6 +295,7 @@ public sealed class PartPropertiesViewModelTests
         Assert.Equal("Document · Not saved yet", vm.HeaderSubline);
         Assert.Equal("Not assigned", vm.PartNumberDisplay);
         Assert.False(vm.IsPartNumberAssigned);
+        Assert.False(vm.IsPartNumberWellFormed);
         Assert.Equal("Not set", vm.MaterialDisplay);
         Assert.Equal("Not set", vm.FinishDisplay);
     }
@@ -1117,5 +1183,239 @@ public sealed class PartPropertiesViewModelTests
         var vm = Create(Complete());
 
         Assert.Null(vm.EditBlockMessage);
+    }
+
+    // Generate part number (spec 02, "Commands: Generate part number")
+
+    /// <summary>A saved part with no number: Inventor reports its file name as the Part Number.</summary>
+    private static PartPropertiesSnapshot Unnumbered() => Complete() with
+    {
+        FullFileName = @"C:\Work\old_bracket.ipt",
+        PartNumber = "old_bracket",
+        Description = "old bracket",
+    };
+
+    [Fact]
+    public void Generate_ShownForAFileWithoutANumber()
+    {
+        var vm = Create(Unnumbered());
+
+        Assert.True(vm.CanGenerate);
+        Assert.True(vm.GenerateCommand.CanExecute(null));
+        Assert.Null(vm.GenerateNote);
+        Assert.False(vm.HasGenerateNote);
+    }
+
+    [Fact]
+    public void Generate_ShownForAnUnregisteredNumber()
+    {
+        var vm = Create(Complete() with { PartNumber = "AWB-10500" });
+
+        Assert.True(vm.CanGenerate);
+        Assert.True(vm.GenerateCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void Generate_HiddenForARegisteredNumber()
+    {
+        var vm = Create(Complete());
+
+        Assert.False(vm.CanGenerate);
+        Assert.False(vm.GenerateCommand.CanExecute(null));
+        Assert.Null(vm.GenerateNote);
+    }
+
+    [Theory]
+    [InlineData(EditBlock.ReadOnlyFile)]
+    [InlineData(EditBlock.NotModifiable)]
+    public void Generate_HiddenWhenTheFileCannotBeEdited(EditBlock block)
+    {
+        var assigner = new FakeAssigner();
+        var vm = Create(Unnumbered() with { EditBlock = block }, assigner: assigner);
+
+        Assert.False(vm.CanGenerate);
+        Assert.False(vm.GenerateCommand.CanExecute(null));
+        vm.GenerateCommand.Execute(null);
+        Assert.Equal(0, assigner.Calls);
+    }
+
+    [Fact]
+    public void Generate_DisabledWithANoteForANeverSavedFile()
+    {
+        var assigner = new FakeAssigner();
+        var vm = Create(Unnumbered() with { FullFileName = "" }, assigner: assigner);
+
+        Assert.False(vm.IsSaved);
+        Assert.True(vm.CanGenerate);
+        Assert.False(vm.GenerateCommand.CanExecute(null));
+        Assert.Equal("Save the file before giving it a part number.", vm.GenerateNote);
+        Assert.True(vm.HasGenerateNote);
+
+        vm.GenerateCommand.Execute(null);
+        Assert.Equal(0, assigner.Calls);
+    }
+
+    [Fact]
+    public void Generate_Success_ShowsTheNumberHidesTheButtonAndSaysSo()
+    {
+        var assigner = new FakeAssigner { Result = new PartNumberAssignment("AWB-10001", false, []) };
+        var vm = Create(Unnumbered(), assigner: assigner);
+        var changes = RecordPropertyChanges(vm);
+        var canExecuteRaised = 0;
+        vm.GenerateCommand.CanExecuteChanged += (_, _) => canExecuteRaised++;
+
+        vm.GenerateCommand.Execute(null);
+
+        Assert.Equal(1, assigner.Calls);
+        Assert.Equal("AWB-10001", vm.PartNumberDisplay);
+        Assert.True(vm.IsPartNumberWellFormed);
+        Assert.True(vm.IsPartNumberAssigned);
+        Assert.False(vm.IsPartNumberUnregistered);
+        Assert.Null(vm.PartNumberNote);
+        Assert.False(vm.CanGenerate);
+        Assert.False(vm.GenerateCommand.CanExecute(null));
+        Assert.Equal("Part number AWB-10001 assigned and written. Save the document to keep it.", vm.StatusText);
+        Assert.False(vm.HasError);
+        Assert.True(canExecuteRaised > 0);
+        foreach (var name in new[]
+        {
+            nameof(vm.PartNumberDisplay), nameof(vm.IsPartNumberWellFormed), nameof(vm.IsPartNumberAssigned),
+            nameof(vm.IsPartNumberUnregistered), nameof(vm.PartNumberNote), nameof(vm.CanGenerate),
+            nameof(vm.StatusText), nameof(vm.HasError),
+        })
+        {
+            Assert.Contains(name, changes);
+        }
+    }
+
+    [Fact]
+    public void Generate_Offline_AddsTheOfflineSentence()
+    {
+        var assigner = new FakeAssigner { Result = new PartNumberAssignment("AWB-10007", true, []) };
+        var vm = Create(Unnumbered(), assigner: assigner);
+
+        vm.GenerateCommand.Execute(null);
+
+        Assert.Equal(
+            "Part number AWB-10007 assigned and written. Save the document to keep it. " +
+            "Assigned offline; it will be added to the shared register at the next sync.",
+            vm.StatusText);
+    }
+
+    [Fact]
+    public void Generate_ReplacesAnUnregisteredNumberAndItsNote()
+    {
+        var assigner = new FakeAssigner { Result = new PartNumberAssignment("AWB-10002", false, []) };
+        var vm = Create(Complete() with { PartNumber = "AWB-10500" }, assigner: assigner);
+        Assert.Equal("Not in the register", vm.PartNumberNote);
+
+        vm.GenerateCommand.Execute(null);
+
+        Assert.Equal("AWB-10002", vm.PartNumberDisplay);
+        Assert.Null(vm.PartNumberNote);
+        Assert.False(vm.CanGenerate);
+    }
+
+    [Fact]
+    public void Generate_Failure_ShowsTheMessageAndChangesNothingElse()
+    {
+        var log = new RecordingLog();
+        var assigner = new FakeAssigner { Throw = new InvalidOperationException("The register is busy.") };
+        var vm = Create(Unnumbered(), assigner: assigner, log: log);
+
+        vm.GenerateCommand.Execute(null);
+
+        Assert.Equal("Generate part number failed: The register is busy.", vm.StatusText);
+        Assert.True(vm.HasError);
+        Assert.Equal(PartNumberDisplay.NotAssignedText, vm.PartNumberDisplay);
+        Assert.False(vm.IsPartNumberAssigned);
+        Assert.True(vm.CanGenerate);
+        Assert.True(vm.GenerateCommand.CanExecute(null));
+        Assert.Single(log.Errors);
+        Assert.Same(assigner.Throw, log.Errors[0].Ex);
+    }
+
+    [Fact]
+    public void Generate_CanBeRetriedAfterAFailure()
+    {
+        var assigner = new FakeAssigner { Throw = new InvalidOperationException("Busy.") };
+        var vm = Create(Unnumbered(), assigner: assigner);
+        vm.GenerateCommand.Execute(null);
+
+        assigner.Throw = null;
+        vm.GenerateCommand.Execute(null);
+
+        Assert.Equal(2, assigner.Calls);
+        Assert.Equal("AWB-10001", vm.PartNumberDisplay);
+        Assert.False(vm.HasError);
+    }
+
+    [Fact]
+    public void Generate_ReportsDuplicatesOnce()
+    {
+        var messages = new[] { "AWB-10003 was given to two files: 'a' and 'b'." };
+        var assigner = new FakeAssigner { Result = new PartNumberAssignment("AWB-10004", false, messages) };
+        var vm = Create(Unnumbered(), assigner: assigner);
+        var reported = new List<IReadOnlyList<string>>();
+        vm.DuplicatesReported += (_, list) => reported.Add(list);
+
+        vm.GenerateCommand.Execute(null);
+
+        var only = Assert.Single(reported);
+        Assert.Equal(messages, only);
+    }
+
+    [Fact]
+    public void Generate_WithoutDuplicates_ReportsNothing()
+    {
+        var vm = Create(Unnumbered());
+        var reported = 0;
+        vm.DuplicatesReported += (_, _) => reported++;
+
+        vm.GenerateCommand.Execute(null);
+
+        Assert.Equal(0, reported);
+    }
+
+    [Fact]
+    public void Generate_DoesNotWriteThroughApply_AndLeavesNoPendingChange()
+    {
+        var target = new FakeTarget();
+        var vm = Create(Unnumbered(), target);
+        Assert.False(vm.HasChanges);
+
+        vm.GenerateCommand.Execute(null);
+
+        Assert.False(vm.HasChanges);
+        Assert.False(vm.ApplyCommand.CanExecute(null));
+        Assert.Empty(target.Calls);
+    }
+
+    [Fact]
+    public void Generate_KeepsPendingEdits_AndApplyThenWritesOnlyThem()
+    {
+        var target = new FakeTarget();
+        var vm = Create(Unnumbered(), target);
+        vm.Designer = "New Designer";
+
+        vm.GenerateCommand.Execute(null);
+        Assert.True(vm.HasChanges);
+        vm.ApplyCommand.Execute(null);
+
+        var writes = Assert.Single(target.Calls);
+        Assert.DoesNotContain(writes, w => w.Location == PartPropertyStorage.PartNumber);
+        Assert.Contains(writes, w => w.Location == PartPropertyStorage.Designer);
+        Assert.Equal(PartPropertiesViewModel.SavedNotice, vm.StatusText);
+        Assert.Equal("AWB-10001", vm.PartNumberDisplay);
+    }
+
+    [Fact]
+    public void FormatDuplicates_HeadingThenOneLinePerDuplicate()
+    {
+        var text = PartPropertiesViewModel.FormatDuplicates(new[] { "first", "second" });
+
+        Assert.Equal(
+            PartPropertiesViewModel.DuplicatesHeading + Environment.NewLine + "- first" + Environment.NewLine + "- second",
+            text);
     }
 }

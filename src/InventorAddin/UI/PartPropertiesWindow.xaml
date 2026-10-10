@@ -14,6 +14,9 @@
         Spec 08, "The three windows: Part Properties".
     -->
     <Window.Resources>
+        <!-- Collapses an element while its bound flag is false (the note and the Generate button). -->
+        <BooleanToVisibilityConverter x:Key="VisibleWhenTrue" />
+
         <!--
             A read-only value that is either text or a placeholder ("Not set", "Not assigned"). Content is the text
             to show (the view-model has it ready); Tag is true when it is a real value. An inline Style on a
@@ -72,10 +75,28 @@
                                Subline="{Binding HeaderSubline, Mode=OneTime}" />
 
         <controls:FormSection Heading="Identity">
+            <!--
+                Spec 02, "Display in Part Properties": a number in the format is shown (with a muted note when the
+                register does not hold it), anything else as "Not assigned". The Generate button shows while the file
+                has no registered number and can be edited; for a never-saved file it is disabled and a note says why.
+                The bindings are OneWay because a successful Generate changes them. Access key G.
+            -->
             <controls:FieldRow Label="Part number">
-                <ContentControl Style="{StaticResource IdentifierOrPlaceholder}"
-                                Content="{Binding PartNumberDisplay, Mode=OneTime}"
-                                Tag="{Binding IsPartNumberAssigned, Mode=OneTime}" />
+                <StackPanel Orientation="Horizontal">
+                    <ContentControl Style="{StaticResource IdentifierOrPlaceholder}"
+                                    Content="{Binding PartNumberDisplay, Mode=OneWay}"
+                                    Tag="{Binding IsPartNumberWellFormed, Mode=OneWay}" />
+                    <TextBlock Style="{DynamicResource SideNoteText}"
+                               Text="{Binding PartNumberNote, Mode=OneWay}"
+                               Visibility="{Binding IsPartNumberUnregistered, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}" />
+                    <Button Style="{DynamicResource SideButton}"
+                            Content="_Generate part number"
+                            Command="{Binding GenerateCommand}"
+                            Visibility="{Binding CanGenerate, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}" />
+                    <TextBlock Style="{DynamicResource SideNoteText}"
+                               Text="{Binding GenerateNote, Mode=OneWay}"
+                               Visibility="{Binding HasGenerateNote, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}" />
+                </StackPanel>
             </controls:FieldRow>
             <controls:FieldRow Label="Part _type" Target="{Binding ElementName=PartTypeBox}">
                 <StackPanel Orientation="Horizontal">

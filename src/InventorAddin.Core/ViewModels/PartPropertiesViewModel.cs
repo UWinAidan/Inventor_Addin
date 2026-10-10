@@ -1,5 +1,6 @@
 using System.Globalization;
 using InventorAddin.Core.Logging;
+using InventorAddin.Core.Numbering;
 using InventorAddin.Core.PartProperties;
 
 namespace InventorAddin.Core.ViewModels;
@@ -24,7 +25,8 @@ public sealed record PartTypeOption(string Code, string FullName, string Display
 /// View-model for the Part Properties window (spec 07). It holds what was read from the file as the original,
 /// the edited fields, the pre-fills, Detailer following Designer, validation, dirty tracking, Apply and OK, and
 /// the status line. Writes go through an <see cref="IPropertyWriteTarget"/>; Cancel needs no command because
-/// nothing is written until Apply or OK.
+/// nothing is written until Apply or OK. It also shows the part number by spec 02 and offers Generate part number
+/// for a file without one, through an <see cref="IPartNumberAssigner"/>.
 /// </summary>
 /// <remarks>
 /// Part type codes are held in the list's spelling: a file code that <see cref="PartTypes.Find"/> matches in a
@@ -43,11 +45,19 @@ public sealed class PartPropertiesViewModel : ObservableObject
     public const string PreFillNotice = "Pre-filled values will be written when you apply.";
     public const string SavedNotice = "Saved to the file. Save the document to keep the changes.";
     public const string WriteErrorPrefix = "Could not write the properties: ";
+    public const string NotInRegisterNote = "Not in the register";
+    public const string GenerateNotSavedNote = RegisterPartNumberAssigner.NotSavedMessage;
+    public const string GeneratedNoticeFormat = "Part number {0} assigned and written. Save the document to keep it.";
+    public const string GeneratedOfflineSuffix = " Assigned offline; it will be added to the shared register at the next sync.";
+    public const string GenerateErrorPrefix = "Generate part number failed: ";
+    public const string DuplicatesHeading =
+        "The register sync found part numbers given to two files. Both rows are kept in the register; fix them by hand.";
 
     public const string DesignerFieldName = "Designer";
     public const string DetailerFieldName = "Detailer";
 
     private readonly IPropertyWriteTarget _target;
+    private readonly IPartNumberAssigner _assigner;
     private readonly CultureInfo _culture;
     private readonly ILog _log;
 
@@ -64,17 +74,35 @@ public sealed class PartPropertiesViewModel : ObservableObject
     private readonly bool _pendingAtOpen;
     private bool _appliedOnce;
 
-    // The result of the last apply: the status text and whether it was a failure.
-    private string? _applyResult;
-    private bool _applyFailed;
+    // The part number as shown (spec 02, "Display in Part Properties"). Changed by a successful Generate.
+    private string _partNumberDisplay;
+    private bool _isPartNumberWellFormed;
+    private bool _isPartNumberAssigned;
+
+    // The result of the last Apply or Generate: the status text and whether it was a failure.
+    private string? _lastResult;
+    private bool _lastFailed;
 
     // Cached state, recomputed after every change.
     private bool _hasChanges;
     private string? _validationMessage;
 
+    /// <param name="snapshot">What was read from the file.</param>
+    /// <param name="target">Where Apply writes.</param>
+    /// <param name="hasNumber">
+    /// Spec 02, "Has a number", for a Part Number property value: the add-in passes <see cref="RegisterStore.HasNumber"/>,
+    /// which reads only this PC's copy of the register.
+    /// </param>
+    /// <param name="assigner">What the Generate button calls.</param>
+    /// <param name="defaultDesigner">The Default designer from Settings.</param>
+    /// <param name="windowsUserName">The Windows user name, which counts as a blank Designer or Detailer.</param>
+    /// <param name="culture">The culture the cost is shown and typed in.</param>
+    /// <param name="log">Where writes and failures are logged.</param>
     public PartPropertiesViewModel(
         PartPropertiesSnapshot snapshot,
         IPropertyWriteTarget target,
+        Func<string?, bool> hasNumber,
+        IPartNumberAssigner assigner,
         string? defaultDesigner,
         string? windowsUserName,
         CultureInfo culture,
@@ -82,19 +110,19 @@ public sealed class PartPropertiesViewModel : ObservableObject
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(target);
+        ArgumentNullException.ThrowIfNull(hasNumber);
+        ArgumentNullException.ThrowIfNull(assigner);
         ArgumentNullException.ThrowIfNull(culture);
 
         _original = snapshot;
         _target = target;
+        _assigner = assigner;
         _culture = culture;
         _log = log ?? NullLog.Instance;
 
         IsEditable = snapshot.EditBlock == EditBlock.None;
         EditBlockMessage = PartPropertiesSnapshot.EditBlockMessage(snapshot.EditBlock);
 
-        PartNumber = snapshot.PartNumber ?? string.Empty;
-        Material = snapshot.Material ?? string.Empty;
-        Finish = snapshot.Finish ?? string.Empty;
         Weight = snapshot.WeightDisplay ?? NoWeightText;
 
         // Display text for the restyled window (spec 08). The never-saved title and subline are defaults
@@ -106,11 +134,15 @@ public sealed class PartPropertiesViewModel : ObservableObject
             : NewFileTitlePrefix + kindName.ToLowerInvariant();
         HeaderSubline = kindName + HeaderSeparator + FileNameFrom(snapshot.FullFileName);
 
-        // PartProperties.PartNumberDisplay: the property of the same name hides the class here.
-        IsPartNumberAssigned = PartProperties.PartNumberDisplay.IsAssigned(snapshot.PartNumber, snapshot.FullFileName);
-        PartNumberDisplay = IsPartNumberAssigned
-            ? PropertyValues.NormaliseText(snapshot.PartNumber)
+        // Spec 02: a Part Number in the format is shown as the number, registered or not; anything else, including
+        // blank and Inventor's file-name fallback, is not a number. PartProperties.PartNumberDisplay: the property of
+        // the same name hides the class here.
+        _isPartNumberWellFormed = Numbering.PartNumber.TryParse(snapshot.PartNumber, out var partNumber);
+        _partNumberDisplay = _isPartNumberWellFormed
+            ? partNumber.ToString()
             : PartProperties.PartNumberDisplay.NotAssignedText;
+        _isPartNumberAssigned = hasNumber(snapshot.PartNumber);
+        IsSaved = saved;
 
         MaterialDisplay = DisplayOrNotSet(snapshot.Material, out var materialSet);
         IsMaterialSet = materialSet;
@@ -153,6 +185,7 @@ public sealed class PartPropertiesViewModel : ObservableObject
 
         ApplyCommand = new RelayCommand(() => Apply(), () => CanApply);
         OkCommand = new RelayCommand(Ok, () => IsValid || !IsEditable);
+        GenerateCommand = new RelayCommand(Generate, () => CanGenerate && IsSaved);
 
         Recalculate();
         _pendingAtOpen = _hasChanges;
@@ -161,13 +194,13 @@ public sealed class PartPropertiesViewModel : ObservableObject
     /// <summary>Raised when OK has finished and the window should close.</summary>
     public event EventHandler? CloseRequested;
 
+    /// <summary>
+    /// Raised once after a successful Generate whose sync found numbers handed out twice, with one line per duplicate.
+    /// The add-in shows them in a message box; the register has already logged each one as a warning.
+    /// </summary>
+    public event EventHandler<IReadOnlyList<string>>? DuplicatesReported;
+
     // Read-only display.
-
-    public string PartNumber { get; }
-
-    public string Material { get; }
-
-    public string Finish { get; }
 
     /// <summary>The mass in the document's units, or <see cref="NoWeightText"/> when it could not be read.</summary>
     public string Weight { get; }
@@ -189,13 +222,44 @@ public sealed class PartPropertiesViewModel : ObservableObject
     public string HeaderSubline { get; }
 
     /// <summary>
-    /// The Part Number trimmed, or <see cref="PartProperties.PartNumberDisplay.NotAssignedText"/> when
-    /// <see cref="IsPartNumberAssigned"/> is false.
+    /// The Part Number as <see cref="Numbering.PartNumber.ToString"/> writes it when it is in the format, registered
+    /// or not; otherwise <see cref="PartProperties.PartNumberDisplay.NotAssignedText"/>. After a successful Generate,
+    /// the new number.
     /// </summary>
-    public string PartNumberDisplay { get; }
+    public string PartNumberDisplay => _partNumberDisplay;
 
-    /// <summary>The result of <see cref="PartProperties.PartNumberDisplay.IsAssigned"/> for this file.</summary>
-    public bool IsPartNumberAssigned { get; }
+    /// <summary>
+    /// True when <see cref="PartNumberDisplay"/> is a number rather than the placeholder, so the window shows it in
+    /// the identifier font.
+    /// </summary>
+    public bool IsPartNumberWellFormed => _isPartNumberWellFormed;
+
+    /// <summary>
+    /// Spec 02, "Has a number": the result of the caller's <c>hasNumber</c> for the file's Part Number, or true after
+    /// a successful Generate.
+    /// </summary>
+    public bool IsPartNumberAssigned => _isPartNumberAssigned;
+
+    /// <summary>True when the Part Number is in the format but the register does not hold it (spec 02, question 13).</summary>
+    public bool IsPartNumberUnregistered => _isPartNumberWellFormed && !_isPartNumberAssigned;
+
+    /// <summary><see cref="NotInRegisterNote"/> when <see cref="IsPartNumberUnregistered"/>, otherwise null.</summary>
+    public string? PartNumberNote => IsPartNumberUnregistered ? NotInRegisterNote : null;
+
+    /// <summary>False for a file that has never been saved.</summary>
+    public bool IsSaved { get; }
+
+    /// <summary>
+    /// Whether the window shows the Generate part number button: the file has no registered number and can be edited.
+    /// The button is disabled for a never-saved file; see <see cref="GenerateNote"/>.
+    /// </summary>
+    public bool CanGenerate => !_isPartNumberAssigned && IsEditable;
+
+    /// <summary><see cref="GenerateNotSavedNote"/> while the button is shown for a never-saved file, otherwise null.</summary>
+    public string? GenerateNote => CanGenerate && !IsSaved ? GenerateNotSavedNote : null;
+
+    /// <summary>True when <see cref="GenerateNote"/> is not null.</summary>
+    public bool HasGenerateNote => GenerateNote is not null;
 
     /// <summary>The material trimmed, or <see cref="NotSetText"/> when blank.</summary>
     public string MaterialDisplay { get; }
@@ -329,8 +393,8 @@ public sealed class PartPropertiesViewModel : ObservableObject
     public bool IsValid => _validationMessage is null;
 
     /// <summary>
-    /// The status line: the edit block message, else the validation message, else the result of the last apply,
-    /// else the pre-fill notice, else empty.
+    /// The status line: the edit block message, else the validation message, else the result of the last Apply or
+    /// Generate, else the pre-fill notice, else empty.
     /// </summary>
     public string StatusText
     {
@@ -340,17 +404,19 @@ public sealed class PartPropertiesViewModel : ObservableObject
                 return EditBlockMessage;
             if (_validationMessage is not null)
                 return _validationMessage;
-            if (_applyResult is not null)
-                return _applyResult;
+            if (_lastResult is not null)
+                return _lastResult;
             if (ShowPreFillNotice)
                 return PreFillNotice;
             return string.Empty;
         }
     }
 
-    /// <summary>True when <see cref="StatusText"/> is a validation or write error, so the window shows it in red.</summary>
+    /// <summary>
+    /// True when <see cref="StatusText"/> is a validation, write or Generate error, so the window shows it in red.
+    /// </summary>
     public bool HasError =>
-        EditBlockMessage is null && (_validationMessage is not null || (_applyResult is not null && _applyFailed));
+        EditBlockMessage is null && (_validationMessage is not null || (_lastResult is not null && _lastFailed));
 
     /// <summary>Writes the changes and stays open. Enabled when there are changes, all valid, and the file is editable.</summary>
     public RelayCommand ApplyCommand { get; }
@@ -358,10 +424,26 @@ public sealed class PartPropertiesViewModel : ObservableObject
     /// <summary>Applies when there are changes, then closes. Does not close when that apply fails.</summary>
     public RelayCommand OkCommand { get; }
 
+    /// <summary>
+    /// Assigns a number from the register and writes it as the Part Number. Enabled while <see cref="CanGenerate"/>
+    /// for a saved file.
+    /// </summary>
+    public RelayCommand GenerateCommand { get; }
+
     private bool CanApply => IsEditable && _hasChanges && IsValid;
 
     // Shown until the first successful apply, while the opening pre-fills have not all been undone.
     private bool ShowPreFillNotice => _pendingAtOpen && !_appliedOnce && _hasChanges;
+
+    /// <summary>
+    /// The message box text for <see cref="DuplicatesReported"/>: <see cref="DuplicatesHeading"/>, then one line per
+    /// duplicate starting with a dash.
+    /// </summary>
+    public static string FormatDuplicates(IReadOnlyList<string> duplicateMessages)
+    {
+        ArgumentNullException.ThrowIfNull(duplicateMessages);
+        return DuplicatesHeading + string.Concat(duplicateMessages.Select(m => Environment.NewLine + "- " + m));
+    }
 
     private static string FileNameFrom(string? fullFileName)
     {
@@ -439,8 +521,8 @@ public sealed class PartPropertiesViewModel : ObservableObject
         {
             // A UI boundary: the window shows the reason and stays open so the user can retry or cancel.
             _log.Error("Could not write the part properties.", ex);
-            _applyResult = WriteErrorPrefix + ex.Message;
-            _applyFailed = true;
+            _lastResult = WriteErrorPrefix + ex.Message;
+            _lastFailed = true;
             OnStateChanged();
             return false;
         }
@@ -451,8 +533,8 @@ public sealed class PartPropertiesViewModel : ObservableObject
 
         _original = Rebase(_original, writes);
         _appliedOnce = true;
-        _applyResult = SavedNotice;
-        _applyFailed = false;
+        _lastResult = SavedNotice;
+        _lastFailed = false;
 
         // Show the cost as it was stored.
         PropertyValues.TryParseCost(_costText, _culture, out var cost, out _);
@@ -465,6 +547,58 @@ public sealed class PartPropertiesViewModel : ObservableObject
 
         OnStateChanged();
         return true;
+    }
+
+    /// <summary>
+    /// Runs the assigner. On success shows the new number, hides the button and reports any duplicates; on failure
+    /// shows the reason and changes nothing else.
+    /// </summary>
+    private void Generate()
+    {
+        if (!CanGenerate || !IsSaved)
+            return;
+
+        PartNumberAssignment result;
+        try
+        {
+            result = _assigner.Assign();
+        }
+        catch (Exception ex)
+        {
+            // A UI boundary, as Apply: the window shows the reason and stays usable.
+            _log.Error("Could not generate a part number.", ex);
+            _lastResult = GenerateErrorPrefix + ex.Message;
+            _lastFailed = true;
+            OnStateChanged();
+            return;
+        }
+
+        // The file now holds the number, so a later Apply must not see it as a change. Part Number is never in the
+        // write plan, but the snapshot is kept true to the file.
+        _original = _original with { PartNumber = result.PartNumber };
+        _isPartNumberWellFormed = Numbering.PartNumber.TryParse(result.PartNumber, out var number);
+        _partNumberDisplay = _isPartNumberWellFormed ? number.ToString() : result.PartNumber;
+        _isPartNumberAssigned = true;
+
+        _lastResult = string.Format(CultureInfo.InvariantCulture, GeneratedNoticeFormat, _partNumberDisplay)
+            + (result.Offline ? GeneratedOfflineSuffix : string.Empty);
+        _lastFailed = false;
+
+        OnPropertyChanged(nameof(PartNumberDisplay));
+        OnPropertyChanged(nameof(IsPartNumberWellFormed));
+        OnPropertyChanged(nameof(IsPartNumberAssigned));
+        OnPropertyChanged(nameof(IsPartNumberUnregistered));
+        OnPropertyChanged(nameof(PartNumberNote));
+        OnPropertyChanged(nameof(CanGenerate));
+        OnPropertyChanged(nameof(GenerateNote));
+        OnPropertyChanged(nameof(HasGenerateNote));
+        GenerateCommand.RaiseCanExecuteChanged();
+        OnStateChanged();
+
+        if (result.DuplicateMessages.Count > 0)
+        {
+            DuplicatesReported?.Invoke(this, result.DuplicateMessages);
+        }
     }
 
     private void Ok()

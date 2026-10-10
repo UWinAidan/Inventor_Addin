@@ -15,7 +15,8 @@ namespace InventorAddin.Commands
     /// <summary>
     /// Opens the Part Properties window (spec 07) for the document being edited. The window stays outside any
     /// transaction; each Apply (or OK with changes) writes its iProperties inside one transaction, so one Undo
-    /// in Inventor reverts it.
+    /// in Inventor reverts it. Generate part number (spec 02) assigns a number from the session's register and then
+    /// writes Part Number in a transaction of its own, so one Undo removes the written number; the register row stays.
     /// </summary>
     public sealed class PartPropertiesCommand : DocumentEditCommand
     {
@@ -34,9 +35,16 @@ namespace InventorAddin.Commands
         {
             PartPropertiesSnapshot snapshot = PartPropertiesReader.Read(doc);
             var target = new TransactionWriteTarget(this, doc);
+
+            // "Has a number" reads only this PC's copy of the register, so the window opens without touching the NAS.
+            var register = AddinServices.RegisterStore;
+            var assigner = new RegisterPartNumberAssigner(register, snapshot, target, AddinServices.Log);
+
             var viewModel = new PartPropertiesViewModel(
                 snapshot,
                 target,
+                register.HasNumber,
+                assigner,
                 AddinServices.Settings.DefaultDesigner,
                 SysEnvironment.UserName,
                 CultureInfo.CurrentCulture,

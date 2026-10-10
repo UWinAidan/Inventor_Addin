@@ -1,6 +1,7 @@
 using System;
 using InventorAddin.Core;
 using InventorAddin.Core.Logging;
+using InventorAddin.Core.Numbering;
 using InventorAddin.Core.Settings;
 using IOPath = System.IO.Path;
 using SysEnvironment = System.Environment;
@@ -8,7 +9,7 @@ using SysEnvironment = System.Environment;
 namespace InventorAddin
 {
     /// <summary>
-    /// Session-wide services: the data folder, the log and the settings loaded at startup.
+    /// Session-wide services: the data folder, the log, the settings loaded at startup and the part number register.
     /// Initialised in <see cref="StandardAddInServer.Activate"/> and reset in <see cref="StandardAddInServer.Deactivate"/>.
     /// Before initialisation (or if it failed) <see cref="Log"/> is <see cref="NullLog.Instance"/> and
     /// <see cref="Settings"/> holds defaults, so callers never need a null check.
@@ -24,6 +25,31 @@ namespace InventorAddin
         public static string? LogFilePath { get; private set; }
 
         public static AddinSettings Settings { get; private set; } = new AddinSettings();
+
+        /// <summary>This PC's register files go in this folder under the data folder (spec 02, "The register").</summary>
+        private const string LocalRegisterFolderName = "register";
+
+        private static RegisterStore? _registerStore;
+
+        /// <summary>
+        /// The part number register (spec 02), built on first use from <see cref="AddinSettings.RegisterFolder"/>
+        /// (blank: no shared folder, always offline) and the <c>register</c> folder under the data folder. Rebuilt
+        /// after the settings change. Building it touches no file.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">The user's application data folder could not be found.</exception>
+        public static RegisterStore RegisterStore
+        {
+            get
+            {
+                if (_registerStore == null)
+                {
+                    string localFolder = IOPath.Combine(DataFolder ?? GetDataFolder(), LocalRegisterFolderName);
+                    _registerStore = new RegisterStore(Settings.RegisterFolder, localFolder, RegisterEnvironment.Instance, Log);
+                }
+
+                return _registerStore;
+            }
+        }
 
         /// <summary>
         /// Creates the log, then loads settings and logs each settings warning.
@@ -57,11 +83,13 @@ namespace InventorAddin
 
         /// <summary>
         /// Replaces the session's settings after the user saved new ones. The ribbon is not rebuilt;
-        /// a changed setting takes effect at the next start.
+        /// a changed ribbon setting takes effect at the next start. The register is rebuilt on next use, so a changed
+        /// register folder applies straight away.
         /// </summary>
         internal static void UpdateSettings(AddinSettings settings)
         {
             Settings = settings ?? throw new ArgumentNullException(nameof(settings));
+            _registerStore = null;
         }
 
         internal static void Shutdown() => Reset();
@@ -81,6 +109,7 @@ namespace InventorAddin
             Log = NullLog.Instance;
             LogFilePath = null;
             Settings = new AddinSettings();
+            _registerStore = null;
         }
     }
 }
