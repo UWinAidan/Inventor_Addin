@@ -2,7 +2,7 @@
 
 Everything that needs doing and is not already a task in `docs/PLAN.md`. Kept current by the parent session: items are added when they come up and removed when they are done or turned into a task. Where the project stands is in `STATUS.md`; why things are the way they are is in `DECISIONS.md`.
 
-Last updated: 2026-10-07
+Last updated: 2026-10-10
 
 ## Next up
 
@@ -17,7 +17,7 @@ From the Part Properties checklist (task 019). Confirmed so far: the window open
 - [ ] Edit a part in place inside an assembly, change Designer, apply, return to the assembly, Undo once: does it revert? (open since task 006)
 - [ ] A read-only file opens with every field disabled and a line saying why
 - [ ] A part with `Part Type` set to `m` in Inventor's own dialog shows `M`
-- [ ] A new, never-saved part: header says "Not saved yet", part name blank, Apply still writes Designer and Detailer
+- [ ] A new, never-saved part: Apply still writes Designer and Detailer (the header was confirmed in the M1b checks)
 - [ ] Part type dropdown: the blank entry at the top can be clicked
 - [ ] With "Show developer tools" switched off and Inventor restarted: is the Developer panel gone, or does Inventor keep showing it? (open since task 007)
 
@@ -27,14 +27,11 @@ From the build deploy line (task 025):
 - [ ] With Inventor open, build again: the build succeeds, prints the `NOT deployed` warning and no `Deployed` line
 - [ ] `dotnet build InventorAddin.slnx -p:DeployToInventor=false`: neither line is printed
 
-From the window style and icons (tasks 026 to 031; full steps in each task file and in PR #14). Confirmed on 2026-10-07: the add-in builds and deploys; About, Settings and Part Properties look right in light and dark with the dark title bar; Not assigned and Not set show correctly; ribbon icons are right in both themes after a restart. A clipping bug at 150% display scale was found and fixed on `main`.
+From the window style and icons (tasks 026 to 031; full steps in each task file and in PR #14). Confirmed on 2026-10-07: the add-in builds and deploys; About, Settings and Part Properties look right in light and dark with the dark title bar; Not assigned and Not set show correctly; ribbon icons are right in both themes after a restart. A clipping bug at 150% display scale was found and fixed on `main`. Confirmed on 2026-10-10: a never-saved part shows "New part", "Not saved yet" and Part number "Not assigned"; the log has one line per start naming the icon set and no icon warnings; section headings read as spaced out.
 
 - [ ] `dotnet test tests/InventorAddin.Core.Tests` passes on Windows (the XAML rules test from 031 finds files by path)
 - [ ] Keyboard: Tab order, access keys, Enter and Esc, and the accent focus outline in each window (026, 028, 029)
 - [ ] Part Properties: the blank Part type entry can be clicked (029)
-- [ ] A new, never-saved part: record what the Part number row shows (spec 08, question 5) (029)
-- [ ] The log has one `INFO` line naming the ribbon icon set, and no icon warnings (030)
-- [ ] Section headings: does the hair-space letter spacing read as wide spacing? (026)
 
 
 ## Waiting on Aidan: decisions
@@ -94,7 +91,6 @@ Small things noticed while building. None is urgent. The parent turns these into
 
 **Window style**
 - The remark in `UiTheme.cs` still says the dark-theme rule waits for spike 020; name the confirmed `LightTheme` and `DarkTheme`. (task 026)
-- Section headings use a hair space (U+200A) between letters. If it does not read as wide spacing in Inventor, try a thin space (U+2009). (task 026)
 - Settings: the gap between a control and its note is the full row gap (9). If it looks loose, add a shared `HelpText` style. (task 028)
 - Settings: the restart note lines up with the checkbox's box, not its label text. (task 028)
 - Settings: "Show developer tools" has no access key; D is taken by Default designer. Alt+S is free. (task 028)

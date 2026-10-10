@@ -2,7 +2,7 @@
 
 Where each big item stands. One line per item, kept current by the parent session. For the order of work and the task lists see `docs/PLAN.md`; for what needs doing next see `TODO.md`.
 
-Last updated: 2026-10-07
+Last updated: 2026-10-10
 
 ## Big items
 

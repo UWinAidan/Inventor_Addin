@@ -196,7 +196,7 @@ None block planning; each has a default above.
 Added while planning M1b (2026-10-07). Each has a default the tasks build:
 
 4. What a never-saved file's header shows. Default: title "New part" (or "New assembly", and so on), subline "Part · Not saved yet".
-5. The part number of a never-saved file. With no file name to compare against, the default shows any non-blank Part Number as it is and a blank one as "Not assigned". Task 029 records what Inventor reports for a new part (it may be `Part1`), which may change this.
+5. The part number of a never-saved file. With no file name to compare against, the default shows any non-blank Part Number as it is and a blank one as "Not assigned". Task 029 records what Inventor reports for a new part (it may be `Part1`), which may change this. Seen in Inventor 2026 (2026-10-10): a new part shows "Not assigned", so the default holds.
 6. Which theme names count as dark. Default: any name containing "dark", until spike 020 records the names Inventor 2026 reports.
 7. The About window's Inventor version row. Default: the release year (2026), worked out from Inventor's major version (30).
 8. A test (task 031) that fails when a window's XAML sets its own colour, font size, margin or fixed size, so the rule does not depend only on review. Default: added.
