@@ -30,6 +30,9 @@ namespace InventorAddin.UI
         // Registered commands by internal name, for looking up layout entries.
         private readonly Dictionary<string, AddinCommand> _commandsByName = new(StringComparer.Ordinal);
 
+        // Commands that failed to register, so their layout entries are skipped with a warning that says why.
+        private readonly HashSet<string> _failedCommands = new(StringComparer.Ordinal);
+
         public RibbonSetup(Application app, string clientId, AddinSettings settings, ILog log)
         {
             _app = app;
@@ -50,8 +53,9 @@ namespace InventorAddin.UI
 
         /// <summary>
         /// Registers every command, with its icons, and builds each environment's ribbon. Inventor's theme is read once,
-        /// here, for the icons; switching theme while Inventor runs takes effect at the next start. A ribbon that fails
-        /// to build is logged and the others are still built.
+        /// here, for the icons; switching theme while Inventor runs takes effect at the next start. A command that fails
+        /// to register is logged and left out (its buttons are skipped), and a ribbon that fails to build is logged; the
+        /// other commands and ribbons are still built.
         /// </summary>
         public void Create()
         {
@@ -67,7 +71,7 @@ namespace InventorAddin.UI
                     $"{conflict.IgnoredIconName}. A command has one definition, so {conflict.KeptIconName} is used.");
 
             foreach (AddinCommand command in CreateCommands())
-                Register(command, LoadPictures(command, icons.IconNameFor(command.InternalName), theme));
+                TryRegister(command, icons, theme);
 
             foreach (RibbonEnvironment environment in RibbonEnvironments.All)
             {
@@ -99,6 +103,14 @@ namespace InventorAddin.UI
                 {
                     if (!_commandsByName.TryGetValue(button.CommandInternalName, out AddinCommand? command))
                     {
+                        if (_failedCommands.Contains(button.CommandInternalName))
+                        {
+                            _log.Warn(
+                                $"Command {button.CommandInternalName} failed to register, so its button on panel " +
+                                $"{panelLayout.Id} ({environment.RibbonName()}) is skipped.");
+                            continue;
+                        }
+
                         _log.Warn(
                             $"Ribbon layout lists command {button.CommandInternalName} on panel {panelLayout.Id} " +
                             $"({environment.RibbonName()}), but no such command is registered. The button is skipped.");
@@ -129,6 +141,33 @@ namespace InventorAddin.UI
                     $"Icon {iconName} ({UiThemes.ResourceSuffix(theme)}) could not be loaded for command {command.InternalName}; " +
                     $"the button shows text only. {ex.Message}");
                 return null;
+            }
+        }
+
+        /// <summary>
+        /// Loads the command's icons and registers it. A failure is logged as an error naming the command, and the command
+        /// is left out so that the other commands and the ribbons are still built.
+        /// </summary>
+        private void TryRegister(AddinCommand command, RibbonIconChoice icons, UiTheme theme)
+        {
+            try
+            {
+                Register(command, LoadPictures(command, icons.IconNameFor(command.InternalName), theme));
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"Could not register command {command.InternalName}. It is left out of the ribbon.", ex);
+                _failedCommands.Add(command.InternalName);
+
+                // Register may have attached the event before failing; detach it so the command holds nothing.
+                try
+                {
+                    command.Dispose();
+                }
+                catch (Exception disposeEx)
+                {
+                    _log.Warn($"Could not release command {command.InternalName} after it failed to register. {disposeEx.Message}");
+                }
             }
         }
 

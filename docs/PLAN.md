@@ -153,7 +153,7 @@ Planned 2026-10-10. Run in number order; each task depends only on lower numbers
 - [ ] 039 Part number display and Generate part number in Part Properties
 - [ ] 040 New Part dialog view-model and creation properties (Core)
 - [ ] 041 Mass Update scan result and view-model (Core)
-- [ ] 042 Icons for the M2 commands, and a ribbon that survives one failing command
+- [x] 042 Icons for the M2 commands, and a ribbon that survives one failing command
 - [ ] 043 New Part command and window
 - [ ] 044 Create Print
 - [ ] 045 Save As Copy

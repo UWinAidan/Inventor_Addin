@@ -62,6 +62,16 @@ namespace InventorAddin.Commands
                     AddinServices.Log.Warn(
                         $"Icon {pictures.IconName} was refused for command {InternalName}; the button shows text only. {ex.Message}");
                 }
+
+                // Inventor may have created the definition before the call threw. Adding it again would fail on the
+                // duplicate name, so reuse it.
+                ButtonDefinition? created = ComSafe.Get(() => (ButtonDefinition)defs[InternalName]);
+                if (created != null)
+                {
+                    AddinServices.Log.Warn(
+                        $"Command {InternalName} was defined by Inventor despite the error; that definition is used.");
+                    return created;
+                }
             }
 
             return defs.AddButtonDefinition(

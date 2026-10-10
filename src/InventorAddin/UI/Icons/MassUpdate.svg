@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="#3B4350" stroke-width="1.5" stroke-linecap="butt" stroke-linejoin="miter">
+  <title>Mass Update, 32 px: a stack of sheets with a check mark</title>
+  <polyline points="10.75,6 10.75,2.75 29.25,2.75 29.25,21.25 26,21.25"/>
+  <polyline points="6.75,10 6.75,6.75 25.25,6.75 25.25,25.25 22,25.25"/>
+  <rect x="2.75" y="10.75" width="18.5" height="18.5"/>
+  <polyline points="7.5,20 11,23.5 17.5,17"/>
+</svg>
