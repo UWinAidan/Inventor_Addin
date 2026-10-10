@@ -48,7 +48,11 @@ public static class RibbonLayout
             new(CommandNames.Settings, ButtonSize.Small, IconNames.Settings, DocumentEnvironments),
             new(CommandNames.About, ButtonSize.Small, IconNames.About, DocumentEnvironments),
         }),
-        new(RibbonIds.DrawingToolsPanelId, RibbonIds.DrawingToolsPanelName, DeveloperOnly: false, Array.Empty<ButtonDefinition>()),
+        new(RibbonIds.DrawingToolsPanelId, RibbonIds.DrawingToolsPanelName, DeveloperOnly: false, new ButtonDefinition[]
+        {
+            // Spec 02, "Commands: Create Print": a drawing of the active part or assembly.
+            new(CommandNames.CreatePrint, ButtonSize.Large, IconNames.CreatePrint, ModelEnvironments),
+        }),
         new(RibbonIds.DeveloperPanelId, RibbonIds.DeveloperPanelName, DeveloperOnly: true, new ButtonDefinition[]
         {
             new(CommandNames.ExportModelData, ButtonSize.Small, IconNames.ExportModelData, DocumentEnvironments),

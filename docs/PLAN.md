@@ -158,7 +158,7 @@ Planned 2026-10-10. Run in number order; each task depends only on lower numbers
 - [x] 041 Mass Update scan result and view-model (Core)
 - [x] 042 Icons for the M2 commands, and a ribbon that survives one failing command
 - [x] 043 New Part command and window
-- [ ] 044 Create Print
+- [x] 044 Create Print
 - [ ] 045 Save As Copy
 - [ ] 046 Save As and Replace
 - [ ] 047 Rename, with references updated across the workspace

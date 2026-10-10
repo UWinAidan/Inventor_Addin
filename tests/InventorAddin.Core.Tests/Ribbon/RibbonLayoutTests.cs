@@ -53,6 +53,7 @@ public sealed class RibbonLayoutTests
         Assert.Equal($"{Branding.IdPrefix}_About", CommandNames.About);
         Assert.Equal($"{Branding.IdPrefix}_PartProperties", CommandNames.PartProperties);
         Assert.Equal($"{Branding.IdPrefix}_NewPart", CommandNames.NewPart);
+        Assert.Equal($"{Branding.IdPrefix}_CreatePrint", CommandNames.CreatePrint);
     }
 
     public static TheoryData<RibbonEnvironment, bool> DocumentEnvironmentsAndSetting()
@@ -146,6 +147,25 @@ public sealed class RibbonLayoutTests
     }
 
     [Theory]
+    [MemberData(nameof(EveryEnvironmentAndSetting))]
+    public void CreatePrint_OnlyOnPartAndAssembly_AsTheLargeButtonOnDrawingTools(RibbonEnvironment environment, bool showDeveloperTools)
+    {
+        var panels = RibbonLayout.For(environment, showDeveloperTools);
+        var names = panels.SelectMany(p => p.Buttons).Select(b => b.CommandInternalName).ToList();
+
+        bool expected = environment is RibbonEnvironment.Part or RibbonEnvironment.Assembly;
+        Assert.Equal(expected, names.Contains(CommandNames.CreatePrint));
+        if (expected)
+        {
+            var panel = Assert.Single(panels, p => p.Id == RibbonIds.DrawingToolsPanelId);
+            Assert.Equal("Drawing Tools", panel.DisplayName);
+            Assert.Equal(
+                new[] { new ButtonLayout($"{Branding.IdPrefix}_CreatePrint", ButtonSize.Large, IconNames.CreatePrint) },
+                panel.Buttons);
+        }
+    }
+
+    [Theory]
     [MemberData(nameof(DocumentEnvironmentsAndSetting))]
     public void DocumentEnvironments_AlwaysHaveTheTab(RibbonEnvironment environment, bool showDeveloperTools)
     {
@@ -155,21 +175,35 @@ public sealed class RibbonLayoutTests
     [Theory]
     [InlineData(RibbonEnvironment.Part)]
     [InlineData(RibbonEnvironment.Assembly)]
-    [InlineData(RibbonEnvironment.Drawing)]
-    public void DocumentEnvironments_WithDeveloperTools_CadAutomationThenDeveloper(RibbonEnvironment environment)
+    public void ModelEnvironments_WithDeveloperTools_CadAutomationThenDrawingToolsThenDeveloper(RibbonEnvironment environment)
     {
         var ids = RibbonLayout.For(environment, showDeveloperTools: true).Select(p => p.Id);
 
-        Assert.Equal(new[] { RibbonIds.CadAutomationPanelId, RibbonIds.DeveloperPanelId }, ids);
+        Assert.Equal(new[] { RibbonIds.CadAutomationPanelId, RibbonIds.DrawingToolsPanelId, RibbonIds.DeveloperPanelId }, ids);
     }
 
     [Theory]
     [InlineData(RibbonEnvironment.Part)]
     [InlineData(RibbonEnvironment.Assembly)]
-    [InlineData(RibbonEnvironment.Drawing)]
-    public void DocumentEnvironments_WithoutDeveloperTools_OnlyCadAutomation(RibbonEnvironment environment)
+    public void ModelEnvironments_WithoutDeveloperTools_CadAutomationThenDrawingTools(RibbonEnvironment environment)
     {
-        var panel = Assert.Single(RibbonLayout.For(environment, showDeveloperTools: false));
+        var ids = RibbonLayout.For(environment, showDeveloperTools: false).Select(p => p.Id);
+
+        Assert.Equal(new[] { RibbonIds.CadAutomationPanelId, RibbonIds.DrawingToolsPanelId }, ids);
+    }
+
+    [Fact]
+    public void Drawing_WithDeveloperTools_CadAutomationThenDeveloper()
+    {
+        var ids = RibbonLayout.For(RibbonEnvironment.Drawing, showDeveloperTools: true).Select(p => p.Id);
+
+        Assert.Equal(new[] { RibbonIds.CadAutomationPanelId, RibbonIds.DeveloperPanelId }, ids);
+    }
+
+    [Fact]
+    public void Drawing_WithoutDeveloperTools_OnlyCadAutomation()
+    {
+        var panel = Assert.Single(RibbonLayout.For(RibbonEnvironment.Drawing, showDeveloperTools: false));
 
         Assert.Equal(RibbonIds.CadAutomationPanelId, panel.Id);
     }
@@ -300,6 +334,7 @@ public sealed class RibbonLayoutTests
     [InlineData(CommandNames.ExportModelData, IconNames.ExportModelData)]
     [InlineData(CommandNames.ExportLibraries, IconNames.ExportLibraries)]
     [InlineData(CommandNames.NewPart, IconNames.NewPart)]
+    [InlineData(CommandNames.CreatePrint, IconNames.CreatePrint)]
     public void EachCommand_UsesItsIconName_InEveryEnvironment(string command, string iconName)
     {
         var buttons = RibbonEnvironments.All
@@ -322,6 +357,7 @@ public sealed class RibbonLayoutTests
         Assert.Equal(CommandNames.ExportModelData, prefix + IconNames.ExportModelData);
         Assert.Equal(CommandNames.ExportLibraries, prefix + IconNames.ExportLibraries);
         Assert.Equal(CommandNames.NewPart, prefix + IconNames.NewPart);
+        Assert.Equal(CommandNames.CreatePrint, prefix + IconNames.CreatePrint);
     }
 
     [Fact]
@@ -334,7 +370,7 @@ public sealed class RibbonLayoutTests
             .Select(g => g.First().IconName)
             .ToList();
 
-        Assert.Equal(6, iconNames.Count);
+        Assert.Equal(7, iconNames.Count);
         Assert.Equal(iconNames.Count, iconNames.Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
 

@@ -98,3 +98,4 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-10-10 | An `otherCadFolders` value in `settings.json` that is not a list makes the file invalid (`.bad`), as every wrong type except an unknown units name does | Default | task 049 |
 | 2026-10-10 | Mass Update says "your name" rather than "Windows user name", since a match may be one of the Other names | Default | task 048 |
 | 2026-10-10 | New Part is a file-operations command (`kFileOperationsCmdType`), lays its dialog out as File, Identity and Location, and checks that the target file does not exist inside the register lock with the real number, so a name already on disk costs no number | Default | task 043 |
+| 2026-10-10 | Create Print stops with a message when the model's range box is empty or flat, before making a drawing; a print with either extension (`.dwg` or `.idw`) beside the model counts as existing | Default | task 044 |
