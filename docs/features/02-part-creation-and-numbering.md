@@ -78,7 +78,7 @@ The local file names are Defaults. Only this small data file goes on the NAS, ne
 | `Kind` | `Part`, `SheetMetalPart` or `Assembly` |
 | `FilePath` | full path of the file when the number was assigned |
 | `AssignedAt` | UTC time, ISO 8601 (`2026-10-10T14:03:00Z`) |
-| `AssignedBy` | Windows user name |
+| `AssignedBy` | the Default designer from Settings, or the Windows user name when that is blank (Aidan, 2026-10-10) |
 | `Computer` | computer name |
 
 Values with a comma, quote or line break are quoted, quotes doubled. Rows are never removed or reordered by the add-in.

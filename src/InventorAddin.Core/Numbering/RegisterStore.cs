@@ -196,7 +196,7 @@ public sealed class RegisterStore
             request.Kind,
             request.FilePath,
             _environment.Now,
-            _environment.UserName,
+            _environment.AssignedBy,
             _environment.ComputerName);
 
     private void TakeLock(string lockPath)
@@ -208,7 +208,7 @@ public sealed class RegisterStore
             {
                 using var stream = new FileStream(lockPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
                 var holder = FileEncoding.GetBytes(
-                    $"{_environment.UserName} on {_environment.ComputerName} at {_environment.Now:O}");
+                    $"{_environment.AssignedBy} on {_environment.ComputerName} at {_environment.Now:O}");
                 stream.Write(holder);
                 return;
             }

@@ -12,7 +12,7 @@ namespace InventorAddin.Core.Numbering;
 /// <param name="Kind">Part, sheet metal part or assembly.</param>
 /// <param name="FilePath">Full path of the file when the number was assigned.</param>
 /// <param name="AssignedAt">When the number was assigned. The CSV stores it in UTC to the second.</param>
-/// <param name="AssignedBy">Windows user name.</param>
+/// <param name="AssignedBy">Who assigned the number: the Default designer, or the Windows user name when that is blank.</param>
 /// <param name="Computer">Computer name.</param>
 public sealed record RegisterEntry(
     PartNumber Number,

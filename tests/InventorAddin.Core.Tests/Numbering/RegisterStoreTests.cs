@@ -235,6 +235,19 @@ public sealed class RegisterStoreTests : IDisposable
     }
 
     [Fact]
+    public void AssignedByIsTheEnvironmentsPerson_OnlineAndOffline()
+    {
+        _environment.AssignedBy = "A. Person";
+
+        Store().Assign(Request());
+        _environment.Reachable = false;
+        Store().Assign(Request());
+
+        Assert.Equal("A. Person", Assert.Single(RegisterCsv.Read(File.ReadAllText(SharedPath)).Entries).AssignedBy);
+        Assert.Equal("A. Person", Assert.Single(RegisterCsv.Read(File.ReadAllText(PendingPath)).Entries).AssignedBy);
+    }
+
+    [Fact]
     public void AssignAfterTheHighestInTheSharedRegister_NotTheLocalCopy()
     {
         WriteShared(10001, 10007);
@@ -552,13 +565,20 @@ public sealed class RegisterStoreTests : IDisposable
     [Fact]
     public void RealEnvironment_ProbeFindsAnExistingFolderAndNotAMissingOne()
     {
-        var environment = RegisterEnvironment.Instance;
+        var environment = new RegisterEnvironment("A. Person");
 
+        Assert.Equal("A. Person", environment.AssignedBy);
         Assert.True(environment.ProbeFolder(_shared, TimeSpan.FromSeconds(3)));
         Assert.False(environment.ProbeFolder(Path.Combine(_root, "missing"), TimeSpan.FromSeconds(3)));
         Assert.False(environment.ProbeFolder("", TimeSpan.FromSeconds(3)));
         Assert.Equal(TimeSpan.Zero, environment.Now.Offset);
         Assert.False(string.IsNullOrEmpty(environment.ComputerName));
+    }
+
+    [Fact]
+    public void RealEnvironment_NullAssignedByReadsAsBlank()
+    {
+        Assert.Equal("", new RegisterEnvironment(null).AssignedBy);
     }
 
     private sealed class FakeEnvironment : IRegisterEnvironment
@@ -569,7 +589,7 @@ public sealed class RegisterStoreTests : IDisposable
 
         public DateTimeOffset Now => RegisterStoreTests.Now;
 
-        public string UserName => "testuser";
+        public string AssignedBy { get; set; } = "testuser";
 
         public string ComputerName => "TESTPC";
 
