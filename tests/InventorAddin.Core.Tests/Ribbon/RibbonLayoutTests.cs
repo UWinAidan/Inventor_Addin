@@ -42,6 +42,8 @@ public sealed class RibbonLayoutTests
         Assert.Equal("CAD Automation", RibbonIds.CadAutomationPanelName);
         Assert.Equal($"id_Panel_{Branding.IdPrefix}_DrawingTools", RibbonIds.DrawingToolsPanelId);
         Assert.Equal("Drawing Tools", RibbonIds.DrawingToolsPanelName);
+        Assert.Equal($"id_Panel_{Branding.IdPrefix}_Modelling", RibbonIds.ModellingPanelId);
+        Assert.Equal("Modelling", RibbonIds.ModellingPanelName);
     }
 
     [Fact]
@@ -56,6 +58,7 @@ public sealed class RibbonLayoutTests
         Assert.Equal($"{Branding.IdPrefix}_SaveAsCopy", CommandNames.SaveAsCopy);
         Assert.Equal($"{Branding.IdPrefix}_SaveAsReplace", CommandNames.SaveAsReplace);
         Assert.Equal($"{Branding.IdPrefix}_CreatePrint", CommandNames.CreatePrint);
+        Assert.Equal($"{Branding.IdPrefix}_MassUpdate", CommandNames.MassUpdate);
     }
 
     public static TheoryData<RibbonEnvironment, bool> DocumentEnvironmentsAndSetting()
@@ -228,21 +231,23 @@ public sealed class RibbonLayoutTests
     [Theory]
     [InlineData(RibbonEnvironment.Part)]
     [InlineData(RibbonEnvironment.Assembly)]
-    public void ModelEnvironments_WithDeveloperTools_CadAutomationThenDrawingToolsThenDeveloper(RibbonEnvironment environment)
+    public void ModelEnvironments_WithDeveloperTools_CadAutomationThenDrawingToolsThenModellingThenDeveloper(RibbonEnvironment environment)
     {
         var ids = RibbonLayout.For(environment, showDeveloperTools: true).Select(p => p.Id);
 
-        Assert.Equal(new[] { RibbonIds.CadAutomationPanelId, RibbonIds.DrawingToolsPanelId, RibbonIds.DeveloperPanelId }, ids);
+        Assert.Equal(
+            new[] { RibbonIds.CadAutomationPanelId, RibbonIds.DrawingToolsPanelId, RibbonIds.ModellingPanelId, RibbonIds.DeveloperPanelId },
+            ids);
     }
 
     [Theory]
     [InlineData(RibbonEnvironment.Part)]
     [InlineData(RibbonEnvironment.Assembly)]
-    public void ModelEnvironments_WithoutDeveloperTools_CadAutomationThenDrawingTools(RibbonEnvironment environment)
+    public void ModelEnvironments_WithoutDeveloperTools_CadAutomationThenDrawingToolsThenModelling(RibbonEnvironment environment)
     {
         var ids = RibbonLayout.For(environment, showDeveloperTools: false).Select(p => p.Id);
 
-        Assert.Equal(new[] { RibbonIds.CadAutomationPanelId, RibbonIds.DrawingToolsPanelId }, ids);
+        Assert.Equal(new[] { RibbonIds.CadAutomationPanelId, RibbonIds.DrawingToolsPanelId, RibbonIds.ModellingPanelId }, ids);
     }
 
     [Fact]
@@ -296,31 +301,66 @@ public sealed class RibbonLayoutTests
     }
 
     [Fact]
-    public void ZeroDoc_WithDeveloperTools_NewPartThenExportLibraries()
+    public void ZeroDoc_WithDeveloperTools_NewPartThenMassUpdateThenExportLibraries()
     {
         var panels = RibbonLayout.For(RibbonEnvironment.ZeroDoc, showDeveloperTools: true);
 
-        Assert.Equal(new[] { RibbonIds.CadAutomationPanelId, RibbonIds.DeveloperPanelId }, panels.Select(p => p.Id));
+        Assert.Equal(
+            new[] { RibbonIds.CadAutomationPanelId, RibbonIds.ModellingPanelId, RibbonIds.DeveloperPanelId },
+            panels.Select(p => p.Id));
         Assert.Equal(
             new[] { new ButtonLayout($"{Branding.IdPrefix}_NewPart", ButtonSize.Small, IconNames.NewPart) },
             panels[0].Buttons);
-        Assert.Equal("Developer", panels[1].DisplayName);
+        Assert.Equal(
+            new[] { new ButtonLayout($"{Branding.IdPrefix}_MassUpdate", ButtonSize.Small, IconNames.MassUpdate) },
+            panels[1].Buttons);
+        Assert.Equal("Developer", panels[2].DisplayName);
         Assert.Equal(
             new[] { new ButtonLayout($"{Branding.IdPrefix}_ExportLibraries", ButtonSize.Small, IconNames.ExportLibraries) },
-            panels[1].Buttons);
+            panels[2].Buttons);
     }
 
     [Fact]
-    public void ZeroDoc_WithoutDeveloperTools_OnlyNewPart()
+    public void ZeroDoc_WithoutDeveloperTools_NewPartThenMassUpdate()
     {
-        // No Settings or About on ZeroDoc yet (spec 01 open question 4), so New Part is the only button.
-        var panel = Assert.Single(RibbonLayout.For(RibbonEnvironment.ZeroDoc, showDeveloperTools: false));
+        // No Settings or About on ZeroDoc yet (spec 01 open question 4).
+        var panels = RibbonLayout.For(RibbonEnvironment.ZeroDoc, showDeveloperTools: false);
 
-        Assert.Equal(RibbonIds.CadAutomationPanelId, panel.Id);
+        Assert.Equal(new[] { RibbonIds.CadAutomationPanelId, RibbonIds.ModellingPanelId }, panels.Select(p => p.Id));
         Assert.Equal(
             new[] { new ButtonLayout($"{Branding.IdPrefix}_NewPart", ButtonSize.Small, IconNames.NewPart) },
-            panel.Buttons);
+            panels[0].Buttons);
+        Assert.Equal(
+            new[] { new ButtonLayout($"{Branding.IdPrefix}_MassUpdate", ButtonSize.Small, IconNames.MassUpdate) },
+            panels[1].Buttons);
         Assert.True(RibbonLayout.HasPanels(RibbonEnvironment.ZeroDoc, showDeveloperTools: false));
+    }
+
+    [Theory]
+    [MemberData(nameof(EveryEnvironmentAndSetting))]
+    public void MassUpdate_OnlyOnZeroDocPartAndAssembly_AsTheSmallButtonOnModelling(RibbonEnvironment environment, bool showDeveloperTools)
+    {
+        var panels = RibbonLayout.For(environment, showDeveloperTools);
+        var names = panels.SelectMany(p => p.Buttons).Select(b => b.CommandInternalName).ToList();
+
+        bool expected = environment is RibbonEnvironment.ZeroDoc or RibbonEnvironment.Part or RibbonEnvironment.Assembly;
+        Assert.Equal(expected, names.Contains(CommandNames.MassUpdate));
+        Assert.Equal(expected, panels.Any(p => p.Id == RibbonIds.ModellingPanelId));
+        if (expected)
+        {
+            var panel = Assert.Single(panels, p => p.Id == RibbonIds.ModellingPanelId);
+            Assert.Equal("Modelling", panel.DisplayName);
+            Assert.Equal(
+                new[] { new ButtonLayout($"{Branding.IdPrefix}_MassUpdate", ButtonSize.Small, IconNames.MassUpdate) },
+                panel.Buttons);
+
+            // After Drawing Tools (where shown), before Developer (where shown).
+            var ids = panels.Select(p => p.Id).ToList();
+            var modelling = ids.IndexOf(RibbonIds.ModellingPanelId);
+            Assert.True(modelling > ids.IndexOf(RibbonIds.DrawingToolsPanelId));
+            if (showDeveloperTools)
+                Assert.Equal(modelling + 1, ids.IndexOf(RibbonIds.DeveloperPanelId));
+        }
     }
 
     [Theory]
@@ -390,6 +430,7 @@ public sealed class RibbonLayoutTests
     [InlineData(CommandNames.CreatePrint, IconNames.CreatePrint)]
     [InlineData(CommandNames.SaveAsCopy, IconNames.SaveAsCopy)]
     [InlineData(CommandNames.SaveAsReplace, IconNames.SaveAsReplace)]
+    [InlineData(CommandNames.MassUpdate, IconNames.MassUpdate)]
     public void EachCommand_UsesItsIconName_InEveryEnvironment(string command, string iconName)
     {
         var buttons = RibbonEnvironments.All
@@ -415,6 +456,7 @@ public sealed class RibbonLayoutTests
         Assert.Equal(CommandNames.CreatePrint, prefix + IconNames.CreatePrint);
         Assert.Equal(CommandNames.SaveAsCopy, prefix + IconNames.SaveAsCopy);
         Assert.Equal(CommandNames.SaveAsReplace, prefix + IconNames.SaveAsReplace);
+        Assert.Equal(CommandNames.MassUpdate, prefix + IconNames.MassUpdate);
     }
 
     [Fact]
@@ -427,7 +469,7 @@ public sealed class RibbonLayoutTests
             .Select(g => g.First().IconName)
             .ToList();
 
-        Assert.Equal(9, iconNames.Count);
+        Assert.Equal(10, iconNames.Count);
         Assert.Equal(iconNames.Count, iconNames.Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
 

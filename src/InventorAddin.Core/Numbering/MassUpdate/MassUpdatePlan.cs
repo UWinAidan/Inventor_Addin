@@ -43,16 +43,25 @@ public sealed record FileUpdate(ScannedFile File, RegisterAction? Register, IRea
     /// <see cref="PartName.FromFileName"/> of the path; the part type is the listed code when the file's code is in
     /// <see cref="PartTypes"/> (any case), otherwise the file's code trimmed.
     /// </summary>
-    public RegisterEntry EntryFor(PartNumber number, DateTimeOffset assignedAt, string assignedBy, string computer) =>
+    public RegisterEntry EntryFor(PartNumber number, DateTimeOffset assignedAt, string assignedBy, string computer)
+    {
+        var request = RequestFor();
+        return new(number, request.Name, request.PartType, request.Kind, request.FilePath, assignedAt, assignedBy, computer);
+    }
+
+    /// <summary>
+    /// What <see cref="RegisterStore"/> needs to register or assign a number for this file: the name, part type, kind
+    /// and path that <see cref="EntryFor"/> puts in the row.
+    /// </summary>
+    public RegisterRequest RequestFor() =>
         new(
-            number,
             PartName.FromFileName(File.FullPath),
             PartTypes.Find(File.PartType)?.Code ?? PropertyValues.NormaliseText(File.PartType),
             File.Kind,
-            File.FullPath,
-            assignedAt,
-            assignedBy,
-            computer);
+            File.FullPath);
+
+    /// <summary>True when the file itself must be opened and saved: a number to write, or names to replace.</summary>
+    public bool ChangesFile => Register is AssignNew || Writes.Count > 0;
 }
 
 /// <summary>
@@ -86,21 +95,11 @@ public sealed record MassUpdatePlan(IReadOnlyList<FileUpdate> Updates, IReadOnly
         {
             ArgumentNullException.ThrowIfNull(state, nameof(files));
 
-            var isFirstCarrier = true;
-            if (state.NumberState == NumberState.WellFormedUnregistered && state.Number is { } carried)
+            var duplicate = CheckCarrier(state, firstCarrier);
+            var isFirstCarrier = duplicate is null;
+            if (duplicate is not null && IsTickedAndOffered(state, ticked, MassUpdateActions.Register))
             {
-                if (firstCarrier.TryGetValue(carried, out var firstPath))
-                {
-                    isFirstCarrier = false;
-                    if (IsTickedAndOffered(state, ticked, MassUpdateActions.Register))
-                    {
-                        duplicates.Add(new MassUpdateDuplicate(carried, firstPath, state.File.FullPath));
-                    }
-                }
-                else
-                {
-                    firstCarrier.Add(carried, state.File.FullPath);
-                }
+                duplicates.Add(duplicate);
             }
 
             RegisterAction? register = null;
@@ -134,6 +133,50 @@ public sealed record MassUpdatePlan(IReadOnlyList<FileUpdate> Updates, IReadOnly
         }
 
         return new MassUpdatePlan(updates.AsReadOnly(), duplicates.AsReadOnly());
+    }
+
+    /// <summary>
+    /// The scanned files that carry an unregistered number an earlier file in <paramref name="states"/> already
+    /// carries, by path (ignoring case), each with the file that keeps the number. The same rule as
+    /// <see cref="Build"/>: the first file in scan order keeps the number, whether or not it can be changed (it may be
+    /// open in Inventor). Mass Update shows these at scan time and offers no Register on them (task 048).
+    /// </summary>
+    public static IReadOnlyDictionary<string, MassUpdateDuplicate> ScanDuplicates(IEnumerable<ScannedFileState> states)
+    {
+        ArgumentNullException.ThrowIfNull(states);
+
+        var firstCarrier = new Dictionary<PartNumber, string>();
+        var duplicates = new Dictionary<string, MassUpdateDuplicate>(StringComparer.OrdinalIgnoreCase);
+        foreach (var state in states)
+        {
+            ArgumentNullException.ThrowIfNull(state, nameof(states));
+            if (CheckCarrier(state, firstCarrier) is { } duplicate)
+            {
+                duplicates[state.File.FullPath] = duplicate;
+            }
+        }
+
+        return duplicates;
+    }
+
+    /// <summary>
+    /// For a file carrying an unregistered number: the duplicate when an earlier file carries it, otherwise null, and
+    /// the file is recorded as the number's first carrier. Null for any other file.
+    /// </summary>
+    private static MassUpdateDuplicate? CheckCarrier(ScannedFileState state, Dictionary<PartNumber, string> firstCarrier)
+    {
+        if (state.NumberState != NumberState.WellFormedUnregistered || state.Number is not { } carried)
+        {
+            return null;
+        }
+
+        if (firstCarrier.TryGetValue(carried, out var firstPath))
+        {
+            return new MassUpdateDuplicate(carried, firstPath, state.File.FullPath);
+        }
+
+        firstCarrier.Add(carried, state.File.FullPath);
+        return null;
     }
 
     private static bool IsTickedAndOffered(ScannedFileState state, MassUpdateActions ticked, MassUpdateActions action) =>

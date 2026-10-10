@@ -54,7 +54,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Questions 1 to 8 in spec 08: accent colour, dark title bar, icon style, and five defaults added while planning (never-saved header and part number, theme names, Inventor version row, the XAML rules test)
 
 **Numbering (spec 02), not blocking**
-- Questions 13 to 22 in spec 02: a well-formed number not in the register, case in file names, what to do with duplicates, Save As and Replace on every occurrence, opening Part Properties after creating a file, a comma in the name of a file with no number, a register row that cannot be read, Mass Update's Detailer, a registered number on two files, and a file named only `AWB-10001.ipt`. Each has a default the tasks build
+- Questions 13 to 22 and 26 in spec 02: a well-formed number not in the register, case in file names, what to do with duplicates, Save As and Replace on every occurrence, opening Part Properties after creating a file, a comma in the name of a file with no number, a register row that cannot be read, Mass Update's Detailer, a registered number on two files, a file named only `AWB-10001.ipt`, and Mass Update assigning a number an unticked file carries. Each has a default the tasks build
 
 **Distribution, not blocking**
 - Whether and when to add an installer and a download page. It was to be decided when M2 was planned and is still parked
@@ -112,6 +112,7 @@ Small things noticed while building. None is urgent. The parent turns these into
 - The window's local `ValueOrPlaceholder` and `IdentifierOrPlaceholder` styles could become shared pieces. (task 029)
 
 **Numbering**
+- Mass Update: a file whose number was already registered but whose names were replaced is reported as an error, not a change; give `FileUpdateResult` a note field. A first-sync `IOException` says "a number may already have been taken" when none was; use that message only part way. Parts left loaded by an assembly closed earlier may show as "Open in Inventor" (try `Documents.CloseAll(true)` if so). The window does not redraw during the sync (about 8 s) or a slow folder listing. The list's scroll bar does not follow the dark theme; spec 08 has no list styles. (task 048)
 - Rename: Inventor freezes while CAD folders are listed (up to 3 s per unreachable folder, 60 s per slow one); move the wait off the UI thread with progress. The Rename window is owned by Inventor, not Part Properties (needs an owner overload in `WindowHost`). The result list uses the four-line text box with no visible scroll bar. Spec 08 should list the Part name row with Rename. (task 047)
 - Save As and Replace: `kReferencesChangeCmdType` may suit it better than `kShapeEditCmdType`. Saving the sub-assembly with `Save()` may save its other unsaved files or show a dialog; consider `SilentOperation` around it and say so in the warning. `((AssemblyComponentDefinition)x).Parent` returns the sub-assembly document directly and avoids the unconfirmed `.Document`. Check which document holds the selection while a sub-assembly is edited in place. Spec 08 should name the button. (task 046 review)
 - Save As Copy: rename `NewPartException` and `NewPartResult` to neutral names now that copy commands share them; `NewPartCommand.cs` probably has an unused `using System;`. Spec 08 should list the Save As Copy icon and dialog. (task 045)

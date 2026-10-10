@@ -112,10 +112,10 @@ public sealed class MassUpdateViewModelTests
     }
 
     [Theory]
-    [InlineData(User, "Alex Example", "Has a number; Windows user name as Designer")]
-    [InlineData("Alex Example", User, "Has a number; Windows user name as Detailer")]
-    [InlineData(User, User, "Has a number; Windows user name as Designer and Detailer")]
-    public void RowShowsWhichNamesAreTheWindowsUser(string designer, string detailer, string expected)
+    [InlineData(User, "Alex Example", "Has a number; your name as Designer")]
+    [InlineData("Alex Example", User, "Has a number; your name as Detailer")]
+    [InlineData(User, User, "Has a number; your name as Designer and Detailer")]
+    public void RowCallsANameThatMeansMeYourName(string designer, string detailer, string expected)
     {
         var row = Scanned(Designer, File("a.ipt", "AWB-10001", designer, detailer)).Rows[0];
 
@@ -277,7 +277,7 @@ public sealed class MassUpdateViewModelTests
             File("e.ipt", "", User, User),
             File("f.ipt", "", User, open: true));
 
-        Assert.Equal("6 files, 2 to register, 2 to number, 3 with the Windows user name", vm.CountsText);
+        Assert.Equal("6 files, 2 to register, 2 to number, 3 with your name", vm.CountsText);
     }
 
     [Fact]
@@ -288,9 +288,9 @@ public sealed class MassUpdateViewModelTests
 
         var row = vm.Rows[0];
         Assert.True(row.CanReplaceNames);
-        Assert.Equal("Has a number; Windows user name as Designer and Detailer", row.StateText);
+        Assert.Equal("Has a number; your name as Designer and Detailer", row.StateText);
         Assert.False(vm.Rows[1].CanReplaceNames);
-        Assert.Equal("2 files, 0 to register, 0 to number, 1 with the Windows user name", vm.CountsText);
+        Assert.Equal("2 files, 0 to register, 0 to number, 1 with your name", vm.CountsText);
 
         row.ReplaceNames = true;
         var update = Assert.Single(vm.BuildPlan().Updates);
@@ -308,15 +308,15 @@ public sealed class MassUpdateViewModelTests
     public void CountsSayOneFile()
     {
         Assert.Equal(
-            "1 file, 0 to register, 1 to number, 0 with the Windows user name",
+            "1 file, 0 to register, 1 to number, 0 with your name",
             Scanned(Designer, File("a.ipt")).CountsText);
     }
 
     [Fact]
-    public void CountsIncludeWindowsUserNamesWhenDefaultDesignerIsBlank()
+    public void CountsIncludeYourNameWhenDefaultDesignerIsBlank()
     {
         Assert.Equal(
-            "1 file, 0 to register, 0 to number, 1 with the Windows user name",
+            "1 file, 0 to register, 0 to number, 1 with your name",
             Scanned("", File("a.ipt", "AWB-10001", User)).CountsText);
     }
 
@@ -400,31 +400,231 @@ public sealed class MassUpdateViewModelTests
         Assert.Null(vm.Rows[2].Succeeded);
     }
 
+    // Duplicates at scan time (task 048)
+
     [Fact]
-    public void DuplicateRowSaysItWasNotRegistered()
+    public void ALaterFileCarryingTheSameUnregisteredNumberSaysSoAtScanAndOffersNoRegister()
     {
-        var vm = Scanned(Designer, File("a.ipt", "AWB-10005"), File("b.ipt", "AWB-10005"));
-        vm.TickAllRegister = true;
-        vm.ApplyCommand.Execute(null);
+        var vm = Scanned(Designer, File("a.ipt", "AWB-10005"), File("b.ipt", "awb-10005"));
 
-        vm.ReportResults([new FileUpdateResult($@"{Folder}\a.ipt")]);
+        Assert.True(vm.Rows[0].CanRegister);
+        Assert.Equal(MassUpdateRow.NotInRegisterText, vm.Rows[0].StateText);
+        Assert.Null(vm.Rows[0].ScanDuplicate);
 
-        Assert.Equal("Done", vm.Rows[0].ResultText);
-        Assert.Equal("Not registered: AWB-10005 is also on a.ipt.", vm.Rows[1].ResultText);
-        Assert.False(vm.Rows[1].Succeeded);
+        var row = vm.Rows[1];
+        Assert.False(row.CanRegister);
+        Assert.Equal("Not registered: AWB-10005 is also on a.ipt", row.StateText);
+        Assert.Equal(new MassUpdateDuplicate(new PartNumber(10005), $@"{Folder}\a.ipt", $@"{Folder}\b.ipt"), row.ScanDuplicate);
+        row.Register = true;
+        Assert.False(row.Register);
+        Assert.Equal("2 files, 1 to register, 0 to number, 0 with your name", vm.CountsText);
     }
 
     [Fact]
-    public void DuplicateRowWithNamesReplacedShowsBoth()
+    public void TickAllRegisterSkipsTheDuplicate_AndThePlanRegistersTheFirstOnly()
     {
         var vm = Scanned(Designer, File("a.ipt", "AWB-10005"), File("b.ipt", "AWB-10005", User));
+
         vm.TickAllRegister = true;
         vm.TickAllReplaceNames = true;
+
+        Assert.True(vm.TickAllRegister);
+        var plan = vm.BuildPlan();
+        Assert.Empty(plan.Duplicates);
+        Assert.Equal(2, plan.Updates.Count);
+        Assert.Equal(new RegisterExisting(new PartNumber(10005)), plan.Updates[0].Register);
+        Assert.Null(plan.Updates[1].Register);
+        Assert.Single(plan.Updates[1].Writes);
+    }
+
+    [Fact]
+    public void DuplicateRowWithYourNameShowsBoth_AndStillOffersReplaceNames()
+    {
+        var vm = Scanned(Designer, File("a.ipt", "AWB-10005"), File("b.ipt", "AWB-10005", User));
+
+        Assert.Equal("Not registered: AWB-10005 is also on a.ipt; your name as Designer", vm.Rows[1].StateText);
+        Assert.True(vm.Rows[1].CanReplaceNames);
+    }
+
+    [Fact]
+    public void AFileOpenInInventorStillKeepsItsNumber_SoALaterCarrierIsTheDuplicate()
+    {
+        var vm = Scanned(Designer, File("a.ipt", "AWB-10005", open: true), File("b.ipt", "AWB-10005"));
+
+        Assert.Equal(ScannedFileState.OpenInInventorText, vm.Rows[0].StateText);
+        Assert.False(vm.Rows[1].CanRegister);
+        Assert.Equal("Not registered: AWB-10005 is also on a.ipt", vm.Rows[1].StateText);
+    }
+
+    [Fact]
+    public void ARegisteredNumberOnTwoFilesIsNotADuplicate()
+    {
+        var vm = Scanned(Designer, File("a.ipt", "AWB-10001"), File("b.ipt", "AWB-10001"));
+
+        Assert.All(vm.Rows, r => Assert.Null(r.ScanDuplicate));
+        Assert.All(vm.Rows, r => Assert.Equal(MassUpdateRow.HasNumberText, r.StateText));
+    }
+
+    [Fact]
+    public void DuplicateTextNamesTheFirstFileOnly()
+    {
+        var duplicate = new MassUpdateDuplicate(new PartNumber(10001), @"C:\A\AWB-10001,plate.ipt", @"C:\B\copy.ipt");
+
+        Assert.Equal("Not registered: AWB-10001 is also on AWB-10001,plate.ipt", MassUpdateViewModel.DuplicateText(duplicate));
+    }
+
+    [Fact]
+    public void ApplyIsDisabledAfterResultsUntilTheNextScan()
+    {
+        var vm = Scanned(Designer, File("a.ipt"));
+        vm.Rows[0].Assign = true;
+        Assert.True(vm.ApplyCommand.CanExecute(null));
+
+        vm.ApplyCommand.Execute(null);
+        vm.ReportResults([new FileUpdateResult($@"{Folder}\a.ipt")]);
+
+        Assert.False(vm.ApplyCommand.CanExecute(null));
+        vm.ShowScan([File("a.ipt")], Register);
+        vm.Rows[0].Assign = true;
+        Assert.True(vm.ApplyCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void ApplyStaysEnabledWhenNoResultsWereReported()
+    {
+        var vm = Scanned(Designer, File("a.ipt"));
+        vm.Rows[0].Assign = true;
+
         vm.ApplyCommand.Execute(null);
 
-        vm.ReportResults([new FileUpdateResult($@"{Folder}\a.ipt"), new FileUpdateResult($@"{Folder}\b.ipt")]);
+        Assert.True(vm.ApplyCommand.CanExecute(null));
+    }
 
-        Assert.Equal("Done Not registered: AWB-10005 is also on a.ipt.", vm.Rows[1].ResultText);
+    [Fact]
+    public void ResultFlagsFollowTheResult()
+    {
+        var vm = Scanned(Designer, File("a.ipt"), File("b.ipt"));
+        Assert.False(vm.Rows[0].ResultIsDone);
+        Assert.False(vm.Rows[0].ResultIsError);
+
+        vm.ReportResults([new FileUpdateResult($@"{Folder}\a.ipt"), new FileUpdateResult($@"{Folder}\b.ipt", "Failed.")]);
+
+        Assert.True(vm.Rows[0].ResultIsDone);
+        Assert.False(vm.Rows[0].ResultIsError);
+        Assert.False(vm.Rows[1].ResultIsDone);
+        Assert.True(vm.Rows[1].ResultIsError);
+    }
+
+    // Busy, progress and cancel (task 048)
+
+    [Fact]
+    public void WhileBusyScanApplyAndCloseAreDisabled_AndCancelOnlyForAScan()
+    {
+        var vm = Scanned(Designer, File("a.ipt"));
+        vm.Rows[0].Assign = true;
+
+        vm.BeginWork(cancellable: true);
+
+        Assert.True(vm.IsBusy);
+        Assert.False(vm.IsIdle);
+        Assert.False(vm.ScanCommand.CanExecute(null));
+        Assert.False(vm.ApplyCommand.CanExecute(null));
+        Assert.True(vm.CancelCommand.CanExecute(null));
+        Assert.True(vm.CanCancel);
+
+        vm.EndWork();
+
+        Assert.False(vm.IsBusy);
+        Assert.True(vm.ScanCommand.CanExecute(null));
+        Assert.True(vm.ApplyCommand.CanExecute(null));
+        Assert.False(vm.CancelCommand.CanExecute(null));
+        Assert.False(vm.CanCancel);
+
+        vm.BeginWork(cancellable: false);
+        Assert.False(vm.CancelCommand.CanExecute(null));
+        Assert.False(vm.CanCancel);
+    }
+
+    [Fact]
+    public void CancelAsksTheScanToStop_AndSaysSo()
+    {
+        var vm = Create();
+        vm.BeginWork(cancellable: true);
+
+        vm.CancelCommand.Execute(null);
+
+        Assert.True(vm.IsCancelRequested);
+        Assert.False(vm.CancelCommand.CanExecute(null));
+        Assert.Equal(MassUpdateViewModel.CancellingText, vm.StatusText);
+
+        vm.EndWork();
+        vm.BeginWork(cancellable: true);
+        Assert.False(vm.IsCancelRequested);
+        Assert.Null(vm.StatusText);
+    }
+
+    [Fact]
+    public void StatusLine()
+    {
+        var vm = Create();
+
+        vm.ShowStatus("Something went wrong.", isError: true);
+        Assert.Equal("Something went wrong.", vm.StatusText);
+        Assert.True(vm.StatusIsError);
+
+        vm.ShowStatus(" ", isError: true);
+        Assert.Null(vm.StatusText);
+        Assert.False(vm.StatusIsError);
+
+        vm.ShowStatus(MassUpdateViewModel.ScanProgressText(3, 12));
+        Assert.Equal("Reading 3 of 12", vm.StatusText);
+        Assert.False(vm.StatusIsError);
+        Assert.Equal("Updating 1 of 7", MassUpdateViewModel.ApplyProgressText(1, 7));
+    }
+
+    [Theory]
+    [InlineData(4, 12, true, "Scan stopped after 4 of 12 files.")]
+    [InlineData(0, 0, false, MassUpdateViewModel.NoFilesText)]
+    [InlineData(12, 12, false, null)]
+    public void ScanDoneText(int read, int total, bool cancelled, string? expected)
+    {
+        Assert.Equal(expected, MassUpdateViewModel.ScanDoneText(read, total, cancelled));
+    }
+
+    [Fact]
+    public void HasActionsIsFalseOnlyForARowWithNothingToOffer()
+    {
+        var vm = Scanned(
+            Designer,
+            File("a.ipt", "AWB-10001"),
+            File("b.ipt", ""),
+            File("c.ipt", "AWB-10001", User),
+            File("d.ipt", "", open: true),
+            File("e.ipt", "AWB-10005"),
+            File("f.ipt", "AWB-10005"));
+
+        Assert.Equal([false, true, true, false, true, false], vm.Rows.Select(r => r.HasActions));
+        Assert.True(Scanned("", File("a.ipt", "AWB-10001", User)).Rows[0].HasActions);
+    }
+
+    [Fact]
+    public void HasReplaceNamesDisabledReasonFollowsTheDefaultDesigner()
+    {
+        Assert.False(Create().HasReplaceNamesDisabledReason);
+        Assert.True(Create("  ").HasReplaceNamesDisabledReason);
+    }
+
+    [Fact]
+    public void HeaderAndHasRows()
+    {
+        var vm = Create();
+        Assert.Equal("Mass Update", vm.HeaderTitle);
+        Assert.False(string.IsNullOrWhiteSpace(vm.HeaderSubline));
+        Assert.False(vm.HasRows);
+
+        vm.ShowScan([File("a.ipt")], Register);
+
+        Assert.True(vm.HasRows);
     }
 
     [Fact]

@@ -604,6 +604,107 @@ public sealed class RegisterStoreTests : IDisposable
         AssertOnlyRegisterFilesLeft();
     }
 
+    // Registering a number a file already carries (Mass Update, task 048)
+
+    [Fact]
+    public void RegisterExisting_Reachable_AppendsTheRowWithThatNumber_InBothFiles()
+    {
+        WriteShared(10001, 10003);
+
+        var result = Store().RegisterExisting(new PartNumber(10900), Request("old plate"));
+
+        Assert.True(result.Added);
+        Assert.False(result.Offline);
+        Assert.Empty(result.Duplicates);
+        Assert.Equal([10001, 10003, 10900], Numbers(SharedPath));
+        Assert.Equal([10001, 10003, 10900], Numbers(LocalPath));
+        var entry = RegisterCsv.Read(File.ReadAllText(SharedPath)).Entries[^1];
+        Assert.Equal("old plate", entry.Name);
+        Assert.Equal(@"C:\Work\old plate.ipt", entry.FilePath);
+        Assert.Equal(Now, entry.AssignedAt);
+        Assert.Equal("testuser", entry.AssignedBy);
+        AssertOnlyRegisterFilesLeft();
+    }
+
+    [Fact]
+    public void RegisterExisting_NumberAlreadyHeld_AddsNothing_AndSaysSo()
+    {
+        WriteShared(10001, 10003);
+        var before = File.ReadAllBytes(SharedPath);
+
+        var result = Store().RegisterExisting(new PartNumber(10003), Request());
+
+        Assert.False(result.Added);
+        Assert.False(result.Offline);
+        Assert.Equal(before, File.ReadAllBytes(SharedPath));
+        Assert.Contains(_log.Warnings, w => w.Contains("AWB-10003", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void RegisterExisting_ThenAssign_GivesOneMoreThanTheRegisteredNumber()
+    {
+        WriteShared(10001);
+        var store = Store();
+
+        store.RegisterExisting(new PartNumber(10900), Request("old plate"));
+        var assigned = store.Assign(Request("new plate"));
+
+        Assert.Equal(new PartNumber(10901), assigned.PartNumber);
+    }
+
+    [Fact]
+    public void RegisterExisting_Offline_GoesToPending_UnlessThisPcHoldsIt()
+    {
+        WriteLocal(10001);
+        _environment.Reachable = false;
+        var store = Store();
+
+        var added = store.RegisterExisting(new PartNumber(10900), Request());
+        var again = store.RegisterExisting(new PartNumber(10900), Request());
+        var held = store.RegisterExisting(new PartNumber(10001), Request());
+
+        Assert.Equal((true, true), (added.Added, added.Offline));
+        Assert.Equal((false, true), (again.Added, again.Offline));
+        Assert.Equal((false, true), (held.Added, held.Offline));
+        Assert.Equal([10900], Numbers(PendingPath));
+        Assert.True(store.ReadLocal().Contains(new PartNumber(10900)));
+    }
+
+    [Fact]
+    public void RegisterExisting_SyncsPendingFirst_AndReportsTheirDuplicates()
+    {
+        WriteShared(10001, 10002);
+        Directory.CreateDirectory(_local);
+        File.WriteAllText(PendingPath, RegisterCsv.Write([Entry(10002, "TESTPC") with { FilePath = @"C:\Work\offline.ipt" }]));
+
+        var result = Store().RegisterExisting(new PartNumber(10900), Request());
+
+        Assert.True(result.Added);
+        Assert.Equal(new PartNumber(10002), Assert.Single(result.Duplicates).Number);
+        Assert.Equal([10001, 10002, 10002, 10900], Numbers(SharedPath));
+        Assert.False(File.Exists(PendingPath));
+    }
+
+    [Fact]
+    public void RegisterExisting_BusyLockThrows_AndChangesNothing()
+    {
+        WriteShared(10001);
+        File.WriteAllText(LockPath, "someone else");
+        File.SetLastWriteTimeUtc(LockPath, Now.UtcDateTime);
+        var before = File.ReadAllBytes(SharedPath);
+
+        Assert.Throws<RegisterBusyException>(() => Store().RegisterExisting(new PartNumber(10900), Request()));
+
+        Assert.Equal(before, File.ReadAllBytes(SharedPath));
+        Assert.False(File.Exists(PendingPath));
+    }
+
+    [Fact]
+    public void RegisterExisting_RejectsNull()
+    {
+        Assert.Throws<ArgumentNullException>(() => Store().RegisterExisting(new PartNumber(10900), null!));
+    }
+
     [Fact]
     public void WrittenRegisterHasAByteOrderMarkForExcel()
     {

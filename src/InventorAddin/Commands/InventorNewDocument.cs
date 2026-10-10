@@ -2,17 +2,18 @@ using System;
 using System.Collections.Generic;
 using Inventor;
 using InventorAddin.Core.Numbering;
+using InventorAddin.Core.Numbering.MassUpdate;
 using InventorAddin.Core.PartProperties;
 using InventorAddin.Extraction;
 
 namespace InventorAddin.Commands
 {
     /// <summary>
-    /// A document a command has just made (New Part) or opened as a copy (Save As Copy), by the calls spike 032
-    /// confirmed: properties written with <see cref="PropertyWriter"/> inside one transaction, saved, or closed without
-    /// saving.
+    /// A document a command has just made (New Part), opened as a copy (Save As Copy) or opened invisibly to change it
+    /// (Mass Update), by the calls spike 032 confirmed: properties written with <see cref="PropertyWriter"/> inside one
+    /// transaction, saved, or closed without saving.
     /// </summary>
-    internal sealed class InventorNewDocument : INewPartDocument, ICopiedDocument
+    internal sealed class InventorNewDocument : INewPartDocument, ICopiedDocument, IMassUpdateDocument
     {
         private readonly Document _doc;
         private readonly string _commandName;

@@ -162,6 +162,57 @@ public sealed class RegisterStore
     }
 
     /// <summary>
+    /// Mass Update's Register (task 048): adds a row for <paramref name="number"/>, a number a file already carries,
+    /// for <paramref name="request"/>. Nothing is added when the register already holds the number (<c>Added</c>
+    /// false). When the shared folder can be reached: syncs the pending entries under the lock, as
+    /// <see cref="Assign(RegisterRequest)"/> does, and appends the row. When it cannot: checks against
+    /// <see cref="ReadLocal"/> and appends the row to the pending entries; a number another PC registered meanwhile is
+    /// then reported as a duplicate at the next sync.
+    /// </summary>
+    /// <exception cref="RegisterBusyException">The lock could not be taken within <see cref="LockWait"/>.</exception>
+    /// <exception cref="RegisterUnreadableException">The shared or pending register cannot be read in full.</exception>
+    public RegisterExistingResult RegisterExisting(PartNumber number, RegisterRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (!IsReachable())
+        {
+            if (ReadLocal().Contains(number))
+            {
+                _log.Warn($"Part number {number} was not registered for '{request.FilePath}': this PC's register already holds it.");
+                return new RegisterExistingResult(Added: false, Offline: true, Duplicates: []);
+            }
+
+            AppendPending(CreateEntry(number, request));
+            _log.Info($"Part number {number} registered offline for '{request.FilePath}'; it will be synced to the shared register.");
+            return new RegisterExistingResult(Added: true, Offline: true, Duplicates: []);
+        }
+
+        var added = false;
+        var duplicates = UnderLock(merged =>
+        {
+            if (merged.Contains(number))
+            {
+                return merged;
+            }
+
+            added = true;
+            return merged.Append(CreateEntry(number, request));
+        });
+
+        if (added)
+        {
+            _log.Info($"Part number {number} registered for '{request.FilePath}'.");
+        }
+        else
+        {
+            _log.Warn($"Part number {number} was not registered for '{request.FilePath}': the register already holds it.");
+        }
+
+        return new RegisterExistingResult(added, Offline: false, duplicates);
+    }
+
+    /// <summary>
     /// A renamed file (task 047): rewrites the <c>FilePath</c> and <c>Name</c> of the row holding
     /// <paramref name="number"/> (<see cref="PartRegister.TryUpdate"/>; <paramref name="oldPath"/> picks the row when the
     /// number was handed out twice). Rows are never added, removed or reordered by this. When the shared folder can be
@@ -653,6 +704,14 @@ public sealed class RegisterStore
 /// <param name="Name">The new part name, with spaces.</param>
 /// <param name="UpdatedAt">When the rename was made.</param>
 public sealed record RegisterUpdate(PartNumber Number, string OldFilePath, string FilePath, string Name, DateTimeOffset UpdatedAt);
+
+/// <summary>What <see cref="RegisterStore.RegisterExisting"/> did.</summary>
+/// <param name="Added">False when the register already held the number, so no row was added.</param>
+/// <param name="Offline">
+/// True when the shared register could not be reached: the row waits in the pending entries until the next sync.
+/// </param>
+/// <param name="Duplicates">Duplicates found by the sync done under the lock; empty when offline.</param>
+public sealed record RegisterExistingResult(bool Added, bool Offline, IReadOnlyList<RegisterDuplicate> Duplicates);
 
 /// <summary>What <see cref="RegisterStore.UpdateEntry"/> did.</summary>
 /// <param name="Found">

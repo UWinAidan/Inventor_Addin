@@ -165,7 +165,7 @@ Designer and Detailer are not in the dialog; they come from Settings and can be 
 
 - Scans a folder, by default the Work folder from Settings (Aidan, question 23), with Browse. Includes subfolders, skips `OldVersions`, reads `.ipt` and `.iam` files.
 - Lists every file with its file name, Part Number, whether it has a number (in the register), and whether Designer or Detailer equals the Windows user name.
-- Offers three actions, each on the files ticked: **register** a number that is in the format but not in the register; **assign** a new number to a file without one (the file is not renamed); **replace** a Designer or Detailer equal to the Windows user name with the values from Settings.
+- Offers three actions, each on the files ticked: **register** a number that is in the format but not in the register; **assign** a new number to a file without one (the file is not renamed); **replace** a Designer or Detailer equal to the Windows user name or one of the Other names with the values from Settings.
 - Each changed file is saved. This cannot be undone with Inventor's Undo, so the add-in asks for confirmation first, saying how many files will change.
 - Files open in Inventor are skipped and listed as "open in Inventor".
 
@@ -232,3 +232,4 @@ Still open (each has a Default above, so none blocks planning):
 20. Mass Update on a file whose Designer is a real name and whose Detailer is the Windows user name. Default: Detailer is set to the Default designer from Settings. Part Properties instead makes Detailer follow the file's Designer. Should Mass Update do the same?
 21. A file carrying a number the register holds for a different file (for example a copy made in Explorer). Default: it counts as having a number, because the check ignores the path. Should Mass Update flag a number carried by two scanned files even when it is registered?
 22. A file named only `AWB-10001.ipt`, with no Part Number set. Inventor's fallback is `AWB-10001`, which is in the format, so the window shows it as a number (and as assigned if the register holds it). Default: accepted, since files in the new format always have a comma. Should the add-in check the Part Number against the file name to catch this?
+26. Mass Update assigning a number that an unticked scanned file already carries but has not registered. The register is the only source of numbers, so the next number can match such a file's Part Number. Default: not checked; the file shows "Not in the register" before Apply, so it can be ticked for Register, which runs before Assign. Should Assign skip numbers carried by any scanned file?

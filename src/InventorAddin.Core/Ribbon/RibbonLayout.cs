@@ -35,7 +35,7 @@ public static class RibbonLayout
         RibbonEnvironment.Assembly,
     };
 
-    // Spec 02, "Commands: New Part": also with no document open.
+    // Spec 02, "Commands: New Part" and "Commands: Mass Update": also with no document open.
     private static readonly RibbonEnvironment[] NewFileEnvironments =
     {
         RibbonEnvironment.ZeroDoc,
@@ -62,6 +62,11 @@ public static class RibbonLayout
         {
             // Spec 02, "Commands: Create Print": a drawing of the active part or assembly.
             new(CommandNames.CreatePrint, ButtonSize.Large, IconNames.CreatePrint, ModelEnvironments),
+        }),
+        new(RibbonIds.ModellingPanelId, RibbonIds.ModellingPanelName, DeveloperOnly: false, new ButtonDefinition[]
+        {
+            // Spec 02, "Commands: Mass Update": a folder of files, so also with no document open.
+            new(CommandNames.MassUpdate, ButtonSize.Small, IconNames.MassUpdate, NewFileEnvironments),
         }),
         new(RibbonIds.DeveloperPanelId, RibbonIds.DeveloperPanelName, DeveloperOnly: true, new ButtonDefinition[]
         {
