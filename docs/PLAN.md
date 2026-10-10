@@ -146,7 +146,7 @@ Planned 2026-10-10. Run in number order; each task depends only on lower numbers
 - [ ] 032 Spike: templates, creating and saving, rename, base view (Windows)
 - [x] 033 Part number format (Core)
 - [x] 034 File name rule and part name (Core)
-- [ ] 035 Register model and CSV format (Core)
+- [x] 035 Register model and CSV format (Core)
 - [ ] 036 Register store: shared folder, local copy, lock, offline (Core)
 - [x] 037 Register folder and units settings
 - [x] 038 Windows user name counts as blank in Part Properties
