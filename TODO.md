@@ -47,7 +47,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Questions 1 to 8 in spec 08: accent colour, dark title bar, icon style, and five defaults added while planning (never-saved header and part number, theme names, Inventor version row, the XAML rules test)
 
 **Numbering (spec 02), not blocking**
-- Questions 13 to 17 in spec 02: a well-formed number not in the register, case in file names, what to do with duplicates, Save As and Replace on every occurrence, and opening Part Properties after creating a file. Each has a default the tasks build
+- Questions 13 to 18 in spec 02: a well-formed number not in the register, case in file names, what to do with duplicates, Save As and Replace on every occurrence, opening Part Properties after creating a file, and a comma in the name of a file with no number. Each has a default the tasks build
 
 **Distribution, not blocking**
 - Whether and when to add an installer and a download page. It was to be decided when M2 was planned and is still parked
@@ -95,6 +95,9 @@ Small things noticed while building. None is urgent. The parent turns these into
 - Number parsing accepts oddly placed group separators, so `1,2,3` reads as 123. Tighten only if it confuses anyone. (task 013)
 - The Part Properties window now sizes to its content, so a long status message widens it, up to 560, until the message clears. If that is distracting, fix the width in `UI/Theme/`. (task 029)
 - The window's local `ValueOrPlaceholder` and `IdentifierOrPlaceholder` styles could become shared pieces. (task 029)
+
+**Numbering**
+- Until task 039 lands, Part Properties shows Inventor's file-name fallback as an assigned number for files whose name has an underscore or a comma, because `PartName.FromFileName` now converts them. Do not build a commit between 034 and 039 for testing. Close this when 039 is committed. (task 034)
 
 **Developer tools**
 - JSON exports include `BoundingBox` lengths, which are derived values. Mark them ignored if exports should not carry them. (task 001)

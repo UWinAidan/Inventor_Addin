@@ -210,3 +210,4 @@ Still open (each has a Default above, so none blocks planning):
 15. Duplicates found at sync. Default: both rows kept and reported; Aidan fixes them by hand. Should the add-in offer to renumber the offline file?
 16. Save As and Replace. Default: replaces only the selected occurrence. Should it replace every occurrence of that part in the assembly?
 17. Should New Part, Save As Copy and Create Print open the new file's Part Properties window straight after creating it?
+18. A comma in the name of a file with no part number. The name is read from after the first comma, so `a,b.ipt` reads back as `b`. Default: a name containing a comma is refused when the file has no part number (Rename on an old file); the reading rule stays as Aidan set it. Should the name instead be read from after the first comma only when the text before it is a part number?
