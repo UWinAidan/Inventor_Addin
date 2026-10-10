@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using System.Text.Json;
 using InventorAddin.Core.Logging;
 
 namespace InventorAddin.Core.Numbering;
@@ -10,12 +11,23 @@ namespace InventorAddin.Core.Numbering;
 /// sync that reports duplicates. The store does not decide where the folders are. Everything is synchronous apart from
 /// the reachability probe.
 /// </summary>
+/// <remarks>
+/// Rename (task 047) is the one change ever made to an existing row: <see cref="UpdateEntry"/> rewrites a row's
+/// <c>FilePath</c> and <c>Name</c>. Offline, the update waits in <see cref="PendingUpdatesFileName"/> and is applied at
+/// the next sync, after the pending entries.
+/// </remarks>
 public sealed class RegisterStore
 {
     public const string SharedFileName = "part-register.csv";
     public const string LockFileName = "part-register.lock";
     public const string LocalFileName = "part-register.csv";
     public const string PendingFileName = "pending.csv";
+
+    /// <summary>
+    /// This PC's register updates made while the shared folder could not be reached (task 047, Default). JSON, because
+    /// it is the add-in's own file and holds the old path as well as the new one; Aidan never needs to open it.
+    /// </summary>
+    public const string PendingUpdatesFileName = "pending-updates.json";
 
     /// <summary>How long <see cref="Assign"/> and <see cref="Sync"/> retry for the lock by default.</summary>
     public static readonly TimeSpan DefaultLockWait = TimeSpan.FromSeconds(5);
@@ -75,15 +87,25 @@ public sealed class RegisterStore
 
     public string PendingFilePath => Path.Combine(LocalFolder, PendingFileName);
 
+    public string PendingUpdatesFilePath => Path.Combine(LocalFolder, PendingUpdatesFileName);
+
     /// <summary>
-    /// The local copy followed by the pending entries, without touching the shared folder. A missing file reads as
-    /// empty; an unreadable one reads as empty with a logged warning. Never throws for file problems.
+    /// The local copy followed by the pending entries, with the pending updates applied, without touching the shared
+    /// folder. A missing file reads as empty; an unreadable one reads as empty with a logged warning. Never throws for
+    /// file problems.
     /// </summary>
     public PartRegister ReadLocal()
     {
         var local = ReadLocalFile(LocalFilePath);
         var pending = ReadLocalFile(PendingFilePath);
-        return new PartRegister(local.Concat(pending));
+        var register = new PartRegister(local.Concat(pending));
+
+        foreach (var update in ReadLocalUpdates())
+        {
+            register.TryUpdate(update.Number, update.FilePath, update.Name, update.OldFilePath, out register);
+        }
+
+        return register;
     }
 
     /// <summary>Spec 02, "Has a number", against <see cref="ReadLocal"/>.</summary>
@@ -140,6 +162,76 @@ public sealed class RegisterStore
     }
 
     /// <summary>
+    /// A renamed file (task 047): rewrites the <c>FilePath</c> and <c>Name</c> of the row holding
+    /// <paramref name="number"/> (<see cref="PartRegister.TryUpdate"/>; <paramref name="oldPath"/> picks the row when the
+    /// number was handed out twice). Rows are never added, removed or reordered by this. When the shared folder can be
+    /// reached, the update is made under the lock, with the same sync as <see cref="Assign(RegisterRequest)"/>. When it
+    /// cannot, or when that write fails (the lock is busy, a register file cannot be read in full, or an I/O error), the
+    /// update waits in the pending updates file and is applied at the next sync (<c>Offline</c> true; after a failed
+    /// write, <c>QueuedReason</c> says why). It is not queued when this PC's register (<see cref="ReadLocal"/>) does not
+    /// hold the number.
+    /// </summary>
+    /// <exception cref="RegisterUnreadableException">
+    /// The pending updates file cannot be read in full, so the update could not be queued either. Nothing was changed.
+    /// </exception>
+    public RegisterUpdateResult UpdateEntry(PartNumber number, string newPath, string newName, string? oldPath = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(newPath);
+        ArgumentNullException.ThrowIfNull(newName);
+
+        if (!IsReachable())
+        {
+            return QueueUpdate(number, newPath, newName, oldPath, queuedReason: null);
+        }
+
+        var found = false;
+        IReadOnlyList<RegisterDuplicate> duplicates;
+        try
+        {
+            duplicates = UnderLock(merged =>
+            {
+                found = merged.TryUpdate(number, newPath, newName, oldPath, out var updated);
+                return updated;
+            });
+        }
+        catch (Exception ex) when (ex is RegisterBusyException or RegisterUnreadableException or IOException or UnauthorizedAccessException)
+        {
+            // The rename has happened, so the update must not be lost: it waits, as offline, for the next sync. Applying
+            // it again is safe (PartRegister.TryUpdate), so a write that got part way does no harm.
+            _log.Warn($"Register entry {number} could not be updated in the shared register ({ex.Message}); it is queued for the next sync.");
+            return QueueUpdate(number, newPath, newName, oldPath, queuedReason: ex.Message);
+        }
+
+        if (found)
+        {
+            _log.Info($"Register entry {number} updated to '{newPath}'.");
+        }
+        else
+        {
+            _log.Warn($"Register entry {number} was not updated for '{newPath}': the register does not hold it.");
+        }
+
+        return new RegisterUpdateResult(found, Offline: false, duplicates);
+    }
+
+    /// <summary>
+    /// Puts an update in the pending updates file, when this PC's register holds the number. Throws
+    /// <see cref="RegisterUnreadableException"/> when the pending updates file cannot be read in full.
+    /// </summary>
+    private RegisterUpdateResult QueueUpdate(PartNumber number, string newPath, string newName, string? oldPath, string? queuedReason)
+    {
+        if (!ReadLocal().Contains(number))
+        {
+            _log.Warn($"Register entry {number} was not updated for '{newPath}': this PC's register does not hold it.");
+            return new RegisterUpdateResult(Found: false, Offline: true, Duplicates: [], QueuedReason: queuedReason);
+        }
+
+        AppendPendingUpdate(new RegisterUpdate(number, oldPath ?? "", newPath, newName, _environment.Now));
+        _log.Info($"Register entry {number} updated offline to '{newPath}'; it will be synced to the shared register.");
+        return new RegisterUpdateResult(Found: true, Offline: true, Duplicates: [], QueuedReason: queuedReason);
+    }
+
+    /// <summary>
     /// Syncs the pending entries into the shared register and refreshes the local copy, as <see cref="Assign"/> does
     /// but without adding an entry. When the shared folder cannot be reached, does nothing and returns
     /// <c>Reached = false</c>.
@@ -161,9 +253,10 @@ public sealed class RegisterStore
         SharedFolder is not null && _environment.ProbeFolder(SharedFolder, ProbeTimeout);
 
     /// <summary>
-    /// Takes the lock, reads the shared register and the pending entries, merges them, lets <paramref name="change"/>
-    /// add to the result, writes the shared register, deletes the pending file and writes the local copy. The lock is
-    /// released in all cases. Returns the duplicates the merge found.
+    /// Takes the lock, reads the shared register, the pending entries and the pending updates, merges the entries,
+    /// applies the updates, lets <paramref name="change"/> change the result, writes the shared register when it
+    /// changed, deletes the pending files and writes the local copy. The lock is released in all cases. Returns the
+    /// duplicates the merge found.
     /// </summary>
     private IReadOnlyList<RegisterDuplicate> UnderLock(Func<PartRegister, PartRegister> change)
     {
@@ -175,6 +268,7 @@ public sealed class RegisterStore
         {
             var shared = ReadStrict(sharedPath);
             var pending = ReadStrict(PendingFilePath);
+            var updates = ReadStrictUpdates(PendingUpdatesFilePath);
 
             var sync = PartRegister.Merge(shared, pending.Entries);
             foreach (var duplicate in sync.Duplicates)
@@ -184,10 +278,21 @@ public sealed class RegisterStore
                     $"and '{duplicate.Added.FilePath}'. Both rows are kept in the register.");
             }
 
-            var result = change(sync.Register);
+            var register = sync.Register;
+            foreach (var update in updates)
+            {
+                if (!register.TryUpdate(update.Number, update.FilePath, update.Name, update.OldFilePath, out register))
+                {
+                    _log.Warn(
+                        $"An update made offline to register entry {update.Number} ('{update.FilePath}') was dropped: " +
+                        "the shared register does not hold that number.");
+                }
+            }
 
-            // Rows are only ever added, so an unchanged count means an unchanged register: leave the NAS file alone.
-            if (result.Entries.Count != shared.Entries.Count)
+            var result = change(register);
+
+            // Leave the NAS file alone when nothing in it changed.
+            if (!result.Entries.SequenceEqual(shared.Entries))
             {
                 WriteReplacing(SharedFolder!, SharedFileName, RegisterCsv.Write(result.Entries));
             }
@@ -195,6 +300,11 @@ public sealed class RegisterStore
             if (File.Exists(PendingFilePath))
             {
                 File.Delete(PendingFilePath);
+            }
+
+            if (File.Exists(PendingUpdatesFilePath))
+            {
+                File.Delete(PendingUpdatesFilePath);
             }
 
             Directory.CreateDirectory(LocalFolder);
@@ -345,6 +455,145 @@ public sealed class RegisterStore
         }
     }
 
+    /// <summary>
+    /// Reads the pending updates file before it is applied and deleted. A missing file is empty. A file that does not
+    /// parse, or holds an update whose number or new path cannot be read, throws
+    /// <see cref="RegisterUnreadableException"/>, so nothing is dropped (as spec 02 question 19 does for rows).
+    /// </summary>
+    private static IReadOnlyList<RegisterUpdate> ReadStrictUpdates(string path)
+    {
+        if (!File.Exists(path))
+        {
+            return [];
+        }
+
+        var text = File.ReadAllText(path);
+        var problems = new List<string>();
+        var updates = ParseUpdates(text, problems);
+        if (problems.Count > 0)
+        {
+            throw new RegisterUnreadableException(path, problems);
+        }
+
+        return updates;
+    }
+
+    /// <summary>The pending updates for <see cref="ReadLocal"/>. Never throws for file problems; problems are logged.</summary>
+    private IReadOnlyList<RegisterUpdate> ReadLocalUpdates()
+    {
+        try
+        {
+            if (!File.Exists(PendingUpdatesFilePath))
+            {
+                return [];
+            }
+
+            var problems = new List<string>();
+            var updates = ParseUpdates(File.ReadAllText(PendingUpdatesFilePath), problems);
+            foreach (var problem in problems)
+            {
+                _log.Warn($"Register updates file '{PendingUpdatesFilePath}': {problem}");
+            }
+
+            return updates;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _log.Warn($"Could not read the register updates file '{PendingUpdatesFilePath}': {ex.Message}. It is ignored.");
+            return [];
+        }
+    }
+
+    /// <summary>The updates in pending updates JSON, in file order. Each problem is added to <paramref name="problems"/>.</summary>
+    private static List<RegisterUpdate> ParseUpdates(string text, List<string> problems)
+    {
+        var updates = new List<RegisterUpdate>();
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return updates;
+        }
+
+        List<PendingUpdateRecord?>? records;
+        try
+        {
+            records = JsonSerializer.Deserialize<List<PendingUpdateRecord?>>(text, UpdatesJsonOptions);
+        }
+        catch (JsonException ex)
+        {
+            problems.Add($"The file is not a list of register updates: {ex.Message}");
+            return updates;
+        }
+
+        for (var i = 0; i < (records?.Count ?? 0); i++)
+        {
+            var record = records![i];
+            if (record is null || !PartNumber.TryParse(record.Number, out var number) || string.IsNullOrWhiteSpace(record.FilePath))
+            {
+                problems.Add($"Update {i + 1}: no part number or no new file path.");
+                continue;
+            }
+
+            updates.Add(new RegisterUpdate(
+                number,
+                record.OldFilePath ?? "",
+                record.FilePath,
+                record.Name ?? "",
+                record.UpdatedAt ?? DateTimeOffset.MinValue));
+        }
+
+        return updates;
+    }
+
+    /// <summary>
+    /// Adds one update to the pending updates file. The file is rewritten through a temporary file; one that cannot be
+    /// read in full throws <see cref="RegisterUnreadableException"/> rather than lose what it holds.
+    /// </summary>
+    private void AppendPendingUpdate(RegisterUpdate update)
+    {
+        Directory.CreateDirectory(LocalFolder);
+
+        var updates = ReadStrictUpdates(PendingUpdatesFilePath).ToList();
+        updates.Add(update);
+
+        var records = updates.Select(u => new PendingUpdateRecord
+        {
+            Number = u.Number.ToString(),
+            OldFilePath = u.OldFilePath,
+            FilePath = u.FilePath,
+            Name = u.Name,
+            UpdatedAt = u.UpdatedAt,
+            UpdatedBy = _environment.AssignedBy,
+            Computer = _environment.ComputerName,
+        });
+
+        WriteReplacing(LocalFolder, PendingUpdatesFileName, JsonSerializer.Serialize(records, UpdatesJsonOptions));
+    }
+
+    private static readonly JsonSerializerOptions UpdatesJsonOptions = new()
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true,
+    };
+
+    /// <summary>One update as the pending updates file stores it.</summary>
+    private sealed class PendingUpdateRecord
+    {
+        public string? Number { get; set; }
+
+        public string? OldFilePath { get; set; }
+
+        public string? FilePath { get; set; }
+
+        public string? Name { get; set; }
+
+        public DateTimeOffset? UpdatedAt { get; set; }
+
+        public string? UpdatedBy { get; set; }
+
+        public string? Computer { get; set; }
+    }
+
     /// <summary>Adds one row to the pending file, creating it with a header when it is missing or empty.</summary>
     private void AppendPending(RegisterEntry entry)
     {
@@ -396,3 +645,30 @@ public sealed class RegisterStore
         }
     }
 }
+
+/// <summary>A change to one register row made by Rename while the shared register could not be reached (task 047).</summary>
+/// <param name="Number">The number whose row changes.</param>
+/// <param name="OldFilePath">The file's path before the rename, which picks the row when the number is held twice; <c>""</c> when not known.</param>
+/// <param name="FilePath">The file's new full path.</param>
+/// <param name="Name">The new part name, with spaces.</param>
+/// <param name="UpdatedAt">When the rename was made.</param>
+public sealed record RegisterUpdate(PartNumber Number, string OldFilePath, string FilePath, string Name, DateTimeOffset UpdatedAt);
+
+/// <summary>What <see cref="RegisterStore.UpdateEntry"/> did.</summary>
+/// <param name="Found">
+/// False when the register does not hold the number, so nothing was changed or queued. Offline, this is checked
+/// against this PC's register.
+/// </param>
+/// <param name="Offline">
+/// True when the shared register could not be reached: the update waits in the pending updates file until the next sync.
+/// </param>
+/// <param name="Duplicates">Duplicates found by the sync done under the lock; empty when offline.</param>
+/// <param name="QueuedReason">
+/// Why the update was queued although the shared folder answered (the lock was busy, a register file could not be read in
+/// full, or an I/O error); null otherwise.
+/// </param>
+public sealed record RegisterUpdateResult(
+    bool Found,
+    bool Offline,
+    IReadOnlyList<RegisterDuplicate> Duplicates,
+    string? QueuedReason = null);

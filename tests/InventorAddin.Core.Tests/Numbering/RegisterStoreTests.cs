@@ -613,6 +613,308 @@ public sealed class RegisterStoreTests : IDisposable
         Assert.Equal(new byte[] { 0xEF, 0xBB, 0xBF }, bytes[..3]);
     }
 
+    // Updating an entry (task 047, Rename)
+
+    private string PendingUpdatesPath => Path.Combine(_local, RegisterStore.PendingUpdatesFileName);
+
+    private static List<RegisterEntry> Entries(string path) => RegisterCsv.Read(File.ReadAllText(path)).Entries.ToList();
+
+    [Fact]
+    public void PendingUpdatesFileNameIsTheDefault()
+    {
+        Assert.Equal("pending-updates.json", RegisterStore.PendingUpdatesFileName);
+    }
+
+    [Fact]
+    public void UpdateEntry_Reachable_RewritesPathAndNameOnly_InPlace_InBothFiles()
+    {
+        WriteShared(10001, 10002, 10003);
+
+        var result = Store().UpdateEntry(new PartNumber(10002), @"C:\Work\AWB-10002,base_plate.iam", "base plate");
+
+        Assert.True(result.Found);
+        Assert.False(result.Offline);
+        Assert.Empty(result.Duplicates);
+        foreach (var path in new[] { SharedPath, LocalPath })
+        {
+            var entries = Entries(path);
+            Assert.Equal([10001, 10002, 10003], entries.Select(e => e.Number.Value));
+            Assert.Equal(Entry(10001), entries[0]);
+            Assert.Equal(Entry(10003), entries[2]);
+            Assert.Equal(
+                Entry(10002) with { FilePath = @"C:\Work\AWB-10002,base_plate.iam", Name = "base plate" },
+                entries[1]);
+        }
+
+        AssertOnlyRegisterFilesLeft();
+    }
+
+    [Fact]
+    public void UpdateEntry_NumberNotInTheRegister_ChangesNothing_AndSaysSo()
+    {
+        WriteShared(10001);
+        var before = File.ReadAllBytes(SharedPath);
+
+        var result = Store().UpdateEntry(new PartNumber(10009), @"C:\Work\x.ipt", "x");
+
+        Assert.False(result.Found);
+        Assert.Equal(before, File.ReadAllBytes(SharedPath));
+        Assert.Contains(_log.Warnings, w => w.Contains("AWB-10009", StringComparison.Ordinal));
+        AssertOnlyRegisterFilesLeft();
+    }
+
+    [Fact]
+    public void UpdateEntry_NumberHeldTwice_ChangesTheRowWithTheOldPath()
+    {
+        var first = Entry(10002) with { FilePath = @"C:\A\one.ipt" };
+        var second = Entry(10002, "TESTPC") with { FilePath = @"C:\B\two.ipt" };
+        File.WriteAllText(SharedPath, RegisterCsv.Write([Entry(10001), first, second]));
+
+        Store().UpdateEntry(new PartNumber(10002), @"C:\B\renamed.ipt", "renamed", oldPath: @"c:\b\TWO.ipt");
+
+        var entries = Entries(SharedPath);
+        Assert.Equal(first, entries[1]);
+        Assert.Equal(@"C:\B\renamed.ipt", entries[2].FilePath);
+    }
+
+    [Fact]
+    public void UpdateEntry_Reachable_SyncsPendingEntriesToo()
+    {
+        WriteShared(10001);
+        WriteLocal(10001);
+        _environment.Reachable = false;
+        var store = Store();
+        store.Assign(Request("offline plate"));
+
+        _environment.Reachable = true;
+        var result = store.UpdateEntry(new PartNumber(10002), @"C:\Work\AWB-10002,renamed.ipt", "renamed");
+
+        Assert.True(result.Found);
+        Assert.Equal([10001, 10002], Numbers(SharedPath));
+        Assert.Equal(@"C:\Work\AWB-10002,renamed.ipt", Entries(SharedPath)[1].FilePath);
+        Assert.False(File.Exists(PendingPath));
+    }
+
+    [Fact]
+    public void UpdateEntry_Offline_WaitsInThePendingUpdates_ShowsInReadLocal_AndIsAppliedAtTheNextSync()
+    {
+        WriteShared(10001, 10002);
+        WriteLocal(10001, 10002);
+        var sharedBefore = File.ReadAllBytes(SharedPath);
+        _environment.Reachable = false;
+        var store = Store();
+
+        var result = store.UpdateEntry(new PartNumber(10002), @"C:\Work\AWB-10002,renamed.iam", "renamed", Entry(10002).FilePath);
+
+        Assert.True(result.Found);
+        Assert.True(result.Offline);
+        Assert.True(File.Exists(PendingUpdatesPath));
+        Assert.Equal(sharedBefore, File.ReadAllBytes(SharedPath));
+        Assert.Equal(@"C:\Work\AWB-10002,renamed.iam", store.ReadLocal().Entries[1].FilePath);
+        Assert.Equal("renamed", store.ReadLocal().Entries[1].Name);
+
+        _environment.Reachable = true;
+        var sync = store.Sync();
+
+        Assert.True(sync.Reached);
+        var shared = Entries(SharedPath);
+        Assert.Equal([10001, 10002], shared.Select(e => e.Number.Value));
+        Assert.Equal(Entry(10002) with { FilePath = @"C:\Work\AWB-10002,renamed.iam", Name = "renamed" }, shared[1]);
+        Assert.Equal(shared, Entries(LocalPath));
+        Assert.False(File.Exists(PendingUpdatesPath));
+        AssertOnlyRegisterFilesLeft();
+    }
+
+    [Fact]
+    public void UpdateEntry_Offline_TwoUpdatesAreAppliedInOrder()
+    {
+        WriteShared(10001);
+        WriteLocal(10001);
+        _environment.Reachable = false;
+        var store = Store();
+
+        store.UpdateEntry(new PartNumber(10001), @"C:\Work\first.iam", "first");
+        store.UpdateEntry(new PartNumber(10001), @"C:\Work\second.iam", "second", @"C:\Work\first.iam");
+        _environment.Reachable = true;
+        store.Sync();
+
+        var entry = Assert.Single(Entries(SharedPath));
+        Assert.Equal(@"C:\Work\second.iam", entry.FilePath);
+        Assert.Equal("second", entry.Name);
+    }
+
+    [Fact]
+    public void UpdateEntry_Offline_OfAPendingNumber_IsAppliedAfterThePendingEntryIsSynced()
+    {
+        WriteShared(10001);
+        WriteLocal(10001);
+        _environment.Reachable = false;
+        var store = Store();
+        store.Assign(Request("offline plate"));
+        store.UpdateEntry(new PartNumber(10002), @"C:\Work\AWB-10002,renamed.ipt", "renamed");
+
+        _environment.Reachable = true;
+        var assignment = store.Assign(Request("next plate"));
+
+        Assert.Equal(10003, assignment.PartNumber.Value);
+        var shared = Entries(SharedPath);
+        Assert.Equal([10001, 10002, 10003], shared.Select(e => e.Number.Value));
+        Assert.Equal(@"C:\Work\AWB-10002,renamed.ipt", shared[1].FilePath);
+        Assert.False(File.Exists(PendingUpdatesPath));
+    }
+
+    [Fact]
+    public void UpdateEntry_Offline_NumberThisPcDoesNotHold_IsNotQueued()
+    {
+        WriteLocal(10001);
+        _environment.Reachable = false;
+
+        var result = Store().UpdateEntry(new PartNumber(10005), @"C:\Work\x.ipt", "x");
+
+        Assert.False(result.Found);
+        Assert.True(result.Offline);
+        Assert.False(File.Exists(PendingUpdatesPath));
+    }
+
+    [Fact]
+    public void PendingUpdateForANumberTheSharedRegisterDoesNotHold_IsDroppedWithAWarning()
+    {
+        WriteLocal(10001, 10002);
+        _environment.Reachable = false;
+        var store = Store();
+        store.UpdateEntry(new PartNumber(10002), @"C:\Work\x.ipt", "x");
+
+        // The shared register never had AWB-10002 (for example the local copy came from elsewhere).
+        WriteShared(10001);
+        var sharedBefore = File.ReadAllBytes(SharedPath);
+        _environment.Reachable = true;
+        store.Sync();
+
+        Assert.Equal(sharedBefore, File.ReadAllBytes(SharedPath));
+        Assert.False(File.Exists(PendingUpdatesPath));
+        Assert.Contains(_log.Warnings, w => w.Contains("dropped", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void UpdateEntry_LockBusy_IsQueued_ThenAppliedAtTheNextSync()
+    {
+        WriteShared(10001, 10002);
+        WriteLocal(10001, 10002);
+        var before = File.ReadAllBytes(SharedPath);
+        File.WriteAllText(LockPath, "other PC");
+        File.SetLastWriteTimeUtc(LockPath, Now.UtcDateTime);
+        var store = Store(TimeSpan.FromMilliseconds(150));
+
+        var result = store.UpdateEntry(new PartNumber(10002), @"C:\Work\AWB-10002,renamed.ipt", "renamed", Entry(10002).FilePath);
+
+        Assert.True(result.Found);
+        Assert.True(result.Offline);
+        Assert.NotNull(result.QueuedReason);
+        Assert.Equal(before, File.ReadAllBytes(SharedPath));
+        Assert.True(File.Exists(PendingUpdatesPath));
+        Assert.Equal(@"C:\Work\AWB-10002,renamed.ipt", store.ReadLocal().Entries[1].FilePath);
+
+        File.Delete(LockPath);
+        store.Sync();
+
+        Assert.Equal(Entry(10002) with { FilePath = @"C:\Work\AWB-10002,renamed.ipt", Name = "renamed" }, Entries(SharedPath)[1]);
+        Assert.False(File.Exists(PendingUpdatesPath));
+        AssertOnlyRegisterFilesLeft();
+    }
+
+    [Fact]
+    public void UpdateEntry_SharedFileWithABadRow_IsQueued_AndTheSharedFileIsLeftUnchanged()
+    {
+        WriteLocal(10001);
+        var text = RegisterCsv.Write([Entry(10001)]) + "AWB-10002,bad date,,Part,C:\\x.ipt,last tuesday,someone,PC\r\n";
+        File.WriteAllText(SharedPath, text);
+        var before = File.ReadAllBytes(SharedPath);
+
+        var result = Store().UpdateEntry(new PartNumber(10001), @"C:\x.ipt", "x");
+
+        Assert.True(result.Found);
+        Assert.Contains("Line 3", result.QueuedReason, StringComparison.Ordinal);
+        Assert.Equal(before, File.ReadAllBytes(SharedPath));
+        Assert.True(File.Exists(PendingUpdatesPath));
+        AssertOnlyRegisterFilesLeft();
+    }
+
+    [Fact]
+    public void UpdateEntry_WriteFailsAndThePendingUpdatesFileIsUnreadable_Throws_AndChangesNothing()
+    {
+        WriteShared(10001);
+        WriteLocal(10001);
+        File.WriteAllText(PendingUpdatesPath, "this is not json");
+        var before = File.ReadAllBytes(SharedPath);
+
+        var ex = Assert.Throws<RegisterUnreadableException>(
+            () => Store().UpdateEntry(new PartNumber(10001), @"C:\x.ipt", "x"));
+
+        Assert.Equal(PendingUpdatesPath, ex.FilePath);
+        Assert.Equal(before, File.ReadAllBytes(SharedPath));
+        Assert.Equal("this is not json", File.ReadAllText(PendingUpdatesPath));
+    }
+
+    [Fact]
+    public void TheSameUpdateAppliedTwice_ChangesNothingMore_EvenWithANumberHeldTwice()
+    {
+        var first = Entry(10002) with { FilePath = @"C:\A\one.ipt" };
+        var second = Entry(10002, "TESTPC") with { FilePath = @"C:\B\two.ipt" };
+        File.WriteAllText(SharedPath, RegisterCsv.Write([first, second]));
+        WriteLocal();
+        File.WriteAllText(LocalPath, RegisterCsv.Write([first, second]));
+        var store = Store();
+
+        store.UpdateEntry(new PartNumber(10002), @"C:\B\renamed.ipt", "renamed", @"C:\B\two.ipt");
+        var once = File.ReadAllBytes(SharedPath);
+
+        // As after a write that got part way and was queued: the same update arrives again.
+        _environment.Reachable = false;
+        store.UpdateEntry(new PartNumber(10002), @"C:\B\renamed.ipt", "renamed", @"C:\B\two.ipt");
+        _environment.Reachable = true;
+        store.Sync();
+
+        Assert.Equal(once, File.ReadAllBytes(SharedPath));
+        Assert.Equal(first, Entries(SharedPath)[0]);
+    }
+
+    [Fact]
+    public void UnreadablePendingUpdatesFile_IsRefusedRatherThanDeleted_AndIgnoredByReadLocal()
+    {
+        WriteShared(10001);
+        WriteLocal(10001);
+        File.WriteAllText(PendingUpdatesPath, "this is not json");
+        var sharedBefore = File.ReadAllBytes(SharedPath);
+
+        var ex = Assert.Throws<RegisterUnreadableException>(() => Store().Sync());
+
+        Assert.Equal(PendingUpdatesPath, ex.FilePath);
+        Assert.Equal("this is not json", File.ReadAllText(PendingUpdatesPath));
+        Assert.Equal(sharedBefore, File.ReadAllBytes(SharedPath));
+        Assert.Equal([10001], Store().ReadLocal().Entries.Select(e => e.Number.Value));
+        Assert.Contains(_log.Warnings, w => w.Contains(PendingUpdatesPath, StringComparison.Ordinal));
+        AssertOnlyRegisterFilesLeft();
+    }
+
+    [Fact]
+    public void UnreadablePendingUpdatesFile_IsNotOverwrittenByAnOfflineUpdate()
+    {
+        WriteLocal(10001);
+        File.WriteAllText(PendingUpdatesPath, "[ { \"number\": \"not a number\" } ]");
+        _environment.Reachable = false;
+
+        Assert.Throws<RegisterUnreadableException>(
+            () => Store().UpdateEntry(new PartNumber(10001), @"C:\x.ipt", "x"));
+
+        Assert.Equal("[ { \"number\": \"not a number\" } ]", File.ReadAllText(PendingUpdatesPath));
+    }
+
+    [Fact]
+    public void UpdateEntry_RejectsABlankPath()
+    {
+        Assert.Throws<ArgumentException>(() => Store().UpdateEntry(new PartNumber(10001), " ", "x"));
+    }
+
     // RegisterEnvironment
 
     [Fact]

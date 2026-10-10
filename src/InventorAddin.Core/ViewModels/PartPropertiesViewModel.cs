@@ -44,7 +44,8 @@ public sealed record PartTypeOption(string Code, string FullName, string Display
 /// the edited fields, the pre-fills, Detailer following Designer, validation, dirty tracking, Apply and OK, and
 /// the status line. Writes go through an <see cref="IPropertyWriteTarget"/>; Cancel needs no command because
 /// nothing is written until Apply or OK. It also shows the part number by spec 02 and offers Generate part number
-/// for a file without one, through an <see cref="IPartNumberAssigner"/>.
+/// for a file without one, through an <see cref="IPartNumberAssigner"/>, and Rename beside the part name for a saved,
+/// editable file, through an <see cref="IPartRenamer"/> (task 047).
 /// </summary>
 /// <remarks>
 /// Part type codes are held in the list's spelling: a file code that <see cref="PartTypes.Find"/> matches in a
@@ -68,6 +69,8 @@ public sealed class PartPropertiesViewModel : ObservableObject
     public const string GeneratedNoticeFormat = "Part number {0} assigned and written. Save the document to keep it.";
     public const string GeneratedOfflineSuffix = " Assigned offline; it will be added to the shared register at the next sync.";
     public const string GenerateErrorPrefix = "Generate part number failed: ";
+    public const string RenamedNoticeFormat = "Renamed to {0}.";
+    public const string RenameErrorPrefix = "Rename failed: ";
     public const string DuplicatesHeading =
         "The register sync found part numbers given to two files. Both rows are kept in the register; fix them by hand.";
 
@@ -76,6 +79,7 @@ public sealed class PartPropertiesViewModel : ObservableObject
 
     private readonly IPropertyWriteTarget _target;
     private readonly IPartNumberAssigner _assigner;
+    private readonly IPartRenamer? _renamer;
     private readonly CultureInfo _culture;
     private readonly ILog _log;
 
@@ -119,6 +123,7 @@ public sealed class PartPropertiesViewModel : ObservableObject
     /// </param>
     /// <param name="culture">The culture the cost is shown and typed in.</param>
     /// <param name="log">Where writes and failures are logged.</param>
+    /// <param name="renamer">What the Rename button calls; null hides the button.</param>
     public PartPropertiesViewModel(
         PartPropertiesSnapshot snapshot,
         IPropertyWriteTarget target,
@@ -127,7 +132,8 @@ public sealed class PartPropertiesViewModel : ObservableObject
         string? defaultDesigner,
         IReadOnlyCollection<string> namesThatMeanMe,
         CultureInfo culture,
-        ILog? log = null)
+        ILog? log = null,
+        IPartRenamer? renamer = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(target);
@@ -139,6 +145,7 @@ public sealed class PartPropertiesViewModel : ObservableObject
         _original = snapshot;
         _target = target;
         _assigner = assigner;
+        _renamer = renamer;
         _culture = culture;
         _log = log ?? NullLog.Instance;
 
@@ -147,14 +154,7 @@ public sealed class PartPropertiesViewModel : ObservableObject
 
         Weight = snapshot.WeightDisplay ?? NoWeightText;
 
-        // Display text for the restyled window (spec 08). The never-saved title and subline are defaults
-        // (spec 08, open question 4).
         var saved = !string.IsNullOrWhiteSpace(snapshot.FullFileName);
-        var kindName = DocumentKindNames.For(snapshot.DocumentKind);
-        HeaderTitle = saved
-            ? PartName.FromFileName(snapshot.FullFileName)
-            : NewFileTitlePrefix + kindName.ToLowerInvariant();
-        HeaderSubline = kindName + HeaderSeparator + FileNameFrom(snapshot.FullFileName);
 
         // Spec 02: a Part Number in the format is shown as the number, registered or not; anything else, including
         // blank and Inventor's file-name fallback, is not a number. PartProperties.PartNumberDisplay: the property of
@@ -201,6 +201,7 @@ public sealed class PartPropertiesViewModel : ObservableObject
         ApplyCommand = new RelayCommand(() => Apply(), () => CanApply);
         OkCommand = new RelayCommand(Ok, () => IsValid || !IsEditable);
         GenerateCommand = new RelayCommand(Generate, () => CanGenerate && IsSaved);
+        RenameCommand = new RelayCommand(Rename, () => CanRename);
 
         Recalculate();
         _pendingAtOpen = _hasChanges;
@@ -223,18 +224,39 @@ public sealed class PartPropertiesViewModel : ObservableObject
     // Display text for the restyled window (spec 08). Each "Is...Set" flag is false when the window shows
     // placeholder text, so it can use the placeholder colour.
 
+    // Display text for the restyled window (spec 08). The never-saved title and subline are defaults
+    // (spec 08, open question 4). Each follows the file name, which a Rename changes.
+
     /// <summary>
-    /// The header title: the file name without its extension (<see cref="PartName.FromFileName"/>) for a saved
-    /// file; for a never-saved file "New " and the kind name in lower case, for example <c>New sheet metal part</c>.
+    /// The header title: the part name (<see cref="PartName.FromFileName"/>) for a saved file; for a never-saved file
+    /// "New " and the kind name in lower case, for example <c>New sheet metal part</c>.
     /// </summary>
-    public string HeaderTitle { get; }
+    public string HeaderTitle => IsSaved
+        ? PartName.FromFileName(_original.FullFileName)
+        : NewFileTitlePrefix + DocumentKindNames.For(_original.DocumentKind).ToLowerInvariant();
 
     /// <summary>
     /// The line under the header title: the kind name (<see cref="DocumentKindNames"/>), <see cref="HeaderSeparator"/>,
     /// and the file name with its extension or <see cref="NotSavedFileName"/>, for example
     /// <c>Assembly · Gearbox.iam</c> or <c>Part · Not saved yet</c>.
     /// </summary>
-    public string HeaderSubline { get; }
+    public string HeaderSubline =>
+        DocumentKindNames.For(_original.DocumentKind) + HeaderSeparator + FileNameFrom(_original.FullFileName);
+
+    /// <summary>
+    /// The Part name row (spec 07): the part name read from the file name, or <see cref="NotSavedFileName"/> for a file
+    /// that has never been saved (placeholder; see <see cref="IsSaved"/>).
+    /// </summary>
+    public string PartNameDisplay => IsSaved ? PartName.FromFileName(_original.FullFileName) : NotSavedFileName;
+
+    /// <summary>
+    /// Whether the window shows the Rename button beside the part name: a saved file that can be edited, when a renamer
+    /// was given (task 047).
+    /// </summary>
+    public bool CanRename => _renamer is not null && IsSaved && IsEditable;
+
+    /// <summary>Opens Rename. Enabled while <see cref="CanRename"/>.</summary>
+    public RelayCommand RenameCommand { get; }
 
     /// <summary>
     /// The Part Number as <see cref="Numbering.PartNumber.ToString"/> writes it when it is in the format, registered
@@ -614,6 +636,49 @@ public sealed class PartPropertiesViewModel : ObservableObject
         {
             DuplicatesReported?.Invoke(this, result.DuplicateMessages);
         }
+    }
+
+    /// <summary>
+    /// Runs the renamer. When the file was renamed, the header, the part name and the status line show the new name,
+    /// and Description counts as written when the rename wrote it; on failure the status line shows the reason.
+    /// </summary>
+    private void Rename()
+    {
+        if (!CanRename)
+            return;
+
+        PartRenameOutcome? outcome;
+        try
+        {
+            outcome = _renamer!.Rename();
+        }
+        catch (Exception ex)
+        {
+            // A UI boundary, as Apply.
+            _log.Error("Could not rename the file.", ex);
+            _lastResult = RenameErrorPrefix + ex.Message;
+            _lastFailed = true;
+            OnStateChanged();
+            return;
+        }
+
+        if (outcome is null)
+            return;
+
+        _original = _original with
+        {
+            FullFileName = outcome.NewFullFileName,
+            Description = outcome.DescriptionWritten ? outcome.NewName : _original.Description,
+        };
+
+        _lastResult = string.Format(
+            CultureInfo.InvariantCulture, RenamedNoticeFormat, FileNameFrom(outcome.NewFullFileName));
+        _lastFailed = false;
+
+        OnPropertyChanged(nameof(HeaderTitle));
+        OnPropertyChanged(nameof(HeaderSubline));
+        OnPropertyChanged(nameof(PartNameDisplay));
+        OnStateChanged();
     }
 
     private void Ok()

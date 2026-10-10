@@ -42,6 +42,21 @@ public sealed class PartPropertiesViewModelTests
         }
     }
 
+    private sealed class FakeRenamer : IPartRenamer
+    {
+        public int Calls { get; private set; }
+        public PartRenameOutcome? Result { get; set; }
+        public Exception? Throw { get; set; }
+
+        public PartRenameOutcome? Rename()
+        {
+            Calls++;
+            if (Throw is not null)
+                throw Throw;
+            return Result;
+        }
+    }
+
     private sealed class RecordingLog : ILog
     {
         public List<string> Infos { get; } = new();
@@ -89,7 +104,8 @@ public sealed class PartPropertiesViewModelTests
         string? windowsUserName = null,
         Func<string?, bool>? hasNumber = null,
         FakeAssigner? assigner = null,
-        IReadOnlyCollection<string>? namesThatMeanMe = null) =>
+        IReadOnlyCollection<string>? namesThatMeanMe = null,
+        IPartRenamer? renamer = null) =>
         new(
             snapshot,
             target ?? new FakeTarget(),
@@ -98,7 +114,8 @@ public sealed class PartPropertiesViewModelTests
             defaultDesigner,
             namesThatMeanMe ?? (windowsUserName is null ? [] : [windowsUserName]),
             culture ?? Invariant,
-            log);
+            log,
+            renamer);
 
     private static List<string> RecordPropertyChanges(INotifyPropertyChanged source)
     {
@@ -1504,5 +1521,161 @@ public sealed class PartPropertiesViewModelTests
         Assert.Equal(
             PartPropertiesViewModel.DuplicatesHeading + Environment.NewLine + "- first" + Environment.NewLine + "- second",
             text);
+    }
+
+    // Rename (task 047)
+
+    private static PartPropertiesSnapshot Numbered() => Complete() with
+    {
+        FullFileName = @"C:\Work\AWB-10001,mounting_bracket.ipt",
+        Description = "mounting bracket",
+    };
+
+    [Fact]
+    public void PartName_IsReadFromTheFileName_AndNotSavedShowsThePlaceholder()
+    {
+        Assert.Equal("mounting bracket", Create(Numbered()).PartNameDisplay);
+        Assert.Equal(PartPropertiesViewModel.NotSavedFileName, Create(Complete() with { FullFileName = "" }).PartNameDisplay);
+    }
+
+    [Fact]
+    public void CanRename_OnlyForASavedEditableFile_WithARenamer()
+    {
+        var renamer = new FakeRenamer();
+
+        Assert.True(Create(Numbered(), renamer: renamer).CanRename);
+        Assert.False(Create(Numbered()).CanRename);
+        Assert.False(Create(Numbered() with { FullFileName = "" }, renamer: renamer).CanRename);
+        Assert.False(Create(Numbered() with { EditBlock = EditBlock.ReadOnlyFile }, renamer: renamer).CanRename);
+        Assert.False(Create(Numbered() with { EditBlock = EditBlock.NotModifiable }, renamer: renamer).CanRename);
+        Assert.False(Create(Numbered() with { FullFileName = "" }, renamer: renamer).RenameCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void Rename_Success_ShowsTheNewNameInTheHeaderAndPartName_AndSaysSo()
+    {
+        var renamer = new FakeRenamer
+        {
+            Result = new PartRenameOutcome(@"C:\Work\AWB-10001,base_plate.ipt", "base plate", DescriptionWritten: true),
+        };
+        var vm = Create(Numbered(), renamer: renamer);
+        var changes = RecordPropertyChanges(vm);
+
+        vm.RenameCommand.Execute(null);
+
+        Assert.Equal(1, renamer.Calls);
+        Assert.Equal("base plate", vm.HeaderTitle);
+        Assert.Equal("base plate", vm.PartNameDisplay);
+        Assert.Equal("Part" + PartPropertiesViewModel.HeaderSeparator + "AWB-10001,base_plate.ipt", vm.HeaderSubline);
+        Assert.Equal("Renamed to AWB-10001,base_plate.ipt.", vm.StatusText);
+        Assert.False(vm.HasError);
+        Assert.Contains(nameof(vm.HeaderTitle), changes);
+        Assert.Contains(nameof(vm.HeaderSubline), changes);
+        Assert.Contains(nameof(vm.PartNameDisplay), changes);
+        // Description was written by the rename, so there is nothing to apply.
+        Assert.False(vm.HasChanges);
+    }
+
+    [Fact]
+    public void Rename_WhenDescriptionWasNotWritten_ApplyWritesIt()
+    {
+        var target = new FakeTarget();
+        var renamer = new FakeRenamer
+        {
+            Result = new PartRenameOutcome(@"C:\Work\AWB-10001,base_plate.ipt", "base plate", DescriptionWritten: false),
+        };
+        var vm = Create(Numbered(), target, renamer: renamer);
+
+        vm.RenameCommand.Execute(null);
+        Assert.True(vm.HasChanges);
+        vm.ApplyCommand.Execute(null);
+
+        var write = Assert.Single(Assert.Single(target.Calls));
+        Assert.Equal(PartPropertyStorage.Description, write.Location);
+        Assert.Equal("base plate", write.TextValue);
+    }
+
+    [Fact]
+    public void Rename_Cancelled_ChangesNothing()
+    {
+        var renamer = new FakeRenamer { Result = null };
+        var vm = Create(Numbered(), renamer: renamer);
+
+        vm.RenameCommand.Execute(null);
+
+        Assert.Equal("mounting bracket", vm.HeaderTitle);
+        Assert.Equal(string.Empty, vm.StatusText);
+        Assert.False(vm.HasError);
+    }
+
+    [Fact]
+    public void Rename_Throws_ShowsTheReasonAndLogs()
+    {
+        var log = new RecordingLog();
+        var renamer = new FakeRenamer { Throw = new InvalidOperationException("broken") };
+        var vm = Create(Numbered(), log: log, renamer: renamer);
+
+        vm.RenameCommand.Execute(null);
+
+        Assert.Equal(PartPropertiesViewModel.RenameErrorPrefix + "broken", vm.StatusText);
+        Assert.True(vm.HasError);
+        Assert.Single(log.Errors);
+        Assert.Equal("mounting bracket", vm.HeaderTitle);
+    }
+
+    [Fact]
+    public void Rename_KeepsPendingEdits()
+    {
+        var target = new FakeTarget();
+        var renamer = new FakeRenamer
+        {
+            Result = new PartRenameOutcome(@"C:\Work\AWB-10001,base_plate.ipt", "base plate", DescriptionWritten: true),
+        };
+        var vm = Create(Numbered(), target, renamer: renamer);
+        vm.Designer = "New Designer";
+
+        vm.RenameCommand.Execute(null);
+        vm.ApplyCommand.Execute(null);
+
+        var writes = Assert.Single(target.Calls);
+        Assert.Equal([PartPropertyStorage.Designer], writes.Select(w => w.Location));
+    }
+
+    [Fact]
+    public void Rename_WithAPendingDescriptionPreFill_ApplyDoesNotPutTheOldNameBack()
+    {
+        // Description differs from the part name, so the window opens with a pending Description write of the old name.
+        var target = new FakeTarget();
+        var renamer = new FakeRenamer
+        {
+            Result = new PartRenameOutcome(@"C:\Work\AWB-10001,base_plate.ipt", "base plate", DescriptionWritten: true),
+        };
+        var vm = Create(Numbered() with { Description = "something else" }, target, renamer: renamer);
+        Assert.True(vm.HasChanges);
+
+        vm.RenameCommand.Execute(null);
+        vm.ApplyCommand.Execute(null);
+        vm.OkCommand.Execute(null);
+
+        Assert.False(vm.HasChanges);
+        Assert.DoesNotContain(target.Calls.SelectMany(c => c), w => w.Location == PartPropertyStorage.Description);
+    }
+
+    [Fact]
+    public void Rename_WithAPendingDescriptionPreFill_AndDescriptionNotWritten_ApplyWritesTheNewName()
+    {
+        var target = new FakeTarget();
+        var renamer = new FakeRenamer
+        {
+            Result = new PartRenameOutcome(@"C:\Work\AWB-10001,base_plate.ipt", "base plate", DescriptionWritten: false),
+        };
+        var vm = Create(Numbered() with { Description = "something else" }, target, renamer: renamer);
+
+        vm.RenameCommand.Execute(null);
+        vm.ApplyCommand.Execute(null);
+
+        var write = Assert.Single(Assert.Single(target.Calls));
+        Assert.Equal(PartPropertyStorage.Description, write.Location);
+        Assert.Equal("base plate", write.TextValue);
     }
 }

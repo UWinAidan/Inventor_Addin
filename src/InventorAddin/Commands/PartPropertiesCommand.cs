@@ -37,8 +37,13 @@ namespace InventorAddin.Commands
             var target = new TransactionWriteTarget(this, doc);
 
             // "Has a number" reads only this PC's copy of the register, so the window opens without touching the NAS.
+            // The assigner reads the file's path when Generate is pressed, so a Rename made first registers the new path.
             var register = AddinServices.RegisterStore;
-            var assigner = new RegisterPartNumberAssigner(register, snapshot, target, AddinServices.Log);
+            var assigner = new CurrentPathAssigner(() => new RegisterPartNumberAssigner(
+                register,
+                snapshot with { FullFileName = ComSafe.Get(() => doc.FullFileName) ?? snapshot.FullFileName },
+                target,
+                AddinServices.Log));
 
             var settings = AddinServices.Settings;
             var viewModel = new PartPropertiesViewModel(
@@ -49,7 +54,8 @@ namespace InventorAddin.Commands
                 settings.DefaultDesigner,
                 PersonNames.NamesThatMeanMe(SysEnvironment.UserName, settings.OtherNamesForMe),
                 CultureInfo.CurrentCulture,
-                AddinServices.Log);
+                AddinServices.Log,
+                new RenameService(doc, target));
 
             WindowHost.ShowDialog(new PartPropertiesWindow(viewModel), IconNames.PartProperties);
         }
@@ -57,6 +63,16 @@ namespace InventorAddin.Commands
         /// <summary>Not used: <see cref="Run"/> writes through <see cref="TransactionWriteTarget"/> instead.</summary>
         protected override void Execute(Document doc) =>
             throw new NotSupportedException($"{nameof(PartPropertiesCommand)} writes through its window, not through Execute.");
+
+        /// <summary>Builds the Generate assigner when Generate is pressed, from the file as it is then.</summary>
+        private sealed class CurrentPathAssigner : IPartNumberAssigner
+        {
+            private readonly Func<IPartNumberAssigner> _create;
+
+            public CurrentPathAssigner(Func<IPartNumberAssigner> create) => _create = create;
+
+            public PartNumberAssignment Assign() => _create().Assign();
+        }
 
         /// <summary>Applies one list of writes per call, each inside its own transaction named after the command.</summary>
         private sealed class TransactionWriteTarget : IPropertyWriteTarget

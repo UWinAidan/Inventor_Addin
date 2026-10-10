@@ -14,7 +14,7 @@
         Spec 08, "The three windows: Part Properties".
     -->
     <Window.Resources>
-        <!-- Collapses an element while its bound flag is false (the note and the Generate button). -->
+        <!-- Collapses an element while its bound flag is false (the note and the Generate and Rename buttons). -->
         <BooleanToVisibilityConverter x:Key="VisibleWhenTrue" />
 
         <!--
@@ -69,10 +69,13 @@
     </Window.Resources>
 
     <StackPanel Style="{DynamicResource DialogContent}">
-        <!-- The header icon is put in the window's resources by WindowHost (HeaderIcon), in the window's theme. -->
+        <!--
+            The header icon is put in the window's resources by WindowHost (HeaderIcon), in the window's theme.
+            Title and subline are OneWay because a Rename changes them.
+        -->
         <controls:DialogHeader Icon="{DynamicResource HeaderIcon}"
-                               Title="{Binding HeaderTitle, Mode=OneTime}"
-                               Subline="{Binding HeaderSubline, Mode=OneTime}" />
+                               Title="{Binding HeaderTitle, Mode=OneWay}"
+                               Subline="{Binding HeaderSubline, Mode=OneWay}" />
 
         <controls:FormSection Heading="Identity">
             <!--
@@ -96,6 +99,22 @@
                     <TextBlock Style="{DynamicResource SideNoteText}"
                                Text="{Binding GenerateNote, Mode=OneWay}"
                                Visibility="{Binding HasGenerateNote, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}" />
+                </StackPanel>
+            </controls:FieldRow>
+            <!--
+                Spec 07: the part name follows the file name and is not edited here. The Rename button (task 047) shows
+                for a saved file that can be edited, and opens the Rename window; afterwards the row and the header show
+                the new name. "Not saved yet" in placeholder colour for a file never saved. Access key R.
+            -->
+            <controls:FieldRow Label="Part name">
+                <StackPanel Orientation="Horizontal">
+                    <ContentControl Style="{StaticResource ValueOrPlaceholder}"
+                                    Content="{Binding PartNameDisplay, Mode=OneWay}"
+                                    Tag="{Binding IsSaved, Mode=OneTime}" />
+                    <Button Style="{DynamicResource SideButton}"
+                            Content="_Rename"
+                            Command="{Binding RenameCommand}"
+                            Visibility="{Binding CanRename, Mode=OneTime, Converter={StaticResource VisibleWhenTrue}}" />
                 </StackPanel>
             </controls:FieldRow>
             <controls:FieldRow Label="Part _type" Target="{Binding ElementName=PartTypeBox}">

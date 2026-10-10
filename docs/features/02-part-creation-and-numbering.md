@@ -65,6 +65,7 @@ On 2026-10-10:
 | Lock file | `{RegisterFolder}\part-register.lock` | exists only while a PC is writing |
 | Local copy | `%APPDATA%\AwbAddin\register\part-register.csv` | the shared register as of the last sync |
 | Pending entries | `%APPDATA%\AwbAddin\register\pending.csv` | numbers this PC assigned while the NAS could not be reached |
+| Pending updates | `%APPDATA%\AwbAddin\register\pending-updates.json` | Rename's path and name changes not yet written to the shared register (Default, task 047) |
 
 The local file names are Defaults. Only this small data file goes on the NAS, never the CAD. A blank `RegisterFolder` means no shared register: every number is assigned from this PC's copy, as when the NAS is unreachable (Default).
 
