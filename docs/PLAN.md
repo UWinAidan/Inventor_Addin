@@ -144,16 +144,16 @@ Planned 2026-10-10. Run in number order; each task depends only on lower numbers
 | 048 | cloud, add-in not compiled | 032, 036, 039, 041, 042 | none |
 
 - [ ] 032 Spike: templates, creating and saving, rename, base view (Windows)
-- [ ] 033 Part number format (Core)
-- [ ] 034 File name rule and part name (Core)
-- [ ] 035 Register model and CSV format (Core)
+- [x] 033 Part number format (Core)
+- [x] 034 File name rule and part name (Core)
+- [x] 035 Register model and CSV format (Core)
 - [ ] 036 Register store: shared folder, local copy, lock, offline (Core)
-- [ ] 037 Register folder and units settings
-- [ ] 038 Windows user name counts as blank in Part Properties
+- [x] 037 Register folder and units settings
+- [x] 038 Windows user name counts as blank in Part Properties
 - [ ] 039 Part number display and Generate part number in Part Properties
 - [ ] 040 New Part dialog view-model and creation properties (Core)
 - [ ] 041 Mass Update scan result and view-model (Core)
-- [ ] 042 Icons for the M2 commands, and a ribbon that survives one failing command
+- [x] 042 Icons for the M2 commands, and a ribbon that survives one failing command
 - [ ] 043 New Part command and window
 - [ ] 044 Create Print
 - [ ] 045 Save As Copy

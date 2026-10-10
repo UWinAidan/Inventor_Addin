@@ -1,22 +1,25 @@
+using InventorAddin.Core.Numbering;
+
 namespace InventorAddin.Core.PartProperties;
 
-/// <summary>The part name, which follows the file name (spec 07, "Part name is linked to the file name").</summary>
+/// <summary>
+/// The part name, which follows the file name (spec 07, "Part name is linked to the file name"; spec 02,
+/// "File names and the part name").
+/// </summary>
 public static class PartName
 {
     /// <summary>
-    /// The file name without folder or extension, or <c>""</c> for null or blank (a never-saved file).
-    /// Both <c>\</c> and <c>/</c> count as folder separators on every platform, so
-    /// <c>C:\Work\Bracket.v2.ipt</c> gives <c>Bracket.v2</c> on Linux too. Only the last extension is removed.
+    /// The part name read from a file name: the file name without folder or last extension; if it contains a comma,
+    /// the text after the first comma; then underscores shown as spaces, trimmed. So
+    /// <c>C:\Work\AWB-10001,mounting_bracket.ipt</c> gives <c>mounting bracket</c>, and an old file without a comma,
+    /// <c>Old_bracket.v2.ipt</c>, gives <c>Old bracket.v2</c>. Null or blank (a never-saved file) gives <c>""</c>.
+    /// Both <c>\</c> and <c>/</c> count as folder separators on every platform.
     /// </summary>
     public static string FromFileName(string? fullFileName)
     {
-        if (string.IsNullOrWhiteSpace(fullFileName))
-        {
-            return string.Empty;
-        }
-
-        var name = fullFileName[(fullFileName.LastIndexOfAny(new[] { '\\', '/' }) + 1)..];
-        var dot = name.LastIndexOf('.');
-        return dot >= 0 ? name[..dot] : name;
+        var stem = PartFileName.Stem(fullFileName);
+        var comma = stem.IndexOf(PartFileName.NumberSeparator);
+        var name = comma >= 0 ? stem[(comma + 1)..] : stem;
+        return name.Replace('_', ' ').Trim();
     }
 }

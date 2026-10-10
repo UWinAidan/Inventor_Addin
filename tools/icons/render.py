@@ -43,6 +43,11 @@ ICONS = [
     ("About", "About"),
     ("ExportModelData", "Export Model Data"),
     ("ExportLibraries", "Export Libraries"),
+    ("NewPart", "New Part"),
+    ("SaveAsCopy", "Save As Copy"),
+    ("SaveAsReplace", "Save As and Replace"),
+    ("CreatePrint", "Create Print"),
+    ("MassUpdate", "Mass Update"),
 ]
 
 # Stroke colour per set. "Light" is for Inventor's light theme (dark strokes).
@@ -437,7 +442,7 @@ def render_preview(icons) -> Image.Image:
     font = ImageFont.load_default(size=26)
     title_font = ImageFont.load_default(size=32)
     small = ImageFont.load_default(size=20)
-    margin, label_w, gap = 36, 250, 44
+    margin, label_w, gap = 36, 300, 44
     tile = 36 * s
     row_h = tile + 28
     col16 = margin + label_w

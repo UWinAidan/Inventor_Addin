@@ -39,6 +39,167 @@ public sealed class SettingsStoreTests : IDisposable
         Assert.Equal(1, settings.SchemaVersion);
         Assert.False(settings.ShowDeveloperTools);
         Assert.Equal("", settings.DefaultDesigner);
+        Assert.Equal(AddinSettings.DefaultRegisterFolder, settings.RegisterFolder);
+        Assert.Equal(UnitsSystem.Metric, settings.DefaultUnits);
+    }
+
+    // ---- Register folder and units (task 037) ----
+
+    [Fact]
+    public void DefaultRegisterFolder_IsAidansNasFolder()
+    {
+        Assert.Equal(@"B:\aidan\AWB_Design_Data", AddinSettings.DefaultRegisterFolder);
+    }
+
+    [Fact]
+    public void Load_FileWrittenBeforeRegisterFolderAndUnits_LoadsDefaults()
+    {
+        WriteSettingsFile("""
+            {
+              "schemaVersion": 1,
+              "showDeveloperTools": true,
+              "defaultDesigner": "A. Person"
+            }
+            """);
+
+        var result = new SettingsStore(_folder).Load();
+
+        Assert.Empty(result.Warnings);
+        Assert.Equal(AddinSettings.DefaultRegisterFolder, result.Settings.RegisterFolder);
+        Assert.Equal(UnitsSystem.Metric, result.Settings.DefaultUnits);
+        Assert.True(result.Settings.ShowDeveloperTools);
+        Assert.Equal("A. Person", result.Settings.DefaultDesigner);
+    }
+
+    [Fact]
+    public void Load_NullRegisterFolder_LoadsDefault()
+    {
+        WriteSettingsFile("{ \"registerFolder\": null }");
+
+        var result = new SettingsStore(_folder).Load();
+
+        Assert.Empty(result.Warnings);
+        Assert.Equal(AddinSettings.DefaultRegisterFolder, result.Settings.RegisterFolder);
+    }
+
+    [Fact]
+    public void RegisterFolder_SetToNull_StoresDefault()
+    {
+        var settings = new AddinSettings { RegisterFolder = null! };
+
+        Assert.Equal(AddinSettings.DefaultRegisterFolder, settings.RegisterFolder);
+    }
+
+    [Fact]
+    public void Load_BlankRegisterFolder_StaysBlank()
+    {
+        WriteSettingsFile("{ \"registerFolder\": \"\" }");
+
+        var result = new SettingsStore(_folder).Load();
+
+        Assert.Empty(result.Warnings);
+        Assert.Equal("", result.Settings.RegisterFolder);
+    }
+
+    [Fact]
+    public void Save_WritesRegisterFolderAndUnitsInCamelCase_UnitsByName()
+    {
+        new SettingsStore(_folder).Save(new AddinSettings { RegisterFolder = @"C:\Shared\Register", DefaultUnits = UnitsSystem.Imperial });
+
+        var json = JsonNode.Parse(File.ReadAllText(SettingsPath))!.AsObject();
+
+        Assert.Equal(@"C:\Shared\Register", json["registerFolder"]!.GetValue<string>());
+        Assert.Equal("Imperial", json["defaultUnits"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public void Save_DefaultUnits_WritesMetric()
+    {
+        new SettingsStore(_folder).Save(new AddinSettings());
+
+        Assert.Contains("\"defaultUnits\": \"Metric\"", File.ReadAllText(SettingsPath));
+    }
+
+    [Theory]
+    [InlineData("\"Metric\"", UnitsSystem.Metric)]
+    [InlineData("\"Imperial\"", UnitsSystem.Imperial)]
+    [InlineData("\"imperial\"", UnitsSystem.Imperial)]
+    [InlineData("null", UnitsSystem.Metric)]
+    public void Load_KnownUnits_LoadWithoutWarning(string value, UnitsSystem expected)
+    {
+        WriteSettingsFile($"{{ \"defaultUnits\": {value} }}");
+
+        var result = new SettingsStore(_folder).Load();
+
+        Assert.Empty(result.Warnings);
+        Assert.Equal(expected, result.Settings.DefaultUnits);
+    }
+
+    [Theory]
+    [InlineData("\"Furlongs\"", "\"Furlongs\"")]
+    [InlineData("\"\"", "\"\"")]
+    [InlineData("\"1\"", "\"1\"")]
+    [InlineData("1", "1")]
+    [InlineData("true", "true")]
+    [InlineData("{ \"a\": 1 }", "an object")]
+    [InlineData("[1, 2]", "a list")]
+    public void Load_UnknownUnits_LoadsMetric_WithWarning_NotBadFile(string value, string shownAs)
+    {
+        WriteSettingsFile($$"""
+            {
+              "showDeveloperTools": true,
+              "defaultUnits": {{value}},
+              "defaultDesigner": "A. Person"
+            }
+            """);
+
+        var result = new SettingsStore(_folder).Load();
+
+        Assert.Equal(UnitsSystem.Metric, result.Settings.DefaultUnits);
+        Assert.True(result.Settings.ShowDeveloperTools);
+        Assert.Equal("A. Person", result.Settings.DefaultDesigner);
+        var warning = Assert.Single(result.Warnings);
+        Assert.Contains("defaultUnits", warning);
+        Assert.Contains(shownAs, warning);
+        Assert.Contains("Metric is used", warning);
+        Assert.Contains(SettingsPath, warning);
+        Assert.True(File.Exists(SettingsPath));
+        Assert.False(File.Exists(BadPath));
+    }
+
+    [Fact]
+    public void Load_UnknownUnitsInInvalidFile_GivesOnlyTheBadFileWarning()
+    {
+        WriteSettingsFile("{ \"defaultUnits\": \"Furlongs\", \"showDeveloperTools\": \"yes\" }");
+
+        var result = new SettingsStore(_folder).Load();
+
+        var warning = Assert.Single(result.Warnings);
+        Assert.Contains("settings.json.bad", warning);
+        Assert.Equal(new AddinSettings(), result.Settings);
+    }
+
+    [Fact]
+    public void Load_UnknownUnits_WarnsOnEveryLoadUntilSaved()
+    {
+        WriteSettingsFile("{ \"defaultUnits\": \"Furlongs\" }");
+        var store = new SettingsStore(_folder);
+
+        Assert.Single(store.Load().Warnings);
+        Assert.Single(store.Load().Warnings);
+
+        store.Save(store.Load().Settings);
+
+        Assert.Empty(store.Load().Warnings);
+    }
+
+    [Fact]
+    public void Equality_ComparesRegisterFolderAndUnits()
+    {
+        Assert.NotEqual(new AddinSettings { RegisterFolder = "" }, new AddinSettings());
+        Assert.NotEqual(new AddinSettings { DefaultUnits = UnitsSystem.Imperial }, new AddinSettings());
+        Assert.Equal(new AddinSettings { RegisterFolder = @"C:\R", DefaultUnits = UnitsSystem.Imperial },
+                     new AddinSettings { RegisterFolder = @"C:\R", DefaultUnits = UnitsSystem.Imperial });
     }
 
     [Fact]
@@ -271,12 +432,12 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Theory]
-    [InlineData(false, 1, "")]
-    [InlineData(true, 1, "")]
-    [InlineData(true, 3, "")]
-    [InlineData(false, 1, "A. Person")]
-    [InlineData(true, 1, "Ünïcode Désigner \"quoted\"")]
-    public void SaveThenLoad_RoundTrips(bool showDeveloperTools, int schemaVersion, string defaultDesigner)
+    [InlineData(false, 1, "", AddinSettings.DefaultRegisterFolder, UnitsSystem.Metric)]
+    [InlineData(true, 1, "", "", UnitsSystem.Metric)]
+    [InlineData(true, 3, "", @"\\server\share\register", UnitsSystem.Imperial)]
+    [InlineData(false, 1, "A. Person", @"D:\Ünïcode folder", UnitsSystem.Imperial)]
+    [InlineData(true, 1, "Ünïcode Désigner \"quoted\"", AddinSettings.DefaultRegisterFolder, UnitsSystem.Metric)]
+    public void SaveThenLoad_RoundTrips(bool showDeveloperTools, int schemaVersion, string defaultDesigner, string registerFolder, UnitsSystem units)
     {
         var store = new SettingsStore(_folder);
         var original = new AddinSettings
@@ -284,6 +445,8 @@ public sealed class SettingsStoreTests : IDisposable
             ShowDeveloperTools = showDeveloperTools,
             SchemaVersion = schemaVersion,
             DefaultDesigner = defaultDesigner,
+            RegisterFolder = registerFolder,
+            DefaultUnits = units,
         };
 
         store.Save(original);

@@ -72,3 +72,6 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-10-10 | A blank register folder in Settings means no shared register: numbers come from the PC's own copy, as when the NAS is unreachable | Default | spec 02 |
 | 2026-10-10 | Rename updates the file path and name in the number's register entry; it is the only change the add-in makes to an existing row | Default | spec 02 |
 | 2026-10-10 | Create Print picks the largest standard scale at which the front view fits in 60% of the sheet | Default | task 044 |
+| 2026-10-10 | The part number prefix `AWB` is a numbering-format constant in `PartNumber`, not a brand name, so it is the one exception to keeping brand text only in `Branding` | Default | task 033 |
+| 2026-10-10 | A part name containing a comma is refused for a file with no part number, so the name reads back the same | Default | spec 02, question 18 |
+| 2026-10-10 | The add-in refuses to assign a number or sync while the shared register has a row it cannot read or a column missing, and names the lines to fix, so a write never drops rows | Default | spec 02, question 19 |

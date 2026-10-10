@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace InventorAddin.Core.Settings;
 
@@ -25,11 +26,15 @@ public sealed class SettingsStore
     public const string BadFileSuffix = ".bad";
 
     // Private on purpose: settings files and model dumps (ModelJson) have different needs.
-    private static readonly JsonSerializerOptions JsonOptions = new()
+    // Used for writing; Load builds its own copy so it can collect warnings about unknown values.
+    private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions(onUnknownUnits: null);
+
+    private static JsonSerializerOptions CreateJsonOptions(Action<string>? onUnknownUnits) => new()
     {
         WriteIndented = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         PropertyNameCaseInsensitive = true,
+        Converters = { new UnitsSystemConverter(onUnknownUnits) },
     };
 
     public SettingsStore(string folder)
@@ -66,11 +71,17 @@ public sealed class SettingsStore
             return new SettingsLoadResult(new AddinSettings(), warnings);
         }
 
+        // Unknown values that are read as a default rather than making the whole file invalid. Reported only when
+        // the file loads; an invalid file gets the .bad warning alone.
+        var unknownValues = new List<string>();
+        var loadOptions = CreateJsonOptions(raw =>
+            unknownValues.Add($"Settings file '{FilePath}' has an unknown defaultUnits value ({raw}). Metric is used."));
+
         AddinSettings? settings;
         string? problem;
         try
         {
-            settings = JsonSerializer.Deserialize<AddinSettings>(json, JsonOptions);
+            settings = JsonSerializer.Deserialize<AddinSettings>(json, loadOptions);
             problem = settings is null ? "the file does not contain a settings object" : null;
         }
         catch (JsonException ex)
@@ -80,7 +91,10 @@ public sealed class SettingsStore
         }
 
         if (settings is not null)
+        {
+            warnings.AddRange(unknownValues);
             return new SettingsLoadResult(settings, warnings);
+        }
 
         var badPath = FilePath + BadFileSuffix;
         try
@@ -129,5 +143,53 @@ public sealed class SettingsStore
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
             }
         }
+    }
+
+    /// <summary>
+    /// Reads and writes <see cref="UnitsSystem"/> as its member name. A name in any case is accepted. Anything else
+    /// (an unknown name, a number, an object) reads as <see cref="UnitsSystem.Metric"/> and is reported through the
+    /// callback, so one stale value does not make the whole file invalid. A JSON null reads as Metric without a report,
+    /// as a missing value would.
+    /// </summary>
+    private sealed class UnitsSystemConverter : JsonConverter<UnitsSystem>
+    {
+        private const UnitsSystem Fallback = UnitsSystem.Metric;
+
+        private readonly Action<string>? _onUnknown;
+
+        public UnitsSystemConverter(Action<string>? onUnknown) => _onUnknown = onUnknown;
+
+        public override UnitsSystem Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            switch (reader.TokenType)
+            {
+                case JsonTokenType.Null:
+                    return Fallback;
+
+                case JsonTokenType.String:
+                    var text = reader.GetString() ?? string.Empty;
+                    foreach (var value in Enum.GetValues<UnitsSystem>())
+                    {
+                        if (string.Equals(value.ToString(), text, StringComparison.OrdinalIgnoreCase))
+                            return value;
+                    }
+                    _onUnknown?.Invoke($"\"{text}\"");
+                    return Fallback;
+
+                case JsonTokenType.StartObject or JsonTokenType.StartArray:
+                    reader.Skip();
+                    _onUnknown?.Invoke(reader.TokenType == JsonTokenType.EndObject ? "an object" : "a list");
+                    return Fallback;
+
+                default:
+                    // A number or true/false: a single token.
+                    using (var doc = JsonDocument.ParseValue(ref reader))
+                        _onUnknown?.Invoke(doc.RootElement.GetRawText());
+                    return Fallback;
+            }
+        }
+
+        public override void Write(Utf8JsonWriter writer, UnitsSystem value, JsonSerializerOptions options) =>
+            writer.WriteStringValue(Enum.IsDefined(value) ? value.ToString() : Fallback.ToString());
     }
 }

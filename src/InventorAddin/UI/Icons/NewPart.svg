@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="#3B4350" stroke-width="1.5" stroke-linecap="butt" stroke-linejoin="miter">
+  <title>New Part, 32 px: a sheet with a folded corner and a plus</title>
+  <polyline points="16,29.25 4.75,29.25 4.75,2.75 16.75,2.75 22.25,8.25 22.25,16"/>
+  <polyline points="16.75,2.75 16.75,8.25 22.25,8.25"/>
+  <line x1="18" y1="23.75" x2="29.5" y2="23.75"/>
+  <line x1="23.75" y1="18" x2="23.75" y2="29.5"/>
+</svg>

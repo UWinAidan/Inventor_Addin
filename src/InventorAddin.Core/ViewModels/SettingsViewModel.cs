@@ -4,6 +4,9 @@ using InventorAddin.Core.Settings;
 
 namespace InventorAddin.Core.ViewModels;
 
+/// <summary>One entry in the "Units for new files" dropdown.</summary>
+public sealed record UnitsOption(UnitsSystem Units, string DisplayText);
+
 /// <summary>
 /// View-model for the Settings window. Edits a copy of the settings it is given; nothing is written
 /// until <see cref="SaveCommand"/> runs, so closing or cancelling the window discards the edits.
@@ -11,8 +14,9 @@ namespace InventorAddin.Core.ViewModels;
 public sealed class SettingsViewModel : ObservableObject
 {
     /// <summary>
-    /// Only the developer tools need a restart: the ribbon is built at startup. Other settings, such as the
-    /// default designer, are read from <c>AddinServices.Settings</c> each time a command runs.
+    /// Only the developer tools need a restart: the ribbon is built at startup. Other settings (the default
+    /// designer, the register folder, the units for new files) are read from <c>AddinServices.Settings</c> each
+    /// time a command runs.
     /// </summary>
     public const string RestartNoticeText = "Showing or hiding developer tools takes effect the next time Inventor starts.";
 
@@ -23,6 +27,22 @@ public sealed class SettingsViewModel : ObservableObject
     /// <summary>The one-line explanation shown under the default designer box.</summary>
     public const string DefaultDesignerHelpText = "Filled in as Designer in Part Properties when a file has none.";
 
+    /// <summary>The one-line explanation shown under the register folder box.</summary>
+    public const string RegisterFolderHelpText = "The shared part number register. Leave blank to use only this PC's copy.";
+
+    public const string RegisterFolderInvalidCharacterError = "The register folder contains a character Windows does not allow.";
+
+    public const string RegisterFolderNotFullPathError = @"Enter a full folder path, such as B:\Data.";
+
+    /// <summary>Characters Windows does not allow in a path, besides control characters.</summary>
+    private const string InvalidPathCharacters = "<>\"|?*";
+
+    private static readonly IReadOnlyList<UnitsOption> AllUnitsOptions = new[]
+    {
+        new UnitsOption(UnitsSystem.Metric, "Metric"),
+        new UnitsOption(UnitsSystem.Imperial, "Imperial"),
+    };
+
     private readonly SettingsStore _store;
     private readonly ILog _log;
 
@@ -31,8 +51,9 @@ public sealed class SettingsViewModel : ObservableObject
     private AddinSettings _saved;
     private readonly AddinSettings _edited;
 
-    // The default designer exactly as typed; _edited holds it normalised.
+    // The text settings exactly as typed; _edited holds them normalised.
     private string _defaultDesignerText;
+    private string _registerFolderText;
 
     private string? _validationError;
     private string? _saveError;
@@ -47,6 +68,7 @@ public sealed class SettingsViewModel : ObservableObject
         _saved = Normalise(settings);
         _edited = Normalise(settings);
         _defaultDesignerText = settings.DefaultDesigner;
+        _registerFolderText = settings.RegisterFolder;
         _validationError = Validate();
         SaveCommand = new RelayCommand(Save, () => IsDirty && _validationError is null);
     }
@@ -89,6 +111,45 @@ public sealed class SettingsViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// The register folder as typed. Saved trimmed; only the trimmed value counts towards <see cref="IsDirty"/>.
+    /// Blank means no shared register. A folder that does not exist is allowed, since the NAS may be offline.
+    /// </summary>
+    public string RegisterFolder
+    {
+        get => _registerFolderText;
+        set
+        {
+            value ??= string.Empty;
+            if (_registerFolderText == value)
+                return;
+
+            _registerFolderText = value;
+            _edited.RegisterFolder = PropertyValues.NormaliseText(value);
+            OnPropertyChanged();
+            SetValidationError(Validate());
+            OnEditChanged();
+        }
+    }
+
+    /// <summary>The units new files are created in.</summary>
+    public UnitsSystem DefaultUnits
+    {
+        get => _edited.DefaultUnits;
+        set
+        {
+            if (_edited.DefaultUnits == value)
+                return;
+
+            _edited.DefaultUnits = value;
+            OnPropertyChanged();
+            OnEditChanged();
+        }
+    }
+
+    /// <summary>The entries of the units dropdown, in display order.</summary>
+    public IReadOnlyList<UnitsOption> UnitsOptions => AllUnitsOptions;
+
     /// <summary>Whether the edited values differ from the last saved ones.</summary>
     public bool IsDirty => _edited != _saved;
 
@@ -105,6 +166,8 @@ public sealed class SettingsViewModel : ObservableObject
     public string HeaderSubline => Branding.ProductName;
 
     public string DefaultDesignerHelp => DefaultDesignerHelpText;
+
+    public string RegisterFolderHelp => RegisterFolderHelpText;
 
     /// <summary>Where the settings are written, for display.</summary>
     public string SettingsFilePath => _store.FilePath;
@@ -123,10 +186,48 @@ public sealed class SettingsViewModel : ObservableObject
     /// </summary>
     public AddinSettings? SavedSettings { get; private set; }
 
-    private static AddinSettings Normalise(AddinSettings settings) =>
-        settings with { DefaultDesigner = PropertyValues.NormaliseText(settings.DefaultDesigner) };
+    /// <summary>
+    /// Null when <paramref name="folder"/> can be saved as the register folder, otherwise the reason. Checked after
+    /// trimming. Blank is valid (no shared register). Otherwise the folder must be a full Windows path, a drive
+    /// (<c>B:\Data</c>) or a network share (<c>\\server\share</c>), with no character Windows does not allow.
+    /// Whether the folder exists is not checked.
+    /// </summary>
+    public static string? ValidateRegisterFolder(string? folder)
+    {
+        var normalised = PropertyValues.NormaliseText(folder);
+        if (normalised.Length == 0)
+            return null;
 
-    private string? Validate() => PropertyValues.ValidateText(DefaultDesignerFieldName, _defaultDesignerText);
+        if (normalised.Any(c => char.IsControl(c) || InvalidPathCharacters.Contains(c)))
+            return RegisterFolderInvalidCharacterError;
+
+        return IsFullWindowsPath(normalised) ? null : RegisterFolderNotFullPathError;
+    }
+
+    // Written out rather than Path.IsPathFullyQualified, which follows the platform the code runs on, and the
+    // tests run on Linux as well as Windows.
+    private static bool IsFullWindowsPath(string path)
+    {
+        static bool IsSeparator(char c) => c is '\\' or '/';
+
+        if (path.Length >= 3 && char.IsAsciiLetter(path[0]) && path[1] == ':' && IsSeparator(path[2]))
+            return true;
+
+        // A network share: two separators, then a server name.
+        return path.Length >= 3 && IsSeparator(path[0]) && IsSeparator(path[1]) && !IsSeparator(path[2]);
+    }
+
+    private static AddinSettings Normalise(AddinSettings settings) =>
+        settings with
+        {
+            DefaultDesigner = PropertyValues.NormaliseText(settings.DefaultDesigner),
+            RegisterFolder = PropertyValues.NormaliseText(settings.RegisterFolder),
+        };
+
+    // The first problem in window order: the default designer is above the register folder.
+    private string? Validate() =>
+        PropertyValues.ValidateText(DefaultDesignerFieldName, _defaultDesignerText)
+        ?? ValidateRegisterFolder(_registerFolderText);
 
     private void Save()
     {
@@ -156,6 +257,12 @@ public sealed class SettingsViewModel : ObservableObject
         {
             _defaultDesignerText = toWrite.DefaultDesigner;
             OnPropertyChanged(nameof(DefaultDesigner));
+        }
+
+        if (_registerFolderText != toWrite.RegisterFolder)
+        {
+            _registerFolderText = toWrite.RegisterFolder;
+            OnPropertyChanged(nameof(RegisterFolder));
         }
 
         OnEditChanged();

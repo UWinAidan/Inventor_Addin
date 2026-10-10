@@ -47,7 +47,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Questions 1 to 8 in spec 08: accent colour, dark title bar, icon style, and five defaults added while planning (never-saved header and part number, theme names, Inventor version row, the XAML rules test)
 
 **Numbering (spec 02), not blocking**
-- Questions 13 to 17 in spec 02: a well-formed number not in the register, case in file names, what to do with duplicates, Save As and Replace on every occurrence, and opening Part Properties after creating a file. Each has a default the tasks build
+- Questions 13 to 19 in spec 02: a well-formed number not in the register, case in file names, what to do with duplicates, Save As and Replace on every occurrence, opening Part Properties after creating a file, a comma in the name of a file with no number, and a register row that cannot be read. Each has a default the tasks build
 
 **Distribution, not blocking**
 - Whether and when to add an installer and a download page. It was to be decided when M2 was planned and is still parked
@@ -75,6 +75,8 @@ Small things noticed while building. None is urgent. The parent turns these into
 - The agent definitions say "the AWB Addin add-in", which repeats "add-in". (task 011)
 
 **Ribbon icons**
+- Spec 08's "Ribbon icons" list names only the first five buttons. Tasks 043 to 048 should each add their command's icon there. (task 042)
+- When Inventor refuses the icons but has already created the definition, the log says "the button shows text only" and then that the definition was reused; the first line may be untrue. (task 042)
 - Task 030: embed only `UI/Icons/*.png`. The `.svg` sources sit in the same folder and must stay out of the build. (task 024)
 
 **Window style**
@@ -87,6 +89,11 @@ Small things noticed while building. None is urgent. The parent turns these into
 
 - XAML rules test: C# in `UI/Controls/` is not checked, `DynamicResource` keys are not checked to exist, and a size binding with a typed `FallbackValue` passes. (task 031)
 
+**Settings window**
+- "Units for new files" may be cut off by the 100-wide label column. Widen the shared `FieldRow` label column or shorten the label; check in Inventor. (task 037)
+- A shared style for a button beside a text box (for example `BrowseButton`), so Browse can sit on the register folder row. New Part's folder field will want it. (task 037)
+- The Browse handler calls `Directory.Exists` on the UI thread, which can stall on a disconnected NAS drive. Drop the check or move it off the UI thread if it shows. (task 037)
+
 **Part properties**
 - One Apply writes one log line plus one per property. Keep the summary line and log the per-property lines only on failure. (tasks 018, 019)
 - Weight is read through code that also computes volume, area and centre of mass. On a large assembly the window may open slowly; read only the mass, or read it after the window opens. (task 018)
@@ -95,6 +102,9 @@ Small things noticed while building. None is urgent. The parent turns these into
 - Number parsing accepts oddly placed group separators, so `1,2,3` reads as 123. Tighten only if it confuses anyone. (task 013)
 - The Part Properties window now sizes to its content, so a long status message widens it, up to 560, until the message clears. If that is distracting, fix the width in `UI/Theme/`. (task 029)
 - The window's local `ValueOrPlaceholder` and `IdentifierOrPlaceholder` styles could become shared pieces. (task 029)
+
+**Numbering**
+- Until task 039 lands, Part Properties shows Inventor's file-name fallback as an assigned number for files whose name has an underscore or a comma, because `PartName.FromFileName` now converts them. Do not build a commit between 034 and 039 for testing. Close this when 039 is committed. (task 034)
 
 **Developer tools**
 - JSON exports include `BoundingBox` lengths, which are derived values. Mark them ignored if exports should not carry them. (task 001)

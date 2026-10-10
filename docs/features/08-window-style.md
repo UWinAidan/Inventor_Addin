@@ -108,6 +108,8 @@ Every window has the same three bands:
 
 - Header: "Settings", with "AWB Addin" under it.
 - Section **General**: Default designer (text box) with its one-line explanation under it in muted text.
+- Section **General** also has Units for new files (dropdown: Metric, Imperial).
+- Section **Part numbers**: Register folder (text box) with its help text, and a Browse button on the row below (task 037).
 - Section **Developer**: Show developer tools (checkbox), with the note that it takes effect when Inventor next starts.
 - Footer: error text when a save fails; Save (primary), Cancel.
 

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#3B4350" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter" shape-rendering="crispEdges">
+  <title>Save As and Replace, 16 px: two sheets with a curved arrow from the first to the second</title>
+  <polygon points="1.5,8.5 4.5,8.5 6.5,10.5 6.5,14.5 1.5,14.5"/>
+  <polygon points="9.5,8.5 12.5,8.5 14.5,10.5 14.5,14.5 9.5,14.5"/>
+  <path d="M 3.5 6.5 A 4 4 0 0 1 11.5 6.5"/>
+  <polyline points="9.5,4.5 11.5,6.5 13.5,4.5"/>
+</svg>

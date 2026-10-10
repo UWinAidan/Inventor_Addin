@@ -11,9 +11,12 @@
         so shared styles are referred to with DynamicResource. SizeToContent and ResizeMode are repeated from the
         DialogWindow style so the window still sizes to its content if the shared styles fail to load.
 
-        The help line under the text box and the note under the checkbox are rows of their own with no label, so
+        The help lines under the text boxes and the note under the checkbox are rows of their own with no label, so
         they line up with the value column and the row spacing comes from FieldRow. Putting a note in the same row
-        as its control would centre the row's label on the pair instead of on the control.
+        as its control would centre the row's label on the pair instead of on the control. The Browse button is a
+        row of its own for the same reason, and because the shared styles have no gap for a button beside a box.
+
+        Access keys: D default designer, U units, R register folder, B browse, S show developer tools.
     -->
     <StackPanel Style="{DynamicResource DialogContent}">
         <!-- The header icon is put in the window's resources by WindowHost (HeaderIcon), in the window's theme. -->
@@ -29,11 +32,33 @@
             <controls:FieldRow>
                 <TextBlock Style="{DynamicResource MutedText}" Text="{Binding DefaultDesignerHelp, Mode=OneTime}" />
             </controls:FieldRow>
+            <controls:FieldRow Label="_Units for new files" Target="{Binding ElementName=DefaultUnitsBox}">
+                <ComboBox x:Name="DefaultUnitsBox"
+                          IsEditable="False"
+                          ItemsSource="{Binding UnitsOptions, Mode=OneTime}"
+                          DisplayMemberPath="DisplayText"
+                          SelectedValuePath="Units"
+                          SelectedValue="{Binding DefaultUnits, Mode=TwoWay}" />
+            </controls:FieldRow>
+        </controls:FormSection>
+
+        <controls:FormSection Heading="Part numbers">
+            <controls:FieldRow Label="_Register folder" Target="{Binding ElementName=RegisterFolderBox}">
+                <TextBox x:Name="RegisterFolderBox"
+                         Text="{Binding RegisterFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            </controls:FieldRow>
+            <controls:FieldRow>
+                <TextBlock Style="{DynamicResource MutedText}" Text="{Binding RegisterFolderHelp, Mode=OneTime}" />
+            </controls:FieldRow>
+            <controls:FieldRow>
+                <!-- Opens a folder picker and puts the chosen folder in the box above (code-behind). -->
+                <Button Content="_Browse..." HorizontalAlignment="Left" Click="OnBrowseRegisterFolder" />
+            </controls:FieldRow>
         </controls:FormSection>
 
         <controls:FormSection Heading="Developer">
             <controls:FieldRow>
-                <CheckBox Content="Show developer tools"
+                <CheckBox Content="_Show developer tools"
                           IsChecked="{Binding ShowDeveloperTools, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
             </controls:FieldRow>
             <controls:FieldRow>

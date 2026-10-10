@@ -99,4 +99,11 @@ public static class IconNames
     public const string About = "About";
     public const string ExportModelData = "ExportModelData";
     public const string ExportLibraries = "ExportLibraries";
+
+    // M2 commands (task 042). Drawn before their commands exist; each command's own task adds its layout entry.
+    public const string NewPart = "NewPart";
+    public const string SaveAsCopy = "SaveAsCopy";
+    public const string SaveAsReplace = "SaveAsReplace";
+    public const string CreatePrint = "CreatePrint";
+    public const string MassUpdate = "MassUpdate";
 }
