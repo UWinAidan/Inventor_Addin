@@ -97,6 +97,9 @@ Small things noticed while building. None is urgent. The parent turns these into
 - XAML rules test: C# in `UI/Controls/` is not checked, `DynamicResource` keys are not checked to exist, and a size binding with a typed `FallbackValue` passes. (task 031)
 
 **Settings window**
+- `FieldRow` centres its label, so "Other folders" sits halfway down the four-line box. A top-aligned label for tall rows would fix it. (task 049)
+- The shared text box template hides scroll bars, so the four-line Other folders box gives no sign it holds more lines. (task 049)
+- The register folder's "not a full path" message does not name the register folder; the window now has three folder settings. (task 049)
 - A shared style for a button beside a text box (for example `BrowseButton`), so Browse can sit on the register folder row. New Part's folder field will want it. (task 037)
 
 **Part properties**

@@ -202,6 +202,184 @@ public sealed class SettingsStoreTests : IDisposable
                      new AddinSettings { RegisterFolder = @"C:\R", DefaultUnits = UnitsSystem.Imperial });
     }
 
+    // ---- Work folder, other CAD folders, other names (task 049) ----
+
+    [Fact]
+    public void DefaultWorkFolder_IsAidansCadFolder()
+    {
+        Assert.Equal(@"C:\Users\4aida\OneDrive\Documents\CADING", AddinSettings.DefaultWorkFolder);
+    }
+
+    [Fact]
+    public void NewSettings_Defaults()
+    {
+        var settings = new AddinSettings();
+
+        Assert.Equal(AddinSettings.DefaultWorkFolder, settings.WorkFolder);
+        Assert.Empty(settings.OtherCadFolders);
+        Assert.Equal("", settings.OtherNamesForMe);
+    }
+
+    [Fact]
+    public void Load_FileWrittenBeforeFoldersAndNames_LoadsDefaults()
+    {
+        WriteSettingsFile("""
+            {
+              "schemaVersion": 1,
+              "showDeveloperTools": true,
+              "defaultDesigner": "A. Person",
+              "registerFolder": "",
+              "defaultUnits": "Imperial"
+            }
+            """);
+
+        var result = new SettingsStore(_folder).Load();
+
+        Assert.Empty(result.Warnings);
+        Assert.Equal(AddinSettings.DefaultWorkFolder, result.Settings.WorkFolder);
+        Assert.Empty(result.Settings.OtherCadFolders);
+        Assert.Equal("", result.Settings.OtherNamesForMe);
+        Assert.Equal(UnitsSystem.Imperial, result.Settings.DefaultUnits);
+        Assert.Equal("", result.Settings.RegisterFolder);
+    }
+
+    [Fact]
+    public void Load_NullsForNewSettings_LoadDefaults()
+    {
+        WriteSettingsFile("""{ "workFolder": null, "otherCadFolders": null, "otherNamesForMe": null }""");
+
+        var result = new SettingsStore(_folder).Load();
+
+        Assert.Empty(result.Warnings);
+        Assert.Equal(new AddinSettings(), result.Settings);
+    }
+
+    [Fact]
+    public void Load_BlankWorkFolder_StaysBlank()
+    {
+        WriteSettingsFile("""{ "workFolder": "" }""");
+
+        var result = new SettingsStore(_folder).Load();
+
+        Assert.Empty(result.Warnings);
+        Assert.Equal("", result.Settings.WorkFolder);
+    }
+
+    [Fact]
+    public void Load_OtherCadFolders_ReadsArray_DroppingNullEntries()
+    {
+        WriteSettingsFile("""{ "otherCadFolders": [ "D:\\One", null, "\\\\server\\two" ] }""");
+
+        var result = new SettingsStore(_folder).Load();
+
+        Assert.Empty(result.Warnings);
+        Assert.Equal(new[] { @"D:\One", @"\\server\two" }, result.Settings.OtherCadFolders);
+    }
+
+    [Fact]
+    public void Load_OtherCadFoldersNotAList_IsABadFile()
+    {
+        WriteSettingsFile("""{ "otherCadFolders": "D:\\One" }""");
+
+        var result = new SettingsStore(_folder).Load();
+
+        Assert.Contains("settings.json.bad", Assert.Single(result.Warnings));
+        Assert.Equal(new AddinSettings(), result.Settings);
+    }
+
+    [Fact]
+    public void Setters_Null_StoreDefaults()
+    {
+        var settings = new AddinSettings { WorkFolder = null!, OtherCadFolders = null!, OtherNamesForMe = null! };
+
+        Assert.Equal(AddinSettings.DefaultWorkFolder, settings.WorkFolder);
+        Assert.Empty(settings.OtherCadFolders);
+        Assert.Equal("", settings.OtherNamesForMe);
+    }
+
+    [Fact]
+    public void OtherCadFolders_IsCopiedWhenSet()
+    {
+        var list = new List<string> { @"D:\One" };
+        var settings = new AddinSettings { OtherCadFolders = list };
+
+        list.Add(@"E:\Two");
+
+        Assert.Equal(new[] { @"D:\One" }, settings.OtherCadFolders);
+    }
+
+    [Fact]
+    public void Save_WritesNewSettingsInCamelCase_FoldersAsArray()
+    {
+        new SettingsStore(_folder).Save(new AddinSettings
+        {
+            WorkFolder = @"D:\Work",
+            OtherCadFolders = new[] { @"E:\One", @"\\server\two" },
+            OtherNamesForMe = "A.Person, ap",
+        });
+
+        var json = JsonNode.Parse(File.ReadAllText(SettingsPath))!.AsObject();
+
+        Assert.Equal(@"D:\Work", json["workFolder"]!.GetValue<string>());
+        var folders = json["otherCadFolders"]!.AsArray();
+        Assert.Equal(new[] { @"E:\One", @"\\server\two" }, folders.Select(f => f!.GetValue<string>()));
+        Assert.Equal("A.Person, ap", json["otherNamesForMe"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public void Save_DefaultOtherCadFolders_WritesEmptyArray()
+    {
+        new SettingsStore(_folder).Save(new AddinSettings());
+
+        var json = JsonNode.Parse(File.ReadAllText(SettingsPath))!.AsObject();
+
+        Assert.Empty(json["otherCadFolders"]!.AsArray());
+    }
+
+    [Fact]
+    public void Equality_ComparesNewSettings_FoldersByValueAndOrder()
+    {
+        Assert.Equal(
+            new AddinSettings { OtherCadFolders = new[] { @"D:\One", @"E:\Two" } },
+            new AddinSettings { OtherCadFolders = new List<string> { @"D:\One", @"E:\Two" } });
+        Assert.Equal(
+            new AddinSettings { OtherCadFolders = new[] { @"D:\One" } }.GetHashCode(),
+            new AddinSettings { OtherCadFolders = new[] { @"D:\One" } }.GetHashCode());
+        Assert.NotEqual(
+            new AddinSettings { OtherCadFolders = new[] { @"D:\One", @"E:\Two" } },
+            new AddinSettings { OtherCadFolders = new[] { @"E:\Two", @"D:\One" } });
+        Assert.NotEqual(new AddinSettings { OtherCadFolders = new[] { @"D:\One" } }, new AddinSettings());
+        Assert.NotEqual(new AddinSettings { WorkFolder = "" }, new AddinSettings());
+        Assert.NotEqual(new AddinSettings { OtherNamesForMe = "x" }, new AddinSettings());
+    }
+
+    [Fact]
+    public void Equality_ComparesEverySetting()
+    {
+        // Guards the hand-written Equals and GetHashCode: each setting changed on its own makes the two unequal
+        // and changes the hash code.
+        var changes = new Func<AddinSettings, AddinSettings>[]
+        {
+            s => s with { SchemaVersion = 2 },
+            s => s with { ShowDeveloperTools = true },
+            s => s with { DefaultDesigner = "x" },
+            s => s with { RegisterFolder = "" },
+            s => s with { DefaultUnits = UnitsSystem.Imperial },
+            s => s with { WorkFolder = "" },
+            s => s with { OtherCadFolders = new[] { @"D:\One" } },
+            s => s with { OtherNamesForMe = "x" },
+        };
+        var settableProperties = typeof(AddinSettings).GetProperties().Count(p => p.CanWrite);
+
+        Assert.Equal(settableProperties, changes.Length);
+        foreach (var change in changes)
+        {
+            var changed = change(new AddinSettings());
+            Assert.NotEqual(new AddinSettings(), changed);
+            Assert.NotEqual(new AddinSettings().GetHashCode(), changed.GetHashCode());
+        }
+    }
+
     [Fact]
     public void Load_FileWrittenBeforeDefaultDesigner_LoadsItAsEmpty()
     {
@@ -447,6 +625,9 @@ public sealed class SettingsStoreTests : IDisposable
             DefaultDesigner = defaultDesigner,
             RegisterFolder = registerFolder,
             DefaultUnits = units,
+            WorkFolder = registerFolder,
+            OtherCadFolders = showDeveloperTools ? new[] { @"E:\Ünïcode one", @"\\server\two" } : Array.Empty<string>(),
+            OtherNamesForMe = defaultDesigner + ", other",
         };
 
         store.Save(original);

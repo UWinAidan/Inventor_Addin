@@ -1049,6 +1049,378 @@ public sealed class SettingsViewModelTests : IDisposable
         Assert.True(vm.SaveCommand.CanExecute(null));
     }
 
+    // ---- Other names, work folder, other CAD folders (task 049) ----
+
+    [Fact]
+    public void NewSettings_StartWithGivenValues_NotDirty()
+    {
+        var vm = Create(new AddinSettings
+        {
+            OtherNamesForMe = "A.Person, ap",
+            WorkFolder = @"D:\Work",
+            OtherCadFolders = new[] { @"E:\One", @"\\server\two" },
+        });
+
+        Assert.Equal("A.Person, ap", vm.OtherNamesForMe);
+        Assert.Equal(@"D:\Work", vm.WorkFolder);
+        Assert.Equal("E:\\One\r\n\\\\server\\two", vm.OtherCadFolders);
+        Assert.False(vm.IsDirty);
+        Assert.Null(vm.ErrorText);
+    }
+
+    [Fact]
+    public void NewSettings_Defaults_AreShown()
+    {
+        var vm = Create();
+
+        Assert.Equal("", vm.OtherNamesForMe);
+        Assert.Equal(AddinSettings.DefaultWorkFolder, vm.WorkFolder);
+        Assert.Equal("", vm.OtherCadFolders);
+    }
+
+    [Fact]
+    public void OtherNames_Changing_MakesDirty_RaisesValueAndIsDirty()
+    {
+        var vm = Create();
+        var changed = RecordPropertyChanges(vm);
+
+        vm.OtherNamesForMe = "A.Person";
+
+        Assert.True(vm.IsDirty);
+        Assert.True(vm.SaveCommand.CanExecute(null));
+        Assert.Equal(new[] { nameof(SettingsViewModel.OtherNamesForMe), nameof(SettingsViewModel.IsDirty) }, changed);
+    }
+
+    [Fact]
+    public void OtherNames_OnlySpaces_IsNotAChange()
+    {
+        var vm = Create();
+
+        vm.OtherNamesForMe = "   ";
+
+        Assert.False(vm.IsDirty);
+    }
+
+    [Fact]
+    public void OtherNames_Null_IsTreatedAsEmpty()
+    {
+        var vm = Create(new AddinSettings { OtherNamesForMe = "x" });
+
+        vm.OtherNamesForMe = null!;
+
+        Assert.Equal("", vm.OtherNamesForMe);
+        Assert.True(vm.IsDirty);
+    }
+
+    [Fact]
+    public void OtherNames_TooLong_SetsError_AndDisablesSave()
+    {
+        var vm = Create();
+
+        vm.OtherNamesForMe = LongText(256);
+
+        Assert.Equal("Other names must be 255 characters or fewer.", vm.ErrorText);
+        Assert.False(vm.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void OtherNames_LineBreak_SetsError()
+    {
+        var vm = Create();
+
+        vm.OtherNamesForMe = "A\nB";
+
+        Assert.Equal("Other names must be on one line. Remove the line break.", vm.ErrorText);
+    }
+
+    [Fact]
+    public void WorkFolder_Changing_MakesDirty_RaisesValueAndIsDirty()
+    {
+        var vm = Create();
+        var changed = RecordPropertyChanges(vm);
+
+        vm.WorkFolder = @"D:\Work";
+
+        Assert.True(vm.IsDirty);
+        Assert.True(vm.SaveCommand.CanExecute(null));
+        Assert.Equal(new[] { nameof(SettingsViewModel.WorkFolder), nameof(SettingsViewModel.IsDirty) }, changed);
+    }
+
+    [Fact]
+    public void WorkFolder_Blank_IsValid_AndSavedBlank()
+    {
+        var vm = Create();
+
+        vm.WorkFolder = "  ";
+        Assert.Null(vm.ErrorText);
+        Assert.True(vm.IsDirty);
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.Equal("", new SettingsStore(_folder).Load().Settings.WorkFolder);
+        Assert.Equal("", vm.WorkFolder);
+    }
+
+    [Fact]
+    public void WorkFolder_TrailingSpaces_AreNotAChange()
+    {
+        var vm = Create();
+
+        vm.WorkFolder = AddinSettings.DefaultWorkFolder + "  ";
+
+        Assert.False(vm.IsDirty);
+    }
+
+    [Theory]
+    [InlineData(@"D:\Work")]
+    [InlineData(@"\\server\share\cad")]
+    [InlineData(@"Z:\does\not\exist")]
+    public void WorkFolder_FullPath_IsValid(string folder)
+    {
+        Assert.Null(SettingsViewModel.ValidateWorkFolder(folder));
+
+        var vm = Create();
+        vm.WorkFolder = folder;
+
+        Assert.Null(vm.ErrorText);
+    }
+
+    [Theory]
+    [InlineData("Work")]
+    [InlineData(@"\Work")]
+    [InlineData("D:Work")]
+    public void WorkFolder_RelativePath_SetsItsOwnError_AndDisablesSave(string folder)
+    {
+        const string expected = @"Enter the work folder as a full folder path, such as C:\CAD.";
+        Assert.Equal(expected, SettingsViewModel.WorkFolderNotFullPathError);
+        Assert.Equal(expected, SettingsViewModel.ValidateWorkFolder(folder));
+
+        var vm = Create();
+        vm.WorkFolder = folder;
+
+        Assert.Equal(expected, vm.ErrorText);
+        Assert.False(vm.SaveCommand.CanExecute(null));
+    }
+
+    [Theory]
+    [InlineData(@"D:\Wo*rk")]
+    [InlineData("D:\\Wo\trk")]
+    public void WorkFolder_InvalidCharacter_SetsItsOwnError(string folder)
+    {
+        const string expected = "The work folder contains a character Windows does not allow.";
+
+        Assert.Equal(expected, SettingsViewModel.ValidateWorkFolder(folder));
+        var vm = Create();
+        vm.WorkFolder = folder;
+        Assert.Equal(expected, vm.ErrorText);
+    }
+
+    [Fact]
+    public void WorkFolder_EditsACopy()
+    {
+        var original = new AddinSettings();
+        var vm = Create(original);
+
+        vm.WorkFolder = @"D:\Work";
+
+        Assert.Equal(AddinSettings.DefaultWorkFolder, original.WorkFolder);
+    }
+
+    [Fact]
+    public void OtherCadFolders_Changing_MakesDirty_RaisesValueAndIsDirty()
+    {
+        var vm = Create();
+        var changed = RecordPropertyChanges(vm);
+
+        vm.OtherCadFolders = @"D:\One";
+
+        Assert.True(vm.IsDirty);
+        Assert.True(vm.SaveCommand.CanExecute(null));
+        Assert.Equal(new[] { nameof(SettingsViewModel.OtherCadFolders), nameof(SettingsViewModel.IsDirty) }, changed);
+    }
+
+    [Fact]
+    public void OtherCadFolders_BlankLinesOnly_IsNotAChange()
+    {
+        var vm = Create();
+
+        vm.OtherCadFolders = "\r\n  \r\n";
+
+        Assert.False(vm.IsDirty);
+        Assert.Null(vm.ErrorText);
+    }
+
+    [Fact]
+    public void OtherCadFolders_SameFoldersWithSpacesAndBlankLines_IsNotAChange()
+    {
+        var vm = Create(new AddinSettings { OtherCadFolders = new[] { @"D:\One", @"E:\Two" } });
+
+        vm.OtherCadFolders = "  D:\\One  \n\n\tE:\\Two\r\n";
+
+        Assert.False(vm.IsDirty);
+    }
+
+    [Fact]
+    public void OtherCadFolders_OrderChange_IsAChange()
+    {
+        var vm = Create(new AddinSettings { OtherCadFolders = new[] { @"D:\One", @"E:\Two" } });
+
+        vm.OtherCadFolders = "E:\\Two\r\nD:\\One";
+
+        Assert.True(vm.IsDirty);
+    }
+
+    [Theory]
+    [InlineData("", new string[0])]
+    [InlineData("D:\\One", new[] { @"D:\One" })]
+    [InlineData("D:\\One\r\nE:\\Two", new[] { @"D:\One", @"E:\Two" })]
+    [InlineData("D:\\One\nE:\\Two\rF:\\Three", new[] { @"D:\One", @"E:\Two", @"F:\Three" })]
+    [InlineData("\r\n  D:\\One  \r\n\r\n   \r\n E:\\My Two \r\n", new[] { @"D:\One", @"E:\My Two" })]
+    public void ParseFolderLines_TrimsEachLine_DropsBlankLines(string text, string[] expected)
+    {
+        Assert.Equal(expected, SettingsViewModel.ParseFolderLines(text));
+    }
+
+    [Fact]
+    public void ParseFolderLines_Null_IsEmpty()
+    {
+        Assert.Empty(SettingsViewModel.ParseFolderLines(null));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("\r\n\r\n")]
+    [InlineData("D:\\One\r\n\r\n\\\\server\\share")]
+    public void ValidateOtherCadFolders_BlankOrFullPaths_IsValid(string? text)
+    {
+        Assert.Null(SettingsViewModel.ValidateOtherCadFolders(text));
+    }
+
+    [Theory]
+    [InlineData("Relative", 1)]
+    [InlineData("D:\\One\r\nRelative", 2)]
+    [InlineData("D:\\One\r\n\r\n  Relative  \r\nAlso relative", 3)]
+    [InlineData("D:\\One\nE:\\Two\n\\Three", 3)]
+    public void ValidateOtherCadFolders_RelativeLine_NamesTheFirstBadLine(string text, int line)
+    {
+        Assert.Equal(
+            $@"Other folders, line {line}: enter a full folder path, such as D:\CAD.",
+            SettingsViewModel.ValidateOtherCadFolders(text));
+    }
+
+    [Fact]
+    public void ValidateOtherCadFolders_InvalidCharacter_NamesTheLine()
+    {
+        Assert.Equal(
+            "Other folders, line 2, contains a character Windows does not allow.",
+            SettingsViewModel.ValidateOtherCadFolders("D:\\One\r\nD:\\T?wo"));
+    }
+
+    [Fact]
+    public void OtherCadFolders_Invalid_SetsError_AndDisablesSave_ThenFixingClearsIt()
+    {
+        var vm = Create();
+
+        vm.OtherCadFolders = "D:\\One\r\nTwo";
+
+        Assert.Equal(@"Other folders, line 2: enter a full folder path, such as D:\CAD.", vm.ErrorText);
+        Assert.False(vm.SaveCommand.CanExecute(null));
+
+        vm.OtherCadFolders = "D:\\One\r\nE:\\Two";
+
+        Assert.Null(vm.ErrorText);
+        Assert.True(vm.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void OtherCadFolders_InvalidValueFromFile_ShowsErrorAtOnce()
+    {
+        var vm = Create(new AddinSettings { OtherCadFolders = new[] { "Relative" } });
+
+        Assert.Equal(@"Other folders, line 1: enter a full folder path, such as D:\CAD.", vm.ErrorText);
+        Assert.False(vm.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void Validation_FollowsWindowOrder()
+    {
+        var vm = Create();
+        vm.OtherCadFolders = "Relative";
+        vm.WorkFolder = "Relative";
+        vm.RegisterFolder = "Relative";
+        vm.OtherNamesForMe = LongText(256);
+        vm.DefaultDesigner = LongText(256);
+
+        Assert.Equal("Default designer must be 255 characters or fewer.", vm.ErrorText);
+        vm.DefaultDesigner = "";
+        Assert.Equal("Other names must be 255 characters or fewer.", vm.ErrorText);
+        vm.OtherNamesForMe = "";
+        Assert.Equal(SettingsViewModel.RegisterFolderNotFullPathError, vm.ErrorText);
+        vm.RegisterFolder = "";
+        Assert.Equal(SettingsViewModel.WorkFolderNotFullPathError, vm.ErrorText);
+        vm.WorkFolder = "";
+        Assert.Equal(@"Other folders, line 1: enter a full folder path, such as D:\CAD.", vm.ErrorText);
+        vm.OtherCadFolders = "";
+        Assert.Null(vm.ErrorText);
+    }
+
+    [Fact]
+    public void Save_WritesNewSettingsNormalised_ShowsWhatWasSaved_AndRoundTrips()
+    {
+        var vm = Create();
+        vm.OtherNamesForMe = "  A.Person, ap  ";
+        vm.WorkFolder = @"  D:\Work  ";
+        vm.OtherCadFolders = "\r\n  E:\\One  \r\n\r\n\\\\server\\two\r\n";
+        var changed = RecordPropertyChanges(vm);
+
+        vm.SaveCommand.Execute(null);
+
+        var expected = new AddinSettings
+        {
+            OtherNamesForMe = "A.Person, ap",
+            WorkFolder = @"D:\Work",
+            OtherCadFolders = new[] { @"E:\One", @"\\server\two" },
+        };
+        var loaded = new SettingsStore(_folder).Load();
+        Assert.Empty(loaded.Warnings);
+        Assert.Equal(expected, loaded.Settings);
+        Assert.Equal(expected, vm.SavedSettings);
+        Assert.False(vm.IsDirty);
+        Assert.Equal("A.Person, ap", vm.OtherNamesForMe);
+        Assert.Equal(@"D:\Work", vm.WorkFolder);
+        Assert.Equal("E:\\One\r\n\\\\server\\two", vm.OtherCadFolders);
+        Assert.Contains(nameof(SettingsViewModel.OtherNamesForMe), changed);
+        Assert.Contains(nameof(SettingsViewModel.WorkFolder), changed);
+        Assert.Contains(nameof(SettingsViewModel.OtherCadFolders), changed);
+    }
+
+    [Fact]
+    public void Save_NormalisedTextAlreadyShown_RaisesNoValueChange()
+    {
+        var vm = Create();
+        vm.WorkFolder = @"D:\Work";
+        vm.OtherCadFolders = "E:\\One\r\nF:\\Two";
+        var changed = RecordPropertyChanges(vm);
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.DoesNotContain(nameof(SettingsViewModel.WorkFolder), changed);
+        Assert.DoesNotContain(nameof(SettingsViewModel.OtherCadFolders), changed);
+    }
+
+    [Fact]
+    public void NewSettings_HelpTexts()
+    {
+        var vm = Create();
+
+        Assert.Equal(
+            "Names in old files that mean you, separated by commas, for example Aidan.Brown, 4aida. Your Windows user name always counts.",
+            vm.OtherNamesHelp);
+        Assert.Equal("Where New Part and Mass Update start, and the first folder Rename searches.", vm.WorkFolderHelp);
+        Assert.Equal("Other folders that hold your CAD. Rename searches these too.", vm.OtherCadFoldersHelp);
+    }
+
     // ---- Window text ----
 
     [Fact]

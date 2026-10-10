@@ -93,3 +93,6 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-10-10 | The Settings label "Units for new files" becomes "New file units", so it fits the label column | Aidan | task 049 |
 | 2026-10-10 | The register's AssignedBy is the Default designer from Settings, or the Windows user name when that is blank | Aidan | spec 02, task 050 |
 | 2026-10-10 | A setting "Other names that mean me" (comma-separated). Part Properties and Mass Update treat a Designer or Detailer equal to any of them, or to the Windows user name, as the Windows user name | Aidan | spec 02, task 051 |
+| 2026-10-10 | The Other CAD folders setting is labelled "Other folders" in Settings, so it fits the label column | Default | task 049 |
+| 2026-10-10 | The register folder and work folder Browse buttons sit beside their boxes | Default | task 049 |
+| 2026-10-10 | An `otherCadFolders` value in `settings.json` that is not a list makes the file invalid (`.bad`), as every wrong type except an unknown units name does | Default | task 049 |

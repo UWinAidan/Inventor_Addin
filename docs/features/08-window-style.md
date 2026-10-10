@@ -108,8 +108,10 @@ Every window has the same three bands:
 
 - Header: "Settings", with "AWB Addin" under it.
 - Section **General**: Default designer (text box) with its one-line explanation under it in muted text.
-- Section **General** also has Units for new files (dropdown: Metric, Imperial).
-- Section **Part numbers**: Register folder (text box) with its help text, and a Browse button on the row below (task 037).
+- Section **General** also has Other names (text box, under Default designer; help text "Names in old files that mean you, separated by commas, for example Aidan.Brown, 4aida. Your Windows user name always counts.") and New file units (dropdown: Metric, Imperial; was "Units for new files", shortened to fit the label column, task 049).
+- Section **Part numbers**: Register folder (text box) with a Browse button beside it in the side button style, and its help text under it (tasks 037 and 049).
+- Section **Folders** (task 049): Work folder (text box, Browse beside it; help text "Where New Part and Mass Update start, and the first folder Rename searches."), and Other folders, the Other CAD folders setting (a four-line text box, one folder per line; help text "Other folders that hold your CAD. Rename searches these too."). The label is shortened so it fits the 100-wide label column.
+- Labels are kept short enough for the 100-wide label column; the help text carries the explanation. Access keys are unique across the window: D, N, U, R, B (Browse, register folder), W, E (Browse, work folder), O, S.
 - Section **Developer**: Show developer tools (checkbox), with the note that it takes effect when Inventor next starts.
 - Footer: error text when a save fails; Save (primary), Cancel.
 

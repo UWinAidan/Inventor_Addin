@@ -13,10 +13,15 @@
 
         The help lines under the text boxes and the note under the checkbox are rows of their own with no label, so
         they line up with the value column and the row spacing comes from FieldRow. Putting a note in the same row
-        as its control would centre the row's label on the pair instead of on the control. The Browse button is a
-        row of its own for the same reason, and because the shared styles have no gap for a button beside a box.
+        as its control would centre the row's label on the pair instead of on the control. Each Browse button sits
+        beside its folder box in the shared SideButton style (task 049; task 037 had it on a row of its own): the
+        button is docked right and the box fills the rest.
 
-        Access keys: D default designer, U units, R register folder, B browse, S show developer tools.
+        Labels stay short to fit the 100-wide label column; the help line under each box explains it. The other CAD
+        folders row is labelled "Other folders" for that reason.
+
+        Access keys: D default designer, N other names, U new file units, R register folder, B browse (register),
+        W work folder, E browse (work folder), O other folders, S show developer tools.
     -->
     <StackPanel Style="{DynamicResource DialogContent}">
         <!-- The header icon is put in the window's resources by WindowHost (HeaderIcon), in the window's theme. -->
@@ -32,7 +37,14 @@
             <controls:FieldRow>
                 <TextBlock Style="{DynamicResource MutedText}" Text="{Binding DefaultDesignerHelp, Mode=OneTime}" />
             </controls:FieldRow>
-            <controls:FieldRow Label="_Units for new files" Target="{Binding ElementName=DefaultUnitsBox}">
+            <controls:FieldRow Label="Other _names" Target="{Binding ElementName=OtherNamesBox}">
+                <TextBox x:Name="OtherNamesBox"
+                         Text="{Binding OtherNamesForMe, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            </controls:FieldRow>
+            <controls:FieldRow>
+                <TextBlock Style="{DynamicResource MutedText}" Text="{Binding OtherNamesHelp, Mode=OneTime}" />
+            </controls:FieldRow>
+            <controls:FieldRow Label="New file _units" Target="{Binding ElementName=DefaultUnitsBox}">
                 <ComboBox x:Name="DefaultUnitsBox"
                           IsEditable="False"
                           ItemsSource="{Binding UnitsOptions, Mode=OneTime}"
@@ -44,15 +56,44 @@
 
         <controls:FormSection Heading="Part numbers">
             <controls:FieldRow Label="_Register folder" Target="{Binding ElementName=RegisterFolderBox}">
-                <TextBox x:Name="RegisterFolderBox"
-                         Text="{Binding RegisterFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <DockPanel>
+                    <!-- Opens a folder picker and puts the chosen folder in the box beside it (code-behind). -->
+                    <Button DockPanel.Dock="Right"
+                            Style="{DynamicResource SideButton}"
+                            Content="_Browse..."
+                            Click="OnBrowseRegisterFolder" />
+                    <TextBox x:Name="RegisterFolderBox"
+                             Text="{Binding RegisterFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </DockPanel>
             </controls:FieldRow>
             <controls:FieldRow>
                 <TextBlock Style="{DynamicResource MutedText}" Text="{Binding RegisterFolderHelp, Mode=OneTime}" />
             </controls:FieldRow>
+        </controls:FormSection>
+
+        <controls:FormSection Heading="Folders">
+            <controls:FieldRow Label="_Work folder" Target="{Binding ElementName=WorkFolderBox}">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right"
+                            Style="{DynamicResource SideButton}"
+                            Content="Brows_e..."
+                            Click="OnBrowseWorkFolder" />
+                    <TextBox x:Name="WorkFolderBox"
+                             Text="{Binding WorkFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </DockPanel>
+            </controls:FieldRow>
             <controls:FieldRow>
-                <!-- Opens a folder picker and puts the chosen folder in the box above (code-behind). -->
-                <Button Content="_Browse..." HorizontalAlignment="Left" Click="OnBrowseRegisterFolder" />
+                <TextBlock Style="{DynamicResource MutedText}" Text="{Binding WorkFolderHelp, Mode=OneTime}" />
+            </controls:FieldRow>
+            <!-- One folder per line. AcceptsReturn makes Enter start a new line here instead of pressing Save. -->
+            <controls:FieldRow Label="_Other folders" Target="{Binding ElementName=OtherCadFoldersBox}">
+                <TextBox x:Name="OtherCadFoldersBox"
+                         Style="{DynamicResource MultiLineTextBox}"
+                         AcceptsReturn="True"
+                         Text="{Binding OtherCadFolders, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            </controls:FieldRow>
+            <controls:FieldRow>
+                <TextBlock Style="{DynamicResource MutedText}" Text="{Binding OtherCadFoldersHelp, Mode=OneTime}" />
             </controls:FieldRow>
         </controls:FormSection>
 

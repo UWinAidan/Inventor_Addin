@@ -285,6 +285,21 @@
     </Style>
 
     <!--
+        A text box for several lines, one entry per line (Other CAD folders in Settings): four lines tall, text from
+        the top, no wrapping so a long entry stays on its own line. MinLines and MaxLines size it from the font, so
+        Height goes back to Auto. The template is the shared one, whose scroll bars are hidden: the box scrolls with
+        the caret and the mouse wheel. The window sets AcceptsReturn, as text boxes keep their behaviour to the window.
+    -->
+    <Style x:Key="MultiLineTextBox" TargetType="{x:Type TextBox}" BasedOn="{StaticResource {x:Type TextBox}}">
+        <Setter Property="Height" Value="Auto" />
+        <Setter Property="MinLines" Value="4" />
+        <Setter Property="MaxLines" Value="4" />
+        <Setter Property="Padding" Value="8,5,8,5" />
+        <Setter Property="VerticalContentAlignment" Value="Top" />
+        <Setter Property="TextWrapping" Value="NoWrap" />
+    </Style>
+
+    <!--
         Dropdown: the implicit style, with a full template so no system colour shows in either theme.
         The structure follows WPF's default: a ToggleButton over the whole box opens the list, a ContentPresenter
         shows the selection (through the window's ItemTemplate, which this style leaves alone), and a Popup holds the

@@ -163,7 +163,7 @@ Planned 2026-10-10. Run in number order; each task depends only on lower numbers
 - [ ] 046 Save As and Replace
 - [ ] 047 Rename, with references updated across the workspace
 - [ ] 048 Mass Update command and window
-- [ ] 049 Settings: shorter units label, CAD folders, other names that mean me
+- [x] 049 Settings: shorter units label, CAD folders, other names that mean me
 - [x] 050 Register AssignedBy is the Default designer
 - [ ] 051 Other names that mean me, in Part Properties and Mass Update
 
