@@ -6,7 +6,7 @@ using InventorAddin.Core.PartProperties;
 
 namespace InventorAddin.Extraction
 {
-    /// <summary>Reads and writes iProperties.</summary>
+    /// <summary>Reads iProperties. Writes go through <see cref="PropertyWriter"/>.</summary>
     public static class PropertyReader
     {
         // Internal (language-independent) property set names
@@ -55,19 +55,6 @@ namespace InventorAddin.Extraction
 
         public static string? GetString(Document doc, string setName, string propName) =>
             Get(doc, setName, propName)?.ToString();
-
-        /// <summary>Sets a property, creating it in the user-defined set if it doesn't exist.</summary>
-        public static void Set(Document doc, string setName, string propName, object value)
-        {
-            PropertySet set = doc.PropertySets[setName];
-            Property? existing = ComSafe.Get(() => set[propName]);
-            if (existing != null)
-                existing.Value = value;
-            else if (setName == UserDefinedSet)
-                set.Add(value, propName);
-            else
-                throw new ArgumentException($"Property '{propName}' does not exist in '{setName}'.");
-        }
 
         private static bool IsSimple(object v) =>
             v is string || v is bool || v is DateTime || v is decimal || v.GetType().IsPrimitive;

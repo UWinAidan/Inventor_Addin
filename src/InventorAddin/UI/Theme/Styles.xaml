@@ -223,6 +223,15 @@
         <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
 
+    <!--
+        A secondary button beside a value in a field row (Generate part number), the button gap (8) after it.
+        Kept to the left so it does not stretch.
+    -->
+    <Style x:Key="SideButton" TargetType="{x:Type Button}" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Margin" Value="8,0,0,0" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+    </Style>
+
     <!-- ===== Input controls ===== -->
 
     <!--

@@ -79,3 +79,5 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-10-10 | When Mass Update finds one unregistered number on two files, the first in scan order keeps it and the other is reported as a duplicate | Default | task 041 |
 | 2026-10-10 | A registered number found on a second file counts as assigned on both; Mass Update does not flag it | Default | spec 02, question 21 |
 | 2026-10-10 | A PC's pending-entries file with a row it cannot read is refused the same way as the shared register, so a sync never deletes rows it could not read | Default | task 036, spec 02 question 19 |
+| 2026-10-10 | Part Properties shows a Part Number only when it is in the `AWB-10001` format, for saved and never-saved files alike. Replaces the 2026-10-07 default that any non-blank Part Number of a never-saved file counts as assigned | Default | spec 02, task 039 |
+| 2026-10-10 | A Part Number equal to the file name `AWB-10001.ipt` is shown as a number; the add-in does not compare it with the file name | Default | spec 02, question 22 |
