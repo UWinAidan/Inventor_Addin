@@ -6,11 +6,22 @@ Last updated: 2026-10-10
 
 ## Next up
 
-1. M2 cloud run 2: tasks 049 to 051, then 043 to 048 (running now).
-2. Aidan builds run 2 on Windows and works through its checks.
-3. Aidan finishes the Part Properties checks listed below; some will be easier once M2's new parts exist.
+1. Aidan builds M2 run 2 on Windows (`dotnet build InventorAddin.slnx`), fixes any compile errors, and works through the run 2 checks below.
+2. Aidan finishes the remaining run 1 and Part Properties checks below.
+3. Plan the next milestone once M2 is tested; M3 to M6 wait on Aidan's decisions listed below.
 
 ## Waiting on Aidan: checks in Inventor
+
+**M2 run 2** (full steps in each task's Verification section; nothing here has been compiled)
+- [ ] 049 Settings: "New file units", Work folder and Other folders with Browse (including a dead drive and `Q:\x`), Other names (10 steps)
+- [ ] 050 AssignedBy is the Default designer, falling back to the Windows user name (5 steps)
+- [ ] 051 Other names count like the Windows user name in Part Properties (7 steps)
+- [ ] 043 New Part: dialog, templates, number, properties, save, failures, Undo after creation (12 steps)
+- [ ] 044 Create Print: ANSI template, `.dwg`, scale, Part Number, existing print (11 steps)
+- [ ] 045 Save As Copy: the original keeps its name and edits; in-place edit; part open in an assembly (11 steps)
+- [ ] 046 Save As and Replace: top-level with one Undo; inside a sub-assembly with the warning and save (8 steps)
+- [ ] 047 Rename: references in open and closed files, register update, skipped folder, plain AutoCAD `.dwg` (14 steps)
+- [ ] 048 Mass Update: scan, open files, register, assign, replace names, duplicates, register errors (10 steps)
 
 **M2 run 1** (full steps in each task's Verification section). Aidan's run 1 checks found three things, now tasks 049 to 051; tick the rest here when confirmed
 - [ ] Task 037, Settings: units dropdown and register folder, Browse, validation, access keys, an unknown units value in `settings.json`; is "Units for new files" cut off?
