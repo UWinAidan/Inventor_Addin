@@ -104,6 +104,9 @@ Small things noticed while building. None is urgent. The parent turns these into
 - The window's local `ValueOrPlaceholder` and `IdentifierOrPlaceholder` styles could become shared pieces. (task 029)
 
 **Numbering**
+- Register store: check the 3 s probe timeout against spike 032's question 8. A timed-out probe leaves its background folder check running; watch for threads piling up against a hung drive. (task 036)
+- Register store hardening: in `TakeLock`, an `IOException` raised as the other PC releases its lock escapes instead of retrying; write the local copy before deleting the pending file; a failed write after `CreateNew` leaves our own lock behind. Lock-file limits to know: clock skew over 2 minutes between PCs can clear a live lock, and release does not check the lock is still ours. (task 036 review)
+- An unreadable local copy reads as empty, so offline numbering would restart at AWB-10001 until the next sync reports the duplicates. (task 036 review)
 - Mass Update: a duplicate unregistered number is only reported after Apply, and Apply stays disabled if that file is the only one ticked. Show the duplicate in the row at scan time and make Register unavailable there. Fold into 048. (task 041)
 - Mass Update: a register-only update writes nothing to the file, so 048 should not save it; the confirmation still counts it as a changed file. (task 041)
 - `ScannedFile.IsWindowsUser` copies the comparison in `PersonNames.IsWindowsUserPlaceholder`; share one helper. (task 041)

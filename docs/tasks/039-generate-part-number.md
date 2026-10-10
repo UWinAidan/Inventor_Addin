@@ -57,6 +57,8 @@ Add-in
 
 ## Notes for the implementer
 
+- Added while running M2, from the task 036 review: `Sync()` returns `RegisterSyncResult` (not `SyncResult`, which is `PartRegister.Merge`'s). `Assign` and `Sync` can throw `RegisterBusyException` and `RegisterUnreadableException`; show each message to the user and write nothing to the file. If `Assign` throws after the shared file was written, the number may already be in the register; the message should not claim nothing was assigned.
+
 - "Has a number" is Aidan's rule. Showing an unregistered well-formed number with a note and offering Generate is a Default (spec 02, question 13).
 - Writing Part Number uses `PartPropertyStorage.PartNumber` and `PropertyWrite.SetText`; `PropertyWriter` already handles standard properties.
 - After a successful Generate, the view-model's `_original` snapshot must hold the new Part Number so a later Apply does not see it as a change. Part Number is never in the write plan.

@@ -147,7 +147,7 @@ Planned 2026-10-10. Run in number order; each task depends only on lower numbers
 - [x] 033 Part number format (Core)
 - [x] 034 File name rule and part name (Core)
 - [x] 035 Register model and CSV format (Core)
-- [ ] 036 Register store: shared folder, local copy, lock, offline (Core)
+- [x] 036 Register store: shared folder, local copy, lock, offline (Core)
 - [x] 037 Register folder and units settings
 - [x] 038 Windows user name counts as blank in Part Properties
 - [ ] 039 Part number display and Generate part number in Part Properties
