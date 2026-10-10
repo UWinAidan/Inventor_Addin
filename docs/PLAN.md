@@ -160,7 +160,7 @@ Planned 2026-10-10. Run in number order; each task depends only on lower numbers
 - [x] 043 New Part command and window
 - [x] 044 Create Print
 - [x] 045 Save As Copy
-- [ ] 046 Save As and Replace
+- [x] 046 Save As and Replace
 - [ ] 047 Rename, with references updated across the workspace
 - [ ] 048 Mass Update command and window
 - [x] 049 Settings: shorter units label, CAD folders, other names that mean me

@@ -74,7 +74,11 @@ namespace InventorAddin.Extraction
             });
         }
 
-        private static EditBlock ReadEditBlock(Document doc, string fullFileName)
+        /// <summary>
+        /// Whether <paramref name="doc"/> can be edited: its file read-only, or the document not modifiable (for example
+        /// a library file). Also used by Save As and Replace (task 046) for the component and the assembly it edits.
+        /// </summary>
+        internal static EditBlock ReadEditBlock(Document doc, string fullFileName)
         {
             if (ComSafe.Get(() => ModelExtractor.IsFileReadOnly(fullFileName)))
                 return EditBlock.ReadOnlyFile;

@@ -5,7 +5,7 @@ using InventorAddin.Core.ViewModels;
 namespace InventorAddin.UI
 {
     /// <summary>
-    /// Save As Copy dialog (spec 02). All behaviour is in <see cref="SaveAsCopyViewModel"/>; this only closes the window
+    /// Save As Copy dialog (spec 02), also shown by Save As and Replace (task 046). All behaviour is in <see cref="SaveAsCopyViewModel"/>; this only closes the window
     /// when the view-model asks (Save). Cancel closes through the button's <c>IsCancel</c>, leaving
     /// <see cref="SaveAsCopyViewModel.Request"/> null.
     /// </summary>
@@ -17,7 +17,8 @@ namespace InventorAddin.UI
         {
             _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
             InitializeComponent();
-            Title = SaveAsCopyViewModel.HeaderTitleText;
+            // Save As Copy, or Save As and Replace (task 046) when the view-model was made with ForReplace.
+            Title = _viewModel.HeaderTitle;
             DataContext = _viewModel;
             _viewModel.CloseRequested += OnCloseRequested;
             Closed += OnClosed;

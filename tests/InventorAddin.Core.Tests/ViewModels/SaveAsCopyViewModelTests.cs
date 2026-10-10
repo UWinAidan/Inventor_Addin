@@ -245,5 +245,87 @@ public sealed class SaveAsCopyViewModelTests
     public void Constructor_RejectsANullOriginal()
     {
         Assert.Throws<ArgumentNullException>(() => new SaveAsCopyViewModel(null!, DocumentKind.Part, null, null));
+        Assert.Throws<ArgumentNullException>(() => SaveAsCopyViewModel.ForReplace(null!, DocumentKind.Part, null, null, null));
+    }
+
+    // Save As and Replace (task 046)
+
+    [Fact]
+    public void SaveAsCopy_IsNotReplace_AndHasNoWarning()
+    {
+        var vm = Create();
+
+        Assert.False(vm.IsReplace);
+        Assert.Equal("_Save copy", vm.SaveButtonText);
+        Assert.False(vm.HasWarning);
+        Assert.Equal(string.Empty, vm.Warning);
+    }
+
+    [Fact]
+    public void ForReplace_SaysSaveAsAndReplace_OverTheComponentsFileName()
+    {
+        var vm = SaveAsCopyViewModel.ForReplace(Original, DocumentKind.Part, "M", "Test Designer", null);
+
+        Assert.True(vm.IsReplace);
+        Assert.Equal("Save As and Replace", vm.HeaderTitle);
+        Assert.Equal(SaveAsCopyViewModel.ReplaceHeaderTitleText, vm.HeaderTitle);
+        Assert.Equal("_Save and replace", vm.SaveButtonText);
+        Assert.Equal("AWB-10001,mounting_bracket.ipt", vm.HeaderSubline);
+        Assert.False(vm.HasWarning);
+    }
+
+    [Fact]
+    public void ForReplace_PrefillsAndValidates_AsSaveAsCopy()
+    {
+        var copy = Create();
+        var replace = SaveAsCopyViewModel.ForReplace(Original, DocumentKind.Part, "M", "Test Designer", null);
+
+        Assert.Equal(copy.PartName, replace.PartName);
+        Assert.Equal(copy.PartType, replace.PartType);
+        Assert.Equal(copy.Folder, replace.Folder);
+        Assert.Equal(copy.Designer, replace.Designer);
+        Assert.Equal(copy.FileNamePreview, replace.FileNamePreview);
+
+        replace.PartName = "a?b";
+        copy.PartName = "a?b";
+        Assert.Equal(copy.ValidationMessage, replace.ValidationMessage);
+        Assert.False(replace.CanSave);
+    }
+
+    [Theory]
+    [InlineData(null, false, "")]
+    [InlineData("   ", false, "")]
+    [InlineData(" The sub-assembly is saved. ", true, "The sub-assembly is saved.")]
+    public void ForReplace_Warning_ShownWhenGiven(string? warning, bool hasWarning, string expected)
+    {
+        var vm = SaveAsCopyViewModel.ForReplace(Original, DocumentKind.Part, "M", null, warning);
+
+        Assert.Equal(hasWarning, vm.HasWarning);
+        Assert.Equal(expected, vm.Warning);
+    }
+
+    [Fact]
+    public void ForReplace_InASubAssembly_ShowsSaveAsReplacersWarning()
+    {
+        var selection = new ReplaceSelection(
+            Original, DocumentKind.Part, EditBlock.None, EditBlock.None,
+            SubAssemblyFullFileName: @"C:\Work\AWB-10002,frame.iam", SubAssemblyOccurrenceName: "Frame:1");
+
+        var vm = SaveAsCopyViewModel.ForReplace(
+            Original, DocumentKind.Part, "M", null, SaveAsReplacer.SubAssemblyWarning(selection));
+
+        Assert.True(vm.HasWarning);
+        Assert.Contains("AWB-10002,frame.iam (Frame:1)", vm.Warning, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ForReplace_Save_StoresTheRequestForTheComponent()
+    {
+        var vm = SaveAsCopyViewModel.ForReplace(Original, DocumentKind.Part, "M", null, null);
+        vm.PartName = "new bracket";
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.Equal(new SaveAsCopyRequest(Original, DocumentKind.Part, "new bracket", "M"), vm.Request);
     }
 }

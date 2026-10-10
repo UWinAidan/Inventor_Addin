@@ -16,10 +16,14 @@
         header subline is the original's file name. For an assembly a note says its components are shared, not copied.
         Designer and Detailer are not asked; they come from Settings.
 
+        Save As and Replace (task 046) shows this same window through SaveAsCopyViewModel.ForReplace: the header and the
+        Save button say Save As and Replace, and for a component inside a sub-assembly a warning above the buttons says
+        the sub-assembly (named) will change and be saved, and Undo cannot put it back.
+
         Access keys: N part name, T part type, S save.
     -->
     <Window.Resources>
-        <!-- Collapses the assembly note for a part. -->
+        <!-- Collapses the assembly note for a part, and the sub-assembly warning when there is none. -->
         <BooleanToVisibilityConverter x:Key="VisibleWhenTrue" />
     </Window.Resources>
 
@@ -76,11 +80,15 @@
             <TextBlock Style="{DynamicResource MutedText}"
                        Text="{Binding Note, Mode=OneTime}"
                        Visibility="{Binding HasNote, Mode=OneTime, Converter={StaticResource VisibleWhenTrue}}" />
+            <!-- Save As and Replace inside a sub-assembly only: the sub-assembly is changed and saved, and Undo cannot put it back. -->
+            <TextBlock Style="{DynamicResource ErrorStatusText}"
+                       Text="{Binding Warning, Mode=OneTime}"
+                       Visibility="{Binding HasWarning, Mode=OneTime, Converter={StaticResource VisibleWhenTrue}}" />
         </controls:FormSection>
 
         <!-- The first problem with the name, or nothing (the status line is then not drawn). Save stays disabled meanwhile. -->
         <controls:DialogFooter Status="{Binding ValidationMessage, Mode=OneWay}" IsError="True">
-            <Button Style="{DynamicResource PrimaryButton}" Content="_Save copy" IsDefault="True" Command="{Binding SaveCommand}" />
+            <Button Style="{DynamicResource PrimaryButton}" Content="{Binding SaveButtonText, Mode=OneTime}" IsDefault="True" Command="{Binding SaveCommand}" />
             <!-- IsCancel closes a dialog shown with ShowDialog; nothing is copied. -->
             <Button Content="Cancel" IsCancel="True" />
         </controls:DialogFooter>

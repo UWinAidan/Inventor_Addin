@@ -46,6 +46,7 @@ namespace InventorAddin.UI
         {
             yield return new NewPartCommand();
             yield return new SaveAsCopyCommand();
+            yield return new SaveAsReplaceCommand();
             yield return new PartPropertiesCommand();
             yield return new CreatePrintCommand();
             yield return new SettingsCommand();

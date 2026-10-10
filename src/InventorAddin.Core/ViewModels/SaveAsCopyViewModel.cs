@@ -12,6 +12,11 @@ namespace InventorAddin.Core.ViewModels;
 /// assigns the number and makes the copy (<see cref="SaveAsCopyCreator"/>).
 /// </summary>
 /// <remarks>
+/// <para>
+/// Save As and Replace (task 046) uses the same dialog through <see cref="ForReplace"/>: the header and the Save button
+/// say Save As and Replace, the original is the selected component, and <see cref="Warning"/> carries
+/// <see cref="SaveAsReplacer.SubAssemblyWarning"/> when the component sits inside a sub-assembly.
+/// </para>
 /// Designer and Detailer are not fields: they come from <c>DefaultDesigner</c> in Settings, as in New Part. A blank
 /// part type on the original pre-fills the kind's default (A for an assembly, W for a weldment), as Part Properties
 /// and New Part do (Default).
@@ -20,8 +25,17 @@ public sealed class SaveAsCopyViewModel : ObservableObject
 {
     public const string HeaderTitleText = "Save As Copy";
 
+    /// <summary>The header and window title for Save As and Replace (<see cref="ForReplace"/>).</summary>
+    public const string ReplaceHeaderTitleText = "Save As and Replace";
+
+    public const string SaveCopyButtonText = "_Save copy";
+
+    public const string SaveAndReplaceButtonText = "_Save and replace";
+
     private readonly string _originalFullFileName;
     private readonly string _extension;
+    private readonly bool _replace;
+    private readonly string _warning;
 
     private string _partType;
     private string _partName;
@@ -36,9 +50,22 @@ public sealed class SaveAsCopyViewModel : ObservableObject
         DocumentKind kind,
         string? originalPartType,
         string? defaultDesigner)
+        : this(originalFullFileName, kind, originalPartType, defaultDesigner, replace: false, warning: null)
+    {
+    }
+
+    private SaveAsCopyViewModel(
+        string originalFullFileName,
+        DocumentKind kind,
+        string? originalPartType,
+        string? defaultDesigner,
+        bool replace,
+        string? warning)
     {
         ArgumentNullException.ThrowIfNull(originalFullFileName);
 
+        _replace = replace;
+        _warning = warning?.Trim() ?? string.Empty;
         _originalFullFileName = originalFullFileName.Trim();
         Kind = kind;
         Folder = NewPartCreator.DefaultFolder(_originalFullFileName, null);
@@ -60,10 +87,44 @@ public sealed class SaveAsCopyViewModel : ObservableObject
         SaveCommand = new RelayCommand(Save, () => CanSave);
     }
 
+    /// <summary>
+    /// The dialog for Save As and Replace (task 046): the same fields, preview and validation as Save As Copy, for the
+    /// selected component's file.
+    /// </summary>
+    /// <param name="componentFullFileName">The selected component's file; it has been saved.</param>
+    /// <param name="kind">The component's kind.</param>
+    /// <param name="componentPartType">The component's Part Type, as read.</param>
+    /// <param name="defaultDesigner">Designer and Detailer for the copy, from Settings.</param>
+    /// <param name="warning">
+    /// <see cref="SaveAsReplacer.SubAssemblyWarning"/> when the component is inside a sub-assembly; null or blank for a
+    /// top-level component.
+    /// </param>
+    public static SaveAsCopyViewModel ForReplace(
+        string componentFullFileName,
+        DocumentKind kind,
+        string? componentPartType,
+        string? defaultDesigner,
+        string? warning) =>
+        new(componentFullFileName, kind, componentPartType, defaultDesigner, replace: true, warning);
+
     /// <summary>Raised when Save has stored <see cref="Request"/> and the window should close.</summary>
     public event EventHandler? CloseRequested;
 
-    public string HeaderTitle => HeaderTitleText;
+    /// <summary>True for the Save As and Replace dialog (<see cref="ForReplace"/>).</summary>
+    public bool IsReplace => _replace;
+
+    /// <summary>The header and window title: Save As Copy, or Save As and Replace.</summary>
+    public string HeaderTitle => _replace ? ReplaceHeaderTitleText : HeaderTitleText;
+
+    /// <summary>The Save button's text, with its access key.</summary>
+    public string SaveButtonText => _replace ? SaveAndReplaceButtonText : SaveCopyButtonText;
+
+    /// <summary>
+    /// Save As and Replace only: what else changes and cannot be undone (a sub-assembly that is saved). Empty otherwise.
+    /// </summary>
+    public string Warning => _warning;
+
+    public bool HasWarning => _warning.Length > 0;
 
     /// <summary>The original's file name, without its folder, for example <c>AWB-10001,mounting_bracket.ipt</c>.</summary>
     public string HeaderSubline => FileNameOnly(_originalFullFileName);

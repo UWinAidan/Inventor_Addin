@@ -16,7 +16,10 @@ public interface ISaveAsCopySource
     /// </summary>
     void SaveCopyAs(string fullPath);
 
-    /// <summary>Opens the copy saved at <paramref name="fullPath"/>, visible, as the active document.</summary>
+    /// <summary>
+    /// Opens the copy saved at <paramref name="fullPath"/>: for Save As Copy visible, as the active document; for Save
+    /// As and Replace invisibly, since it is closed again before the replace (task 046).
+    /// </summary>
     ICopiedDocument OpenCopy(string fullPath);
 }
 
