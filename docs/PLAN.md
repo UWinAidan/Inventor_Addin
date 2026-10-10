@@ -151,7 +151,7 @@ Planned 2026-10-10. Run in number order; each task depends only on lower numbers
 - [x] 037 Register folder and units settings
 - [x] 038 Windows user name counts as blank in Part Properties
 - [ ] 039 Part number display and Generate part number in Part Properties
-- [ ] 040 New Part dialog view-model and creation properties (Core)
+- [x] 040 New Part dialog view-model and creation properties (Core)
 - [ ] 041 Mass Update scan result and view-model (Core)
 - [x] 042 Icons for the M2 commands, and a ribbon that survives one failing command
 - [ ] 043 New Part command and window

@@ -104,6 +104,10 @@ Small things noticed while building. None is urgent. The parent turns these into
 - The window's local `ValueOrPlaceholder` and `IdentifierOrPlaceholder` styles could become shared pieces. (task 029)
 
 **Numbering**
+- The Metric and Imperial option list is built in both `SettingsViewModel` and `NewPartViewModel`. A shared `UnitsOption.All` would keep the text in one place. (task 040)
+- New Part's folder is checked only for blank and path length. Task 043 should add a full-path and invalid-character check like the register folder's, or make the folder Browse-only. (task 040)
+- `NewPartViewModel.NumberPlaceholder` repeats the `AWB` prefix; build it from `PartNumber.Prefix`. (task 040)
+- New Part: picking the blank part type while the kind is Part, then switching to Assembly, sets the type to A. Check this is wanted when 043 is tested. (task 040)
 - Until task 039 lands, Part Properties shows Inventor's file-name fallback as an assigned number for files whose name has an underscore or a comma, because `PartName.FromFileName` now converts them. Do not build a commit between 034 and 039 for testing. Close this when 039 is committed. (task 034)
 
 **Developer tools**
