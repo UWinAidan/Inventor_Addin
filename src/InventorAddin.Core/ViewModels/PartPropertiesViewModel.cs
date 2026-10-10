@@ -76,6 +76,7 @@ public sealed class PartPropertiesViewModel : ObservableObject
         PartPropertiesSnapshot snapshot,
         IPropertyWriteTarget target,
         string? defaultDesigner,
+        string? windowsUserName,
         CultureInfo culture,
         ILog? log = null)
     {
@@ -134,14 +135,15 @@ public sealed class PartPropertiesViewModel : ObservableObject
 
         PartTypeOptions = options.AsReadOnly();
 
+        // A Designer or Detailer equal to the Windows user name counts as blank (spec 02).
         _designer = snapshot.Designer ?? string.Empty;
-        if (IsEditable && PropertyValues.NormaliseText(_designer).Length == 0)
+        if (IsEditable && IsBlankName(_designer, windowsUserName, defaultDesigner))
         {
             _designer = PropertyValues.NormaliseText(defaultDesigner);
         }
 
         _detailer = snapshot.Detailer ?? string.Empty;
-        if (IsEditable && PropertyValues.NormaliseText(_detailer).Length == 0)
+        if (IsEditable && IsBlankName(_detailer, windowsUserName, defaultDesigner))
         {
             _detailerFollowsDesigner = true;
             _detailer = _designer;
@@ -368,6 +370,10 @@ public sealed class PartPropertiesViewModel : ObservableObject
 
         return fullFileName[(fullFileName.LastIndexOfAny(new[] { '\\', '/' }) + 1)..];
     }
+
+    private static bool IsBlankName(string value, string? windowsUserName, string? defaultDesigner) =>
+        PropertyValues.NormaliseText(value).Length == 0
+        || PersonNames.IsWindowsUserPlaceholder(value, windowsUserName, defaultDesigner);
 
     private static string DisplayOrNotSet(string? value, out bool isSet)
     {

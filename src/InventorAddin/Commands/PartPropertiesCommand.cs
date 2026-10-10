@@ -8,6 +8,7 @@ using InventorAddin.Core.Ribbon;
 using InventorAddin.Core.ViewModels;
 using InventorAddin.Extraction;
 using InventorAddin.UI;
+using SysEnvironment = System.Environment;
 
 namespace InventorAddin.Commands
 {
@@ -37,6 +38,7 @@ namespace InventorAddin.Commands
                 snapshot,
                 target,
                 AddinServices.Settings.DefaultDesigner,
+                SysEnvironment.UserName,
                 CultureInfo.CurrentCulture,
                 AddinServices.Log);
 

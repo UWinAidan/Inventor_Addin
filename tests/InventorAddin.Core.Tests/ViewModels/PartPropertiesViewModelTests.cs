@@ -65,8 +65,9 @@ public sealed class PartPropertiesViewModelTests
         FakeTarget? target = null,
         string? defaultDesigner = DefaultDesigner,
         CultureInfo? culture = null,
-        ILog? log = null) =>
-        new(snapshot, target ?? new FakeTarget(), defaultDesigner, culture ?? Invariant, log);
+        ILog? log = null,
+        string? windowsUserName = null) =>
+        new(snapshot, target ?? new FakeTarget(), defaultDesigner, windowsUserName, culture ?? Invariant, log);
 
     private static List<string> RecordPropertyChanges(INotifyPropertyChanged source)
     {
@@ -81,9 +82,9 @@ public sealed class PartPropertiesViewModelTests
     public void Constructor_RejectsNulls()
     {
         var target = new FakeTarget();
-        Assert.Throws<ArgumentNullException>(() => new PartPropertiesViewModel(null!, target, null, Invariant));
-        Assert.Throws<ArgumentNullException>(() => new PartPropertiesViewModel(Complete(), null!, null, Invariant));
-        Assert.Throws<ArgumentNullException>(() => new PartPropertiesViewModel(Complete(), target, null, null!));
+        Assert.Throws<ArgumentNullException>(() => new PartPropertiesViewModel(null!, target, null, null, Invariant));
+        Assert.Throws<ArgumentNullException>(() => new PartPropertiesViewModel(Complete(), null!, null, null, Invariant));
+        Assert.Throws<ArgumentNullException>(() => new PartPropertiesViewModel(Complete(), target, null, null, null!));
     }
 
     [Fact]
@@ -580,6 +581,134 @@ public sealed class PartPropertiesViewModelTests
             w => Assert.Equal((PartPropertyStorage.PartType, "A"), (w.Location, w.TextValue)),
             w => Assert.Equal((PartPropertyStorage.Designer, DefaultDesigner), (w.Location, w.TextValue)),
             w => Assert.Equal((PartPropertyStorage.Detailer, DefaultDesigner), (w.Location, w.TextValue)));
+    }
+
+    // Windows user name counts as blank (spec 02)
+
+    private const string WindowsUser = "testuser";
+    private const string Person = "A. Person";
+
+    [Theory]
+    [InlineData("testuser")]
+    [InlineData("  TestUser ")]
+    public void WindowsUserAsDesignerAndDetailer_PreFillsFromTheDefault(string stored)
+    {
+        var target = new FakeTarget();
+        var vm = Create(
+            Complete() with { Designer = stored, Detailer = stored },
+            target,
+            defaultDesigner: Person,
+            windowsUserName: WindowsUser);
+
+        Assert.Equal(Person, vm.Designer);
+        Assert.Equal(Person, vm.Detailer);
+        Assert.True(vm.DetailerFollowsDesigner);
+        Assert.True(vm.HasChanges);
+        Assert.Equal(PartPropertiesViewModel.PreFillNotice, vm.StatusText);
+
+        vm.ApplyCommand.Execute(null);
+
+        Assert.Collection(
+            Assert.Single(target.Calls),
+            w => Assert.Equal((PartPropertyStorage.Designer, Person), (w.Location, w.TextValue)),
+            w => Assert.Equal((PartPropertyStorage.Detailer, Person), (w.Location, w.TextValue)));
+    }
+
+    [Fact]
+    public void WindowsUserAsDetailerOnly_FollowsTheFileDesigner()
+    {
+        var vm = Create(
+            Complete() with { Detailer = WindowsUser },
+            defaultDesigner: Person,
+            windowsUserName: WindowsUser);
+
+        Assert.Equal("Alex Example", vm.Designer);
+        Assert.Equal("Alex Example", vm.Detailer);
+        Assert.True(vm.DetailerFollowsDesigner);
+        Assert.True(vm.HasChanges);
+        Assert.Equal(PartPropertiesViewModel.PreFillNotice, vm.StatusText);
+
+        vm.Designer = "Jo Other";
+        Assert.Equal("Jo Other", vm.Detailer);
+    }
+
+    [Fact]
+    public void WindowsUserAsDesignerOnly_KeepsTheFileDetailer()
+    {
+        var vm = Create(
+            Complete() with { Designer = WindowsUser },
+            defaultDesigner: Person,
+            windowsUserName: WindowsUser);
+
+        Assert.Equal(Person, vm.Designer);
+        Assert.Equal("Sam Sample", vm.Detailer);
+        Assert.False(vm.DetailerFollowsDesigner);
+        Assert.True(vm.HasChanges);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void WindowsUser_WithNoDefaultDesigner_IsShownUnchanged(string? defaultDesigner)
+    {
+        var vm = Create(
+            Complete() with { Designer = WindowsUser, Detailer = WindowsUser },
+            defaultDesigner: defaultDesigner,
+            windowsUserName: WindowsUser);
+
+        Assert.Equal(WindowsUser, vm.Designer);
+        Assert.Equal(WindowsUser, vm.Detailer);
+        Assert.False(vm.DetailerFollowsDesigner);
+        Assert.False(vm.HasChanges);
+        Assert.False(vm.ApplyCommand.CanExecute(null));
+        Assert.Equal(string.Empty, vm.StatusText);
+    }
+
+    [Theory]
+    [InlineData(EditBlock.ReadOnlyFile)]
+    [InlineData(EditBlock.NotModifiable)]
+    public void WindowsUser_InAFileThatCannotBeEdited_IsShownUnchanged(EditBlock block)
+    {
+        var vm = Create(
+            Complete() with { Designer = WindowsUser, Detailer = WindowsUser, EditBlock = block },
+            defaultDesigner: Person,
+            windowsUserName: WindowsUser);
+
+        Assert.Equal(WindowsUser, vm.Designer);
+        Assert.Equal(WindowsUser, vm.Detailer);
+        Assert.False(vm.DetailerFollowsDesigner);
+        Assert.False(vm.HasChanges);
+    }
+
+    [Theory]
+    [InlineData(Person)]
+    [InlineData(null)]
+    public void DesignerOtherThanTheWindowsUser_IsKept(string? defaultDesigner)
+    {
+        var vm = Create(
+            Complete() with { Designer = "testuser2", Detailer = "Sam Sample" },
+            defaultDesigner: defaultDesigner,
+            windowsUserName: WindowsUser);
+
+        Assert.Equal("testuser2", vm.Designer);
+        Assert.Equal("Sam Sample", vm.Detailer);
+        Assert.False(vm.HasChanges);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void NoWindowsUserName_BehavesAsBefore(string? windowsUserName)
+    {
+        var vm = Create(
+            Complete() with { Designer = WindowsUser, Detailer = WindowsUser },
+            defaultDesigner: Person,
+            windowsUserName: windowsUserName);
+
+        Assert.Equal(WindowsUser, vm.Designer);
+        Assert.Equal(WindowsUser, vm.Detailer);
+        Assert.False(vm.HasChanges);
     }
 
     // State and commands
