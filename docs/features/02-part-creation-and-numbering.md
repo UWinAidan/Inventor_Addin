@@ -171,6 +171,8 @@ Designer and Detailer are not in the dialog; they come from Settings and can be 
 ## Windows user name as Designer or Detailer
 
 - In Part Properties, a Designer or Detailer equal to the Windows user name (ignoring case and surrounding spaces) counts as blank. Designer pre-fills from `DefaultDesigner`; Detailer then follows Designer. As with every pre-fill, nothing is written until Apply.
+- The same applies to a Designer or Detailer equal to any name in Settings' **Other names** (comma-separated; Aidan, 2026-10-10, task 051), in Part Properties and in Mass Update.
+- Mass Update's row and count text says "your name" rather than "Windows user name", since the match may be an Other name (Default, task 048).
 - When `DefaultDesigner` is blank the rule does not apply and the value is shown as it is (Default), so Apply never clears a Designer with nothing to replace it.
 
 ## Core logic (testable without Inventor)

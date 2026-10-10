@@ -95,7 +95,10 @@ public sealed class PartPropertiesViewModel : ObservableObject
     /// </param>
     /// <param name="assigner">What the Generate button calls.</param>
     /// <param name="defaultDesigner">The Default designer from Settings.</param>
-    /// <param name="windowsUserName">The Windows user name, which counts as a blank Designer or Detailer.</param>
+    /// <param name="namesThatMeanMe">
+    /// The names that count as a blank Designer or Detailer: the Windows user name and the Other names from Settings
+    /// (<see cref="PersonNames.NamesThatMeanMe"/>).
+    /// </param>
     /// <param name="culture">The culture the cost is shown and typed in.</param>
     /// <param name="log">Where writes and failures are logged.</param>
     public PartPropertiesViewModel(
@@ -104,7 +107,7 @@ public sealed class PartPropertiesViewModel : ObservableObject
         Func<string?, bool> hasNumber,
         IPartNumberAssigner assigner,
         string? defaultDesigner,
-        string? windowsUserName,
+        IReadOnlyCollection<string> namesThatMeanMe,
         CultureInfo culture,
         ILog? log = null)
     {
@@ -112,6 +115,7 @@ public sealed class PartPropertiesViewModel : ObservableObject
         ArgumentNullException.ThrowIfNull(target);
         ArgumentNullException.ThrowIfNull(hasNumber);
         ArgumentNullException.ThrowIfNull(assigner);
+        ArgumentNullException.ThrowIfNull(namesThatMeanMe);
         ArgumentNullException.ThrowIfNull(culture);
 
         _original = snapshot;
@@ -167,15 +171,15 @@ public sealed class PartPropertiesViewModel : ObservableObject
 
         PartTypeOptions = options.AsReadOnly();
 
-        // A Designer or Detailer equal to the Windows user name counts as blank (spec 02).
+        // A Designer or Detailer equal to the Windows user name, or to one of the Other names, counts as blank (spec 02).
         _designer = snapshot.Designer ?? string.Empty;
-        if (IsEditable && IsBlankName(_designer, windowsUserName, defaultDesigner))
+        if (IsEditable && IsBlankName(_designer, namesThatMeanMe, defaultDesigner))
         {
             _designer = PropertyValues.NormaliseText(defaultDesigner);
         }
 
         _detailer = snapshot.Detailer ?? string.Empty;
-        if (IsEditable && IsBlankName(_detailer, windowsUserName, defaultDesigner))
+        if (IsEditable && IsBlankName(_detailer, namesThatMeanMe, defaultDesigner))
         {
             _detailerFollowsDesigner = true;
             _detailer = _designer;
@@ -453,9 +457,9 @@ public sealed class PartPropertiesViewModel : ObservableObject
         return fullFileName[(fullFileName.LastIndexOfAny(new[] { '\\', '/' }) + 1)..];
     }
 
-    private static bool IsBlankName(string value, string? windowsUserName, string? defaultDesigner) =>
+    private static bool IsBlankName(string value, IReadOnlyCollection<string> namesThatMeanMe, string? defaultDesigner) =>
         PropertyValues.NormaliseText(value).Length == 0
-        || PersonNames.IsWindowsUserPlaceholder(value, windowsUserName, defaultDesigner);
+        || PersonNames.IsMePlaceholder(value, namesThatMeanMe, defaultDesigner);
 
     private static string DisplayOrNotSet(string? value, out bool isSet)
     {

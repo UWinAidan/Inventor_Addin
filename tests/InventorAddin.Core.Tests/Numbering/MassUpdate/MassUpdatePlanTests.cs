@@ -28,7 +28,7 @@ public sealed class MassUpdatePlanTests
         string partType = "M",
         DocumentKind kind = DocumentKind.Part,
         bool open = false) =>
-        ScannedFileState.For(new ScannedFile(path, partNumber, designer, detailer, partType, kind, open), Register, User);
+        ScannedFileState.For(new ScannedFile(path, partNumber, designer, detailer, partType, kind, open), Register, [User]);
 
     [Fact]
     public void NothingTickedGivesAnEmptyPlan()
@@ -105,6 +105,21 @@ public sealed class MassUpdatePlanTests
                 PropertyWrite.SetText(PartPropertyStorage.Detailer, Designer),
             ],
             update.Writes);
+    }
+
+    [Fact]
+    public void ReplaceNamesSetsAnOtherNameThatMeansMe()
+    {
+        var state = ScannedFileState.For(
+            new ScannedFile(@"C:\Work\a.ipt", "AWB-10001", "Sam Sample", " t.login", "M", DocumentKind.Part),
+            Register,
+            PersonNames.NamesThatMeanMe(User, "T.Login"));
+
+        var plan = MassUpdatePlan.Build([(state, MassUpdateActions.ReplaceNames)], Designer);
+
+        var update = Assert.Single(plan.Updates);
+        var write = Assert.Single(update.Writes);
+        Assert.Equal((PartPropertyStorage.Detailer, Designer), (write.Location, write.TextValue));
     }
 
     [Fact]

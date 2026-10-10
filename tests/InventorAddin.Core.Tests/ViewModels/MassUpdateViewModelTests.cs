@@ -29,7 +29,7 @@ public sealed class MassUpdateViewModelTests
         string? error = null) =>
         new($@"{Folder}\{name}", partNumber, designer, detailer, "M", DocumentKind.Part, open, error);
 
-    private static MassUpdateViewModel Create(string defaultDesigner = Designer) => new(Folder, User, defaultDesigner);
+    private static MassUpdateViewModel Create(string defaultDesigner = Designer) => new(Folder, [User], defaultDesigner);
 
     private static MassUpdateViewModel Scanned(string defaultDesigner, params ScannedFile[] files)
     {
@@ -278,6 +278,30 @@ public sealed class MassUpdateViewModelTests
             File("f.ipt", "", User, open: true));
 
         Assert.Equal("6 files, 2 to register, 2 to number, 3 with the Windows user name", vm.CountsText);
+    }
+
+    [Fact]
+    public void OtherNamesThatMeanMeAreOfferedLikeTheWindowsUser()
+    {
+        var vm = new MassUpdateViewModel(Folder, PersonNames.NamesThatMeanMe(User, "T.Login, tl"), Designer);
+        vm.ShowScan([File("a.ipt", "AWB-10001", "t.login", "TL"), File("b.ipt", "AWB-10001", "T.Login2")], Register);
+
+        var row = vm.Rows[0];
+        Assert.True(row.CanReplaceNames);
+        Assert.Equal("Has a number; Windows user name as Designer and Detailer", row.StateText);
+        Assert.False(vm.Rows[1].CanReplaceNames);
+        Assert.Equal("2 files, 0 to register, 0 to number, 1 with the Windows user name", vm.CountsText);
+
+        row.ReplaceNames = true;
+        var update = Assert.Single(vm.BuildPlan().Updates);
+        Assert.All(update.Writes, w => Assert.Equal(Designer, w.TextValue));
+        Assert.Equal(2, update.Writes.Count);
+    }
+
+    [Fact]
+    public void ConstructorRejectsNullNames()
+    {
+        Assert.Throws<ArgumentNullException>(() => new MassUpdateViewModel(Folder, null!, Designer));
     }
 
     [Fact]

@@ -40,13 +40,14 @@ namespace InventorAddin.Commands
             var register = AddinServices.RegisterStore;
             var assigner = new RegisterPartNumberAssigner(register, snapshot, target, AddinServices.Log);
 
+            var settings = AddinServices.Settings;
             var viewModel = new PartPropertiesViewModel(
                 snapshot,
                 target,
                 register.HasNumber,
                 assigner,
-                AddinServices.Settings.DefaultDesigner,
-                SysEnvironment.UserName,
+                settings.DefaultDesigner,
+                PersonNames.NamesThatMeanMe(SysEnvironment.UserName, settings.OtherNamesForMe),
                 CultureInfo.CurrentCulture,
                 AddinServices.Log);
 

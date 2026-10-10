@@ -60,8 +60,9 @@ public sealed class MassUpdateRow : ObservableObject
     public string PartNumberText => PropertyValues.NormaliseText(State.File.PartNumber);
 
     /// <summary>
-    /// The file's state: the reason it offers no action, or the number state and, when present, which names are the
-    /// Windows user name, joined with <c>"; "</c>.
+    /// The file's state: the reason it offers no action, or the number state and, when present, which names mean the
+    /// user (the Windows user name or one of the Other names), joined with <c>"; "</c>. The text still says
+    /// "Windows user name" for either.
     /// </summary>
     public string StateText
     {
@@ -79,7 +80,7 @@ public sealed class MassUpdateRow : ObservableObject
                 _ => NoNumberText,
             };
 
-            var names = (State.DesignerIsWindowsUser, State.DetailerIsWindowsUser) switch
+            var names = (State.DesignerIsMe, State.DetailerIsMe) switch
             {
                 (true, true) => "Windows user name as Designer and Detailer",
                 (true, false) => "Windows user name as Designer",
@@ -95,11 +96,11 @@ public sealed class MassUpdateRow : ObservableObject
 
     public bool CanAssign => State.Offers(MassUpdateActions.Assign);
 
-    /// <summary>False when the names are not the Windows user name, or the Default designer is blank.</summary>
+    /// <summary>False when neither name means the user, or the Default designer is blank.</summary>
     public bool CanReplaceNames { get; }
 
     /// <summary>
-    /// <see cref="MassUpdateViewModel.ReplaceNamesNeedsDefaultDesignerText"/> when the file has the Windows user name
+    /// <see cref="MassUpdateViewModel.ReplaceNamesNeedsDefaultDesignerText"/> when a name in the file means the user
     /// but the Default designer is blank; null otherwise.
     /// </summary>
     public string? ReplaceNamesNote { get; }
@@ -118,7 +119,7 @@ public sealed class MassUpdateRow : ObservableObject
         set => SetProperty(ref _assign, value && CanAssign);
     }
 
-    /// <summary>Ticked to replace the Windows user name. Stays false when the action is not offered.</summary>
+    /// <summary>Ticked to replace the names that mean the user. Stays false when the action is not offered.</summary>
     public bool ReplaceNames
     {
         get => _replaceNames;
@@ -162,7 +163,7 @@ public sealed class MassUpdateViewModel : ObservableObject
 {
     public const string ReplaceNamesNeedsDefaultDesignerText = "Set Default designer in Settings first.";
 
-    private readonly string _windowsUserName;
+    private readonly IReadOnlyList<string> _namesThatMeanMe;
     private readonly string _defaultDesigner;
     private readonly RelayCommand _scanCommand;
     private readonly RelayCommand _applyCommand;
@@ -170,10 +171,16 @@ public sealed class MassUpdateViewModel : ObservableObject
     private string _folder;
     private IReadOnlyList<MassUpdateRow> _rows = Array.Empty<MassUpdateRow>();
 
-    public MassUpdateViewModel(string? defaultFolder, string? windowsUserName, string? defaultDesigner)
+    /// <param name="defaultFolder">The folder shown at open: the Work folder from Settings.</param>
+    /// <param name="namesThatMeanMe">
+    /// The Windows user name and the Other names from Settings (<see cref="PersonNames.NamesThatMeanMe"/>).
+    /// </param>
+    /// <param name="defaultDesigner">The Default designer from Settings, which replaces those names.</param>
+    public MassUpdateViewModel(string? defaultFolder, IReadOnlyCollection<string> namesThatMeanMe, string? defaultDesigner)
     {
+        ArgumentNullException.ThrowIfNull(namesThatMeanMe);
         _folder = defaultFolder ?? "";
-        _windowsUserName = PropertyValues.NormaliseText(windowsUserName);
+        _namesThatMeanMe = namesThatMeanMe.ToList().AsReadOnly();
         _defaultDesigner = PropertyValues.NormaliseText(defaultDesigner);
         _scanCommand = new RelayCommand(RequestScan, () => PropertyValues.NormaliseText(_folder).Length > 0);
         _applyCommand = new RelayCommand(RequestApply, () => UpdateCount > 0);
@@ -217,7 +224,8 @@ public sealed class MassUpdateViewModel : ObservableObject
 
     /// <summary>
     /// For example <c>"12 files, 3 to register, 5 to number, 7 with the Windows user name"</c>: every file listed,
-    /// then the files each action applies to. Files open in Inventor or not read count only in the first figure.
+    /// then the files each action applies to ("with the Windows user name" counts the Other names too). Files open in
+    /// Inventor or not read count only in the first figure.
     /// Empty before a scan.
     /// </summary>
     public string CountsText
@@ -291,7 +299,7 @@ public sealed class MassUpdateViewModel : ObservableObject
         }
 
         var rows = files
-            .Select(f => new MassUpdateRow(ScannedFileState.For(f, register, _windowsUserName), _defaultDesigner.Length > 0))
+            .Select(f => new MassUpdateRow(ScannedFileState.For(f, register, _namesThatMeanMe), _defaultDesigner.Length > 0))
             .ToList();
         foreach (var row in rows)
         {

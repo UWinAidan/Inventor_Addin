@@ -88,14 +88,15 @@ public sealed class PartPropertiesViewModelTests
         ILog? log = null,
         string? windowsUserName = null,
         Func<string?, bool>? hasNumber = null,
-        FakeAssigner? assigner = null) =>
+        FakeAssigner? assigner = null,
+        IReadOnlyCollection<string>? namesThatMeanMe = null) =>
         new(
             snapshot,
             target ?? new FakeTarget(),
             hasNumber ?? RegisteredOnly10001,
             assigner ?? new FakeAssigner(),
             defaultDesigner,
-            windowsUserName,
+            namesThatMeanMe ?? (windowsUserName is null ? [] : [windowsUserName]),
             culture ?? Invariant,
             log);
 
@@ -114,11 +115,12 @@ public sealed class PartPropertiesViewModelTests
         var target = new FakeTarget();
         var assigner = new FakeAssigner();
         Func<string?, bool> hasNumber = _ => false;
-        Assert.Throws<ArgumentNullException>(() => new PartPropertiesViewModel(null!, target, hasNumber, assigner, null, null, Invariant));
-        Assert.Throws<ArgumentNullException>(() => new PartPropertiesViewModel(Complete(), null!, hasNumber, assigner, null, null, Invariant));
-        Assert.Throws<ArgumentNullException>(() => new PartPropertiesViewModel(Complete(), target, null!, assigner, null, null, Invariant));
-        Assert.Throws<ArgumentNullException>(() => new PartPropertiesViewModel(Complete(), target, hasNumber, null!, null, null, Invariant));
-        Assert.Throws<ArgumentNullException>(() => new PartPropertiesViewModel(Complete(), target, hasNumber, assigner, null, null, null!));
+        Assert.Throws<ArgumentNullException>(() => new PartPropertiesViewModel(null!, target, hasNumber, assigner, null, [], Invariant));
+        Assert.Throws<ArgumentNullException>(() => new PartPropertiesViewModel(Complete(), null!, hasNumber, assigner, null, [], Invariant));
+        Assert.Throws<ArgumentNullException>(() => new PartPropertiesViewModel(Complete(), target, null!, assigner, null, [], Invariant));
+        Assert.Throws<ArgumentNullException>(() => new PartPropertiesViewModel(Complete(), target, hasNumber, null!, null, [], Invariant));
+        Assert.Throws<ArgumentNullException>(() => new PartPropertiesViewModel(Complete(), target, hasNumber, assigner, null, [], null!));
+        Assert.Throws<ArgumentNullException>(() => new PartPropertiesViewModel(Complete(), target, hasNumber, assigner, null, null!, Invariant));
     }
 
     [Fact]
@@ -774,6 +776,91 @@ public sealed class PartPropertiesViewModelTests
 
         Assert.Equal(WindowsUser, vm.Designer);
         Assert.Equal(WindowsUser, vm.Detailer);
+        Assert.False(vm.HasChanges);
+    }
+
+    // Other names that mean me (spec 02)
+
+    private const string OtherName = "T.User";
+
+    private static readonly IReadOnlyList<string> MyNames = PersonNames.NamesThatMeanMe(WindowsUser, "T.User, tu");
+
+    [Theory]
+    [InlineData("T.User")]
+    [InlineData(" t.user ")]
+    [InlineData("TU")]
+    public void OtherNameAsDesigner_PreFillsFromTheDefault(string stored)
+    {
+        var vm = Create(
+            Complete() with { Designer = stored, Detailer = "Sam Sample" },
+            defaultDesigner: Person,
+            namesThatMeanMe: MyNames);
+
+        Assert.Equal(Person, vm.Designer);
+        Assert.Equal("Sam Sample", vm.Detailer);
+        Assert.False(vm.DetailerFollowsDesigner);
+        Assert.True(vm.HasChanges);
+        Assert.Equal(PartPropertiesViewModel.PreFillNotice, vm.StatusText);
+    }
+
+    [Fact]
+    public void OtherNameAsDetailer_FollowsTheFileDesigner()
+    {
+        var vm = Create(
+            Complete() with { Detailer = OtherName },
+            defaultDesigner: Person,
+            namesThatMeanMe: MyNames);
+
+        Assert.Equal("Alex Example", vm.Designer);
+        Assert.Equal("Alex Example", vm.Detailer);
+        Assert.True(vm.DetailerFollowsDesigner);
+        Assert.True(vm.HasChanges);
+    }
+
+    [Fact]
+    public void WindowsUserAsDesignerAndOtherNameAsDetailer_BothPreFill()
+    {
+        var target = new FakeTarget();
+        var vm = Create(
+            Complete() with { Designer = WindowsUser, Detailer = OtherName },
+            target,
+            defaultDesigner: Person,
+            namesThatMeanMe: MyNames);
+
+        Assert.Equal(Person, vm.Designer);
+        Assert.Equal(Person, vm.Detailer);
+        Assert.True(vm.DetailerFollowsDesigner);
+
+        vm.ApplyCommand.Execute(null);
+
+        Assert.Collection(
+            Assert.Single(target.Calls),
+            w => Assert.Equal((PartPropertyStorage.Designer, Person), (w.Location, w.TextValue)),
+            w => Assert.Equal((PartPropertyStorage.Detailer, Person), (w.Location, w.TextValue)));
+    }
+
+    [Fact]
+    public void OtherName_WithNoDefaultDesigner_IsShownUnchanged()
+    {
+        var vm = Create(
+            Complete() with { Designer = OtherName, Detailer = OtherName },
+            defaultDesigner: null,
+            namesThatMeanMe: MyNames);
+
+        Assert.Equal(OtherName, vm.Designer);
+        Assert.Equal(OtherName, vm.Detailer);
+        Assert.False(vm.HasChanges);
+    }
+
+    [Fact]
+    public void NameNotInTheList_IsKept()
+    {
+        var vm = Create(
+            Complete() with { Designer = "T.User2", Detailer = "Sam Sample" },
+            defaultDesigner: Person,
+            namesThatMeanMe: MyNames);
+
+        Assert.Equal("T.User2", vm.Designer);
         Assert.False(vm.HasChanges);
     }
 

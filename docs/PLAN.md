@@ -165,7 +165,7 @@ Planned 2026-10-10. Run in number order; each task depends only on lower numbers
 - [ ] 048 Mass Update command and window
 - [x] 049 Settings: shorter units label, CAD folders, other names that mean me
 - [x] 050 Register AssignedBy is the Default designer
-- [ ] 051 Other names that mean me, in Part Properties and Mass Update
+- [x] 051 Other names that mean me, in Part Properties and Mass Update
 
 **Two runs.** Spike 032 settles what the creating, renaming and printing commands depend on: how Inventor finds its default templates in metric and imperial, creating and saving a document with a comma in its name, the workspace path, updating references to a renamed file in closed files, opening files invisibly, placing a base view, replacing an occurrence, and how long a disconnected NAS blocks. Nothing is planned on top of an unproven assumption, so:
 

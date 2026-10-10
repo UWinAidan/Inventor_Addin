@@ -96,3 +96,4 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-10-10 | The Other CAD folders setting is labelled "Other folders" in Settings, so it fits the label column | Default | task 049 |
 | 2026-10-10 | The register folder and work folder Browse buttons sit beside their boxes | Default | task 049 |
 | 2026-10-10 | An `otherCadFolders` value in `settings.json` that is not a list makes the file invalid (`.bad`), as every wrong type except an unknown units name does | Default | task 049 |
+| 2026-10-10 | Mass Update says "your name" rather than "Windows user name", since a match may be one of the Other names | Default | task 048 |
