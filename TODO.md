@@ -6,14 +6,22 @@ Last updated: 2026-10-10
 
 ## Next up
 
-1. Run M2 cloud run 1 (tasks 033 to 042): "Run milestone M2 following docs/WORKFLOW.md." It skips 032 and stops before 043, which wait on the spike.
-2. Aidan builds run 1 on Windows, works through its checks, and runs spike 032 (`docs/tasks/032-spike-create-rename-print.md`) in a local session. Commit its Results.
-3. Run M2 cloud run 2 (tasks 043 to 048).
+1. Aidan builds run 1 (tasks 033 to 042) on Windows and works through the M2 run 1 checks below. Run 1 is on `main` through PR #23 plus the follow-up pull request for 036, 039, 040 and 041.
+2. Aidan runs spike 032 (`docs/tasks/032-spike-create-rename-print.md`) in a local session and commits its Results.
+3. Run M2 cloud run 2 (tasks 043 to 048): "Run milestone M2 following docs/WORKFLOW.md."
 4. Aidan finishes the Part Properties checks listed below; some will be easier once M2's new parts exist.
 
 ## Waiting on Aidan: checks in Inventor
 
-From the Part Properties checklist (task 019). Confirmed so far: the window opens on an assembly, pre-fills Designer, Detailer and part type A, writes Description, Designer and Cost correctly, one Undo reverts an Apply, and the blank Part type entry can be clicked.
+**M2 run 1** (full steps in each task's Verification section)
+- [ ] Task 037, Settings: units dropdown and register folder, Browse, validation, access keys, an unknown units value in `settings.json`; is "Units for new files" cut off?
+- [ ] Task 038, Part Properties: a Designer or Detailer equal to the Windows login name is replaced by the default designer, and left alone when the default is blank
+- [ ] Task 039, Generate part number: online, offline, Undo, lock busy, duplicates, a typed number not in the register, a never-saved part, a new-format file name, and a register folder changed while Inventor runs (11 steps)
+- [ ] Task 042: ribbon unchanged with no new log warnings; do the five new icons in `docs/ui-mockups/ribbon-icons.png` read? Optionally, force one command to fail and check the rest of the ribbon still builds
+
+From Part Properties (task 019):
+
+Confirmed so far: the window opens on an assembly, pre-fills Designer, Detailer and part type A, writes Description, Designer and Cost correctly, one Undo reverts an Apply, and the blank Part type entry can be clicked.
 
 - [ ] Clear Detailer and Part type, apply: the custom properties are deleted from the Custom tab, not left empty
 - [ ] Edit a part in place inside an assembly, change Designer, apply, return to the assembly, Undo once: does it revert? (open since task 006)
