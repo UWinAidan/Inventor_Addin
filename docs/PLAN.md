@@ -113,6 +113,8 @@ Planned 2026-10-07. Run in number order; each task depends only on lower numbers
 
 Folded in from `TODO.md` follow-ups: the empty gap in Part Properties (029), the Settings error that stays visible (023, 028), the build's deploy message (025), and one ribbon failure stopping the rest (030).
 
+**Done.** Every Windows check passed (reported 2026-10-10). The build's deploy line needs two small fixes, recorded as follow-ups in `TODO.md`.
+
 Left out until Aidan agrees: the reviewer styling checklist and the PowerShell build script that spec 08 proposes. Task 031 checks the window rules with a test instead of a reviewer checklist; it is a default Aidan can drop.
 
 ### M2: Part creation and numbering (spec 02)

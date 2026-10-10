@@ -2,42 +2,23 @@
 
 Everything that needs doing and is not already a task in `docs/PLAN.md`. Kept current by the parent session: items are added when they come up and removed when they are done or turned into a task. Where the project stands is in `STATUS.md`; why things are the way they are is in `DECISIONS.md`.
 
-Last updated: 2026-10-07
+Last updated: 2026-10-10
 
 ## Next up
 
-1. Aidan builds the M1b run 2 branch (`claude/tasks-026-to-031-e9rrxe`) on Windows with Inventor closed, fixes any compile errors, and works through the window style and icon checks below. The build also replaces the spike 020 build still deployed.
-2. Aidan finishes the Part Properties checks listed below.
-3. Aidan decides the numbering configuration (spec 02), then: plan M2.
+1. Aidan finishes the Part Properties checks listed below.
+2. Aidan decides the numbering configuration (spec 02), then: plan M2.
 
 ## Waiting on Aidan: checks in Inventor
 
-From the Part Properties checklist (task 019). Confirmed so far: the window opens on an assembly, pre-fills Designer, Detailer and part type A, writes Description, Designer and Cost correctly, and one Undo reverts an Apply.
+From the Part Properties checklist (task 019). Confirmed so far: the window opens on an assembly, pre-fills Designer, Detailer and part type A, writes Description, Designer and Cost correctly, one Undo reverts an Apply, and the blank Part type entry can be clicked.
 
 - [ ] Clear Detailer and Part type, apply: the custom properties are deleted from the Custom tab, not left empty
 - [ ] Edit a part in place inside an assembly, change Designer, apply, return to the assembly, Undo once: does it revert? (open since task 006)
 - [ ] A read-only file opens with every field disabled and a line saying why
 - [ ] A part with `Part Type` set to `m` in Inventor's own dialog shows `M`
-- [ ] A new, never-saved part: header says "Not saved yet", part name blank, Apply still writes Designer and Detailer
-- [ ] Part type dropdown: the blank entry at the top can be clicked
+- [ ] A new, never-saved part: Apply still writes Designer and Detailer (the header and part number rows were confirmed on 2026-10-07: New part, Not saved yet, Not assigned)
 - [ ] With "Show developer tools" switched off and Inventor restarted: is the Developer panel gone, or does Inventor keep showing it? (open since task 007)
-
-From the build deploy line (task 025):
-
-- [ ] With Inventor closed, `dotnet build InventorAddin.slnx`: the last lines include `Deployed add-in to ...`, and About shows this build's time
-- [ ] With Inventor open, build again: the build succeeds, prints the `NOT deployed` warning and no `Deployed` line
-- [ ] `dotnet build InventorAddin.slnx -p:DeployToInventor=false`: neither line is printed
-
-From the window style and icons (tasks 026 to 031; full steps in each task file and in the pull request):
-
-- [ ] The add-in builds on Windows (first build of 026 to 030; needs `stdole.dll` in Inventor's `Bin` folder)
-- [ ] `dotnet test tests/InventorAddin.Core.Tests` passes on Windows (the XAML rules test from 031 finds files by path)
-- [ ] About, Settings and Part Properties in the light and the dark theme: shared header, sections and footer, colours as in spec 08, dark title bar in dark, no dark-on-dark text (tasks 026, 028, 029)
-- [ ] Keyboard: Tab order, access keys, Enter and Esc, and the accent focus outline in each window (026, 028, 029)
-- [ ] Part Properties: Not assigned and Not set placeholders, the part type dropdown and its side note and tooltip, the blank entry clickable, no empty band above the buttons (029)
-- [ ] A new, never-saved part: record what the Part number row shows (spec 08, question 5) (029)
-- [ ] Ribbon icons in both themes (restart after switching), with no white edge in dark; header icons in each window; one `INFO` line naming the icon set and no icon warnings in the log (030)
-- [ ] Section headings: does the hair-space letter spacing read as wide spacing? (026)
 
 
 ## Waiting on Aidan: decisions
@@ -87,18 +68,17 @@ Small things noticed while building. None is urgent. The parent turns these into
 
 **Build and workflow**
 - There is no `global.json`, so the cloud and Windows may build with different .NET SDKs. Pin it if builds start to differ. (task 001)
-- With Inventor open, the deploy `Copy` may retry for about 10 s before the `NOT deployed` line appears. If that is annoying, set `Retries` low on both copies. Any copy failure is reported as a lock; the MSBuild warning above it shows the real cause. (task 025)
+- **Make the deploy line visible in a plain `dotnet build`.** On Aidan's PC the `Deployed add-in to ...` line only appears with `-tl:off`: the terminal logger hides high-importance messages. Make it show in a plain `dotnet build InventorAddin.slnx` (for example a `Directory.Build.rsp` with `-tl:off`, or another way the terminal logger prints), then update step 3 of "Aidan's part" in `docs/WORKFLOW.md` to match. (task 025, Windows check 2026-10-07)
+- **Cut the deploy copy retries.** With Inventor open the build succeeds, but the `NOT deployed` case prints about 10 warnings, one per `Copy` retry. Set `Retries` low (0 or 1) on both copies so it is a line or two. Any copy failure is still reported as a lock; the MSBuild warning above it shows the real cause. One attempt with Inventor open crashed with `MSB4166` (child node exited); the rerun was fine. (task 025, Windows check 2026-10-07)
 
 **Ribbon and shell**
 - The agent definitions say "the AWB Addin add-in", which repeats "add-in". (task 011)
 
 **Ribbon icons**
-- The deployed add-in on Aidan's PC is still the spike 020 build. Rebuild with Inventor closed to replace it. (task 020)
 - Task 030: embed only `UI/Icons/*.png`. The `.svg` sources sit in the same folder and must stay out of the build. (task 024)
 
 **Window style**
 - The remark in `UiTheme.cs` still says the dark-theme rule waits for spike 020; name the confirmed `LightTheme` and `DarkTheme`. (task 026)
-- Section headings use a hair space (U+200A) between letters. If it does not read as wide spacing in Inventor, try a thin space (U+2009). (task 026)
 - Settings: the gap between a control and its note is the full row gap (9). If it looks loose, add a shared `HelpText` style. (task 028)
 - Settings: the restart note lines up with the checkbox's box, not its label text. (task 028)
 - Settings: "Show developer tools" has no access key; D is taken by Default designer. Alt+S is free. (task 028)
@@ -120,7 +100,6 @@ Small things noticed while building. None is urgent. The parent turns these into
 - `PartNumber`, `Material` and `Finish` on `PartPropertiesViewModel` are no longer bound by the window. Remove them, or keep them for a later field. (task 029)
 - The Part Properties window now sizes to its content, so a long status message widens it, up to 560, until the message clears. If that is distracting, fix the width in `UI/Theme/`. (task 029)
 - The window's local `ValueOrPlaceholder` and `IdentifierOrPlaceholder` styles could become shared pieces. (task 029)
-- If the blank Part type entry is too short to click, give the shared `ComboBoxItem` style a minimum height. (task 029)
 
 **Developer tools**
 - JSON exports include `BoundingBox` lengths, which are derived values. Mark them ignored if exports should not carry them. (task 001)
