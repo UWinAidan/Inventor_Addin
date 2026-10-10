@@ -28,4 +28,29 @@ public sealed record AddinSettings
     }
 
     private string _defaultDesigner = string.Empty;
+
+    /// <summary>
+    /// The folder the shared part number register is kept in when nothing else has been chosen (spec 02,
+    /// "The register: Location"). Aidan's choice; this is the only place it appears in code.
+    /// </summary>
+    public const string DefaultRegisterFolder = @"B:\aidan\AWB_Design_Data";
+
+    /// <summary>
+    /// The folder holding the shared part number register. Defaults to <see cref="DefaultRegisterFolder"/>; a null
+    /// (for example <c>"registerFolder": null</c> in the file) is stored as the default. Blank is kept as blank and
+    /// means "no shared register": every number is assigned from this PC's copy.
+    /// </summary>
+    public string RegisterFolder
+    {
+        get => _registerFolder;
+        set => _registerFolder = value ?? DefaultRegisterFolder;
+    }
+
+    private string _registerFolder = DefaultRegisterFolder;
+
+    /// <summary>
+    /// The units new files are created in. Written to the file as the member name (<c>"defaultUnits": "Metric"</c>).
+    /// <see cref="SettingsStore.Load"/> reads an unknown value as <see cref="UnitsSystem.Metric"/> with a warning.
+    /// </summary>
+    public UnitsSystem DefaultUnits { get; set; } = UnitsSystem.Metric;
 }

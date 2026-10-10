@@ -87,6 +87,11 @@ Small things noticed while building. None is urgent. The parent turns these into
 
 - XAML rules test: C# in `UI/Controls/` is not checked, `DynamicResource` keys are not checked to exist, and a size binding with a typed `FallbackValue` passes. (task 031)
 
+**Settings window**
+- "Units for new files" may be cut off by the 100-wide label column. Widen the shared `FieldRow` label column or shorten the label; check in Inventor. (task 037)
+- A shared style for a button beside a text box (for example `BrowseButton`), so Browse can sit on the register folder row. New Part's folder field will want it. (task 037)
+- The Browse handler calls `Directory.Exists` on the UI thread, which can stall on a disconnected NAS drive. Drop the check or move it off the UI thread if it shows. (task 037)
+
 **Part properties**
 - One Apply writes one log line plus one per property. Keep the summary line and log the per-property lines only on failure. (tasks 018, 019)
 - Weight is read through code that also computes volume, area and centre of mass. On a large assembly the window may open slowly; read only the mass, or read it after the window opens. (task 018)

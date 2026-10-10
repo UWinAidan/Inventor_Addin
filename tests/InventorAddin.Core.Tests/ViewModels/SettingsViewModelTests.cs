@@ -692,6 +692,363 @@ public sealed class SettingsViewModelTests : IDisposable
         Assert.Equal(error, vm.ErrorText);
     }
 
+    // ---- Register folder (task 037) ----
+
+    [Fact]
+    public void RegisterFolder_StartsWithGivenValue()
+    {
+        var vm = Create(new AddinSettings { RegisterFolder = @"C:\Shared" });
+
+        Assert.Equal(@"C:\Shared", vm.RegisterFolder);
+        Assert.False(vm.IsDirty);
+        Assert.Null(vm.ErrorText);
+    }
+
+    [Fact]
+    public void RegisterFolder_DefaultSettings_ShowsDefaultFolder_AndIsValid()
+    {
+        var vm = Create();
+
+        Assert.Equal(AddinSettings.DefaultRegisterFolder, vm.RegisterFolder);
+        Assert.Null(vm.ErrorText);
+    }
+
+    [Fact]
+    public void RegisterFolder_Changing_MakesDirty_RaisesValueAndIsDirty()
+    {
+        var vm = Create();
+        var changed = RecordPropertyChanges(vm);
+        int canExecuteChanged = 0;
+        vm.SaveCommand.CanExecuteChanged += (_, _) => canExecuteChanged++;
+
+        vm.RegisterFolder = @"D:\Register";
+
+        Assert.True(vm.IsDirty);
+        Assert.True(vm.SaveCommand.CanExecute(null));
+        Assert.Equal(new[] { nameof(SettingsViewModel.RegisterFolder), nameof(SettingsViewModel.IsDirty) }, changed);
+        Assert.Equal(1, canExecuteChanged);
+    }
+
+    [Fact]
+    public void RegisterFolder_ChangingBack_ClearsDirty()
+    {
+        var vm = Create();
+
+        vm.RegisterFolder = @"D:\Register";
+        vm.RegisterFolder = AddinSettings.DefaultRegisterFolder;
+
+        Assert.False(vm.IsDirty);
+        Assert.False(vm.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void RegisterFolder_SurroundingSpaces_AreNotDirty()
+    {
+        var vm = Create();
+
+        vm.RegisterFolder = "  " + AddinSettings.DefaultRegisterFolder + " ";
+
+        Assert.False(vm.IsDirty);
+        Assert.Null(vm.ErrorText);
+    }
+
+    [Fact]
+    public void RegisterFolder_Save_WritesTrimmedValue_AndShowsIt()
+    {
+        var vm = Create();
+        vm.RegisterFolder = @"  D:\Register  ";
+        var changed = RecordPropertyChanges(vm);
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.Equal(@"D:\Register", new SettingsStore(_folder).Load().Settings.RegisterFolder);
+        Assert.Equal(@"D:\Register", vm.SavedSettings!.RegisterFolder);
+        Assert.Equal(@"D:\Register", vm.RegisterFolder);
+        Assert.Contains(nameof(SettingsViewModel.RegisterFolder), changed);
+        Assert.False(vm.IsDirty);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void RegisterFolder_Blank_IsValid_AndSavesBlank(string typed)
+    {
+        var vm = Create();
+
+        vm.RegisterFolder = typed;
+
+        Assert.Null(vm.ErrorText);
+        Assert.True(vm.IsDirty);
+        vm.SaveCommand.Execute(null);
+        Assert.Equal("", new SettingsStore(_folder).Load().Settings.RegisterFolder);
+    }
+
+    [Fact]
+    public void RegisterFolder_Null_IsTreatedAsEmpty()
+    {
+        var vm = Create();
+
+        vm.RegisterFolder = null!;
+
+        Assert.Equal("", vm.RegisterFolder);
+        Assert.True(vm.IsDirty);
+    }
+
+    [Theory]
+    [InlineData(@"B:\Data")]
+    [InlineData(@"b:\")]
+    [InlineData(@"C:/Shared/Register")]
+    [InlineData(@"\\server\share")]
+    [InlineData(@"\\server\share\register folder")]
+    [InlineData(@"Z:\does\not\exist\anywhere")]
+    public void RegisterFolder_FullPath_IsValid(string folder)
+    {
+        Assert.Null(SettingsViewModel.ValidateRegisterFolder(folder));
+
+        var vm = Create();
+        vm.RegisterFolder = folder;
+        Assert.Null(vm.ErrorText);
+        Assert.True(vm.SaveCommand.CanExecute(null));
+    }
+
+    [Theory]
+    [InlineData(@"B:\Da<ta")]
+    [InlineData(@"B:\Da>ta")]
+    [InlineData(@"B:\Da""ta")]
+    [InlineData(@"B:\Da|ta")]
+    [InlineData(@"B:\Da?ta")]
+    [InlineData(@"B:\Da*ta")]
+    [InlineData("B:\\Da\tta")]
+    [InlineData("B:\\Da\nta")]
+    [InlineData("B:\\Da\u0001ta")]
+    [InlineData(@"\\?\B:\Data")]
+    [InlineData(@"Da*ta")]
+    public void RegisterFolder_InvalidCharacter_SetsError_AndDisablesSave(string folder)
+    {
+        const string expected = "The register folder contains a character Windows does not allow.";
+        Assert.Equal(expected, SettingsViewModel.ValidateRegisterFolder(folder));
+
+        var vm = Create();
+        vm.RegisterFolder = folder;
+
+        Assert.Equal(expected, vm.ErrorText);
+        Assert.True(vm.HasError);
+        Assert.False(vm.SaveCommand.CanExecute(null));
+    }
+
+    [Theory]
+    [InlineData("Data")]
+    [InlineData(@"Data\Register")]
+    [InlineData(@".\Data")]
+    [InlineData(@"..\Data")]
+    [InlineData(@"\Data")]
+    [InlineData("/Data")]
+    [InlineData("B:")]
+    [InlineData("B:Data")]
+    [InlineData(@"1:\Data")]
+    [InlineData(@"\\")]
+    [InlineData(@"\\\server")]
+    public void RegisterFolder_RelativePath_SetsError_AndDisablesSave(string folder)
+    {
+        var expected = @"Enter a full folder path, such as B:\Data.";
+        Assert.Equal(expected, SettingsViewModel.ValidateRegisterFolder(folder));
+
+        var vm = Create();
+        vm.RegisterFolder = folder;
+
+        Assert.Equal(expected, vm.ErrorText);
+        Assert.False(vm.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void RegisterFolder_Invalid_ExecuteWritesNothing()
+    {
+        var vm = Create();
+        vm.RegisterFolder = "Data";
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.False(File.Exists(SettingsPath));
+        Assert.Null(vm.SavedSettings);
+    }
+
+    [Fact]
+    public void RegisterFolder_Invalid_RaisesErrorTextAndHasError()
+    {
+        var vm = Create();
+        var changed = RecordPropertyChanges(vm);
+
+        vm.RegisterFolder = "Data";
+
+        Assert.Equal(
+            new[]
+            {
+                nameof(SettingsViewModel.RegisterFolder),
+                nameof(SettingsViewModel.ErrorText),
+                nameof(SettingsViewModel.HasError),
+                nameof(SettingsViewModel.IsDirty),
+            },
+            changed);
+    }
+
+    [Fact]
+    public void RegisterFolder_Fixing_ClearsError()
+    {
+        var vm = Create();
+        vm.RegisterFolder = "Data";
+
+        vm.RegisterFolder = @"B:\Data";
+
+        Assert.Null(vm.ErrorText);
+        Assert.False(vm.HasError);
+        Assert.True(vm.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void RegisterFolder_InvalidValueFromFile_ShowsErrorAtOnce()
+    {
+        var vm = Create(new AddinSettings { RegisterFolder = "Data" });
+
+        Assert.Equal(SettingsViewModel.RegisterFolderNotFullPathError, vm.ErrorText);
+        Assert.False(vm.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void Validation_DefaultDesignerErrorComesFirst_ThenRegisterFolder()
+    {
+        var vm = Create();
+        vm.RegisterFolder = "Data";
+        vm.DefaultDesigner = LongText(256);
+
+        Assert.Equal("Default designer must be 255 characters or fewer.", vm.ErrorText);
+
+        vm.DefaultDesigner = "";
+
+        Assert.Equal(SettingsViewModel.RegisterFolderNotFullPathError, vm.ErrorText);
+    }
+
+    [Fact]
+    public void RegisterFolder_EditsACopy()
+    {
+        var original = new AddinSettings();
+        var vm = Create(original);
+
+        vm.RegisterFolder = @"D:\Register";
+
+        Assert.Equal(AddinSettings.DefaultRegisterFolder, original.RegisterFolder);
+    }
+
+    [Fact]
+    public void RegisterFolderHelp_IsTheExplanation()
+    {
+        const string expected = "The shared part number register. Leave blank to use only this PC's copy.";
+
+        Assert.Equal(expected, SettingsViewModel.RegisterFolderHelpText);
+        Assert.Equal(expected, Create().RegisterFolderHelp);
+    }
+
+    // ---- Units for new files (task 037) ----
+
+    [Fact]
+    public void UnitsOptions_AreMetricThenImperial()
+    {
+        var vm = Create();
+
+        Assert.Equal(
+            new[] { new UnitsOption(UnitsSystem.Metric, "Metric"), new UnitsOption(UnitsSystem.Imperial, "Imperial") },
+            vm.UnitsOptions);
+    }
+
+    [Theory]
+    [InlineData(UnitsSystem.Metric)]
+    [InlineData(UnitsSystem.Imperial)]
+    public void DefaultUnits_StartsWithGivenValue(UnitsSystem units)
+    {
+        var vm = Create(new AddinSettings { DefaultUnits = units });
+
+        Assert.Equal(units, vm.DefaultUnits);
+        Assert.False(vm.IsDirty);
+    }
+
+    [Fact]
+    public void DefaultUnits_Changing_MakesDirty_RaisesValueAndIsDirty()
+    {
+        var vm = Create();
+        var changed = RecordPropertyChanges(vm);
+        int canExecuteChanged = 0;
+        vm.SaveCommand.CanExecuteChanged += (_, _) => canExecuteChanged++;
+
+        vm.DefaultUnits = UnitsSystem.Imperial;
+
+        Assert.True(vm.IsDirty);
+        Assert.True(vm.SaveCommand.CanExecute(null));
+        Assert.Equal(new[] { nameof(SettingsViewModel.DefaultUnits), nameof(SettingsViewModel.IsDirty) }, changed);
+        Assert.Equal(1, canExecuteChanged);
+    }
+
+    [Fact]
+    public void DefaultUnits_SettingSameValue_RaisesNothing()
+    {
+        var vm = Create();
+        var changed = RecordPropertyChanges(vm);
+
+        vm.DefaultUnits = UnitsSystem.Metric;
+
+        Assert.Empty(changed);
+        Assert.False(vm.IsDirty);
+    }
+
+    [Fact]
+    public void DefaultUnits_ChangingBack_ClearsDirty()
+    {
+        var vm = Create();
+
+        vm.DefaultUnits = UnitsSystem.Imperial;
+        vm.DefaultUnits = UnitsSystem.Metric;
+
+        Assert.False(vm.IsDirty);
+        Assert.False(vm.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void DefaultUnits_EditsACopy()
+    {
+        var original = new AddinSettings();
+        var vm = Create(original);
+
+        vm.DefaultUnits = UnitsSystem.Imperial;
+
+        Assert.Equal(UnitsSystem.Metric, original.DefaultUnits);
+    }
+
+    [Fact]
+    public void Save_WritesRegisterFolderAndUnits_AndRoundTrips()
+    {
+        var vm = Create();
+        vm.DefaultUnits = UnitsSystem.Imperial;
+        vm.RegisterFolder = @"\\server\share";
+
+        vm.SaveCommand.Execute(null);
+
+        var expected = new AddinSettings { DefaultUnits = UnitsSystem.Imperial, RegisterFolder = @"\\server\share" };
+        var loaded = new SettingsStore(_folder).Load();
+        Assert.Empty(loaded.Warnings);
+        Assert.Equal(expected, loaded.Settings);
+        Assert.Equal(expected, vm.SavedSettings);
+        Assert.False(vm.IsDirty);
+    }
+
+    [Fact]
+    public void EditUnitsAfterFailedSave_ClearsErrorText()
+    {
+        var vm = CreateWithFailedSave();
+
+        vm.DefaultUnits = UnitsSystem.Imperial;
+
+        Assert.Null(vm.ErrorText);
+        Assert.True(vm.SaveCommand.CanExecute(null));
+    }
+
     // ---- Window text ----
 
     [Fact]
