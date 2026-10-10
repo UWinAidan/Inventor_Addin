@@ -83,6 +83,7 @@ public static class CommandNames
     public const string Settings = Prefix + "Settings";
     public const string About = Prefix + "About";
     public const string PartProperties = Prefix + "PartProperties";
+    public const string NewPart = Prefix + "NewPart";
 
     private const string Prefix = Branding.IdPrefix + "_";
 }

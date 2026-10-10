@@ -269,6 +269,59 @@ public sealed class RegisterStoreTests : IDisposable
         Assert.Equal([10003, 10001, 10002, 10004], Numbers(SharedPath));
     }
 
+    // Assigning with the request built from the number
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void AssignWithRequestFor_GetsTheNumberAboutToBeAssigned_AndRecordsItsRequest(bool reachable)
+    {
+        WriteShared(10001);
+        WriteLocal(10001);
+        _environment.Reachable = reachable;
+        var seen = new List<PartNumber>();
+
+        var result = Store().Assign(number =>
+        {
+            seen.Add(number);
+            return new RegisterRequest("test plate", "P", DocumentKind.Part, $@"C:\Work\{number},test_plate.ipt");
+        });
+
+        Assert.Equal(10002, result.PartNumber.Value);
+        Assert.Equal([new PartNumber(10002)], seen);
+        var written = RegisterCsv.Read(File.ReadAllText(reachable ? SharedPath : PendingPath)).Entries.Last();
+        Assert.Equal(@"C:\Work\AWB-10002,test_plate.ipt", written.FilePath);
+        AssertOnlyRegisterFilesLeft();
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void AssignWithRequestFor_ThatThrows_AssignsNothing_AndChangesNoFile(bool reachable)
+    {
+        WriteShared(10001);
+        WriteLocal(10001);
+        _environment.Reachable = reachable;
+        var sharedBefore = File.ReadAllBytes(SharedPath);
+        var localBefore = File.ReadAllBytes(LocalPath);
+        var store = Store();
+
+        var ex = Assert.Throws<InvalidDataException>(() => store.Assign(_ => throw new InvalidDataException("taken")));
+
+        Assert.Equal("taken", ex.Message);
+        Assert.Equal(sharedBefore, File.ReadAllBytes(SharedPath));
+        Assert.Equal(localBefore, File.ReadAllBytes(LocalPath));
+        Assert.False(File.Exists(PendingPath));
+        AssertOnlyRegisterFilesLeft();
+        Assert.Equal(10002, store.Assign(Request()).PartNumber.Value);
+    }
+
+    [Fact]
+    public void AssignWithRequestFor_RejectsNull()
+    {
+        Assert.Throws<ArgumentNullException>(() => Store().Assign((Func<PartNumber, RegisterRequest>)null!));
+    }
+
     // Assigning, offline
 
     [Fact]

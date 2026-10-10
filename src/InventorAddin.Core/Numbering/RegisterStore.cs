@@ -99,23 +99,43 @@ public sealed class RegisterStore
     public RegisterAssignment Assign(RegisterRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
+        return Assign(_ => request);
+    }
+
+    /// <summary>
+    /// As <see cref="Assign(RegisterRequest)"/>, for a file whose path holds the number, such as a new file named
+    /// <c>{number},{name}.ipt</c>. <paramref name="requestFor"/> is called once with the number about to be assigned,
+    /// before its row is written (under the lock when the shared register is reached). If it throws, nothing is
+    /// assigned, no register file is changed, and the exception propagates.
+    /// </summary>
+    /// <exception cref="RegisterBusyException">The lock could not be taken within <see cref="LockWait"/>.</exception>
+    /// <exception cref="RegisterUnreadableException">The shared or pending register cannot be read in full.</exception>
+    public RegisterAssignment Assign(Func<PartNumber, RegisterRequest> requestFor)
+    {
+        ArgumentNullException.ThrowIfNull(requestFor);
+
+        RegisterRequest RequestFor(PartNumber number) =>
+            requestFor(number) ?? throw new InvalidOperationException("No register request was given for the new number.");
 
         if (!IsReachable())
         {
             var number = ReadLocal().NextNumber();
-            AppendPending(CreateEntry(number, request));
-            _log.Info($"Part number {number} assigned offline to '{request.FilePath}'; it will be synced to the shared register.");
+            var offlineRequest = RequestFor(number);
+            AppendPending(CreateEntry(number, offlineRequest));
+            _log.Info($"Part number {number} assigned offline to '{offlineRequest.FilePath}'; it will be synced to the shared register.");
             return new RegisterAssignment(number, Offline: true, Duplicates: []);
         }
 
         var assigned = default(PartNumber);
+        RegisterRequest? request = null;
         var duplicates = UnderLock(merged =>
         {
             assigned = merged.NextNumber();
+            request = RequestFor(assigned);
             return merged.Append(CreateEntry(assigned, request));
         });
 
-        _log.Info($"Part number {assigned} assigned to '{request.FilePath}'.");
+        _log.Info($"Part number {assigned} assigned to '{request!.FilePath}'.");
         return new RegisterAssignment(assigned, Offline: false, duplicates);
     }
 

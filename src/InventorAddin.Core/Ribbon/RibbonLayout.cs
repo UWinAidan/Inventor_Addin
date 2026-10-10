@@ -29,10 +29,19 @@ public static class RibbonLayout
         RibbonEnvironment.Assembly,
     };
 
+    // Spec 02, "Commands: New Part": also with no document open.
+    private static readonly RibbonEnvironment[] NewFileEnvironments =
+    {
+        RibbonEnvironment.ZeroDoc,
+        RibbonEnvironment.Part,
+        RibbonEnvironment.Assembly,
+    };
+
     private static readonly PanelDefinition[] Definitions =
     {
         new(RibbonIds.CadAutomationPanelId, RibbonIds.CadAutomationPanelName, DeveloperOnly: false, new ButtonDefinition[]
         {
+            new(CommandNames.NewPart, ButtonSize.Small, IconNames.NewPart, NewFileEnvironments),
             // Spec 07: parts and assemblies only, not drawings and not with no document open.
             new(CommandNames.PartProperties, ButtonSize.Small, IconNames.PartProperties, ModelEnvironments),
             // ZeroDoc gets no Settings or About button until spec 01 open question 4 is answered.

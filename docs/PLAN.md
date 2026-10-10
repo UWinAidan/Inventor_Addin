@@ -157,7 +157,7 @@ Planned 2026-10-10. Run in number order; each task depends only on lower numbers
 - [x] 040 New Part dialog view-model and creation properties (Core)
 - [x] 041 Mass Update scan result and view-model (Core)
 - [x] 042 Icons for the M2 commands, and a ribbon that survives one failing command
-- [ ] 043 New Part command and window
+- [x] 043 New Part command and window
 - [ ] 044 Create Print
 - [ ] 045 Save As Copy
 - [ ] 046 Save As and Replace
