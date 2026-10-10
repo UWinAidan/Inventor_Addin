@@ -14,7 +14,7 @@ The reference tool's drawing ribbon has the buttons below. Only the button names
 
 | Command | Where | Behaviour | Confidence |
 |---|---|---|---|
-| Create Drawing | part or assembly | Create a drawing of the active model from the drawing template, save it beside the model, place initial views | likely |
+| Create Drawing | part or assembly | Moved to spec 02 as **Create Print** (Aidan, 2026-10-10): a drawing from the default template with one base view, named and numbered like the model. Placing a full set of initial views stays here | decided |
 | Open Drawing | part or assembly | Find and open the drawing that belongs to the active model | likely |
 | Place Initial Views | drawing | Place a standard set of views of the referenced model at a sensible scale | likely |
 | Change Title Block | drawing | Swap the sheet's title block for another from the template's drawing resources | likely |
@@ -30,6 +30,10 @@ Other details seen on the reference sheets, as hints for templates and defaults:
 
 - An assembly sheet with an isometric view, a section view, a front view, balloons, and a parts list in the top right corner. Parts list columns: item, quantity, part number, two short flag columns, description, manufacturer name, manufacturer part number.
 - A part sheet with a dimensioned front view, a section, two isometric views, and the hole tables stacked above the title block.
+
+## Custom drawing template
+
+Decided by Aidan on 2026-10-10: a custom drawing template is a separate item for this milestone (M5), not for numbering (M2). Its title block must read every property from the model (part number, description, designer and the rest), not copy them into the drawing, so a change in the model shows on the print without any update step.
 
 ## Core logic (testable without Inventor)
 

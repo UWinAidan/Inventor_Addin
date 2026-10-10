@@ -44,3 +44,31 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-10-07 | Secondary buttons use the input background colour (white in light, slightly darker than the window in dark) | Default | spec 08, question 9 |
 | 2026-10-07 | Section headings get wide letter spacing from hair spaces inserted by a Core helper, because WPF text has no letter spacing | Default | task 026 |
 | 2026-10-07 | The XAML rules test also requires each input to sit in a labelled row, and bans brushes, colours and size values defined in a window's own resources | Default | task 031 |
+| 2026-10-10 | Part number format `AWB-10001`: prefix `AWB`, a dash, five digits, starting at 10001. One shared sequence for parts, sheet metal parts and assemblies. The part type is not in the number | Aidan | spec 02 |
+| 2026-10-10 | File names are number, comma, name with underscores for spaces (`AWB-10001,mounting_bracket.ipt`). The part name is everything after the first comma, with underscores shown as spaces | Aidan | spec 02 |
+| 2026-10-10 | The register design is accepted: a register file in a folder set in Settings (default `B:\aidan\AWB_Design_Data`, the NAS over Tailscale) with a local copy on each PC. When the NAS is unreachable, assign from the local copy, sync later and report duplicates | Aidan | spec 02 |
+| 2026-10-10 | A file already has a number when its Part Number matches the format and is in the register | Aidan | spec 02 |
+| 2026-10-10 | New files use Inventor's default templates, metric by default with an imperial option. A templates folder setting comes later, when Aidan has his own templates | Aidan | spec 02 |
+| 2026-10-10 | Written on creation: Part Number, Description (the part name), Designer, Detailer, Part Type | Aidan | spec 02 |
+| 2026-10-10 | No assembly browser folder management | Aidan | spec 02 |
+| 2026-10-10 | Rename searches the active Inventor project's workspace for referencing files | Aidan | spec 02 |
+| 2026-10-10 | A Create Print ribbon button makes a drawing from the default drawing template with a base view of the active model, named and numbered the same as the model. It replaces spec 05's Create Drawing | Aidan | specs 02, 05 |
+| 2026-10-10 | Part Properties treats a Designer or Detailer equal to the Windows user name as blank and pre-fills it from Settings. A folder scan or Mass Update command replaces it in bulk | Aidan | specs 02, 07 |
+| 2026-10-10 | A custom drawing template is a separate M5 item. Its title block reads every property from the model rather than copying them into the drawing | Aidan | spec 05 |
+| 2026-10-10 | A file name without a comma (an old file) gives its whole name as the part name, also with underscores shown as spaces | Default | spec 02 |
+| 2026-10-10 | A typed part name keeps its case, is trimmed, and has runs of white space collapsed. Characters Windows does not allow, reserved names and a trailing dot are rejected, not replaced | Default | spec 02, question 14 |
+| 2026-10-10 | The register is a CSV file `part-register.csv` (columns Number, Name, PartType, Kind, FilePath, AssignedAt, AssignedBy, Computer). The local copy and offline entries live in `%APPDATA%\AwbAddin\register\`. Writes take a lock file; a lock older than 2 minutes counts as stale | Default | spec 02 |
+| 2026-10-10 | The register syncs at each assignment and when Mass Update runs, not at Inventor start. The NAS counts as unreachable after 3 seconds | Default | spec 02 |
+| 2026-10-10 | Duplicates found at sync are both kept in the register and reported; Aidan resolves them by hand | Default | spec 02, question 15 |
+| 2026-10-10 | No folder scan before each assignment; the add-in only checks that the new file does not exist yet | Default | spec 02 |
+| 2026-10-10 | A Part Number in the format but not in the register counts as no number: shown with "Not in the register", Generate offered | Default | spec 02, question 13 |
+| 2026-10-10 | Generate part number needs a saved file, writes Part Number only, and does not rename the file | Default | spec 02 |
+| 2026-10-10 | New Part saves the new file straight away, into the active document's folder or the project workspace (Browse to change). Designer and Detailer come from Settings and are not in the dialog. New Part and Mass Update also appear on the ZeroDoc ribbon | Default | specs 01, 02 |
+| 2026-10-10 | Save As Copy writes the creation properties on the copy and keeps everything else. Save As and Replace replaces only the selected occurrence | Default | spec 02, question 16 |
+| 2026-10-10 | Create Print works on parts and assemblies, uses the units set in Settings, places one front view at a standard scale that fits, copies only the Part Number, and offers to open an existing drawing instead of making a second | Default | spec 02 |
+| 2026-10-10 | The folder scan and Mass Update are one command, Mass Update: it registers numbers, assigns numbers and replaces the Windows user name, on ticked files, after a confirmation. Files open in Inventor are skipped | Default | specs 01, 02 |
+| 2026-10-10 | When `DefaultDesigner` is blank, a Windows-user-name Designer or Detailer is shown as it is, so Apply never clears it | Default | spec 02 |
+| 2026-10-10 | M2 runs in two cloud runs around a Windows spike (032): Core, settings, Part Properties and icons first (033 to 042), then the commands that create, copy, rename and print files (043 to 048) | Default | `docs/PLAN.md` |
+| 2026-10-10 | A blank register folder in Settings means no shared register: numbers come from the PC's own copy, as when the NAS is unreachable | Default | spec 02 |
+| 2026-10-10 | Rename updates the file path and name in the number's register entry; it is the only change the add-in makes to an existing row | Default | spec 02 |
+| 2026-10-10 | Create Print picks the largest standard scale at which the front view fits in 60% of the sheet | Default | task 044 |

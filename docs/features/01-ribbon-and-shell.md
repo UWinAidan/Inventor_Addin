@@ -20,14 +20,14 @@ The tab shows different panels depending on the environment. Layout seen in the 
 | Panel | Button | Size | Spec |
 |---|---|---|---|
 | CAD Automation | Change Material and Finish | large | 03 |
-| CAD Automation | New Part | small | 02 |
+| CAD Automation | New Part | small | 02 (also on ZeroDoc, Default) |
 | CAD Automation | Save As Copy | small | 02 |
 | CAD Automation | Save As and Replace | small | 02 |
 | CAD Automation | Open Drawing | small | 05 |
 | CAD Automation | Settings | small | this spec |
 | CAD Automation | About / Version | small | this spec |
-| Drawing Tools | Create Drawing | large | 05 |
-| Modelling | Mass Update | small | open question |
+| Drawing Tools | Create Print | large | 02 (Aidan named it Create Print on 2026-10-10; the reference called it Create Drawing) |
+| Modelling | Mass Update | small | 02 (also on ZeroDoc, Default) |
 
 **Drawing**
 
@@ -58,7 +58,7 @@ A button appears only once its command exists. Do not add placeholder buttons.
 
 ## Open questions
 
-1. What should "Mass Update" do? The reference button's behaviour is not known.
+1. What should "Mass Update" do? The reference button's behaviour is not known. Partly answered 2026-10-10: Aidan wants a folder scan or Mass Update to replace the Windows login name in Designer and Detailer in bulk. Default: one command, Mass Update, scans a folder and also registers and assigns part numbers (spec 02, "Commands").
 2. Should the About button also check for a newer version somewhere, or only display the current one?
-3. Which settings does the first version need? Candidates: designer name, library file locations, template folder, default sheet size. Until answered, M0 builds only `ShowDeveloperTools` (default off).
+3. Which settings does the first version need? Candidates: designer name, library file locations, template folder, default sheet size. Until answered, M0 builds only `ShowDeveloperTools` (default off). M1 added `DefaultDesigner`; M2 adds `RegisterFolder` and `DefaultUnits` (spec 02). A templates folder comes later (Aidan, 2026-10-10).
 4. Should Settings and About also appear on the ZeroDoc ribbon (Inventor with no document open)? Until answered, ZeroDoc keeps only the Developer panel.

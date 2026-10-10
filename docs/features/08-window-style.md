@@ -125,6 +125,8 @@ Inventor reports the file name as the Part Number when none has been set (confir
 
 This is a display rule only. Nothing is written, and the Part Number property is not changed. Spec 02 replaces the rule with its own definition of "has a number" when it adds the Generate button.
 
+Replaced in M2 (task 039) by spec 02, "Part number": a Part Number in the `AWB-10001` format is shown, with a muted "Not in the register" note when the register does not hold it; anything else shows **Not assigned**.
+
 ## Following Inventor's theme
 
 - When a window opens, the add-in asks Inventor which theme is active and loads the matching colour set. If the theme cannot be read, use light.
