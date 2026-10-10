@@ -143,7 +143,7 @@ Planned 2026-10-10. Run in number order; each task depends only on lower numbers
 | 047 | cloud, add-in not compiled | 032, 034, 036, 039 | none |
 | 048 | cloud, add-in not compiled | 032, 036, 039, 041, 042 | none |
 
-- [ ] 032 Spike: templates, creating and saving, rename, base view (Windows)
+- [x] 032 Spike: templates, creating and saving, rename, base view (Windows)
 - [x] 033 Part number format (Core)
 - [x] 034 File name rule and part name (Core)
 - [x] 035 Register model and CSV format (Core)
