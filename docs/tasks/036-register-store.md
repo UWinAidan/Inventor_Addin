@@ -41,6 +41,7 @@ Assigning
 - [ ] Unreachable (see probe below): picks the next number from `ReadLocal()`, appends the entry to the pending file, and returns `Offline = true`
 - [ ] Could not take the lock within `LockWait`: throws `RegisterBusyException` with a message saying another PC is writing the register; nothing is assigned
 - [ ] A shared file that exists but cannot be parsed: throws `RegisterUnreadableException` naming the file; nothing is assigned and nothing is overwritten
+- [ ] A shared file that parses but whose read gives any warning (a row skipped, a column missing) is treated the same way: `RegisterUnreadableException` naming the file and listing the warnings (the line numbers to fix); nothing is assigned and nothing is overwritten. Writing it back would delete the skipped rows, which the spec forbids (Default added while running M2, spec 02 question 19). The same applies to `Sync`
 - [ ] `AssignedAt`, `AssignedBy` and `Computer` come from the environment
 
 Syncing
@@ -59,6 +60,7 @@ Tests
 - [ ] A pending number another PC also used is reported as a duplicate and both rows end up in the shared file
 - [ ] A stale lock is cleared; a fresh lock held by the test makes Assign throw `RegisterBusyException` (use a short `LockWait` through a constructor option so the test is fast)
 - [ ] A corrupt shared file throws and is left unchanged
+- [ ] A shared file with one bad row, and one with the `AssignedAt` column deleted, each throw `RegisterUnreadableException` and are left unchanged byte for byte
 - [ ] No temporary or lock file is left behind after success or failure
 - [ ] `dotnet test tests/InventorAddin.Core.Tests` passes
 

@@ -47,7 +47,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Questions 1 to 8 in spec 08: accent colour, dark title bar, icon style, and five defaults added while planning (never-saved header and part number, theme names, Inventor version row, the XAML rules test)
 
 **Numbering (spec 02), not blocking**
-- Questions 13 to 18 in spec 02: a well-formed number not in the register, case in file names, what to do with duplicates, Save As and Replace on every occurrence, opening Part Properties after creating a file, and a comma in the name of a file with no number. Each has a default the tasks build
+- Questions 13 to 19 in spec 02: a well-formed number not in the register, case in file names, what to do with duplicates, Save As and Replace on every occurrence, opening Part Properties after creating a file, a comma in the name of a file with no number, and a register row that cannot be read. Each has a default the tasks build
 
 **Distribution, not blocking**
 - Whether and when to add an installer and a download page. It was to be decided when M2 was planned and is still parked
