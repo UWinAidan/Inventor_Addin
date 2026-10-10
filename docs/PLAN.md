@@ -141,7 +141,10 @@ Planned 2026-10-10. Run in number order; each task depends only on lower numbers
 | 045 | cloud, add-in not compiled | 032, 040, 043 | none |
 | 046 | cloud, add-in not compiled | 032, 045 | none |
 | 047 | cloud, add-in not compiled | 032, 034, 036, 039 | none |
-| 048 | cloud, add-in not compiled | 032, 036, 039, 041, 042 | none |
+| 048 | cloud, add-in not compiled | 032, 036, 039, 041, 042, 049, 051 | none |
+| 049 | cloud, add-in not compiled | none | 050 |
+| 050 | cloud, add-in not compiled | none | 049 |
+| 051 | cloud, add-in not compiled | 049 | none |
 
 - [x] 032 Spike: templates, creating and saving, rename, base view (Windows)
 - [x] 033 Part number format (Core)
@@ -160,13 +163,18 @@ Planned 2026-10-10. Run in number order; each task depends only on lower numbers
 - [ ] 046 Save As and Replace
 - [ ] 047 Rename, with references updated across the workspace
 - [ ] 048 Mass Update command and window
+- [ ] 049 Settings: shorter units label, CAD folders, other names that mean me
+- [ ] 050 Register AssignedBy is the Default designer
+- [ ] 051 Other names that mean me, in Part Properties and Mass Update
 
 **Two runs.** Spike 032 settles what the creating, renaming and printing commands depend on: how Inventor finds its default templates in metric and imperial, creating and saving a document with a comma in its name, the workspace path, updating references to a renamed file in closed files, opening files invisibly, placing a base view, replacing an occurrence, and how long a disconnected NAS blocks. Nothing is planned on top of an unproven assumption, so:
 
 1. Cloud run 1: 033 to 042. None depends on the spike. Aidan runs 032 on Windows at any point; it is easiest after building run 1, which he needs to do anyway.
-2. Cloud run 2, after 032's Results are committed: 043 to 048. Each reads the Results first and stops if they are empty. All six touch the ribbon files, so they run one at a time.
+2. Cloud run 2, after 032's Results are committed: 049 to 051 first, then 043 to 048. Each reads the Results first and stops if they are empty. All six touch the ribbon files, so they run one at a time.
 
 Folded in from `TODO.md` follow-ups: delete `PropertyReader.Set` and the unbound view-model properties (039), the ribbon's duplicate-definition retry and one command stopping the ribbon (042), and the Settings access key for Show developer tools (037).
+
+**Added 2026-10-10 before run 2** from Aidan's run 1 checks and his answers to spec 02 questions 23 to 25: 049 (Settings: "New file units", Work folder and Other CAD folders, Other names that mean me), 050 (AssignedBy) and 051 (names that mean me). They run before 043, which is why the order is not the number order. Spike 032's findings are written into 043 to 048's notes. Folded in from `TODO.md`: the Settings Browse freeze (049), the unit label (049), Mass Update's shared name check (051), and its duplicate row and register-only files (048).
 
 Not in M2: browser folders (Aidan: no), a templates folder setting (later, with Aidan's own templates), the custom drawing template (M5), and distribution (parked; see below). The two deploy-line follow-ups from task 025 stay in `TODO.md`.
 

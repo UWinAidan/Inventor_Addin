@@ -36,6 +36,9 @@ Out of scope:
 
 ## Notes for the implementer
 
+- Added after spike 032: `SaveAs(path, false)` was tested and renames the open document, which this command must not do. Use `doc.SaveAs(copyPath, true)` (save a copy; the open document keeps its name), then `Documents.Open(copyPath, true)`, write the properties, `Save()`. `SaveAs` with `true` compiles but its behaviour was not run in the spike: list it under members not confirmed, and make the first checklist step check that the original keeps its name, is not marked modified, and that the copy holds the original's unsaved edits.
+- A comma in the copy's name is accepted (spike 032, question 2).
+
 - Writing the creation properties on the copy and keeping everything else is a Default.
 - Saving a copy of an assembly copies the assembly file only; its components are shared with the original. Say so in the dialog's subline note.
 

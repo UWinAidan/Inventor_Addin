@@ -31,7 +31,7 @@ Out of scope:
 
 Core
 
-- [ ] `PrintPlan.DrawingFileName(string modelFullFileName, string drawingExtension)`: the model's folder and file name with the drawing extension (`C:\Work\AWB-10001,test_plate.ipt` and `.idw` give `C:\Work\AWB-10001,test_plate.idw`)
+- [ ] `PrintPlan.DrawingFileName(string modelFullFileName, string drawingExtension)`: the model's folder and file name with the drawing extension (`C:\Work\AWB-10001,test_plate.ipt` and `.dwg` give `C:\Work\AWB-10001,test_plate.dwg`). The extension is the drawing template's own (spike 032: a `.dwg`-template drawing cannot be saved as `.idw`)
 - [ ] `PrintPlan.StandardScales`: 10, 5, 4, 2, 1, 1/2, 1/4, 1/5, 1/10, 1/20, 1/50 (as doubles, largest first; Default)
 - [ ] `PrintPlan.ChooseScale(double viewWidthCm, double viewHeightCm, double sheetWidthCm, double sheetHeightCm)`: the largest standard scale at which the view at scale 1 fits within 60% of the sheet's width and 60% of its height (Default); the smallest scale when none fits; throws for non-positive sizes
 - [ ] Tests with invented sizes, including a tiny part and a large assembly
@@ -41,11 +41,19 @@ Add-in
 - [ ] A large **Create Print** button on the Drawing Tools panel of the Part and Assembly ribbons, with the `CreatePrint` icon
 - [ ] Needs the model saved: an unsaved model stops with `"Save the part before creating its print."`
 - [ ] If the drawing file already exists, asks `"A print for this part already exists. Open it?"` and opens it on Yes; makes nothing new either way
-- [ ] Otherwise: the drawing template in `Settings.DefaultUnits`; a front base view of the model centred on the first sheet at `ChooseScale` (view size at scale 1 by 032's finding, from the model's range box); the drawing's Part Number set to the model's Part Number when `RegisterStore.HasNumber` is true; saved to `DrawingFileName`; left open and active
+- [ ] If a drawing with the other extension (`.idw` or `.dwg`) already exists beside the model, the same question applies to it
+- [ ] Otherwise: the drawing template in `Settings.DefaultUnits`, looked up with the **ANSI** drafting standard (Aidan, spec 02 question 24), falling back to Inventor's units-neutral default drawing template; both blank stops with a message naming the units; a front base view of the model centred on the first sheet at `ChooseScale` (view size at scale 1 by 032's finding, from the model's range box); the drawing's Part Number set to the model's Part Number when `RegisterStore.HasNumber` is true; saved to `DrawingFileName`; left open and active
 - [ ] Any failure closes the half-made drawing without saving and says what failed
 - [ ] `dotnet test tests/InventorAddin.Core.Tests` passes
 
 ## Notes for the implementer
+
+- Added after spike 032 (Results questions 1 and 6):
+  - Drawing template: `FileManager.GetTemplateFile(DocumentTypeEnum.kDrawingDocumentObject, units, DraftingStandardEnum.kANSI_DraftingStandard, Type.Missing)`; fallback `FileManager.GetTemplateFileWithOptions(DocumentTypeEnum.kDrawingDocumentObject, Type.Missing, Type.Missing, Type.Missing, Type.Missing)`. `kDefault_DraftingStandard` returns `""` for drawings. On Aidan's install both give `.dwg`.
+  - Drawing: `Documents.Add(DocumentTypeEnum.kDrawingDocumentObject, template, true)`; sheet `dwg.ActiveSheet` (ANSI D, 86.36 x 55.88 cm in the metric template).
+  - View: `sheet.DrawingViews.AddBaseView((_Document)model, TransientGeometry.CreatePoint2d(sheet.Width / 2, sheet.Height / 2), scale, ViewOrientationTypeEnum.kFrontViewOrientation, DrawingViewStyleEnum.kHiddenLineDrawingViewStyle)`. The first parameter is `_Document`: cast it.
+  - View size at scale 1 for a front view: the model's `ComponentDefinition.RangeBox` X extent by Y extent (cm). Get the definition from `PartDocument` or `AssemblyDocument`.
+  - Part Number: copy it only when `RegisterStore.HasNumber` is true, never Inventor's file-name fallback.
 
 - Create Print is Aidan's (2026-10-10). Assemblies, units from Settings, the scale list and the 60% fit are Defaults.
 - Only the Part Number is copied; the M5 title block will read the model's properties.

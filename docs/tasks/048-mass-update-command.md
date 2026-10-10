@@ -3,7 +3,7 @@
 - **Milestone:** M2
 - **Feature spec:** `docs/features/02-part-creation-and-numbering.md` (Commands: Mass Update)
 - **Status:** todo
-- **Depends on:** 032 (its Results must be filled in), 036, 039, 041, 042
+- **Depends on:** 032 (its Results must be filled in), 036, 039, 041, 042, 049, 051
 - **Needs:** cloud, add-in not compiled
 - **Parallel-safe with:** none (shares the ribbon files)
 
@@ -25,14 +25,20 @@ Read the Results of task 032, questions 3 and 5. If they are empty, stop.
 ## Acceptance criteria
 
 - [ ] A small **Mass Update** button on a new **Modelling** panel (after Drawing Tools, before Developer) of the Part, Assembly and ZeroDoc ribbons, with the `MassUpdate` icon
-- [ ] The window is built on `MassUpdateViewModel` (041), follows spec 08 and the XAML rules test, and opens with the active project's workspace as folder
-- [ ] Scan: `RegisterStore.Sync()` first (reporting duplicates as in 039), then each file from `ScanFolder.FilesToScan` opened invisibly by 032's method with `SilentOperation` on, read, and closed; files already open in Inventor are read from the open document and marked open. A progress line shows `n of N`, and the scan can be cancelled. `SilentOperation` is restored in a `finally`
+- [ ] The window is built on `MassUpdateViewModel` (041), follows spec 08 and the XAML rules test, and opens with `Settings.WorkFolder` (049) as folder (Aidan, spec 02 question 23), with Browse. The view-model gets the names list from `PersonNames.NamesThatMeanMe` (051)
+- [ ] Scan: `RegisterStore.Sync()` first (reporting duplicates as in 039), then each file from `ScanFolder.FilesToScan` opened invisibly by 032's method with `SilentOperation` on, read, and closed; files already open in Inventor (found with a loop over `Documents` comparing `FullFileName` ignoring case; `get_ItemByName` throws when the file is not open) are read from the open document and marked open. A progress line shows `n of N`, and the scan can be cancelled. `SilentOperation` is restored in a `finally`
 - [ ] Apply: the confirmation from the view-model; then for each `FileUpdate`, in order: register action through `RegisterStore` (register an existing number as a new row, or assign the next number), then the property writes (Part Number for an assigned number, Designer and Detailer for replacement) with `PropertyWriter`, then save and close. Each file's result goes back to the view-model
 - [ ] One file failing does not stop the others; its row shows the error and it is logged
+- [ ] A register error (`RegisterBusyException`, `RegisterUnreadableException`: spec 02 question 19) stops Apply before any file changes and shows the message
+- [ ] A file whose only update is Register writes nothing to the file, so it is not opened or saved (task 041 follow-up)
+- [ ] Folded from task 041's follow-up: a duplicate unregistered number shows in its row at scan time ("Not registered: AWB-10005 is also on a.ipt"), and Register is not offered there; the view-model change and its tests are in scope (`MassUpdateViewModel`, `MassUpdatePlan`)
 - [ ] The scan and apply run on the UI thread with the window kept responsive between files (or by 032's advice), never with a COM call off the UI thread
 - [ ] `dotnet test tests/InventorAddin.Core.Tests` passes
 
 ## Notes for the implementer
+
+- Added after spike 032 (question 5): `Documents.Open(path, false)` with `SilentOperation` on, read, `Close(true)` takes about 60 ms a file; a write then `Save()` about 140 ms and sticks. `Documents.Count` counts invisible documents too.
+- The scope gains `src/InventorAddin.Core/ViewModels/MassUpdateViewModel.cs` and `src/InventorAddin.Core/Numbering/MassUpdate/MassUpdatePlan.cs` with their tests, for the duplicate row text.
 
 - One Mass Update command for the folder scan and the bulk replacement is a Default (spec 01, question 1; spec 02).
 - Open files are skipped for writing, as the spec says; they are only read.

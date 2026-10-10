@@ -3,7 +3,7 @@
 - **Milestone:** M2
 - **Feature spec:** `docs/features/02-part-creation-and-numbering.md` (Templates; Written on creation; Commands: New Part)
 - **Status:** todo
-- **Depends on:** 032 (its Results must be filled in), 036, 039, 040, 042
+- **Depends on:** 032 (its Results must be filled in), 036, 039, 040, 042, 049
 - **Needs:** cloud, add-in not compiled
 - **Parallel-safe with:** none (shares the ribbon files with 044 to 048)
 
@@ -31,7 +31,7 @@ Out of scope:
 
 - [ ] A small **New Part** button on the CAD Automation panel of the Part, Assembly and ZeroDoc ribbons, first in the panel, with the `NewPart` icon from 042. Layout tests updated
 - [ ] The command is not a `DocumentEditCommand` (there may be no active document); pick the command type that matches creating a document and say why in a comment
-- [ ] The dialog is built on `NewPartViewModel` (040), follows spec 08 and the XAML rules test, and gets its default folder from the active document's folder, or `ActiveDesignProject.WorkspacePath` when no saved document is open (by 032's finding for the workspace path)
+- [ ] The dialog is built on `NewPartViewModel` (040), follows spec 08 and the XAML rules test, and gets its default folder from the active document's folder, or `Settings.WorkFolder` (049) when no saved document is open (Aidan, spec 02 question 23). The project workspace is not used: spike 032 found it blank. With both blank the folder is empty and Browse is needed. Browse sits beside the folder box with the shared `SideButton` style, and never calls `Directory.Exists` on the UI thread
 - [ ] On Create, in this order: find the template (a missing template stops with a message naming the kind and units, before any number is assigned); check the target file does not exist (using a number placeholder is not enough: check again after assigning and stop with a message if it does); assign the number through `AddinServices.RegisterStore`; create the document from the template; write `CreationProperties.Build(...)` with `PropertyWriter`; save to `PartFileName.Build(...)` in the chosen folder
 - [ ] A failure after the number was assigned shows a message saying which number was used and that it stays in the register, logs the exception, and closes any half-made document without saving
 - [ ] Offline assignment and duplicates are reported as in 039
@@ -39,6 +39,11 @@ Out of scope:
 - [ ] `dotnet test tests/InventorAddin.Core.Tests` passes
 
 ## Notes for the implementer
+
+- Added after spike 032 (Results questions 1 to 3):
+  - Template: `InventorHost.App.FileManager.GetTemplateFile(DocumentTypeEnum, SystemOfMeasureEnum, DraftingStandardEnum.kDefault_DraftingStandard, object subType)`. Metric is `kMetricSystemOfMeasure`, imperial `kEnglishSystemOfMeasure`. Sheet metal passes the subtype `"{9C464203-9BAE-11D3-8BAD-0060B0CE6BB4}"`; parts and assemblies pass `Type.Missing`. A returned `""` means no template: stop with the message. Put the lookup in `Templates.cs` so 044 adds the drawing case there.
+  - Create: `Documents.Add(DocumentTypeEnum.kPartDocumentObject or kAssemblyDocumentObject, templatePath, true)`. Write properties with `PropertyWriter` (no transaction is needed on a new document; one does no harm). Save with `doc.SaveAs(fullPath, false)`; a comma in the name is accepted.
+  - `Documents.Add` can take 2 to 7 s the first time; show a wait cursor while creating.
 
 - Every Inventor member used must come from 032's Results or existing code; list any other in Verification.
 - `Documents.Add` takes a `DocumentTypeEnum`; map from `NewFileKind` in the add-in. The sheet metal subtype is in 032's Results.
