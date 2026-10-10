@@ -19,6 +19,24 @@ public sealed record PartTypeOption(string Code, string FullName, string Display
     /// <summary>An entry for a code the file holds that is not in <see cref="PartTypes.All"/>.</summary>
     public static PartTypeOption Unknown(string code) =>
         new(code, PartTypes.UnknownCodeText, $"{code}: {PartTypes.UnknownCodeText}");
+
+    /// <summary>
+    /// The dropdown's entries: <see cref="Blank"/>, then <see cref="PartTypes.All"/>, then an <see cref="Unknown"/>
+    /// entry for <paramref name="fileCode"/> when it is not blank and not in the list (a file can hold any text).
+    /// </summary>
+    public static IReadOnlyList<PartTypeOption> ListFor(string? fileCode)
+    {
+        var options = new List<PartTypeOption> { Blank };
+        options.AddRange(PartTypes.All.Select(From));
+
+        var code = PropertyValues.NormaliseText(fileCode);
+        if (code.Length > 0 && PartTypes.Find(code) is null)
+        {
+            options.Add(Unknown(code));
+        }
+
+        return options.AsReadOnly();
+    }
 }
 
 /// <summary>
@@ -162,14 +180,7 @@ public sealed class PartPropertiesViewModel : ObservableObject
             _partType = PartTypes.DefaultFor(snapshot.DocumentKind)?.Code ?? string.Empty;
         }
 
-        var options = new List<PartTypeOption> { PartTypeOption.Blank };
-        options.AddRange(PartTypes.All.Select(PartTypeOption.From));
-        if (fileType.Length > 0 && listed is null)
-        {
-            options.Add(PartTypeOption.Unknown(fileType));
-        }
-
-        PartTypeOptions = options.AsReadOnly();
+        PartTypeOptions = PartTypeOption.ListFor(fileType);
 
         // A Designer or Detailer equal to the Windows user name, or to one of the Other names, counts as blank (spec 02).
         _designer = snapshot.Designer ?? string.Empty;

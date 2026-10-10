@@ -42,6 +42,8 @@ public static class RibbonLayout
         new(RibbonIds.CadAutomationPanelId, RibbonIds.CadAutomationPanelName, DeveloperOnly: false, new ButtonDefinition[]
         {
             new(CommandNames.NewPart, ButtonSize.Small, IconNames.NewPart, NewFileEnvironments),
+            // Spec 02, "Commands: Save As Copy": a copy of the active part or assembly.
+            new(CommandNames.SaveAsCopy, ButtonSize.Small, IconNames.SaveAsCopy, ModelEnvironments),
             // Spec 07: parts and assemblies only, not drawings and not with no document open.
             new(CommandNames.PartProperties, ButtonSize.Small, IconNames.PartProperties, ModelEnvironments),
             // ZeroDoc gets no Settings or About button until spec 01 open question 4 is answered.

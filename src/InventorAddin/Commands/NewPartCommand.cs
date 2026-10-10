@@ -1,12 +1,9 @@
 using System;
-using System.Collections.Generic;
 using Inventor;
 using InventorAddin.Core.Numbering;
-using InventorAddin.Core.PartProperties;
 using InventorAddin.Core.Ribbon;
 using InventorAddin.Core.Settings;
 using InventorAddin.Core.ViewModels;
-using InventorAddin.Extraction;
 using InventorAddin.UI;
 using Forms = System.Windows.Forms;
 
@@ -101,52 +98,8 @@ namespace InventorAddin.Commands
             {
                 // Visible, so the new document opens and becomes the active one.
                 Document doc = InventorHost.App.Documents.Add(Templates.DocumentTypeFor(kind), templatePath, true);
-                return new InventorNewPartDocument(doc, _transactionName);
+                return new InventorNewDocument(doc, _transactionName);
             }
-        }
-
-        private sealed class InventorNewPartDocument : INewPartDocument
-        {
-            private readonly Document _doc;
-            private readonly string _transactionName;
-
-            public InventorNewPartDocument(Document doc, string transactionName)
-            {
-                _doc = doc;
-                _transactionName = transactionName;
-            }
-
-            /// <summary>
-            /// Writes inside one transaction, so one Undo reverts them. Spike 032: a new document needs none, and one
-            /// does no harm.
-            /// </summary>
-            public void WriteProperties(IReadOnlyList<PropertyWrite> writes)
-            {
-                Transaction transaction = InventorHost.App.TransactionManager.StartTransaction((_Document)_doc, _transactionName);
-                try
-                {
-                    PropertyWriter.Apply(_doc, writes);
-                    transaction.End();
-                }
-                catch (Exception)
-                {
-                    try
-                    {
-                        transaction.Abort();
-                    }
-                    catch (Exception abortEx)
-                    {
-                        AddinServices.Log.Error("New Part: aborting the property transaction failed.", abortEx);
-                    }
-
-                    throw;
-                }
-            }
-
-            public void SaveAs(string fullPath) => _doc.SaveAs(fullPath, false);
-
-            // Close(true) skips saving (spike 032).
-            public void CloseWithoutSaving() => _doc.Close(true);
         }
     }
 }

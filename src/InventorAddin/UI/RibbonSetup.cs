@@ -45,6 +45,7 @@ namespace InventorAddin.UI
         private static IEnumerable<AddinCommand> CreateCommands()
         {
             yield return new NewPartCommand();
+            yield return new SaveAsCopyCommand();
             yield return new PartPropertiesCommand();
             yield return new CreatePrintCommand();
             yield return new SettingsCommand();

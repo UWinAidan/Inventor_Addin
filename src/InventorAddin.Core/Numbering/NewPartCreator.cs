@@ -187,61 +187,18 @@ public sealed class NewPartCreator
         }
 
         // 2. The folder: a full path that can be reached.
-        if (folder.Length == 0 || !Path.IsPathFullyQualified(folder))
-        {
-            throw new NewPartException(NotFullPathMessage);
-        }
-
-        if (!_folderExists(folder))
-        {
-            throw new NewPartException(FolderMissingMessage(folder));
-        }
+        CheckFolder(folder, _folderExists);
 
         // 3. The number. The name holds the number, so the path is built and checked once the number is known, before
         // its row is written; a file already there costs no number.
-        string? fullPath = null;
-        RegisterAssignment assignment;
-        try
-        {
-            assignment = _store.Assign(number =>
-            {
-                fullPath = FullPathFor(folder, number, request);
-                if (File.Exists(fullPath))
-                {
-                    throw new TargetExistsException(fullPath);
-                }
-
-                return new RegisterRequest(request.PartName, request.PartType, request.Kind.DocumentKindOf(), fullPath);
-            });
-        }
-        catch (TargetExistsException ex)
-        {
-            throw new NewPartException(ExistsBeforeAssignMessage(ex.FullPath), inner: ex);
-        }
-        catch (NewPartException)
-        {
-            throw;
-        }
-        catch (Exception ex) when (ex is RegisterBusyException or RegisterUnreadableException)
-        {
-            throw new NewPartException(ex.Message, inner: ex);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            // The shared file may already hold the new row (for example when only the local copy failed).
-            _log.Error("Could not update the part register while assigning a number for a new part.", ex);
-            throw new NewPartException(
-                $"The part register could not be updated: {ex.Message} A number may already have been taken in the " +
-                "register; check it before trying again.", inner: ex);
-        }
-        catch (InvalidOperationException ex)
-        {
-            // The sequence is full; nothing was assigned.
-            throw new NewPartException(ex.Message, inner: ex);
-        }
+        var (assignment, path) = AssignNumber(
+            _store,
+            _log,
+            "a new part",
+            number => FullPathFor(folder, number, request),
+            fullPath => new RegisterRequest(request.PartName, request.PartType, request.Kind.DocumentKindOf(), fullPath));
 
         var assigned = assignment.PartNumber.ToString();
-        var path = fullPath!;
 
         // 4. Check again, create, write, save. Any failure from here leaves the number in the register.
         INewPartDocument? document = null;
@@ -280,9 +237,90 @@ public sealed class NewPartCreator
         return new NewPartResult(assigned, path, assignment.Offline, duplicates.AsReadOnly());
     }
 
-    private static string FullPathFor(string folder, PartNumber number, NewPartRequest request)
+    /// <summary>
+    /// Stops with a <see cref="NewPartException"/> unless <paramref name="folder"/> is a full path that
+    /// <paramref name="folderExists"/> finds. Nothing is assigned before this. Shared with
+    /// <see cref="SaveAsCopyCreator"/>.
+    /// </summary>
+    internal static void CheckFolder(string folder, Func<string, bool> folderExists)
     {
-        var fileName = PartFileName.Build(number, request.PartName, request.Kind.Extension());
+        if (folder.Length == 0 || !Path.IsPathFullyQualified(folder))
+        {
+            throw new NewPartException(NotFullPathMessage);
+        }
+
+        if (!folderExists(folder))
+        {
+            throw new NewPartException(FolderMissingMessage(folder));
+        }
+    }
+
+    /// <summary>
+    /// Assigns the next number for a new file whose name holds it. <paramref name="fullPathFor"/> builds the file's full
+    /// path from the number about to be assigned (it may throw a <see cref="NewPartException"/> for a path that is too
+    /// long); a file already at that path stops before the row is written, so it costs no number. Register failures
+    /// become <see cref="NewPartException"/>s that say whether a number may have been taken. Shared with
+    /// <see cref="SaveAsCopyCreator"/>.
+    /// </summary>
+    /// <param name="what">For the log, for example <c>a new part</c>.</param>
+    internal static (RegisterAssignment Assignment, string FullPath) AssignNumber(
+        RegisterStore store,
+        ILog log,
+        string what,
+        Func<PartNumber, string> fullPathFor,
+        Func<string, RegisterRequest> requestFor)
+    {
+        string? fullPath = null;
+        RegisterAssignment assignment;
+        try
+        {
+            assignment = store.Assign(number =>
+            {
+                fullPath = fullPathFor(number);
+                if (File.Exists(fullPath))
+                {
+                    throw new TargetExistsException(fullPath);
+                }
+
+                return requestFor(fullPath);
+            });
+        }
+        catch (TargetExistsException ex)
+        {
+            throw new NewPartException(ExistsBeforeAssignMessage(ex.FullPath), inner: ex);
+        }
+        catch (NewPartException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is RegisterBusyException or RegisterUnreadableException)
+        {
+            throw new NewPartException(ex.Message, inner: ex);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // The shared file may already hold the new row (for example when only the local copy failed).
+            log.Error($"Could not update the part register while assigning a number for {what}.", ex);
+            throw new NewPartException(
+                $"The part register could not be updated: {ex.Message} A number may already have been taken in the " +
+                "register; check it before trying again.", inner: ex);
+        }
+        catch (InvalidOperationException ex)
+        {
+            // The sequence is full; nothing was assigned.
+            throw new NewPartException(ex.Message, inner: ex);
+        }
+
+        return (assignment, fullPath!);
+    }
+
+    /// <summary>
+    /// <paramref name="folder"/> joined with <see cref="PartFileName.Build"/>; a path too long for Windows stops with a
+    /// <see cref="NewPartException"/> before anything is assigned.
+    /// </summary>
+    internal static string FullPathFor(string folder, PartNumber number, string partName, string extension)
+    {
+        var fileName = PartFileName.Build(number, partName, extension);
         var problem = PartFileName.ValidatePath(folder, fileName);
         if (problem is not null)
         {
@@ -291,6 +329,9 @@ public sealed class NewPartCreator
 
         return Path.Combine(folder, fileName);
     }
+
+    private static string FullPathFor(string folder, PartNumber number, NewPartRequest request) =>
+        FullPathFor(folder, number, request.PartName, request.Kind.Extension());
 
     private void CloseQuietly(INewPartDocument document, string assigned)
     {
@@ -311,7 +352,11 @@ public sealed class NewPartCreator
         _ => units.ToString().ToLowerInvariant(),
     };
 
-    private static bool ProbeFolder(string folder)
+    /// <summary>
+    /// <see cref="Directory.Exists(string)"/> on a background task that counts as "no" after
+    /// <see cref="FolderProbeTimeout"/>, because a disconnected drive can block for many seconds.
+    /// </summary>
+    internal static bool ProbeFolder(string folder)
     {
         var probe = Task.Run(() => Directory.Exists(folder));
         try
