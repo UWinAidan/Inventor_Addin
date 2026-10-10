@@ -66,6 +66,9 @@ public static class RibbonIds
     public const string DrawingToolsPanelId = PanelIdPrefix + "DrawingTools";
     public const string DrawingToolsPanelName = "Drawing Tools";
 
+    public const string ModellingPanelId = PanelIdPrefix + "Modelling";
+    public const string ModellingPanelName = "Modelling";
+
     public const string DeveloperPanelId = PanelIdPrefix + "Dev";
     public const string DeveloperPanelName = "Developer";
 
@@ -83,6 +86,11 @@ public static class CommandNames
     public const string Settings = Prefix + "Settings";
     public const string About = Prefix + "About";
     public const string PartProperties = Prefix + "PartProperties";
+    public const string NewPart = Prefix + "NewPart";
+    public const string SaveAsCopy = Prefix + "SaveAsCopy";
+    public const string SaveAsReplace = Prefix + "SaveAsReplace";
+    public const string CreatePrint = Prefix + "CreatePrint";
+    public const string MassUpdate = Prefix + "MassUpdate";
 
     private const string Prefix = Branding.IdPrefix + "_";
 }

@@ -1,0 +1,104 @@
+<Window x:Class="InventorAddin.UI.NewPartWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:InventorAddin.UI.Controls"
+        SizeToContent="WidthAndHeight"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False">
+    <!--
+        DataContext is a NewPartViewModel (InventorAddin.Core.ViewModels), set in the constructor.
+        Layout and bindings only: the look comes from UI/Theme, applied by WindowHost after the window is built,
+        so shared styles are referred to with DynamicResource. SizeToContent and ResizeMode are repeated from the
+        DialogWindow style so the window still sizes to its content if the shared styles fail to load.
+
+        Spec 02, "Commands: New Part": file type, part type, part name, units and folder, with a preview of the file
+        name (number shown as AWB-?????). Designer and Detailer are not asked; they come from Settings.
+        The folder's Browse button sits beside its box in the shared SideButton style, as in Settings.
+
+        Access keys: F file type, U units, N part name, T part type, O folder, B browse, C create.
+    -->
+    <StackPanel Style="{DynamicResource DialogContent}">
+        <!-- The header icon is put in the window's resources by WindowHost (HeaderIcon), in the window's theme. -->
+        <controls:DialogHeader Icon="{DynamicResource HeaderIcon}"
+                               Title="{Binding HeaderTitle, Mode=OneTime}"
+                               Subline="{Binding HeaderSubline, Mode=OneTime}" />
+
+        <controls:FormSection Heading="File">
+            <controls:FieldRow Label="_File type" Target="{Binding ElementName=KindBox}">
+                <ComboBox x:Name="KindBox"
+                          IsEditable="False"
+                          ItemsSource="{Binding KindOptions, Mode=OneTime}"
+                          DisplayMemberPath="DisplayText"
+                          SelectedValuePath="Kind"
+                          SelectedValue="{Binding Kind, Mode=TwoWay}" />
+            </controls:FieldRow>
+            <controls:FieldRow Label="_Units" Target="{Binding ElementName=UnitsBox}">
+                <ComboBox x:Name="UnitsBox"
+                          IsEditable="False"
+                          ItemsSource="{Binding UnitsOptions, Mode=OneTime}"
+                          DisplayMemberPath="DisplayText"
+                          SelectedValuePath="Units"
+                          SelectedValue="{Binding Units, Mode=TwoWay}" />
+            </controls:FieldRow>
+        </controls:FormSection>
+
+        <controls:FormSection Heading="Identity">
+            <controls:FieldRow Label="Part _name" Target="{Binding ElementName=PartNameBox}">
+                <TextBox x:Name="PartNameBox"
+                         Text="{Binding PartName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            </controls:FieldRow>
+            <controls:FieldRow Label="Part _type" Target="{Binding ElementName=PartTypeBox}">
+                <StackPanel Orientation="Horizontal">
+                    <!--
+                        As in Part Properties: not editable; the closed box shows the code and each dropdown entry
+                        shows "code: full name". The template tells the two apart by whether it sits inside a
+                        ComboBoxItem (only dropdown entries do). The full name of the chosen code is shown beside it.
+                    -->
+                    <ComboBox x:Name="PartTypeBox"
+                              Style="{DynamicResource CodeComboBox}"
+                              IsEditable="False"
+                              ItemsSource="{Binding PartTypeOptions, Mode=OneTime}"
+                              SelectedValuePath="Code"
+                              SelectedValue="{Binding PartType, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock x:Name="OptionText" Text="{Binding DisplayText, Mode=OneWay}" />
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ComboBoxItem}}" Value="{x:Null}">
+                                        <Setter TargetName="OptionText" Property="Text" Value="{Binding Code, Mode=OneWay}" />
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding PartTypeFullName, Mode=OneWay}" />
+                </StackPanel>
+            </controls:FieldRow>
+        </controls:FormSection>
+
+        <controls:FormSection Heading="Location">
+            <controls:FieldRow Label="F_older" Target="{Binding ElementName=FolderBox}">
+                <DockPanel>
+                    <!-- Opens a folder picker and puts the chosen folder in the box beside it (code-behind). -->
+                    <Button DockPanel.Dock="Right"
+                            Style="{DynamicResource SideButton}"
+                            Content="_Browse..."
+                            Click="OnBrowseFolder" />
+                    <TextBox x:Name="FolderBox"
+                             Text="{Binding Folder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </DockPanel>
+            </controls:FieldRow>
+            <!-- The file name with AWB-????? for the number; empty while the part name is not valid. -->
+            <controls:FieldRow Label="File name">
+                <TextBlock Style="{DynamicResource IdentifierText}" Text="{Binding FileNamePreview, Mode=OneWay}" />
+            </controls:FieldRow>
+        </controls:FormSection>
+
+        <!-- The first problem with the fields, or nothing (the status line is then not drawn). Create stays disabled meanwhile. -->
+        <controls:DialogFooter Status="{Binding ValidationMessage, Mode=OneWay}" IsError="True">
+            <Button Style="{DynamicResource PrimaryButton}" Content="_Create" IsDefault="True" Command="{Binding CreateCommand}" />
+            <!-- IsCancel closes a dialog shown with ShowDialog; nothing is created. -->
+            <Button Content="Cancel" IsCancel="True" />
+        </controls:DialogFooter>
+    </StackPanel>
+</Window>

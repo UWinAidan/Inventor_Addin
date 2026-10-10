@@ -29,7 +29,13 @@ On 2026-10-10:
 - **Templates:** Inventor's own default templates for now. Metric by default, with an imperial option. A templates-folder setting comes later, when Aidan has made his own templates.
 - **Written on creation:** Part Number, Description (the part name), Designer, Detailer, Part Type.
 - **No assembly browser folder management.**
-- **Rename searches the active Inventor project's workspace** for files that reference the renamed file.
+- **Rename searches the active Inventor project's workspace** for files that reference the renamed file. Replaced on 2026-10-10 (question 23): the active project has no workspace, so Rename searches the CAD folders set in Settings.
+- **CAD folders (2026-10-10, question 23).** Aidan's main CAD folder is `C:\Users\4aida\OneDrive\Documents\CADING`, the default for a new **Work folder** setting. CAD also lives in two other folders of his, which he lists in a second setting, **Other CAD folders** (one per line, empty by default; the folder names are not repeated in the repo). New Part, when no saved document is open, and Mass Update start in the work folder. Rename searches the work folder and every other CAD folder (Default: plus the renamed file's own folder and subfolders when it lies in none of them).
+- **Metric drawings use ANSI (mm)** (2026-10-10, question 24), as the drawing template lookup already does.
+- **Save As and Replace may replace a component inside a sub-assembly** (2026-10-10, question 25). It replaces the occurrence in the sub-assembly and saves the sub-assembly, so every assembly that uses it changes too.
+- **Undo after Generate leaves the register row in place** (2026-10-10, from the run 1 checks). Accepted as designed: rows are never removed.
+- **AssignedBy is the person** (2026-10-10, from the run 1 checks): the register's `AssignedBy` is the Default designer from Settings, or the Windows user name when that is blank.
+- **Other names that mean me** (2026-10-10, from the run 1 checks): a setting listing other names Aidan's old files carry (comma-separated, for example `Aidan.Brown, 4aida`). Part Properties and Mass Update treat a Designer or Detailer equal to any of them, or to the Windows user name, the way they treat the Windows user name.
 - **A Create Print ribbon button:** a new drawing from the default drawing template, with a base view of the active part, named and numbered the same as the part.
 - **Old files carry the Windows login name** (for example `4aida`) as Designer and Detailer. Part Properties treats a Designer or Detailer equal to the Windows user name as blank and pre-fills it from Settings. The folder scan or a Mass Update command replaces it in bulk.
 - **A custom drawing template is a separate item for M5**, not part of this spec. Its title block must read every property from the model, not copy them into the drawing.
@@ -59,6 +65,7 @@ On 2026-10-10:
 | Lock file | `{RegisterFolder}\part-register.lock` | exists only while a PC is writing |
 | Local copy | `%APPDATA%\AwbAddin\register\part-register.csv` | the shared register as of the last sync |
 | Pending entries | `%APPDATA%\AwbAddin\register\pending.csv` | numbers this PC assigned while the NAS could not be reached |
+| Pending updates | `%APPDATA%\AwbAddin\register\pending-updates.json` | Rename's path and name changes not yet written to the shared register (Default, task 047) |
 
 The local file names are Defaults. Only this small data file goes on the NAS, never the CAD. A blank `RegisterFolder` means no shared register: every number is assigned from this PC's copy, as when the NAS is unreachable (Default).
 
@@ -72,7 +79,7 @@ The local file names are Defaults. Only this small data file goes on the NAS, ne
 | `Kind` | `Part`, `SheetMetalPart` or `Assembly` |
 | `FilePath` | full path of the file when the number was assigned |
 | `AssignedAt` | UTC time, ISO 8601 (`2026-10-10T14:03:00Z`) |
-| `AssignedBy` | Windows user name |
+| `AssignedBy` | the Default designer from Settings, or the Windows user name when that is blank (Aidan, 2026-10-10) |
 | `Computer` | computer name |
 
 Values with a comma, quote or line break are quoted, quotes doubled. Rows are never removed or reordered by the add-in.
@@ -118,7 +125,7 @@ Each goes where spec 07's storage table puts it. Nothing else is written.
 **New Part** (CAD Automation panel; Part, Assembly and ZeroDoc ribbons, Default)
 
 1. The dialog asks for: file type (part, sheet metal part, assembly), part type (pre-filled A for an assembly, as in spec 07), part name, units (metric or imperial, from Settings), and folder.
-2. The folder defaults to the active document's folder, or the active project's workspace when nothing is open, with a Browse button (Default).
+2. The folder defaults to the active document's folder, or the Work folder from Settings when no saved document is open, with a Browse button (Default; Aidan, question 23). With both blank, Browse is needed.
 3. A preview line shows the file name the part will get, with the number shown as `AWB-?????` until it is assigned.
 4. On Create the add-in checks the name and path, assigns the next number, creates the document from the template, writes the properties above, and saves it under its file name straight away (Default), so the name and number are on disk.
 5. If creating or saving fails after the number was assigned, the number stays in the register (rows are never removed) and the error says which number was used.
@@ -138,13 +145,14 @@ Designer and Detailer are not in the dialog; they come from Settings and can be 
 **Save As and Replace** (CAD Automation panel; Assembly ribbon)
 
 - With one component selected in the active assembly: makes a copy as Save As Copy does, then replaces **that occurrence only** with the copy (Default, open question 16).
+- A component inside a sub-assembly can be selected (Aidan, question 25). The occurrence is replaced inside the sub-assembly, and the sub-assembly is saved. The dialog says so, because every assembly that uses the sub-assembly changes and Undo cannot put the saved file back.
 
 **Rename** (button beside the part name in Part Properties)
 
 - Asks for a new part name. The file gets `{number},{new_name}` if it has a number, or `{new_name}` if not.
-- Renames the file and updates every assembly, drawing and presentation in the active project's workspace that references it, then sets Description to the new name and updates the file path in the register entry.
+- Renames the file and updates every assembly, drawing and presentation in the CAD folders from Settings that references it (Aidan, question 23), then sets Description to the new name and updates the file path in the register entry.
 - Skips Inventor's `OldVersions` folders. Lists what it updated, and anything it could not update.
-- How references in files that are not open get found and updated is settled by the Windows spike (task 032) before the command is built.
+- Method (spike 032): save the open file under the new name, which repoints open assemblies; then open each closed referencing file invisibly, replace the reference through `Document.File.ReferencedFileDescriptors`, save and close it; save the open files the rename changed; then delete the old file.
 
 **Create Print** (Drawing Tools panel, large button; Part and Assembly ribbons)
 
@@ -155,15 +163,17 @@ Designer and Detailer are not in the dialog; they come from Settings and can be 
 
 **Mass Update** (Modelling panel; Part, Assembly and ZeroDoc ribbons) (Default: the folder scan and Mass Update are one command)
 
-- Scans a folder, by default the active project's workspace, with Browse. Includes subfolders, skips `OldVersions`, reads `.ipt` and `.iam` files.
+- Scans a folder, by default the Work folder from Settings (Aidan, question 23), with Browse. Includes subfolders, skips `OldVersions`, reads `.ipt` and `.iam` files.
 - Lists every file with its file name, Part Number, whether it has a number (in the register), and whether Designer or Detailer equals the Windows user name.
-- Offers three actions, each on the files ticked: **register** a number that is in the format but not in the register; **assign** a new number to a file without one (the file is not renamed); **replace** a Designer or Detailer equal to the Windows user name with the values from Settings.
+- Offers three actions, each on the files ticked: **register** a number that is in the format but not in the register; **assign** a new number to a file without one (the file is not renamed); **replace** a Designer or Detailer equal to the Windows user name or one of the Other names with the values from Settings.
 - Each changed file is saved. This cannot be undone with Inventor's Undo, so the add-in asks for confirmation first, saying how many files will change.
 - Files open in Inventor are skipped and listed as "open in Inventor".
 
 ## Windows user name as Designer or Detailer
 
 - In Part Properties, a Designer or Detailer equal to the Windows user name (ignoring case and surrounding spaces) counts as blank. Designer pre-fills from `DefaultDesigner`; Detailer then follows Designer. As with every pre-fill, nothing is written until Apply.
+- The same applies to a Designer or Detailer equal to any name in Settings' **Other names** (comma-separated; Aidan, 2026-10-10, task 051), in Part Properties and in Mass Update.
+- Mass Update's row and count text says "your name" rather than "Windows user name", since the match may be an Other name (Default, task 048).
 - When `DefaultDesigner` is blank the rule does not apply and the value is shown as it is (Default), so Apply never clears a Designer with nothing to replace it.
 
 ## Core logic (testable without Inventor)
@@ -202,7 +212,13 @@ Answered by Aidan on 2026-10-10:
 9. **What counts as "already has a number"?** In the format and in the register.
 10. **Is the register design accepted?** Yes, with the folder in Settings and the default above.
 11. **How is the part name read from a file name?** Everything after the first comma, underscores as spaces.
-12. **Where does Rename look for referencing files?** The active project's workspace.
+12. **Where does Rename look for referencing files?** The active project's workspace. Replaced by question 23's answer.
+
+Answered by Aidan on 2026-10-10, after spike 032:
+
+23. **Which folder holds Aidan's work?** `C:\Users\4aida\OneDrive\Documents\CADING` is the main one; two other folders of his also hold CAD. Settings gets a Work folder (default the main one) and Other CAD folders.
+24. **Drafting standard for metric drawings?** ANSI (mm).
+25. **Save As and Replace inside a sub-assembly?** Allowed; it saves the sub-assembly.
 
 Still open (each has a Default above, so none blocks planning):
 
@@ -216,6 +232,4 @@ Still open (each has a Default above, so none blocks planning):
 20. Mass Update on a file whose Designer is a real name and whose Detailer is the Windows user name. Default: Detailer is set to the Default designer from Settings. Part Properties instead makes Detailer follow the file's Designer. Should Mass Update do the same?
 21. A file carrying a number the register holds for a different file (for example a copy made in Explorer). Default: it counts as having a number, because the check ignores the path. Should Mass Update flag a number carried by two scanned files even when it is registered?
 22. A file named only `AWB-10001.ipt`, with no Part Number set. Inventor's fallback is `AWB-10001`, which is in the format, so the window shows it as a number (and as assigned if the register holds it). Default: accepted, since files in the new format always have a comma. Should the add-in check the Part Number against the file name to catch this?
-23. The active project has no workspace. Aidan's active project is Inventor's `Default.ipj`, whose workspace is blank (spike 032), and its folder is Inventor's own data folder (templates, design data). Default: a blank workspace is never replaced by the project's folder. New Part and Mass Update start in the active document's folder, or with no folder chosen (Browse needed) when nothing saved is open. Rename searches the renamed file's folder and its subfolders. Does Aidan use a project of his own with a workspace set, and if not, which folder holds his work?
-24. The drawing template's drafting standard. Default: ANSI, the only standard Inventor has for both metric and imperial drawings, falling back to Inventor's units-neutral default (`standard.dwg`). Should metric drawings use ISO (or another standard) instead?
-25. Save As and Replace on a component selected inside a sub-assembly. Replacing it changes the sub-assembly file, so every assembly that uses that sub-assembly changes too (spike 032). Default: the command refuses such a selection and asks for a component of the open assembly. Should it replace inside the sub-assembly instead?
+26. Mass Update assigning a number that an unticked scanned file already carries but has not registered. The register is the only source of numbers, so the next number can match such a file's Part Number. Default: not checked; the file shows "Not in the register" before Apply, so it can be ticked for Register, which runs before Assign. Should Assign skip numbers carried by any scanned file?

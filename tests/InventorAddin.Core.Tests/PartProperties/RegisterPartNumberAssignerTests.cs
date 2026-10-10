@@ -285,7 +285,7 @@ public sealed class RegisterPartNumberAssignerTests : IDisposable
 
         public DateTimeOffset Now => RegisterPartNumberAssignerTests.Now;
 
-        public string UserName => "testuser";
+        public string AssignedBy => "testuser";
 
         public string ComputerName => "TESTPC";
 

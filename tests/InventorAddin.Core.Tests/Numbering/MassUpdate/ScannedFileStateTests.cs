@@ -7,6 +7,9 @@ namespace InventorAddin.Core.Tests.Numbering.MassUpdate;
 public sealed class ScannedFileStateTests
 {
     private const string User = "testlogin";
+    private const string OtherName = "T.Login";
+
+    private static readonly IReadOnlyList<string> Me = [User];
 
     private static readonly PartRegister Register = new(
     [
@@ -26,7 +29,7 @@ public sealed class ScannedFileStateTests
     [Fact]
     public void RegisteredNumberOffersNoNumberAction()
     {
-        var state = ScannedFileState.For(File("AWB-10001"), Register, User);
+        var state = ScannedFileState.For(File("AWB-10001"), Register, Me);
 
         Assert.Equal(NumberState.Registered, state.NumberState);
         Assert.Equal(new PartNumber(10001), state.Number);
@@ -39,7 +42,7 @@ public sealed class ScannedFileStateTests
     [InlineData(" awb-10002 ")]
     public void WellFormedUnregisteredNumberOffersRegister(string partNumber)
     {
-        var state = ScannedFileState.For(File(partNumber), Register, User);
+        var state = ScannedFileState.For(File(partNumber), Register, Me);
 
         Assert.Equal(NumberState.WellFormedUnregistered, state.NumberState);
         Assert.Equal(new PartNumber(10002), state.Number);
@@ -54,7 +57,7 @@ public sealed class ScannedFileStateTests
     [InlineData("OLD-0042")]
     public void NoNumberOffersAssign(string partNumber)
     {
-        var state = ScannedFileState.For(File(partNumber), Register, User);
+        var state = ScannedFileState.For(File(partNumber), Register, Me);
 
         Assert.Equal(NumberState.None, state.NumberState);
         Assert.Null(state.Number);
@@ -64,30 +67,30 @@ public sealed class ScannedFileStateTests
     [Fact]
     public void DesignerEqualToWindowsUserOffersReplaceNames()
     {
-        var state = ScannedFileState.For(File("AWB-10001", designer: " TestLogin "), Register, User);
+        var state = ScannedFileState.For(File("AWB-10001", designer: " TestLogin "), Register, Me);
 
-        Assert.True(state.DesignerIsWindowsUser);
-        Assert.False(state.DetailerIsWindowsUser);
+        Assert.True(state.DesignerIsMe);
+        Assert.False(state.DetailerIsMe);
         Assert.Equal(MassUpdateActions.ReplaceNames, state.Actions);
     }
 
     [Fact]
     public void DetailerEqualToWindowsUserOffersReplaceNames()
     {
-        var state = ScannedFileState.For(File("AWB-10001", detailer: "TESTLOGIN"), Register, User);
+        var state = ScannedFileState.For(File("AWB-10001", detailer: "TESTLOGIN"), Register, Me);
 
-        Assert.False(state.DesignerIsWindowsUser);
-        Assert.True(state.DetailerIsWindowsUser);
+        Assert.False(state.DesignerIsMe);
+        Assert.True(state.DetailerIsMe);
         Assert.Equal(MassUpdateActions.ReplaceNames, state.Actions);
     }
 
     [Fact]
     public void NumberAndNameActionsCombine()
     {
-        var state = ScannedFileState.For(File("", designer: User, detailer: User), Register, User);
+        var state = ScannedFileState.For(File("", designer: User, detailer: User), Register, Me);
 
-        Assert.True(state.DesignerIsWindowsUser);
-        Assert.True(state.DetailerIsWindowsUser);
+        Assert.True(state.DesignerIsMe);
+        Assert.True(state.DetailerIsMe);
         Assert.Equal(MassUpdateActions.Assign | MassUpdateActions.ReplaceNames, state.Actions);
         Assert.True(state.Offers(MassUpdateActions.Assign));
         Assert.True(state.Offers(MassUpdateActions.ReplaceNames));
@@ -99,27 +102,55 @@ public sealed class ScannedFileStateTests
     [InlineData("  ")]
     public void BlankWindowsUserNeverMatches(string user)
     {
-        var state = ScannedFileState.For(File("AWB-10001", designer: "", detailer: " "), Register, user);
+        var state = ScannedFileState.For(File("AWB-10001", designer: "", detailer: " "), Register, [user]);
 
-        Assert.False(state.DesignerIsWindowsUser);
-        Assert.False(state.DetailerIsWindowsUser);
+        Assert.False(state.DesignerIsMe);
+        Assert.False(state.DetailerIsMe);
+    }
+
+    [Theory]
+    [InlineData("T.Login", "Alex Example", true, false)]
+    [InlineData("Alex Example", " t.login ", false, true)]
+    [InlineData("t.login", "TESTLOGIN", true, true)]
+    public void OtherNamesThatMeanMeOfferReplaceNames(string designer, string detailer, bool designerIsMe, bool detailerIsMe)
+    {
+        var state = ScannedFileState.For(File("AWB-10001", designer, detailer), Register, [User, OtherName]);
+
+        Assert.Equal(designerIsMe, state.DesignerIsMe);
+        Assert.Equal(detailerIsMe, state.DetailerIsMe);
+        Assert.Equal(MassUpdateActions.ReplaceNames, state.Actions);
+    }
+
+    [Fact]
+    public void ANameNotInTheListIsNotMe()
+    {
+        var state = ScannedFileState.For(File("AWB-10001", designer: OtherName), Register, Me);
+
+        Assert.False(state.DesignerIsMe);
+        Assert.Equal(MassUpdateActions.None, state.Actions);
+    }
+
+    [Fact]
+    public void NullNamesAreRejected()
+    {
+        Assert.Throws<ArgumentNullException>(() => ScannedFileState.For(File(), Register, null!));
     }
 
     [Fact]
     public void FileOpenInInventorOffersNoActionAndSaysWhy()
     {
-        var state = ScannedFileState.For(File("", designer: User, open: true), Register, User);
+        var state = ScannedFileState.For(File("", designer: User, open: true), Register, Me);
 
         Assert.Equal(MassUpdateActions.None, state.Actions);
         Assert.Equal("Open in Inventor; close it first.", state.BlockedReason);
         Assert.Equal(NumberState.None, state.NumberState);
-        Assert.True(state.DesignerIsWindowsUser);
+        Assert.True(state.DesignerIsMe);
     }
 
     [Fact]
     public void FileWithReadErrorOffersNoActionAndGivesTheError()
     {
-        var state = ScannedFileState.For(File("", designer: User, error: "The file could not be opened."), Register, User);
+        var state = ScannedFileState.For(File("", designer: User, error: "The file could not be opened."), Register, Me);
 
         Assert.Equal(MassUpdateActions.None, state.Actions);
         Assert.Equal("The file could not be opened.", state.BlockedReason);
@@ -128,7 +159,7 @@ public sealed class ScannedFileStateTests
     [Fact]
     public void OpenInInventorIsGivenBeforeAReadError()
     {
-        var state = ScannedFileState.For(File(open: true, error: "Some error"), Register, User);
+        var state = ScannedFileState.For(File(open: true, error: "Some error"), Register, Me);
 
         Assert.Equal(ScannedFileState.OpenInInventorText, state.BlockedReason);
     }
@@ -136,7 +167,7 @@ public sealed class ScannedFileStateTests
     [Fact]
     public void BlankReadErrorIsNoError()
     {
-        var state = ScannedFileState.For(File(error: "  "), Register, User);
+        var state = ScannedFileState.For(File(error: "  "), Register, Me);
 
         Assert.Null(state.BlockedReason);
         Assert.Equal(MassUpdateActions.Assign, state.Actions);

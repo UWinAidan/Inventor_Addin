@@ -11,7 +11,8 @@ public sealed record SyncResult(PartRegister Register, IReadOnlyList<RegisterDup
 
 /// <summary>
 /// The part register as data (spec 02, "The register"): one entry per number handed out, in the order they were
-/// handed out. Immutable and append-only: rows are never removed or reordered.
+/// handed out. Immutable. Rows are never removed or reordered; the only change to an existing row is a renamed
+/// file's new path and name (<see cref="TryUpdate"/>, task 047).
 /// </summary>
 public sealed class PartRegister
 {
@@ -58,6 +59,65 @@ public sealed class PartRegister
     {
         ArgumentNullException.ThrowIfNull(entry);
         return new PartRegister(_entries.Append(entry));
+    }
+
+    /// <summary>
+    /// A renamed file (task 047): a new register in which one row holding <paramref name="number"/> has
+    /// <paramref name="newPath"/> as its <c>FilePath</c> and <paramref name="newName"/> as its <c>Name</c>; every other
+    /// value, and every other row, is kept in place. The row is the first one holding the number whose path is already
+    /// <paramref name="newPath"/>, so an update applied again (a queued update after a write that got part way) changes
+    /// nothing more; else the first whose path is <paramref name="oldPath"/>, so the right row is changed when a number
+    /// was handed out twice; otherwise the first row holding the number (Default). Paths are compared ignoring case.
+    /// False, with <paramref name="updated"/> this register, when no row holds the number.
+    /// </summary>
+    public bool TryUpdate(
+        PartNumber number,
+        string newPath,
+        string newName,
+        string? oldPath,
+        out PartRegister updated)
+    {
+        ArgumentNullException.ThrowIfNull(newPath);
+        ArgumentNullException.ThrowIfNull(newName);
+
+        updated = this;
+        var first = -1;
+        var byOldPath = -1;
+        var byNewPath = -1;
+        for (var i = 0; i < _entries.Length; i++)
+        {
+            if (_entries[i].Number != number)
+            {
+                continue;
+            }
+
+            if (first < 0)
+            {
+                first = i;
+            }
+
+            if (byNewPath < 0 && string.Equals(_entries[i].FilePath, newPath, StringComparison.OrdinalIgnoreCase))
+            {
+                byNewPath = i;
+            }
+
+            if (byOldPath < 0 && !string.IsNullOrWhiteSpace(oldPath)
+                && string.Equals(_entries[i].FilePath, oldPath, StringComparison.OrdinalIgnoreCase))
+            {
+                byOldPath = i;
+            }
+        }
+
+        var index = byNewPath >= 0 ? byNewPath : byOldPath >= 0 ? byOldPath : first;
+        if (index < 0)
+        {
+            return false;
+        }
+
+        var entries = (RegisterEntry[])_entries.Clone();
+        entries[index] = entries[index] with { FilePath = newPath, Name = newName };
+        updated = new PartRegister(entries);
+        return true;
     }
 
     /// <summary>

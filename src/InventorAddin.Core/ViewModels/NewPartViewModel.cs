@@ -28,10 +28,10 @@ public sealed class NewPartViewModel : ObservableObject
 {
     public const string HeaderTitleText = "New Part";
 
-    /// <summary>Stands in for the part number in the preview. As long as a real number, so the path check holds.</summary>
-    public const string NumberPlaceholder = "AWB-?????";
+    /// <summary>Stands in for the part number in the preview (<see cref="NewFileNameCheck.NumberPlaceholder"/>).</summary>
+    public const string NumberPlaceholder = NewFileNameCheck.NumberPlaceholder;
 
-    public const string ChooseFolderMessage = "Choose a folder.";
+    public const string ChooseFolderMessage = NewFileNameCheck.ChooseFolderMessage;
 
     private static readonly IReadOnlyList<NewFileKindOption> AllKindOptions =
         NewFileKinds.All.Select(kind => new NewFileKindOption(kind, kind.DisplayName())).ToList().AsReadOnly();
@@ -59,9 +59,7 @@ public sealed class NewPartViewModel : ObservableObject
         _folder = defaultFolder ?? string.Empty;
         _partType = DefaultPartType(_kind);
 
-        var options = new List<PartTypeOption> { PartTypeOption.Blank };
-        options.AddRange(PartTypes.All.Select(PartTypeOption.From));
-        PartTypeOptions = options.AsReadOnly();
+        PartTypeOptions = PartTypeOption.ListFor(null);
 
         CreateCommand = new RelayCommand(Create, () => CanCreate);
         Recalculate();
@@ -175,9 +173,8 @@ public sealed class NewPartViewModel : ObservableObject
     public string FileNamePreview => _fileNamePreview;
 
     /// <summary>
-    /// The first problem: the part name (<see cref="PartFileName.ValidateName"/>), then a blank folder
-    /// (<see cref="ChooseFolderMessage"/>), then the path length (<see cref="PartFileName.ValidatePath"/>). Null when
-    /// there is none.
+    /// The first problem (<see cref="NewFileNameCheck.Problem"/>): the part name, then a blank folder, then the path
+    /// length. Null when there is none.
     /// </summary>
     public string? ValidationMessage => _validationMessage;
 
@@ -204,16 +201,9 @@ public sealed class NewPartViewModel : ObservableObject
 
     private void Recalculate()
     {
-        var folder = _folder.Trim();
-        var nameProblem = PartFileName.ValidateName(_partName);
-
-        _fileNamePreview = nameProblem is null
-            ? NumberPlaceholder + PartFileName.NumberSeparator + PartFileName.Build(null, _partName, _kind.Extension())
-            : string.Empty;
-
-        _validationMessage = nameProblem
-            ?? (folder.Length == 0 ? ChooseFolderMessage : null)
-            ?? PartFileName.ValidatePath(folder, _fileNamePreview);
+        var preview = NewFileNameCheck.For(_partName, _kind.Extension(), _folder);
+        _fileNamePreview = preview.FileName;
+        _validationMessage = preview.Problem;
     }
 
     private void Create()

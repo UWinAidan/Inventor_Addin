@@ -285,6 +285,21 @@
     </Style>
 
     <!--
+        A text box for several lines, one entry per line (Other CAD folders in Settings): four lines tall, text from
+        the top, no wrapping so a long entry stays on its own line. MinLines and MaxLines size it from the font, so
+        Height goes back to Auto. The template is the shared one, whose scroll bars are hidden: the box scrolls with
+        the caret and the mouse wheel. The window sets AcceptsReturn, as text boxes keep their behaviour to the window.
+    -->
+    <Style x:Key="MultiLineTextBox" TargetType="{x:Type TextBox}" BasedOn="{StaticResource {x:Type TextBox}}">
+        <Setter Property="Height" Value="Auto" />
+        <Setter Property="MinLines" Value="4" />
+        <Setter Property="MaxLines" Value="4" />
+        <Setter Property="Padding" Value="8,5,8,5" />
+        <Setter Property="VerticalContentAlignment" Value="Top" />
+        <Setter Property="TextWrapping" Value="NoWrap" />
+    </Style>
+
+    <!--
         Dropdown: the implicit style, with a full template so no system colour shows in either theme.
         The structure follows WPF's default: a ToggleButton over the whole box opens the list, a ContentPresenter
         shows the selection (through the window's ItemTemplate, which this style leaves alone), and a Popup holds the
@@ -557,6 +572,35 @@
                 <Setter Property="Foreground" Value="{DynamicResource DisabledTextBrush}" />
             </Trigger>
         </Style.Triggers>
+    </Style>
+
+    <!-- ===== Lists (Mass Update, task 048) ===== -->
+
+    <!--
+        A list of entries that scrolls once it is taller than 320, so the window stays on screen. No sideways scroll:
+        the entries wrap to the window's width. 9 below, as after a row.
+    -->
+    <Style x:Key="ListScroller" TargetType="{x:Type ScrollViewer}">
+        <Setter Property="MaxHeight" Value="320" />
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+        <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="Margin" Value="0,0,0,9" />
+    </Style>
+
+    <!-- One entry in a list: 9 below it, as between form rows. -->
+    <Style x:Key="ListItem" TargetType="{x:Type FrameworkElement}">
+        <Setter Property="Margin" Value="0,0,0,9" />
+    </Style>
+
+    <!-- A checkbox in a line of checkboxes: 12 after it, the gap between a label and its value. -->
+    <Style x:Key="InlineCheckBox" TargetType="{x:Type CheckBox}" BasedOn="{StaticResource {x:Type CheckBox}}">
+        <Setter Property="Margin" Value="0,0,12,0" />
+    </Style>
+
+    <!-- An identifier beside a value, 8 before it (the Part Number beside a file name). -->
+    <Style x:Key="SideIdentifierText" TargetType="{x:Type TextBlock}" BasedOn="{StaticResource IdentifierText}">
+        <Setter Property="Margin" Value="8,0,0,0" />
     </Style>
 
     <!-- ===== Shared pieces (UI/Controls) ===== -->

@@ -67,7 +67,10 @@ public enum MassUpdateActions
     /// <summary>Assign a new number to a file without one. The file is not renamed.</summary>
     Assign = 2,
 
-    /// <summary>Replace a Designer or Detailer equal to the Windows user name with the Default designer.</summary>
+    /// <summary>
+    /// Replace a Designer or Detailer that means the user (the Windows user name or one of the Other names) with the
+    /// Default designer.
+    /// </summary>
     ReplaceNames = 4,
 }
 
@@ -75,16 +78,19 @@ public enum MassUpdateActions
 /// <param name="File">The file as scanned.</param>
 /// <param name="NumberState">Whether the file has a number.</param>
 /// <param name="Number">The parsed Part Number when it is in the format; null otherwise.</param>
-/// <param name="DesignerIsWindowsUser">True when Designer equals the Windows user name.</param>
-/// <param name="DetailerIsWindowsUser">True when Detailer equals the Windows user name.</param>
+/// <param name="DesignerIsMe">
+/// True when Designer means the user: it equals the Windows user name or one of the Other names
+/// (<see cref="PersonNames.MeansMe"/>).
+/// </param>
+/// <param name="DetailerIsMe">True when Detailer means the user, as <paramref name="DesignerIsMe"/>.</param>
 /// <param name="Actions">The actions that apply. None when <see cref="BlockedReason"/> is set.</param>
 /// <param name="BlockedReason">Why the file offers no action (open in Inventor, or the read error), or null.</param>
 public sealed record ScannedFileState(
     ScannedFile File,
     NumberState NumberState,
     PartNumber? Number,
-    bool DesignerIsWindowsUser,
-    bool DetailerIsWindowsUser,
+    bool DesignerIsMe,
+    bool DetailerIsMe,
     MassUpdateActions Actions,
     string? BlockedReason)
 {
@@ -95,23 +101,24 @@ public sealed record ScannedFileState(
 
     /// <summary>
     /// The state of <paramref name="file"/> against <paramref name="register"/> and
-    /// <paramref name="windowsUserName"/>. Register applies to a well-formed, unregistered number; Assign to a file
-    /// with no number; Replace names when Designer or Detailer equals the Windows user name (ignoring case and
-    /// surrounding spaces, as <see cref="PersonNames"/> compares, but whatever the Default designer is). A file open
-    /// in Inventor, or with a read error, offers no action and gives the reason, the open file first.
+    /// <paramref name="namesThatMeanMe"/> (<see cref="PersonNames.NamesThatMeanMe"/>). Register applies to a
+    /// well-formed, unregistered number; Assign to a file with no number; Replace names when Designer or Detailer
+    /// means the user (<see cref="PersonNames.MeansMe"/>, whatever the Default designer is). A file open in Inventor,
+    /// or with a read error, offers no action and gives the reason, the open file first.
     /// </summary>
-    public static ScannedFileState For(ScannedFile file, PartRegister register, string windowsUserName)
+    public static ScannedFileState For(ScannedFile file, PartRegister register, IReadOnlyCollection<string> namesThatMeanMe)
     {
         ArgumentNullException.ThrowIfNull(file);
         ArgumentNullException.ThrowIfNull(register);
+        ArgumentNullException.ThrowIfNull(namesThatMeanMe);
 
         PartNumber? number = PartNumber.TryParse(file.PartNumber, out var parsed) ? parsed : null;
         var numberState = number is null
             ? NumberState.None
             : register.Contains(number.Value) ? NumberState.Registered : NumberState.WellFormedUnregistered;
 
-        var designerIsUser = IsWindowsUser(file.Designer, windowsUserName);
-        var detailerIsUser = IsWindowsUser(file.Detailer, windowsUserName);
+        var designerIsMe = PersonNames.MeansMe(file.Designer, namesThatMeanMe);
+        var detailerIsMe = PersonNames.MeansMe(file.Detailer, namesThatMeanMe);
 
         var blocked = file.OpenInInventor
             ? OpenInInventorText
@@ -127,19 +134,12 @@ public sealed record ScannedFileState(
                 _ => MassUpdateActions.None,
             };
 
-            if (designerIsUser || detailerIsUser)
+            if (designerIsMe || detailerIsMe)
             {
                 actions |= MassUpdateActions.ReplaceNames;
             }
         }
 
-        return new ScannedFileState(file, numberState, number, designerIsUser, detailerIsUser, actions, blocked);
-    }
-
-    private static bool IsWindowsUser(string value, string? windowsUserName)
-    {
-        var user = PropertyValues.NormaliseText(windowsUserName);
-        return user.Length > 0
-            && string.Equals(PropertyValues.NormaliseText(value), user, StringComparison.OrdinalIgnoreCase);
+        return new ScannedFileState(file, numberState, number, designerIsMe, detailerIsMe, actions, blocked);
     }
 }

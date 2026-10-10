@@ -6,13 +6,24 @@ Last updated: 2026-10-10
 
 ## Next up
 
-1. Aidan builds run 1 (tasks 033 to 042) on Windows and works through the M2 run 1 checks below. Run 1 is on `main` through PR #23 plus the follow-up pull request for 036, 039, 040 and 041.
-2. Run M2 cloud run 2 (tasks 043 to 048): "Run milestone M2 following docs/WORKFLOW.md." Spike 032's Results are committed; its Follow-ups say what each task must change (drawing template lookup, blank workspace, open-file detection, sub-assembly selection).
-3. Aidan finishes the Part Properties checks listed below; some will be easier once M2's new parts exist.
+1. Aidan builds M2 run 2 on Windows (`dotnet build InventorAddin.slnx`), fixes any compile errors, and works through the run 2 checks below.
+2. Aidan finishes the remaining run 1 and Part Properties checks below.
+3. Plan the next milestone once M2 is tested; M3 to M6 wait on Aidan's decisions listed below.
 
 ## Waiting on Aidan: checks in Inventor
 
-**M2 run 1** (full steps in each task's Verification section)
+**M2 run 2** (full steps in each task's Verification section; nothing here has been compiled)
+- [ ] 049 Settings: "New file units", Work folder and Other folders with Browse (including a dead drive and `Q:\x`), Other names (10 steps)
+- [ ] 050 AssignedBy is the Default designer, falling back to the Windows user name (5 steps)
+- [ ] 051 Other names count like the Windows user name in Part Properties (7 steps)
+- [ ] 043 New Part: dialog, templates, number, properties, save, failures, Undo after creation (12 steps)
+- [ ] 044 Create Print: ANSI template, `.dwg`, scale, Part Number, existing print (11 steps)
+- [ ] 045 Save As Copy: the original keeps its name and edits; in-place edit; part open in an assembly (11 steps)
+- [ ] 046 Save As and Replace: top-level with one Undo; inside a sub-assembly with the warning and save (8 steps)
+- [ ] 047 Rename: references in open and closed files, register update, skipped folder, plain AutoCAD `.dwg` (14 steps)
+- [ ] 048 Mass Update: scan, open files, register, assign, replace names, duplicates, register errors (10 steps)
+
+**M2 run 1** (full steps in each task's Verification section). Aidan's run 1 checks found three things, now tasks 049 to 051; tick the rest here when confirmed
 - [ ] Task 037, Settings: units dropdown and register folder, Browse, validation, access keys, an unknown units value in `settings.json`; is "Units for new files" cut off?
 - [ ] Task 038, Part Properties: a Designer or Detailer equal to the Windows login name is replaced by the default designer, and left alone when the default is blank
 - [ ] Task 039, Generate part number: online, offline, Undo, lock busy, duplicates, a typed number not in the register, a never-saved part, a new-format file name, and a register folder changed while Inventor runs (11 steps)
@@ -54,8 +65,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Questions 1 to 8 in spec 08: accent colour, dark title bar, icon style, and five defaults added while planning (never-saved header and part number, theme names, Inventor version row, the XAML rules test)
 
 **Numbering (spec 02), not blocking**
-- Questions 23 to 25 in spec 02, from spike 032: your active project is `Default.ipj` with no workspace, so which folder holds your work; ANSI or ISO for metric drawings; Save As and Replace on a component inside a sub-assembly. Each has a default the run 2 tasks will build
-- Questions 13 to 22 in spec 02: a well-formed number not in the register, case in file names, what to do with duplicates, Save As and Replace on every occurrence, opening Part Properties after creating a file, a comma in the name of a file with no number, a register row that cannot be read, Mass Update's Detailer, a registered number on two files, and a file named only `AWB-10001.ipt`. Each has a default the tasks build
+- Questions 13 to 22 and 26 in spec 02: a well-formed number not in the register, case in file names, what to do with duplicates, Save As and Replace on every occurrence, opening Part Properties after creating a file, a comma in the name of a file with no number, a register row that cannot be read, Mass Update's Detailer, a registered number on two files, a file named only `AWB-10001.ipt`, and Mass Update assigning a number an unticked file carries. Each has a default the tasks build
 
 **Distribution, not blocking**
 - Whether and when to add an installer and a download page. It was to be decided when M2 was planned and is still parked
@@ -98,9 +108,10 @@ Small things noticed while building. None is urgent. The parent turns these into
 - XAML rules test: C# in `UI/Controls/` is not checked, `DynamicResource` keys are not checked to exist, and a size binding with a typed `FallbackValue` passes. (task 031)
 
 **Settings window**
-- "Units for new files" may be cut off by the 100-wide label column. Widen the shared `FieldRow` label column or shorten the label; check in Inventor. (task 037)
+- `FieldRow` centres its label, so "Other folders" sits halfway down the four-line box. A top-aligned label for tall rows would fix it. (task 049)
+- The shared text box template hides scroll bars, so the four-line Other folders box gives no sign it holds more lines. (task 049)
+- The register folder's "not a full path" message does not name the register folder; the window now has three folder settings. (task 049)
 - A shared style for a button beside a text box (for example `BrowseButton`), so Browse can sit on the register folder row. New Part's folder field will want it. (task 037)
-- The Browse handler calls `Directory.Exists` on the UI thread. Spike 032 measured 8 s on the disconnected `B:` drive and up to 42 s on an unreachable host, so the Settings window will freeze when the NAS is down. Drop the check or move it off the UI thread. (task 037, spike 032)
 
 **Part properties**
 - One Apply writes one log line plus one per property. Keep the summary line and log the per-property lines only on failure. (tasks 018, 019)
@@ -112,15 +123,22 @@ Small things noticed while building. None is urgent. The parent turns these into
 - The window's local `ValueOrPlaceholder` and `IdentifierOrPlaceholder` styles could become shared pieces. (task 029)
 
 **Numbering**
+- Mass Update: a file whose number was already registered but whose names were replaced is reported as an error, not a change; give `FileUpdateResult` a note field. A first-sync `IOException` says "a number may already have been taken" when none was; use that message only part way. Parts left loaded by an assembly closed earlier may show as "Open in Inventor" (try `Documents.CloseAll(true)` if so). The window does not redraw during the sync (about 8 s) or a slow folder listing. The list's scroll bar does not follow the dark theme; spec 08 has no list styles. (task 048)
+- Rename: Inventor freezes while CAD folders are listed (up to 3 s per unreachable folder, 60 s per slow one); move the wait off the UI thread with progress. The Rename window is owned by Inventor, not Part Properties (needs an owner overload in `WindowHost`). The result list uses the four-line text box with no visible scroll bar. Spec 08 should list the Part name row with Rename. (task 047)
+- Save As and Replace: `kReferencesChangeCmdType` may suit it better than `kShapeEditCmdType`. Saving the sub-assembly with `Save()` may save its other unsaved files or show a dialog; consider `SilentOperation` around it and say so in the warning. `((AssemblyComponentDefinition)x).Parent` returns the sub-assembly document directly and avoids the unconfirmed `.Document`. Check which document holds the selection while a sub-assembly is edited in place. Spec 08 should name the button. (task 046 review)
+- Save As Copy: rename `NewPartException` and `NewPartResult` to neutral names now that copy commands share them; `NewPartCommand.cs` probably has an unused `using System;`. Spec 08 should list the Save As Copy icon and dialog. (task 045)
+- Create Print uses the active document, so while editing a part in place inside an assembly it prints the assembly. Its messages say "part" for assemblies too. An existing print is offered before the template is looked up. "metric"/"imperial" wording is in both `NewPartCreator` and `PrintPlan`; share it. Spec 08's icon list should name Create Print. (task 044)
+- New Part writes its properties in a transaction, so one Undo on the new part clears Part Number and Description in memory; saving then leaves a file without its number while the register keeps the row. Spike 032 found no transaction is needed on a new document: drop it, or keep it if Aidan prefers (043 checklist step 12). (task 043 review)
+- New Part checks `File.Exists` on the target while holding the register lock; a NAS folder dropping at that moment could hold the lock 8 to 42 s. Time-box it like the folder probe. (task 043 review)
+- New Part's checklist does not exercise a save failure after the number is assigned (try a folder without write permission). The dialog shows "Enter a part name." in the error style as soon as it opens; a muted style until typing may read better. The dialog accepts any folder text until Create. (task 043)
+- Spec 08 should record the New Part dialog layout (File, Identity, Location) and add New Part to its "Ribbon icons" list. (task 043)
+- The "Part number ... assigned" log lines in `RegisterStore.Assign` name the number and file, not who assigned it. Add `AssignedBy` if the log should say. (task 050)
 - Generate part number: offline it probes the register folder twice (sync, then assign), so a hung drive costs about 6 s, not 3; let `Assign` reuse the sync's result. The window freezes meanwhile with no wait cursor or status. (task 039)
 - Generate: when the re-check refuses ("already has a registered number"), the sync's duplicates are only logged, and the window does not refresh to show the number. (task 039)
 - Generate: each failure is logged twice, by `RegisterPartNumberAssigner` and by the view-model. A failed write after assigning leaves the button enabled, so a retry uses up a second number. A success message is hidden behind a pending validation message. (task 039 review)
 - Register store: spike 032 confirmed the 3 s probe timeout is right. An unreachable path blocked `Directory.Exists` for 8 to 42 s, so a timed-out probe's background check can live that long. Make sure abandoned probes cannot pile up against a hung drive, for example by reusing one in flight. (task 036, spike 032)
 - Register store hardening: in `TakeLock`, an `IOException` raised as the other PC releases its lock escapes instead of retrying; write the local copy before deleting the pending file; a failed write after `CreateNew` leaves our own lock behind. Lock-file limits to know: clock skew over 2 minutes between PCs can clear a live lock, and release does not check the lock is still ours. (task 036 review)
 - An unreadable local copy reads as empty, so offline numbering would restart at AWB-10001 until the next sync reports the duplicates. (task 036 review)
-- Mass Update: a duplicate unregistered number is only reported after Apply, and Apply stays disabled if that file is the only one ticked. Show the duplicate in the row at scan time and make Register unavailable there. Fold into 048. (task 041)
-- Mass Update: a register-only update writes nothing to the file, so 048 should not save it; the confirmation still counts it as a changed file. (task 041)
-- `ScannedFile.IsWindowsUser` copies the comparison in `PersonNames.IsWindowsUserPlaceholder`; share one helper. (task 041)
 - `ScanFolder` skips hidden and system files and follows directory junctions (the `EnumerationOptions` defaults). Say so in its doc comment or set it deliberately. (task 041)
 - The Metric and Imperial option list is built in both `SettingsViewModel` and `NewPartViewModel`. A shared `UnitsOption.All` would keep the text in one place. (task 040)
 - New Part's folder is checked only for blank and path length. Task 043 should add a full-path and invalid-character check like the register folder's, or make the folder Browse-only. (task 040)

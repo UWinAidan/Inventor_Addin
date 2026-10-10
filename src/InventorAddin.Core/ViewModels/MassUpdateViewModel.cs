@@ -39,10 +39,17 @@ public sealed class MassUpdateRow : ObservableObject
     private string? _resultText;
     private bool? _succeeded;
 
-    public MassUpdateRow(ScannedFileState state, bool defaultDesignerIsSet)
+    /// <param name="state">The file's state.</param>
+    /// <param name="defaultDesignerIsSet">False when the Default designer is blank, so Replace names is not offered.</param>
+    /// <param name="scanDuplicate">
+    /// Set when an earlier scanned file carries the same unregistered number (<see cref="MassUpdatePlan.ScanDuplicates"/>):
+    /// Register is then not offered, and the state says why.
+    /// </param>
+    public MassUpdateRow(ScannedFileState state, bool defaultDesignerIsSet, MassUpdateDuplicate? scanDuplicate = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         State = state;
+        ScanDuplicate = scanDuplicate;
         CanReplaceNames = defaultDesignerIsSet && state.Offers(MassUpdateActions.ReplaceNames);
         ReplaceNamesNote = !defaultDesignerIsSet && state.Offers(MassUpdateActions.ReplaceNames)
             ? MassUpdateViewModel.ReplaceNamesNeedsDefaultDesignerText
@@ -50,6 +57,9 @@ public sealed class MassUpdateRow : ObservableObject
     }
 
     public ScannedFileState State { get; }
+
+    /// <summary>The earlier file carrying this file's unregistered number, or null.</summary>
+    public MassUpdateDuplicate? ScanDuplicate { get; }
 
     public string FullPath => State.File.FullPath;
 
@@ -60,8 +70,10 @@ public sealed class MassUpdateRow : ObservableObject
     public string PartNumberText => PropertyValues.NormaliseText(State.File.PartNumber);
 
     /// <summary>
-    /// The file's state: the reason it offers no action, or the number state and, when present, which names are the
-    /// Windows user name, joined with <c>"; "</c>.
+    /// The file's state: the reason it offers no action, or the number state and, when present, which names mean the
+    /// user, joined with <c>"; "</c>. A name that means the user (the Windows user name or one of the Other names) is
+    /// called "your name" (Default, task 048). A number an earlier file also carries, unregistered, reads
+    /// <see cref="MassUpdateViewModel.DuplicateText"/>.
     /// </summary>
     public string StateText
     {
@@ -72,18 +84,20 @@ public sealed class MassUpdateRow : ObservableObject
                 return reason;
             }
 
-            var number = State.NumberState switch
-            {
-                NumberState.Registered => HasNumberText,
-                NumberState.WellFormedUnregistered => NotInRegisterText,
-                _ => NoNumberText,
-            };
+            var number = ScanDuplicate is { } duplicate
+                ? MassUpdateViewModel.DuplicateText(duplicate)
+                : State.NumberState switch
+                {
+                    NumberState.Registered => HasNumberText,
+                    NumberState.WellFormedUnregistered => NotInRegisterText,
+                    _ => NoNumberText,
+                };
 
-            var names = (State.DesignerIsWindowsUser, State.DetailerIsWindowsUser) switch
+            var names = (State.DesignerIsMe, State.DetailerIsMe) switch
             {
-                (true, true) => "Windows user name as Designer and Detailer",
-                (true, false) => "Windows user name as Designer",
-                (false, true) => "Windows user name as Detailer",
+                (true, true) => "your name as Designer and Detailer",
+                (true, false) => "your name as Designer",
+                (false, true) => "your name as Detailer",
                 _ => null,
             };
 
@@ -91,18 +105,22 @@ public sealed class MassUpdateRow : ObservableObject
         }
     }
 
-    public bool CanRegister => State.Offers(MassUpdateActions.Register);
+    /// <summary>False when Register does not apply, or an earlier file carries the same number.</summary>
+    public bool CanRegister => State.Offers(MassUpdateActions.Register) && ScanDuplicate is null;
 
     public bool CanAssign => State.Offers(MassUpdateActions.Assign);
 
-    /// <summary>False when the names are not the Windows user name, or the Default designer is blank.</summary>
+    /// <summary>False when neither name means the user, or the Default designer is blank.</summary>
     public bool CanReplaceNames { get; }
 
     /// <summary>
-    /// <see cref="MassUpdateViewModel.ReplaceNamesNeedsDefaultDesignerText"/> when the file has the Windows user name
+    /// <see cref="MassUpdateViewModel.ReplaceNamesNeedsDefaultDesignerText"/> when a name in the file means the user
     /// but the Default designer is blank; null otherwise.
     /// </summary>
     public string? ReplaceNamesNote { get; }
+
+    /// <summary>True when the row shows a tick box or the Replace names note; the window hides the line otherwise.</summary>
+    public bool HasActions => CanRegister || CanAssign || CanReplaceNames || ReplaceNamesNote is not null;
 
     /// <summary>Ticked to register the file's number. Stays false when the action does not apply.</summary>
     public bool Register
@@ -118,7 +136,7 @@ public sealed class MassUpdateRow : ObservableObject
         set => SetProperty(ref _assign, value && CanAssign);
     }
 
-    /// <summary>Ticked to replace the Windows user name. Stays false when the action is not offered.</summary>
+    /// <summary>Ticked to replace the names that mean the user. Stays false when the action is not offered.</summary>
     public bool ReplaceNames
     {
         get => _replaceNames;
@@ -138,12 +156,25 @@ public sealed class MassUpdateRow : ObservableObject
         private set => SetProperty(ref _resultText, value);
     }
 
-    /// <summary>After Apply: true when done, false on an error or a duplicate number. Null before.</summary>
+    /// <summary>After Apply: true when done, false on an error. Null before.</summary>
     public bool? Succeeded
     {
         get => _succeeded;
-        private set => SetProperty(ref _succeeded, value);
+        private set
+        {
+            if (SetProperty(ref _succeeded, value))
+            {
+                OnPropertyChanged(nameof(ResultIsDone));
+                OnPropertyChanged(nameof(ResultIsError));
+            }
+        }
     }
+
+    /// <summary>True when Apply reported this file done; for the window, which shows the result in the muted style.</summary>
+    public bool ResultIsDone => _succeeded == true;
+
+    /// <summary>True when Apply reported an error for this file; for the window, which shows it in the error style.</summary>
+    public bool ResultIsError => _succeeded == false;
 
     internal void SetResult(string text, bool succeeded)
     {
@@ -156,28 +187,53 @@ public sealed class MassUpdateRow : ObservableObject
 /// View-model for the Mass Update window (spec 02, "Commands: Mass Update"). Independent of Inventor: the add-in
 /// scans when <see cref="ScanRequested"/> fires and hands the files to <see cref="ShowScan"/>, applies the plan
 /// carried by <see cref="ApplyRequested"/> after confirming with <see cref="ConfirmText"/>, then reports each file
-/// back through <see cref="ReportResults"/>.
+/// back through <see cref="ReportResults"/>. While the add-in scans or applies it calls <see cref="BeginWork"/> and
+/// <see cref="EndWork"/>, which disable the other commands, and shows progress with <see cref="ShowStatus"/>; a scan
+/// stops between files once <see cref="IsCancelRequested"/> is true (<see cref="CancelCommand"/>).
 /// </summary>
 public sealed class MassUpdateViewModel : ObservableObject
 {
     public const string ReplaceNamesNeedsDefaultDesignerText = "Set Default designer in Settings first.";
+    public const string HeaderTitleText = "Mass Update";
+    public const string HeaderSublineText = "Register, number and fix names in a folder of files";
+    public const string CancellingText = "Stopping after this file...";
+    public const string ScanAgainText = "Scan again to make more changes.";
+    public const string NoFilesText = "No part or assembly files in this folder.";
 
-    private readonly string _windowsUserName;
+    private readonly IReadOnlyList<string> _namesThatMeanMe;
     private readonly string _defaultDesigner;
     private readonly RelayCommand _scanCommand;
     private readonly RelayCommand _applyCommand;
+    private readonly RelayCommand _cancelCommand;
 
     private string _folder;
     private IReadOnlyList<MassUpdateRow> _rows = Array.Empty<MassUpdateRow>();
+    private bool _isBusy;
+    private bool _canCancel;
+    private bool _isCancelRequested;
+    private bool _applied;
+    private string? _statusText;
+    private bool _statusIsError;
 
-    public MassUpdateViewModel(string? defaultFolder, string? windowsUserName, string? defaultDesigner)
+    /// <param name="defaultFolder">The folder shown at open: the Work folder from Settings.</param>
+    /// <param name="namesThatMeanMe">
+    /// The Windows user name and the Other names from Settings (<see cref="PersonNames.NamesThatMeanMe"/>).
+    /// </param>
+    /// <param name="defaultDesigner">The Default designer from Settings, which replaces those names.</param>
+    public MassUpdateViewModel(string? defaultFolder, IReadOnlyCollection<string> namesThatMeanMe, string? defaultDesigner)
     {
+        ArgumentNullException.ThrowIfNull(namesThatMeanMe);
         _folder = defaultFolder ?? "";
-        _windowsUserName = PropertyValues.NormaliseText(windowsUserName);
+        _namesThatMeanMe = namesThatMeanMe.ToList().AsReadOnly();
         _defaultDesigner = PropertyValues.NormaliseText(defaultDesigner);
-        _scanCommand = new RelayCommand(RequestScan, () => PropertyValues.NormaliseText(_folder).Length > 0);
-        _applyCommand = new RelayCommand(RequestApply, () => UpdateCount > 0);
+        _scanCommand = new RelayCommand(RequestScan, () => !_isBusy && PropertyValues.NormaliseText(_folder).Length > 0);
+        _applyCommand = new RelayCommand(RequestApply, () => !_isBusy && !_applied && UpdateCount > 0);
+        _cancelCommand = new RelayCommand(RequestCancel, () => _isBusy && _canCancel && !_isCancelRequested);
     }
+
+    public string HeaderTitle => HeaderTitleText;
+
+    public string HeaderSubline => HeaderSublineText;
 
     /// <summary>Raised by <see cref="ScanCommand"/>. The add-in scans the folder and calls <see cref="ShowScan"/>.</summary>
     public event EventHandler<MassUpdateScanEventArgs>? ScanRequested;
@@ -203,7 +259,91 @@ public sealed class MassUpdateViewModel : ObservableObject
 
     public RelayCommand ScanCommand => _scanCommand;
 
+    /// <summary>
+    /// Apply is disabled while busy, with nothing ticked, and after its results are reported until the next scan,
+    /// because the files have changed (an Assign applied twice would give a file two numbers).
+    /// </summary>
     public RelayCommand ApplyCommand => _applyCommand;
+
+    /// <summary>Stops a scan between files. Enabled only while a scan runs.</summary>
+    public RelayCommand CancelCommand => _cancelCommand;
+
+    /// <summary>True while the add-in scans or applies. The folder, Browse, Scan, Apply and Close are disabled.</summary>
+    public bool IsBusy
+    {
+        get => _isBusy;
+        private set
+        {
+            if (SetProperty(ref _isBusy, value))
+            {
+                OnPropertyChanged(nameof(IsIdle));
+                OnPropertyChanged(nameof(CanCancel));
+                RaiseCommandStates();
+            }
+        }
+    }
+
+    /// <summary>The opposite of <see cref="IsBusy"/>, for the window's bindings.</summary>
+    public bool IsIdle => !_isBusy;
+
+    /// <summary>True while a scan runs, so the Stop button is shown.</summary>
+    public bool CanCancel => _isBusy && _canCancel;
+
+    /// <summary>Set by <see cref="CancelCommand"/>; the add-in stops the scan after the file it is reading.</summary>
+    public bool IsCancelRequested => _isCancelRequested;
+
+    /// <summary>The footer's status line: progress, a result or a problem. Null when there is nothing to say.</summary>
+    public string? StatusText
+    {
+        get => _statusText;
+        private set => SetProperty(ref _statusText, value);
+    }
+
+    /// <summary>True when <see cref="StatusText"/> is a problem, shown in the error style.</summary>
+    public bool StatusIsError
+    {
+        get => _statusIsError;
+        private set => SetProperty(ref _statusIsError, value);
+    }
+
+    /// <summary>True once a scan has listed at least one file; the file list is shown then.</summary>
+    public bool HasRows => _rows.Count > 0;
+
+    /// <summary>The add-in starts a scan (<paramref name="cancellable"/>) or an apply.</summary>
+    public void BeginWork(bool cancellable)
+    {
+        _canCancel = cancellable;
+        _isCancelRequested = false;
+        OnPropertyChanged(nameof(IsCancelRequested));
+        IsBusy = true;
+        ShowStatus(null);
+    }
+
+    /// <summary>The add-in finished the scan or apply.</summary>
+    public void EndWork()
+    {
+        _canCancel = false;
+        IsBusy = false;
+    }
+
+    /// <summary>Shows <paramref name="text"/> on the status line, in the error style when <paramref name="isError"/>.</summary>
+    public void ShowStatus(string? text, bool isError = false)
+    {
+        StatusText = string.IsNullOrWhiteSpace(text) ? null : text;
+        StatusIsError = isError && StatusText is not null;
+    }
+
+    /// <summary>For example <c>"Reading 3 of 12"</c>.</summary>
+    public static string ScanProgressText(int current, int total) => $"Reading {current} of {total}";
+
+    /// <summary>For example <c>"Updating 3 of 7"</c>.</summary>
+    public static string ApplyProgressText(int current, int total) => $"Updating {current} of {total}";
+
+    /// <summary>The status after a scan: cancelled part way, no files, or nothing (the counts are shown above the list).</summary>
+    public static string? ScanDoneText(int read, int total, bool cancelled) =>
+        cancelled ? $"Scan stopped after {read} of {total} files."
+        : total == 0 ? NoFilesText
+        : null;
 
     /// <summary>One row per scanned file, in the order scanned.</summary>
     public IReadOnlyList<MassUpdateRow> Rows => _rows;
@@ -215,10 +355,14 @@ public sealed class MassUpdateViewModel : ObservableObject
     public string? ReplaceNamesDisabledReason =>
         _defaultDesigner.Length == 0 ? ReplaceNamesNeedsDefaultDesignerText : null;
 
+    /// <summary>True when <see cref="ReplaceNamesDisabledReason"/> is set; for the window.</summary>
+    public bool HasReplaceNamesDisabledReason => ReplaceNamesDisabledReason is not null;
+
     /// <summary>
-    /// For example <c>"12 files, 3 to register, 5 to number, 7 with the Windows user name"</c>: every file listed,
-    /// then the files each action applies to. Files open in Inventor or not read count only in the first figure.
-    /// Empty before a scan.
+    /// For example <c>"12 files, 3 to register, 5 to number, 7 with your name"</c>: every file listed, then the files
+    /// each action applies to ("with your name" counts the Windows user name and the Other names). Files open in
+    /// Inventor or not read count only in the first figure; a file whose number an earlier file also carries does not
+    /// count to register. Empty before a scan.
     /// </summary>
     public string CountsText
     {
@@ -233,7 +377,7 @@ public sealed class MassUpdateViewModel : ObservableObject
             var register = _rows.Count(r => r.CanRegister);
             var assign = _rows.Count(r => r.CanAssign);
             var names = _rows.Count(r => r.State.Offers(MassUpdateActions.ReplaceNames));
-            return $"{files}, {register} to register, {assign} to number, {names} with the Windows user name";
+            return $"{files}, {register} to register, {assign} to number, {names} with your name";
         }
     }
 
@@ -256,21 +400,39 @@ public sealed class MassUpdateViewModel : ObservableObject
     public bool TickAllRegister
     {
         get => AllTicked(r => r.CanRegister, r => r.Register);
-        set => SetAll(r => r.Register = value);
+        set
+        {
+            SetAll(r => r.Register = value);
+
+            // Raised even when no row changed, so a tick box on a list with nothing to tick goes back to clear.
+            OnTicksChanged();
+        }
     }
 
     /// <summary>Ticks or unticks Assign on every row it applies to. True when every such row is ticked.</summary>
     public bool TickAllAssign
     {
         get => AllTicked(r => r.CanAssign, r => r.Assign);
-        set => SetAll(r => r.Assign = value);
+        set
+        {
+            SetAll(r => r.Assign = value);
+
+            // Raised even when no row changed, so a tick box on a list with nothing to tick goes back to clear.
+            OnTicksChanged();
+        }
     }
 
     /// <summary>Ticks or unticks Replace names on every row it is offered on. True when every such row is ticked.</summary>
     public bool TickAllReplaceNames
     {
         get => AllTicked(r => r.CanReplaceNames, r => r.ReplaceNames);
-        set => SetAll(r => r.ReplaceNames = value);
+        set
+        {
+            SetAll(r => r.ReplaceNames = value);
+
+            // Raised even when no row changed, so a tick box on a list with nothing to tick goes back to clear.
+            OnTicksChanged();
+        }
     }
 
     /// <summary>The plan made by the last Apply, or null before one.</summary>
@@ -278,7 +440,8 @@ public sealed class MassUpdateViewModel : ObservableObject
 
     /// <summary>
     /// Shows the scan result: one row per file, in the order given, with nothing ticked. <paramref name="register"/>
-    /// is the register as synced for this run.
+    /// is the register as synced for this run. A file carrying an unregistered number that an earlier file also
+    /// carries says so and offers no Register (<see cref="MassUpdatePlan.ScanDuplicates"/>). Apply is enabled again.
     /// </summary>
     public void ShowScan(IEnumerable<ScannedFile> files, PartRegister register)
     {
@@ -290,8 +453,13 @@ public sealed class MassUpdateViewModel : ObservableObject
             row.PropertyChanged -= OnRowChanged;
         }
 
-        var rows = files
-            .Select(f => new MassUpdateRow(ScannedFileState.For(f, register, _windowsUserName), _defaultDesigner.Length > 0))
+        var states = files.Select(f => ScannedFileState.For(f, register, _namesThatMeanMe)).ToList();
+        var duplicates = MassUpdatePlan.ScanDuplicates(states);
+        var rows = states
+            .Select(state => new MassUpdateRow(
+                state,
+                _defaultDesigner.Length > 0,
+                duplicates.TryGetValue(state.File.FullPath, out var duplicate) ? duplicate : null))
             .ToList();
         foreach (var row in rows)
         {
@@ -300,7 +468,9 @@ public sealed class MassUpdateViewModel : ObservableObject
 
         _rows = rows.AsReadOnly();
         LastPlan = null;
+        _applied = false;
         OnPropertyChanged(nameof(Rows));
+        OnPropertyChanged(nameof(HasRows));
         OnPropertyChanged(nameof(CountsText));
         OnPropertyChanged(nameof(LastPlan));
         OnTicksChanged();
@@ -312,7 +482,7 @@ public sealed class MassUpdateViewModel : ObservableObject
 
     /// <summary>
     /// Shows each file's result on its row (matched by path, ignoring case): <see cref="MassUpdateRow.DoneText"/> or
-    /// the error. A row the last plan did not register because another file carries its number also says so.
+    /// the error. Apply stays disabled until the next scan (<see cref="ApplyCommand"/>).
     /// </summary>
     public void ReportResults(IEnumerable<FileUpdateResult> results)
     {
@@ -324,53 +494,53 @@ public sealed class MassUpdateViewModel : ObservableObject
             byPath[result.FullPath] = result;
         }
 
-        var duplicates = (LastPlan?.Duplicates ?? Array.Empty<MassUpdateDuplicate>())
-            .ToDictionary(d => d.DuplicatePath, StringComparer.OrdinalIgnoreCase);
-
         foreach (var row in _rows)
         {
-            var parts = new List<string>();
-            var succeeded = true;
-            var any = false;
-
             if (byPath.TryGetValue(row.FullPath, out var result))
             {
-                any = true;
                 if (string.IsNullOrWhiteSpace(result.Error))
                 {
-                    parts.Add(MassUpdateRow.DoneText);
+                    row.SetResult(MassUpdateRow.DoneText, succeeded: true);
                 }
                 else
                 {
-                    parts.Add(result.Error.Trim());
-                    succeeded = false;
+                    row.SetResult(result.Error.Trim(), succeeded: false);
                 }
             }
-
-            if (duplicates.TryGetValue(row.FullPath, out var duplicate))
-            {
-                any = true;
-                succeeded = false;
-                parts.Add(DuplicateText(duplicate));
-            }
-
-            if (any)
-            {
-                row.SetResult(string.Join(" ", parts), succeeded);
-            }
         }
+
+        _applied = true;
+        _applyCommand.RaiseCanExecuteChanged();
     }
 
-    /// <summary>For example <c>"Not registered: AWB-10001 is also on AWB-10001,plate.ipt."</c></summary>
+    /// <summary>
+    /// A file's number that an earlier scanned file also carries, unregistered, for example
+    /// <c>"Not registered: AWB-10005 is also on a.ipt"</c>.
+    /// </summary>
     public static string DuplicateText(MassUpdateDuplicate duplicate)
     {
         ArgumentNullException.ThrowIfNull(duplicate);
         var first = duplicate.FirstPath[(duplicate.FirstPath.LastIndexOfAny(['\\', '/']) + 1)..];
-        return $"Not registered: {duplicate.Number} is also on {first}.";
+        return $"Not registered: {duplicate.Number} is also on {first}";
     }
 
     private void RequestScan() =>
         ScanRequested?.Invoke(this, new MassUpdateScanEventArgs(PropertyValues.NormaliseText(_folder)));
+
+    private void RequestCancel()
+    {
+        _isCancelRequested = true;
+        OnPropertyChanged(nameof(IsCancelRequested));
+        _cancelCommand.RaiseCanExecuteChanged();
+        ShowStatus(CancellingText);
+    }
+
+    private void RaiseCommandStates()
+    {
+        _scanCommand.RaiseCanExecuteChanged();
+        _applyCommand.RaiseCanExecuteChanged();
+        _cancelCommand.RaiseCanExecuteChanged();
+    }
 
     private void RequestApply()
     {

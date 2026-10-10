@@ -33,7 +33,8 @@ namespace InventorAddin
 
         /// <summary>
         /// The part number register (spec 02), built on first use from <see cref="AddinSettings.RegisterFolder"/>
-        /// (blank: no shared folder, always offline) and the <c>register</c> folder under the data folder. Rebuilt
+        /// (blank: no shared folder, always offline), the <c>register</c> folder under the data folder, and
+        /// <c>AssignedBy</c> from <see cref="AddinSettings.DefaultDesigner"/> or the Windows user name. Rebuilt
         /// after the settings change. Building it touches no file.
         /// </summary>
         /// <exception cref="InvalidOperationException">The user's application data folder could not be found.</exception>
@@ -44,7 +45,9 @@ namespace InventorAddin
                 if (_registerStore == null)
                 {
                     string localFolder = IOPath.Combine(DataFolder ?? GetDataFolder(), LocalRegisterFolderName);
-                    _registerStore = new RegisterStore(Settings.RegisterFolder, localFolder, RegisterEnvironment.Instance, Log);
+                    var environment = new RegisterEnvironment(
+                        RegisterEnvironment.AssignedByFor(Settings.DefaultDesigner, SysEnvironment.UserName));
+                    _registerStore = new RegisterStore(Settings.RegisterFolder, localFolder, environment, Log);
                 }
 
                 return _registerStore;
@@ -84,7 +87,7 @@ namespace InventorAddin
         /// <summary>
         /// Replaces the session's settings after the user saved new ones. The ribbon is not rebuilt;
         /// a changed ribbon setting takes effect at the next start. The register is rebuilt on next use, so a changed
-        /// register folder applies straight away.
+        /// register folder or Default designer applies straight away.
         /// </summary>
         internal static void UpdateSettings(AddinSettings settings)
         {

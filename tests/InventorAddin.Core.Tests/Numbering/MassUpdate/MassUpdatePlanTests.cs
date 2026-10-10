@@ -28,7 +28,7 @@ public sealed class MassUpdatePlanTests
         string partType = "M",
         DocumentKind kind = DocumentKind.Part,
         bool open = false) =>
-        ScannedFileState.For(new ScannedFile(path, partNumber, designer, detailer, partType, kind, open), Register, User);
+        ScannedFileState.For(new ScannedFile(path, partNumber, designer, detailer, partType, kind, open), Register, [User]);
 
     [Fact]
     public void NothingTickedGivesAnEmptyPlan()
@@ -105,6 +105,21 @@ public sealed class MassUpdatePlanTests
                 PropertyWrite.SetText(PartPropertyStorage.Detailer, Designer),
             ],
             update.Writes);
+    }
+
+    [Fact]
+    public void ReplaceNamesSetsAnOtherNameThatMeansMe()
+    {
+        var state = ScannedFileState.For(
+            new ScannedFile(@"C:\Work\a.ipt", "AWB-10001", "Sam Sample", " t.login", "M", DocumentKind.Part),
+            Register,
+            PersonNames.NamesThatMeanMe(User, "T.Login"));
+
+        var plan = MassUpdatePlan.Build([(state, MassUpdateActions.ReplaceNames)], Designer);
+
+        var update = Assert.Single(plan.Updates);
+        var write = Assert.Single(update.Writes);
+        Assert.Equal((PartPropertyStorage.Detailer, Designer), (write.Location, write.TextValue));
     }
 
     [Fact]
@@ -261,5 +276,63 @@ public sealed class MassUpdatePlanTests
         Assert.Equal(
             PropertyWrite.SetText(PartPropertyStorage.PartNumber, "AWB-10012"),
             FileUpdate.PartNumberWrite(new PartNumber(10012)));
+    }
+
+    [Fact]
+    public void RequestForCarriesTheSameDetailsAsTheEntry()
+    {
+        var update = Assert.Single(MassUpdatePlan.Build(
+            [(State(@"C:\Work\Sub\AWB-10005,side_frame.iam", "AWB-10005", partType: " a ", kind: DocumentKind.Assembly), MassUpdateActions.Register)],
+            Designer).Updates);
+
+        Assert.Equal(
+            new RegisterRequest("side frame", "A", DocumentKind.Assembly, @"C:\Work\Sub\AWB-10005,side_frame.iam"),
+            update.RequestFor());
+    }
+
+    [Fact]
+    public void ChangesFileOnlyForAnAssignedNumberOrNames()
+    {
+        var plan = MassUpdatePlan.Build(
+            [
+                (State(@"C:\Work\a.ipt", "AWB-10007"), MassUpdateActions.Register),
+                (State(@"C:\Work\b.ipt", ""), MassUpdateActions.Assign),
+                (State(@"C:\Work\c.ipt", "AWB-10001", User), MassUpdateActions.ReplaceNames),
+                (State(@"C:\Work\d.ipt", "AWB-10008", User), MassUpdateActions.Register | MassUpdateActions.ReplaceNames),
+            ],
+            Designer);
+
+        Assert.Equal([false, true, true, true], plan.Updates.Select(u => u.ChangesFile));
+    }
+
+    [Fact]
+    public void ScanDuplicatesNameEachLaterCarrierOfAnUnregisteredNumber()
+    {
+        var states = new[]
+        {
+            State(@"C:\Work\a.ipt", "AWB-10005", open: true),
+            State(@"C:\Work\b.ipt", "AWB-10005"),
+            State(@"C:\Work\c.ipt", "AWB-10001"),
+            State(@"C:\Work\d.ipt", "AWB-10001"),
+            State(@"C:\Work\e.ipt", " awb-10005 "),
+            State(@"C:\Work\f.ipt", ""),
+            State(@"C:\Work\g.ipt", ""),
+        };
+
+        var duplicates = MassUpdatePlan.ScanDuplicates(states);
+
+        Assert.Equal(2, duplicates.Count);
+        Assert.Equal(new MassUpdateDuplicate(new PartNumber(10005), @"C:\Work\a.ipt", @"C:\Work\b.ipt"), duplicates[@"C:\WORK\B.IPT"]);
+        Assert.Equal(new MassUpdateDuplicate(new PartNumber(10005), @"C:\Work\a.ipt", @"C:\Work\e.ipt"), duplicates[@"C:\Work\e.ipt"]);
+    }
+
+    [Fact]
+    public void ScanDuplicatesAgreesWithBuild()
+    {
+        var states = new[] { State(@"C:\Work\a.ipt", "AWB-10005"), State(@"C:\Work\b.ipt", "AWB-10005") };
+
+        var plan = MassUpdatePlan.Build(states.Select(s => (s, MassUpdateActions.Register)), Designer);
+
+        Assert.Equal(plan.Duplicates.Single(), MassUpdatePlan.ScanDuplicates(states).Values.Single());
     }
 }

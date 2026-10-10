@@ -256,4 +256,67 @@ public sealed class PartRegisterTests
         Assert.True(result.Register.Contains(new PartNumber(10009)));
         Assert.Equal(new PartNumber(10010), result.Register.NextNumber());
     }
+
+    // TryUpdate (task 047)
+
+    [Fact]
+    public void TryUpdate_ChangesPathAndNameOfThatRowOnly_AndLeavesTheOriginalAlone()
+    {
+        var register = new PartRegister([Entry(10001), Entry(10002), Entry(10003)]);
+
+        Assert.True(register.TryUpdate(new PartNumber(10002), @"C:\Work\AWB-10002,base_plate.ipt", "base plate", null, out var updated));
+
+        Assert.Equal([10001, 10002, 10003], updated.Entries.Select(e => e.Number.Value));
+        Assert.Equal(Entry(10001), updated.Entries[0]);
+        Assert.Equal(Entry(10002) with { FilePath = @"C:\Work\AWB-10002,base_plate.ipt", Name = "base plate" }, updated.Entries[1]);
+        Assert.Equal(Entry(10003), updated.Entries[2]);
+        Assert.Equal(Entry(10002), register.Entries[1]);
+    }
+
+    [Fact]
+    public void TryUpdate_NumberNotHeld_IsFalse_AndGivesTheSameRegister()
+    {
+        var register = new PartRegister([Entry(10001)]);
+
+        Assert.False(register.TryUpdate(new PartNumber(10002), @"C:\x.ipt", "x", null, out var updated));
+        Assert.Same(register, updated);
+    }
+
+    [Fact]
+    public void TryUpdate_NumberHeldTwice_PicksTheRowWithTheOldPath_IgnoringCase_ElseTheFirst()
+    {
+        var register = new PartRegister([Entry(10002, @"C:\A\one.ipt"), Entry(10002, @"C:\B\two.ipt")]);
+
+        register.TryUpdate(new PartNumber(10002), @"C:\B\new.ipt", "new", @"c:\b\TWO.IPT", out var byPath);
+        register.TryUpdate(new PartNumber(10002), @"C:\B\new.ipt", "new", @"C:\elsewhere.ipt", out var noMatch);
+        register.TryUpdate(new PartNumber(10002), @"C:\B\new.ipt", "new", null, out var noPath);
+
+        Assert.Equal([@"C:\A\one.ipt", @"C:\B\new.ipt"], byPath.Entries.Select(e => e.FilePath));
+        Assert.Equal([@"C:\B\new.ipt", @"C:\B\two.ipt"], noMatch.Entries.Select(e => e.FilePath));
+        Assert.Equal([@"C:\B\new.ipt", @"C:\B\two.ipt"], noPath.Entries.Select(e => e.FilePath));
+    }
+
+    [Fact]
+    public void TryUpdate_KeepsHasNumberAndNextNumber()
+    {
+        var register = new PartRegister([Entry(10001), Entry(10004)]);
+
+        register.TryUpdate(new PartNumber(10004), @"C:\x.ipt", "x", null, out var updated);
+
+        Assert.True(updated.HasNumber("AWB-10004"));
+        Assert.Equal(new PartNumber(10005), updated.NextNumber());
+    }
+
+    [Fact]
+    public void TryUpdate_AppliedTwice_ChangesNothingMore_BecauseTheRowWithTheNewPathMatchesFirst()
+    {
+        var register = new PartRegister([Entry(10002, @"C:\A\one.ipt"), Entry(10002, @"C:\B\two.ipt")]);
+
+        register.TryUpdate(new PartNumber(10002), @"C:\B\new.ipt", "new", @"C:\B\two.ipt", out var once);
+        Assert.True(once.TryUpdate(new PartNumber(10002), @"C:\B\new.ipt", "new", @"C:\B\two.ipt", out var twice));
+        Assert.True(twice.TryUpdate(new PartNumber(10002), @"C:\B\new.ipt", "new", null, out var thrice));
+
+        Assert.Equal(once.Entries, twice.Entries);
+        Assert.Equal([@"C:\A\one.ipt", @"C:\B\new.ipt"], thrice.Entries.Select(e => e.FilePath));
+    }
 }

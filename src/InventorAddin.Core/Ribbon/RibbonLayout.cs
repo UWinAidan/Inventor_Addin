@@ -29,17 +29,45 @@ public static class RibbonLayout
         RibbonEnvironment.Assembly,
     };
 
+    // Spec 02, "Commands: Save As and Replace": a component selected in an assembly.
+    private static readonly RibbonEnvironment[] AssemblyEnvironments =
+    {
+        RibbonEnvironment.Assembly,
+    };
+
+    // Spec 02, "Commands: New Part" and "Commands: Mass Update": also with no document open.
+    private static readonly RibbonEnvironment[] NewFileEnvironments =
+    {
+        RibbonEnvironment.ZeroDoc,
+        RibbonEnvironment.Part,
+        RibbonEnvironment.Assembly,
+    };
+
     private static readonly PanelDefinition[] Definitions =
     {
         new(RibbonIds.CadAutomationPanelId, RibbonIds.CadAutomationPanelName, DeveloperOnly: false, new ButtonDefinition[]
         {
+            new(CommandNames.NewPart, ButtonSize.Small, IconNames.NewPart, NewFileEnvironments),
+            // Spec 02, "Commands: Save As Copy": a copy of the active part or assembly.
+            new(CommandNames.SaveAsCopy, ButtonSize.Small, IconNames.SaveAsCopy, ModelEnvironments),
+            // Spec 02, "Commands: Save As and Replace": the selected component in the active assembly.
+            new(CommandNames.SaveAsReplace, ButtonSize.Small, IconNames.SaveAsReplace, AssemblyEnvironments),
             // Spec 07: parts and assemblies only, not drawings and not with no document open.
             new(CommandNames.PartProperties, ButtonSize.Small, IconNames.PartProperties, ModelEnvironments),
             // ZeroDoc gets no Settings or About button until spec 01 open question 4 is answered.
             new(CommandNames.Settings, ButtonSize.Small, IconNames.Settings, DocumentEnvironments),
             new(CommandNames.About, ButtonSize.Small, IconNames.About, DocumentEnvironments),
         }),
-        new(RibbonIds.DrawingToolsPanelId, RibbonIds.DrawingToolsPanelName, DeveloperOnly: false, Array.Empty<ButtonDefinition>()),
+        new(RibbonIds.DrawingToolsPanelId, RibbonIds.DrawingToolsPanelName, DeveloperOnly: false, new ButtonDefinition[]
+        {
+            // Spec 02, "Commands: Create Print": a drawing of the active part or assembly.
+            new(CommandNames.CreatePrint, ButtonSize.Large, IconNames.CreatePrint, ModelEnvironments),
+        }),
+        new(RibbonIds.ModellingPanelId, RibbonIds.ModellingPanelName, DeveloperOnly: false, new ButtonDefinition[]
+        {
+            // Spec 02, "Commands: Mass Update": a folder of files, so also with no document open.
+            new(CommandNames.MassUpdate, ButtonSize.Small, IconNames.MassUpdate, NewFileEnvironments),
+        }),
         new(RibbonIds.DeveloperPanelId, RibbonIds.DeveloperPanelName, DeveloperOnly: true, new ButtonDefinition[]
         {
             new(CommandNames.ExportModelData, ButtonSize.Small, IconNames.ExportModelData, DocumentEnvironments),

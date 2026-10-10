@@ -9,8 +9,11 @@ public interface IRegisterEnvironment
     /// <summary>The current time. Used for <c>AssignedAt</c> and for the age of a lock file.</summary>
     DateTimeOffset Now { get; }
 
-    /// <summary>The Windows user name, for <c>AssignedBy</c>.</summary>
-    string UserName { get; }
+    /// <summary>
+    /// Who is assigning, for <c>AssignedBy</c> and the lock file: the person, as
+    /// <see cref="RegisterEnvironment.AssignedByFor"/> gives it (spec 02, "AssignedBy is the person").
+    /// </summary>
+    string AssignedBy { get; }
 
     /// <summary>The computer name, for <c>Computer</c>.</summary>
     string ComputerName { get; }
@@ -22,14 +25,31 @@ public interface IRegisterEnvironment
     bool ProbeFolder(string folder, TimeSpan timeout);
 }
 
-/// <summary>The real <see cref="IRegisterEnvironment"/>: the system clock in UTC, <see cref="Environment"/> names, and a probe with a timeout.</summary>
+/// <summary>
+/// The real <see cref="IRegisterEnvironment"/>: the system clock in UTC, the <c>AssignedBy</c> value it was given,
+/// the <see cref="Environment"/> computer name, and a probe with a timeout.
+/// </summary>
 public sealed class RegisterEnvironment : IRegisterEnvironment
 {
-    public static readonly RegisterEnvironment Instance = new();
+    /// <param name="assignedBy">Who is assigning; build it with <see cref="AssignedByFor"/>. Null reads as blank.</param>
+    public RegisterEnvironment(string? assignedBy)
+    {
+        AssignedBy = assignedBy ?? "";
+    }
+
+    /// <summary>
+    /// Spec 02, "AssignedBy is the person": the trimmed <paramref name="defaultDesigner"/> from Settings when it is not
+    /// blank, otherwise the trimmed <paramref name="windowsUserName"/>. Both blank gives <c>""</c>.
+    /// </summary>
+    public static string AssignedByFor(string? defaultDesigner, string? windowsUserName)
+    {
+        var designer = defaultDesigner?.Trim() ?? "";
+        return designer.Length > 0 ? designer : windowsUserName?.Trim() ?? "";
+    }
 
     public DateTimeOffset Now => DateTimeOffset.UtcNow;
 
-    public string UserName => Environment.UserName;
+    public string AssignedBy { get; }
 
     public string ComputerName => Environment.MachineName;
 
