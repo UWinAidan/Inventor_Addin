@@ -6,8 +6,10 @@ Last updated: 2026-10-10
 
 ## Next up
 
-1. Aidan finishes the Part Properties checks listed below.
-2. Aidan decides the numbering configuration (spec 02), then: plan M2.
+1. Run M2 cloud run 1 (tasks 033 to 042): "Run milestone M2 following docs/WORKFLOW.md." It skips 032 and stops before 043, which wait on the spike.
+2. Aidan builds run 1 on Windows, works through its checks, and runs spike 032 (`docs/tasks/032-spike-create-rename-print.md`) in a local session. Commit its Results.
+3. Run M2 cloud run 2 (tasks 043 to 048).
+4. Aidan finishes the Part Properties checks listed below; some will be easier once M2's new parts exist.
 
 ## Waiting on Aidan: checks in Inventor
 
@@ -24,13 +26,6 @@ From the Part Properties checklist (task 019). Confirmed so far: the window open
 ## Waiting on Aidan: decisions
 
 Each spec lists its own open questions in full. These are the ones that block planning.
-
-**Numbering (spec 02), blocks M2**
-- What a part number looks like, and whether assemblies and parts are numbered differently
-- Whether the register design is accepted: one register file on the NAS with a local copy on each PC
-- How a file name combines the part number and the name
-- Where templates live
-- What the Rename command searches when it updates references
 
 **Material and finish (spec 03), blocks M3**
 - The finish list: names, codes, which materials each applies to
@@ -51,16 +46,21 @@ Each spec lists its own open questions in full. These are the ones that block pl
 **Window style (spec 08), not blocking**
 - Questions 1 to 8 in spec 08: accent colour, dark title bar, icon style, and five defaults added while planning (never-saved header and part number, theme names, Inventor version row, the XAML rules test)
 
+**Numbering (spec 02), not blocking**
+- Questions 13 to 17 in spec 02: a well-formed number not in the register, case in file names, what to do with duplicates, Save As and Replace on every occurrence, and opening Part Properties after creating a file. Each has a default the tasks build
+
+**Distribution, not blocking**
+- Whether and when to add an installer and a download page. It was to be decided when M2 was planned and is still parked
+
 **Smaller, not blocking**
 - Should Settings and About appear with no document open? (spec 01, question 4)
 - Should About check for a newer version? (spec 01, question 2)
-- What should "Mass Update" do, if it is wanted at all? (spec 01, question 1)
 - More fields for the properties window: revision, vendor, vendor part number, project, notes? (spec 07, question 1)
 
 ## Proposed work, not yet agreed
 
 - **Reviewer styling checklist and a Windows build script.** Both are written into spec 08 as proposed additions to M1b. Aidan has not said yes or no.
-- **Part name editable in the properties window.** Aidan asked on 2026-10-06 whether the name can be edited. Today it is display-only because it is linked to the file name, and changing it means renaming the file (the Rename command, planned with M2). Waiting on Aidan: keep it that way, or make the name editable now and let it differ from the file name.
+- **Part name editable in the properties window.** Aidan asked on 2026-10-06 whether the name can be edited. It stays display-only, linked to the file name; the Rename button beside it is now planned (task 047). Waiting on Aidan only if he wants the name to differ from the file name.
 
 ## Follow-ups from finished tasks
 
@@ -81,11 +81,8 @@ Small things noticed while building. None is urgent. The parent turns these into
 - The remark in `UiTheme.cs` still says the dark-theme rule waits for spike 020; name the confirmed `LightTheme` and `DarkTheme`. (task 026)
 - Settings: the gap between a control and its note is the full row gap (9). If it looks loose, add a shared `HelpText` style. (task 028)
 - Settings: the restart note lines up with the checkbox's box, not its label text. (task 028)
-- Settings: "Show developer tools" has no access key; D is taken by Default designer. Alt+S is free. (task 028)
 - A cloud check project that compiles the add-in's XAML and WPF code against stub Inventor types would catch XAML errors before Aidan builds. Proposed, not agreed. (task 026)
 
-- Ribbon: if `AddButtonDefinition` with icons throws after Inventor created the definition, the text-only retry fails on the duplicate name. Re-check `defs[InternalName]` before retrying. (task 030 review)
-- Ribbon: one command failing to register still stops the whole ribbon build; only per-ribbon failures are now caught. (task 030)
 - Developer commands get no icon while developer tools are off. (task 030)
 
 - XAML rules test: C# in `UI/Controls/` is not checked, `DynamicResource` keys are not checked to exist, and a size binding with a typed `FallbackValue` passes. (task 031)
@@ -93,11 +90,9 @@ Small things noticed while building. None is urgent. The parent turns these into
 **Part properties**
 - One Apply writes one log line plus one per property. Keep the summary line and log the per-property lines only on failure. (tasks 018, 019)
 - Weight is read through code that also computes volume, area and centre of mass. On a large assembly the window may open slowly; read only the mass, or read it after the window opens. (task 018)
-- `PropertyReader.Set` has no callers now that `PropertyWriter` exists. Delete it. (task 018)
 - `PartPropertiesViewModel.Ok()` has no guard for invalid values when called from code. The window cannot reach it today. (task 016)
 - Correcting a part type's case shows the "pre-filled values" wording, which is not quite accurate for it. (task 016)
 - Number parsing accepts oddly placed group separators, so `1,2,3` reads as 123. Tighten only if it confuses anyone. (task 013)
-- `PartNumber`, `Material` and `Finish` on `PartPropertiesViewModel` are no longer bound by the window. Remove them, or keep them for a later field. (task 029)
 - The Part Properties window now sizes to its content, so a long status message widens it, up to 560, until the message clears. If that is distracting, fix the width in `UI/Theme/`. (task 029)
 - The window's local `ValueOrPlaceholder` and `IdentifierOrPlaceholder` styles could become shared pieces. (task 029)
 

@@ -11,12 +11,12 @@ Last updated: 2026-10-10
 | Foundations (M0) | 01 | **Done, tested in Inventor** | Settings, log, ribbon, error reporting, Settings and About windows, editing-command base, "AWB Addin" branding |
 | Part properties window (M1) | 07 | **Built and merged, partly tested in Inventor** | Opens on parts and assemblies, pre-fills, writes and undoes correctly. A never-saved part shows New part, Not saved yet and Not assigned; the blank Part type entry can be clicked. Some checklist steps not yet reported; see `TODO.md` |
 | Window style and icons (M1b) | 08 | **Done, tested in Inventor** | Tasks 020 to 031. Shared look in light and dark, all three windows restyled, icons on ribbon and headers, XAML rules test. Every check passed on Windows. Two follow-ups on the build's deploy line are in `TODO.md` |
-| Part creation and numbering (M2) | 02 | Not started | Waiting on Aidan's numbering decisions |
+| Part creation and numbering (M2) | 02 | **Planned** | Tasks 032 to 048. Run 1 (033 to 042) is ready for the cloud; run 2 (043 to 048) waits on Windows spike 032 |
 | Material and finish (M3) | 03 | Not started | Waiting on Aidan's finish list and a Windows spike |
 | Hole table wizard (M4) | 04 | Not started | Core half needs three answers; add-in half needs a Windows spike |
-| Drawing tools (M5) | 05 | Not started | Waiting on which commands Aidan wants |
+| Drawing tools (M5) | 05 | Not started | Waiting on which commands Aidan wants. Will include a custom drawing template |
 | iLogic injection (M6) | 06 | Not started | Waiting on which rules |
-| Distribution (installer, download page) | none yet | Parked | To be decided when the part number generator is planned |
+| Distribution (installer, download page) | none yet | Parked | Was to be decided when M2 was planned; still waiting on Aidan |
 
 States used: Not started, Planned, In progress, Built (merged, not tested in Inventor), Partly tested, Done (tested in Inventor), Parked, Proposed.
 

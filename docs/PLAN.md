@@ -4,7 +4,7 @@ Owned by the parent session (see `docs/WORKFLOW.md`). This file holds the milest
 
 ## Milestones
 
-Order set by Aidan on 2026-10-06: the part properties window first, then window style, then numbering. The order after M2 is still a draft.
+Order set by Aidan on 2026-10-06: the part properties window first, then window style, then numbering. The order after M2 is still a draft. M5 also gets the custom drawing template (Aidan, 2026-10-10).
 
 ### M0: Foundations
 
@@ -119,7 +119,56 @@ Left out until Aidan agrees: the reviewer styling checklist and the PowerShell b
 
 ### M2: Part creation and numbering (spec 02)
 
-Blocked on the spec's open questions. Aidan will decide the numbering configuration, including whether assemblies and parts are numbered differently, when this milestone is planned. This milestone also adds the "Generate part number" button to the M1 window.
+Part numbers `AWB-10001` from a register on the NAS with a local copy on each PC, file names `AWB-10001,name.ipt`, and the commands that create, copy, rename, print and bulk-update files. Aidan answered the spec's numbering questions on 2026-10-10; the rest have defaults.
+
+Planned 2026-10-10. Run in number order; each task depends only on lower numbers.
+
+| Task | Needs | Depends on | Parallel-safe with |
+|---|---|---|---|
+| 032 | **windows** (spike, Aidan) | none | every cloud task |
+| 033 | cloud | none | 037, 038, 042 |
+| 034 | cloud | 033 | 035, 036, 037, 042 |
+| 035 | cloud | 033 | 034, 037, 038, 042 |
+| 036 | cloud | 035 | 034, 037, 038, 042 |
+| 037 | cloud, add-in not compiled | none | 033 to 036, 038 |
+| 038 | cloud, add-in not compiled | none | 033, 035, 036, 037, 042 |
+| 039 | cloud, add-in not compiled | 033, 035, 036, 037, 038 | 040, 042 |
+| 040 | cloud | 033, 034, 037 | 039, 041, 042 |
+| 041 | cloud | 033, 034, 035, 038 | 039, 040, 042 |
+| 042 | cloud, add-in not compiled | none | 033 to 041 |
+| 043 | cloud, add-in not compiled | 032, 036, 039, 040, 042 | none |
+| 044 | cloud, add-in not compiled | 032, 034, 037, 042, 043 | none |
+| 045 | cloud, add-in not compiled | 032, 040, 043 | none |
+| 046 | cloud, add-in not compiled | 032, 045 | none |
+| 047 | cloud, add-in not compiled | 032, 034, 036, 039 | none |
+| 048 | cloud, add-in not compiled | 032, 036, 039, 041, 042 | none |
+
+- [ ] 032 Spike: templates, creating and saving, rename, base view (Windows)
+- [ ] 033 Part number format (Core)
+- [ ] 034 File name rule and part name (Core)
+- [ ] 035 Register model and CSV format (Core)
+- [ ] 036 Register store: shared folder, local copy, lock, offline (Core)
+- [ ] 037 Register folder and units settings
+- [ ] 038 Windows user name counts as blank in Part Properties
+- [ ] 039 Part number display and Generate part number in Part Properties
+- [ ] 040 New Part dialog view-model and creation properties (Core)
+- [ ] 041 Mass Update scan result and view-model (Core)
+- [ ] 042 Icons for the M2 commands, and a ribbon that survives one failing command
+- [ ] 043 New Part command and window
+- [ ] 044 Create Print
+- [ ] 045 Save As Copy
+- [ ] 046 Save As and Replace
+- [ ] 047 Rename, with references updated across the workspace
+- [ ] 048 Mass Update command and window
+
+**Two runs.** Spike 032 settles what the creating, renaming and printing commands depend on: how Inventor finds its default templates in metric and imperial, creating and saving a document with a comma in its name, the workspace path, updating references to a renamed file in closed files, opening files invisibly, placing a base view, replacing an occurrence, and how long a disconnected NAS blocks. Nothing is planned on top of an unproven assumption, so:
+
+1. Cloud run 1: 033 to 042. None depends on the spike. Aidan runs 032 on Windows at any point; it is easiest after building run 1, which he needs to do anyway.
+2. Cloud run 2, after 032's Results are committed: 043 to 048. Each reads the Results first and stops if they are empty. All six touch the ribbon files, so they run one at a time.
+
+Folded in from `TODO.md` follow-ups: delete `PropertyReader.Set` and the unbound view-model properties (039), the ribbon's duplicate-definition retry and one command stopping the ribbon (042), and the Settings access key for Show developer tools (037).
+
+Not in M2: browser folders (Aidan: no), a templates folder setting (later, with Aidan's own templates), the custom drawing template (M5), and distribution (parked; see below). The two deploy-line follow-ups from task 025 stay in `TODO.md`.
 
 ### M3: Material and finish (spec 03)
 
@@ -131,7 +180,7 @@ The largest feature. Its Core half (classification, grouping, tagging, descripti
 
 ### M5: Drawing tools (spec 05)
 
-Blocked on question 1 of the spec, which decides which commands exist at all.
+Blocked on question 1 of the spec, which decides which commands exist at all. Includes a custom drawing template whose title block reads every property from the model (Aidan, 2026-10-10). Create Drawing moved to M2 as Create Print.
 
 ### M6: iLogic injection (spec 06)
 
@@ -139,4 +188,4 @@ Blocked on questions 1 and 2 of the spec.
 
 ### Parked: distribution
 
-An installer and a download page so other people can install the add-in. No spec yet. Aidan will decide whether and when to add it at the point the part number generator (M2) is planned. Do not plan or build any of it before then.
+An installer and a download page so other people can install the add-in. No spec yet. Aidan was to decide whether and when to add it when the part number generator (M2) was planned; he did not raise it when M2 was planned on 2026-10-10, so it stays parked and is listed under decisions waiting on him. Do not plan or build any of it before then.
