@@ -201,8 +201,8 @@ public sealed class RenameViewModel : ObservableObject
     public string ResultText => _result is null ? string.Empty : ResultLines(_result);
 
     /// <summary>
-    /// The summary of a result: renamed or not, how many files were updated and how many were not, and whether the
-    /// old file was kept.
+    /// The summary of a result: renamed or not, how many files were updated and how many were not, how many occurrences
+    /// were renamed (when any), and whether the old file was kept.
     /// </summary>
     public static string Summary(RenameResult result)
     {
@@ -216,6 +216,13 @@ public sealed class RenameViewModel : ObservableObject
             $"Renamed to {RenamePlan.FileNameOnly(result.Request.NewFullFileName)}. {Files(result.UpdatedCount)} updated");
         if (result.FailedCount > 0)
             text += string.Create(CultureInfo.InvariantCulture, $", {result.FailedCount} not updated");
+        if (result.OccurrencesRenamed > 0)
+        {
+            text += result.OccurrencesRenamed == 1
+                ? ", 1 occurrence renamed"
+                : string.Create(CultureInfo.InvariantCulture, $", {result.OccurrencesRenamed} occurrences renamed");
+        }
+
         text += ".";
         if (!result.OldFileDeleted)
             text += " The old file was kept.";

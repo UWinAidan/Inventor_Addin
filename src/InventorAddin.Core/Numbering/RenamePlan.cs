@@ -356,6 +356,60 @@ public static class RenamePlan
         return fullFileName[(fullFileName.LastIndexOfAny(FolderSeparators) + 1)..];
     }
 
+    /// <summary>
+    /// The new name of an occurrence of a renamed file (spec 02, "Commands: Rename"; Aidan, 2026-10-11): when
+    /// <paramref name="occurrenceName"/> is the old file name without its folder and extension, a colon and one or more
+    /// digits (ignoring case), the new file name without folder and extension, a colon and the same digits. Otherwise
+    /// null: an occurrence given any other name is left alone. <c>BRACKET,AWB-10005:2</c> becomes
+    /// <c>BRACKET_2,AWB-10005:2</c> when <c>BRACKET,AWB-10005.ipt</c> is renamed to <c>BRACKET_2,AWB-10005.ipt</c>.
+    /// </summary>
+    public static string? RenamedOccurrence(string? occurrenceName, string? oldFullFileName, string? newFullFileName)
+    {
+        var oldStem = Stem(oldFullFileName);
+        var newStem = Stem(newFullFileName);
+        if (string.IsNullOrEmpty(occurrenceName) || oldStem.Length == 0 || newStem.Length == 0)
+        {
+            return null;
+        }
+
+        var prefix = oldStem + ":";
+        if (occurrenceName.Length <= prefix.Length
+            || !occurrenceName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var digits = occurrenceName[prefix.Length..];
+        return digits.All(char.IsAsciiDigit) ? newStem + ":" + digits : null;
+    }
+
+    /// <summary>
+    /// The file path in an Inventor full document name: the name without a trailing model state in angle brackets
+    /// (<c>C:\Cad\a.ipt&lt;Default&gt;</c> gives <c>C:\Cad\a.ipt</c>), trimmed. Empty for null.
+    /// </summary>
+    public static string FileOfDocumentName(string? fullDocumentName)
+    {
+        var name = fullDocumentName?.Trim() ?? string.Empty;
+        if (name.EndsWith('>'))
+        {
+            var open = name.LastIndexOf('<');
+            if (open > 0)
+            {
+                name = name[..open].TrimEnd();
+            }
+        }
+
+        return name;
+    }
+
+    /// <summary>The file name without its folder and extension; empty for a blank path.</summary>
+    private static string Stem(string? fullFileName)
+    {
+        var name = FileNameOnly(fullFileName?.Trim());
+        var dot = name.LastIndexOf('.');
+        return dot > 0 ? name[..dot] : name;
+    }
+
     /// <summary>The candidate files under one folder, recursively, skipping <c>OldVersions</c>. Throws when it does not exist.</summary>
     private static IReadOnlyList<string> CandidateFilesIn(string root)
     {
@@ -459,10 +513,26 @@ public sealed record RenameRequest(string OldFullFileName, string NewFullFileNam
 /// <summary>One file Rename changed, or tried to.</summary>
 /// <param name="FullFileName">The file.</param>
 /// <param name="Problem">Why it was not updated; null when it was updated and saved.</param>
-public sealed record RenameFileResult(string FullFileName, string? Problem = null)
+/// <param name="OccurrencesRenamed">How many of its occurrences were renamed (<see cref="RenamePlan.RenamedOccurrence"/>).</param>
+/// <param name="OccurrenceProblems">The occurrences that should have been renamed and could not be; null for none.</param>
+public sealed record RenameFileResult(
+    string FullFileName,
+    string? Problem = null,
+    int OccurrencesRenamed = 0,
+    IReadOnlyList<OccurrenceProblem>? OccurrenceProblems = null)
 {
     public bool Updated => Problem is null;
 }
+
+/// <summary>An occurrence Rename should have renamed and could not.</summary>
+/// <param name="OccurrenceName">Its name, unchanged.</param>
+/// <param name="Reason">Why.</param>
+public sealed record OccurrenceProblem(string OccurrenceName, string Reason);
+
+/// <summary>What <see cref="IRenameTarget.UpdateReferences"/> did to a file that uses the renamed one.</summary>
+/// <param name="OccurrencesRenamed">How many of its occurrences were renamed.</param>
+/// <param name="OccurrenceProblems">The occurrences that could not be renamed; null for none.</param>
+public sealed record RenameFileUpdate(int OccurrencesRenamed = 0, IReadOnlyList<OccurrenceProblem>? OccurrenceProblems = null);
 
 /// <summary>A line in Rename's result that is not about one referencing file.</summary>
 public sealed record RenameNote(string Text, bool IsProblem);
@@ -486,35 +556,52 @@ public sealed record RenameResult(
 
     public int FailedCount => Files.Count(f => !f.Updated);
 
+    /// <summary>How many occurrences were renamed, over every file.</summary>
+    public int OccurrencesRenamed => Files.Sum(f => f.OccurrencesRenamed);
+
     /// <summary>True when something did not go as planned: a file not updated or a note that is a problem.</summary>
     public bool HasProblems => !Renamed || FailedCount > 0 || Notes.Any(n => n.IsProblem);
 }
 
 /// <summary>
-/// What <see cref="PartRenamer"/> needs from Inventor. Spike 032 (question 4) settled the method; the add-in supplies it,
-/// tests use a fake.
+/// What <see cref="PartRenamer"/> needs from Inventor. Spikes 032 (question 4) and 052 (question 1) settled the method;
+/// the add-in supplies it, tests use a fake.
 /// </summary>
 public interface IRenameTarget
 {
     /// <summary>
     /// Saves the open document under <paramref name="newFullFileName"/> (<c>SaveAs(newPath, false)</c>). The old file stays
-    /// on disk; open documents that hold it now point at the new file and are modified. Throws when it cannot.
+    /// on disk; open documents that hold it now point at the new file in memory, but are not marked modified (spike 052),
+    /// so nothing is written for them until they are marked and saved. Throws when it cannot.
     /// </summary>
     void SaveAs(string newFullFileName);
 
     /// <summary>
-    /// Replaces each reference to <paramref name="oldFullFileName"/> in <paramref name="fullFileName"/> with
-    /// <paramref name="newFullFileName"/> and saves it, opening it invisibly and closing it again when it is not open in
-    /// Inventor. True when it referenced the old file and was saved; false when it did not reference it. Throws when it
-    /// cannot be opened, updated or saved.
+    /// Updates <paramref name="fullFileName"/> when it uses the renamed file, opening it invisibly and closing it again
+    /// when it is not open in Inventor. It uses the file when one of its direct references is
+    /// <paramref name="oldFullFileName"/> or <paramref name="newFullFileName"/> (an open document repointed by
+    /// <see cref="SaveAs"/>). Each reference to the old file is replaced with the new one, each occurrence of the file
+    /// that <see cref="RenamePlan.RenamedOccurrence"/> renames is renamed, then the document is marked modified and
+    /// saved. Null when it does not use the file. Throws when it cannot be opened, updated or saved.
     /// </summary>
-    bool UpdateReferences(string fullFileName, string oldFullFileName, string newFullFileName);
+    RenameFileUpdate? UpdateReferences(string fullFileName, string oldFullFileName, string newFullFileName);
 
     /// <summary>
-    /// Saves each open document that <see cref="SaveAs"/> pointed at <paramref name="newFullFileName"/> and left
-    /// modified. One result per document, with the reason for each that could not be saved.
+    /// Updates and saves, as <see cref="UpdateReferences"/> does, each document open in Inventor (visible or not) that
+    /// uses the renamed file and is not in <paramref name="alreadyHandled"/>, leaving out never-saved documents and the
+    /// renamed one. These are the open documents outside the search that <see cref="SaveAs"/> repointed in memory. One
+    /// result per document, with the reason for each that could not be saved.
     /// </summary>
-    IReadOnlyList<RenameFileResult> SaveRepointedDocuments(string newFullFileName);
+    IReadOnlyList<RenameFileResult> SaveRepointedDocuments(
+        string oldFullFileName,
+        string newFullFileName,
+        IReadOnlyCollection<string> alreadyHandled);
+
+    /// <summary>
+    /// The documents open in Inventor, visible or not, other than the renamed one, that still have a direct reference to
+    /// <paramref name="oldFullFileName"/>. Asked before the old file is deleted.
+    /// </summary>
+    IReadOnlyList<string> OpenDocumentsReferencing(string oldFullFileName);
 
     /// <summary>Sets the renamed document's Description to <paramref name="partName"/> and saves it. Throws when it cannot.</summary>
     void WriteDescription(string partName);
@@ -524,11 +611,12 @@ public interface IRenameTarget
 }
 
 /// <summary>
-/// The Rename steps (spec 02, "Commands: Rename"; spike 032 question 4), in this order: save the open file under its new
-/// name, which repoints open assemblies; replace the reference in each candidate file that uses the old file, saving
-/// each; save the open documents the rename changed; set Description to the new name; delete the old file only when
-/// every file was updated; update the register entry when the file has a registered number. Every outcome goes into
-/// the <see cref="RenameResult"/>.
+/// The Rename steps (spec 02, "Commands: Rename"; spikes 032 question 4 and 052 question 1), in this order: save the
+/// open file under its new name, which repoints open documents in memory; update and save each candidate file that uses
+/// the file, renaming its occurrences; update and save the other open documents that use it; set Description to the new
+/// name; delete the old file only when every file was updated, every folder searched, and no open document still
+/// references it; update the register entry when the file has a registered number. Every outcome goes into the
+/// <see cref="RenameResult"/>.
 /// </summary>
 /// <remarks>
 /// A failure part way keeps the old file, so a file that could not be updated still opens; the result says which
@@ -579,6 +667,26 @@ public sealed class PartRenamer
     public static string OpenFilesFailedMessage(string reason) =>
         $"The open files that use it could not all be saved: {reason}";
 
+    /// <summary>Why the old file is kept when documents open in Inventor still reference it.</summary>
+    public static string OldFileStillUsedMessage(string oldFullFileName, IReadOnlyList<string> openFiles)
+    {
+        ArgumentNullException.ThrowIfNull(openFiles);
+        return $"The old file {RenamePlan.FileNameOnly(oldFullFileName)} was kept, because these open files still use " +
+               "it: " + string.Join("; ", openFiles.Select(RenamePlan.FileNameOnly)) +
+               ". Update them by hand, then delete the old file.";
+    }
+
+    public static string OldFileCheckFailedMessage(string oldFullFileName, string reason) =>
+        $"The old file {RenamePlan.FileNameOnly(oldFullFileName)} was kept, because the open files could not be checked " +
+        $"for it: {reason} Delete it by hand once nothing uses it.";
+
+    public static string OccurrenceNotRenamedMessage(string fullFileName, OccurrenceProblem problem)
+    {
+        ArgumentNullException.ThrowIfNull(problem);
+        return $"The occurrence {problem.OccurrenceName} in {RenamePlan.FileNameOnly(fullFileName)} could not be renamed: " +
+               $"{problem.Reason} The file was still updated.";
+    }
+
     /// <summary>Runs the steps.</summary>
     /// <param name="request">The rename.</param>
     /// <param name="filesToSearch">The candidate files (<see cref="RenameSearchList.Files"/>).</param>
@@ -616,7 +724,7 @@ public sealed class PartRenamer
 
         _log.Info($"Rename: '{oldPath}' saved as '{newPath}'. Searching {filesToSearch.Count} files for references.");
 
-        // 2. The files that are not open, and the open ones too: replace the reference and save.
+        // 2. Each file found, open or closed: replace the reference, rename occurrences, mark it modified and save.
         var toSearch = filesToSearch
             .Where(f => !SamePath(f, oldPath) && !SamePath(f, newPath))
             .ToList();
@@ -626,10 +734,12 @@ public sealed class PartRenamer
             progress?.Invoke(RenamePlan.ProgressText(i + 1, toSearch.Count, file));
             try
             {
-                if (_target.UpdateReferences(file, oldPath, newPath))
+                if (_target.UpdateReferences(file, oldPath, newPath) is { } update)
                 {
-                    files.Add(new RenameFileResult(file));
-                    _log.Info($"Rename: '{file}' updated.");
+                    var result = new RenameFileResult(file, null, update.OccurrencesRenamed, update.OccurrenceProblems);
+                    files.Add(result);
+                    _log.Info($"Rename: '{file}' updated, {update.OccurrencesRenamed} occurrences renamed.");
+                    AddOccurrenceNotes(result, notes);
                 }
             }
             catch (Exception ex)
@@ -639,23 +749,30 @@ public sealed class PartRenamer
             }
         }
 
-        // 3. The open documents SaveAs repointed: save them.
+        // 3. The other open documents SaveAs repointed in memory: update and save them too. Every file the search
+        //    handled is passed, so none is saved twice.
         var openFilesFailed = false;
         progress?.Invoke(SavingOpenFilesProgress);
         try
         {
-            foreach (var saved in _target.SaveRepointedDocuments(newPath))
+            var handled = new HashSet<string>(toSearch, StringComparer.OrdinalIgnoreCase);
+            foreach (var saved in _target.SaveRepointedDocuments(oldPath, newPath, handled))
             {
-                if (files.Any(f => SamePath(f.FullFileName, saved.FullFileName)))
+                if (handled.Contains(saved.FullFileName) || files.Any(f => SamePath(f.FullFileName, saved.FullFileName)))
                 {
                     continue;
                 }
 
                 files.Add(saved);
                 if (saved.Updated)
-                    _log.Info($"Rename: open file '{saved.FullFileName}' saved.");
+                {
+                    _log.Info($"Rename: open file '{saved.FullFileName}' saved, {saved.OccurrencesRenamed} occurrences renamed.");
+                    AddOccurrenceNotes(saved, notes);
+                }
                 else
+                {
                     _log.Warn($"Rename: open file '{saved.FullFileName}' could not be saved: {saved.Problem}");
+                }
             }
         }
         catch (Exception ex)
@@ -678,8 +795,8 @@ public sealed class PartRenamer
             _log.Error("Rename: Description could not be written.", ex);
         }
 
-        // 5. The old file goes last, and only when nothing still uses it: every file found was updated, and every
-        //    search folder was searched.
+        // 5. The old file goes last, and only when nothing still uses it: every file found was updated, every search
+        //    folder was searched, and no open document still references it.
         var oldDeleted = false;
         var someFailed = files.Any(f => !f.Updated) || openFilesFailed;
         var someSkipped = skippedFolders is { Count: > 0 };
@@ -695,7 +812,28 @@ public sealed class PartRenamer
             _log.Warn($"Rename: '{oldPath}' kept, because {skippedFolders!.Count} search folders were not searched.");
         }
 
+        var stillUsed = false;
         if (!someFailed && !someSkipped)
+        {
+            try
+            {
+                var openUsers = _target.OpenDocumentsReferencing(oldPath);
+                if (openUsers.Count > 0)
+                {
+                    stillUsed = true;
+                    notes.Add(new RenameNote(OldFileStillUsedMessage(oldPath, openUsers), IsProblem: true));
+                    _log.Warn($"Rename: '{oldPath}' kept, because open files still use it: {string.Join("; ", openUsers)}.");
+                }
+            }
+            catch (Exception ex)
+            {
+                stillUsed = true;
+                notes.Add(new RenameNote(OldFileCheckFailedMessage(oldPath, ex.Message), IsProblem: true));
+                _log.Error($"Rename: '{oldPath}' kept, because the open files could not be checked for it.", ex);
+            }
+        }
+
+        if (!someFailed && !someSkipped && !stillUsed)
         {
             try
             {
@@ -717,9 +855,20 @@ public sealed class PartRenamer
 
         _log.Info(
             $"Rename: finished '{oldPath}' -> '{newPath}': {files.Count(f => f.Updated)} updated, " +
-            $"{files.Count(f => !f.Updated)} not updated, old file {(oldDeleted ? "deleted" : "kept")}.");
+            $"{files.Count(f => !f.Updated)} not updated, {files.Sum(f => f.OccurrencesRenamed)} occurrences renamed, " +
+            $"old file {(oldDeleted ? "deleted" : "kept")}.");
 
         return new RenameResult(request, true, oldDeleted, descriptionWritten, files.AsReadOnly(), notes.AsReadOnly());
+    }
+
+    /// <summary>A note, and a log line, for each occurrence of <paramref name="file"/> that could not be renamed.</summary>
+    private void AddOccurrenceNotes(RenameFileResult file, List<RenameNote> notes)
+    {
+        foreach (var problem in file.OccurrenceProblems ?? [])
+        {
+            notes.Add(new RenameNote(OccurrenceNotRenamedMessage(file.FullFileName, problem), IsProblem: true));
+            _log.Warn($"Rename: occurrence '{problem.OccurrenceName}' in '{file.FullFileName}' could not be renamed: {problem.Reason}");
+        }
     }
 
     private RenameNote UpdateRegister(PartNumber number, RenameRequest request)

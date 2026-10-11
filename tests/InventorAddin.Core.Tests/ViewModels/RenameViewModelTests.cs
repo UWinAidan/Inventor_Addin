@@ -323,6 +323,18 @@ public sealed class RenameViewModelTests
         Assert.Equal("Renamed to x.ipt. 0 files updated.", RenameViewModel.Summary(result));
     }
 
+    [Theory]
+    [InlineData(1, "Renamed to x.ipt. 1 file updated, 1 occurrence renamed.")]
+    [InlineData(3, "Renamed to x.ipt. 1 file updated, 3 occurrences renamed.")]
+    public void Summary_SaysHowManyOccurrencesWereRenamed(int occurrences, string expected)
+    {
+        var result = new RenameResult(
+            new RenameRequest(OldPath, @"C:\Cad\x.ipt", "x"), true, true, true,
+            [new RenameFileResult(@"C:\Cad\asm.iam", null, occurrences)], []);
+
+        Assert.Equal(expected, RenameViewModel.Summary(result));
+    }
+
     [Fact]
     public void CloseButton_IsCancelBefore_CloseAfter_AndDisabledWhileRunning()
     {

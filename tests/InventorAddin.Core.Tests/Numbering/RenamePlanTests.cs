@@ -489,4 +489,76 @@ public sealed class RenamePlanTests : IDisposable
     {
         Assert.Equal(expected, RenamePlan.FileNameOnly(path));
     }
+
+    // RenamedOccurrence (task 058)
+
+    private const string OldBracket = @"C:\Cad\BRACKET,AWB-10005.ipt";
+    private const string NewBracket = @"C:\Cad\BRACKET_2,AWB-10005.ipt";
+
+    [Theory]
+    [InlineData("BRACKET,AWB-10005:2", "BRACKET_2,AWB-10005:2")]
+    [InlineData("BRACKET,AWB-10005:1", "BRACKET_2,AWB-10005:1")]
+    [InlineData("BRACKET,AWB-10005:12", "BRACKET_2,AWB-10005:12")]
+    [InlineData("BRACKET,AWB-10005:007", "BRACKET_2,AWB-10005:007")]
+    [InlineData("bracket,awb-10005:3", "BRACKET_2,AWB-10005:3")]
+    public void RenamedOccurrence_TheOldFileNameAColonAndDigits_GetsTheNewNameAndTheSameDigits(string name, string expected)
+    {
+        Assert.Equal(expected, RenamePlan.RenamedOccurrence(name, OldBracket, NewBracket));
+    }
+
+    [Theory]
+    [InlineData("BRACKET,AWB-10005:2a")]
+    [InlineData("BRACKET,AWB-10005 copy:1")]
+    [InlineData("BRACKET,AWB-10005:")]
+    [InlineData("BRACKET,AWB-10005")]
+    [InlineData("BRACKET,AWB-10005:-1")]
+    [InlineData("BRACKET,AWB-10005: 1")]
+    [InlineData("BRACKET,AWB-10005:1:2")]
+    [InlineData("MY BRACKET")]
+    [InlineData("XBRACKET,AWB-10005:1")]
+    [InlineData("BRACKET:1")]
+    [InlineData("")]
+    [InlineData(null)]
+    public void RenamedOccurrence_AnyOtherName_IsLeftAlone(string? name)
+    {
+        Assert.Null(RenamePlan.RenamedOccurrence(name, OldBracket, NewBracket));
+    }
+
+    [Fact]
+    public void RenamedOccurrence_ANameWithSeveralCommasAndDots_UsesTheWholeFileNameWithoutTheExtension()
+    {
+        Assert.Equal(
+            "BASE,PLATE.V2_NEW,AWB-10001:4",
+            RenamePlan.RenamedOccurrence("base,plate.v2,AWB-10001:4", @"C:\Cad\base,plate.v2,AWB-10001.ipt", @"C:\Cad\BASE,PLATE.V2_NEW,AWB-10001.ipt"));
+    }
+
+    [Fact]
+    public void RenamedOccurrence_AnAssembly_KeepsItsExtensionOutOfTheName()
+    {
+        Assert.Equal(
+            "ASSY_MAIN_FRAME,AWB-10002:1",
+            RenamePlan.RenamedOccurrence("frame,AWB-10002:1", "/cad/frame,AWB-10002.iam", "/cad/ASSY_MAIN_FRAME,AWB-10002.iam"));
+    }
+
+    [Theory]
+    [InlineData(null, NewBracket)]
+    [InlineData(OldBracket, null)]
+    [InlineData("", NewBracket)]
+    public void RenamedOccurrence_NoFileName_IsNull(string? oldPath, string? newPath)
+    {
+        Assert.Null(RenamePlan.RenamedOccurrence("BRACKET,AWB-10005:1", oldPath, newPath));
+    }
+
+    // FileOfDocumentName
+
+    [Theory]
+    [InlineData(@"C:\Cad\a.ipt", @"C:\Cad\a.ipt")]
+    [InlineData(@"C:\Cad\a.ipt<Default>", @"C:\Cad\a.ipt")]
+    [InlineData(@"C:\Cad\a.ipt<Model State1>", @"C:\Cad\a.ipt")]
+    [InlineData(@" C:\Cad\a.ipt ", @"C:\Cad\a.ipt")]
+    [InlineData(null, "")]
+    public void FileOfDocumentName_DropsAModelState(string? name, string expected)
+    {
+        Assert.Equal(expected, RenamePlan.FileOfDocumentName(name));
+    }
 }

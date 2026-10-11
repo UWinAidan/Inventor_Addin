@@ -216,31 +216,53 @@ namespace InventorAddin.Commands
             return null;
         }
 
-        /// <summary>True when one of <paramref name="doc"/>'s direct references is <paramref name="fullFileName"/>.</summary>
-        private static bool References(Document doc, string fullFileName)
+        /// <summary>
+        /// True when one of <paramref name="doc"/>'s direct references is <paramref name="fullFileName"/>; false when its
+        /// references cannot be read (<see cref="TryReferences"/> says which).
+        /// </summary>
+        private static bool References(Document doc, string fullFileName) =>
+            TryReferences(doc, fullFileName, out _) == true;
+
+        /// <summary>
+        /// True when one of <paramref name="doc"/>'s direct references is <paramref name="fullFileName"/>, false when none
+        /// is, and null when its references cannot be read, with the reason in <paramref name="error"/>.
+        /// </summary>
+        private static bool? TryReferences(Document doc, string fullFileName, out string? error)
         {
-            bool found = false;
-            ComSafe.Run(() =>
+            error = null;
+            try
             {
                 foreach (FileDescriptor fd in doc.File.ReferencedFileDescriptors)
                 {
-                    if (SamePath(fd.FullFileName, fullFileName))
-                    {
-                        found = true;
-                        return;
-                    }
+                    if (SamePath(ComSafe.Get(() => fd.FullFileName), fullFileName))
+                        return true;
                 }
-            });
-            return found;
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+                return null;
+            }
         }
 
         private static bool SamePath(string? a, string? b) =>
             !string.IsNullOrEmpty(a) && string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
 
         /// <summary>
-        /// Spike 032, question 4: <c>SaveAs(newPath, false)</c> on the open document; <c>ReplaceReference</c> through
-        /// <c>Document.File.ReferencedFileDescriptors</c> in each file that uses it, opened invisibly with
-        /// <c>SilentOperation</c> when it is not open; <c>Save</c> on the open documents the SaveAs repointed.
+        /// True when <paramref name="a"/> and <paramref name="b"/> are the same Inventor document: Inventor reports the
+        /// same <c>FullFileName</c> for both, whatever spelling of the path was used to open it.
+        /// </summary>
+        private static bool SameDocument(Document a, Document b) =>
+            SamePath(ComSafe.Get(() => a.FullFileName), ComSafe.Get(() => b.FullFileName));
+
+        /// <summary>
+        /// Spikes 032 (question 4) and 052 (question 1): <c>SaveAs(newPath, false)</c> on the open document, which
+        /// repoints open documents in memory without marking them modified; then, in each file that uses it, open or
+        /// opened invisibly with <c>SilentOperation</c>, <c>ReplaceReference</c> through
+        /// <c>Document.File.ReferencedFileDescriptors</c> where it still names the old path, the occurrence renames, then
+        /// <c>Dirty = true</c> and <c>Save</c>, because <c>Save</c> writes nothing for a document that is not dirty.
         /// </summary>
         private sealed class InventorRenameTarget : IRenameTarget
         {
@@ -256,18 +278,17 @@ namespace InventorAddin.Commands
             // false: save under the new name and keep working on it (not a copy). The old file stays on disk.
             public void SaveAs(string newFullFileName) => _doc.SaveAs(newFullFileName, false);
 
-            public bool UpdateReferences(string fullFileName, string oldFullFileName, string newFullFileName)
+            public RenameFileUpdate? UpdateReferences(string fullFileName, string oldFullFileName, string newFullFileName)
             {
                 // ReplaceReference works on an open document too (spike 032); an open one is saved, not closed.
                 Document? open = FindOpen(fullFileName);
                 if (open != null)
-                {
-                    if (!ReplaceReferences(open, oldFullFileName, newFullFileName))
-                        return false;
+                    return UpdateAndSave(open, oldFullFileName, newFullFileName);
 
-                    open.Save();
-                    return true;
-                }
+                // FindOpen can miss a document that is open under another spelling of its path (a mapped drive and
+                // its UNC path); Documents.Open then returns that open document. Record what is open first, so such a
+                // document is updated and saved but not closed.
+                List<Document> openBefore = OpenDocuments();
 
                 // SilentOperation only around the invisible open, as spike 032 did.
                 var app = InventorHost.App;
@@ -283,39 +304,49 @@ namespace InventorAddin.Commands
                     app.SilentOperation = previousSilent;
                 }
 
+                bool wasOpen = openBefore.Exists(d => ReferenceEquals(d, doc) || SameDocument(d, doc));
+                if (wasOpen)
+                    AddinServices.Log.Info($"Rename: '{fullFileName}' was already open; it is saved and left open.");
+
                 try
                 {
-                    if (!ReplaceReferences(doc, oldFullFileName, newFullFileName))
-                        return false;
-
-                    doc.Save();
-                    return true;
+                    return UpdateAndSave(doc, oldFullFileName, newFullFileName);
                 }
                 finally
                 {
-                    // Close(true) skips saving (spike 032): a failed update is not written.
-                    ComSafe.Run(() => doc.Close(true));
+                    // Close(true) skips saving (spike 032): a failed update is not written. A document the user
+                    // already had open stays open.
+                    if (!wasOpen)
+                        ComSafe.Run(() => doc.Close(true));
                 }
             }
 
-            public IReadOnlyList<RenameFileResult> SaveRepointedDocuments(string newFullFileName)
+            public IReadOnlyList<RenameFileResult> SaveRepointedDocuments(
+                string oldFullFileName,
+                string newFullFileName,
+                IReadOnlyCollection<string> alreadyHandled)
             {
+                var handled = new HashSet<string>(alreadyHandled, StringComparer.OrdinalIgnoreCase);
                 var results = new List<RenameFileResult>();
                 foreach (Document d in OpenDocuments())
                 {
                     string path = ComSafe.Get(() => d.FullFileName) ?? string.Empty;
 
-                    // A never-saved document is repointed in memory and keeps the new name when it is saved.
-                    if (path.Length == 0 || SamePath(path, newFullFileName))
+                    // A never-saved document is repointed in memory and keeps the new name when it is saved. The renamed
+                    // document is skipped, as is each file the search already handled.
+                    if (path.Length == 0 || SamePath(path, newFullFileName) || SamePath(path, oldFullFileName)
+                        || handled.Contains(path))
                         continue;
 
-                    if (!ComSafe.Get(() => d.Dirty) || !References(d, newFullFileName))
+                    // Not dirty is expected here (spike 052): UpdateAndSave marks it before saving.
+                    if (!References(d, newFullFileName) && !References(d, oldFullFileName))
                         continue;
 
                     try
                     {
-                        d.Save();
-                        results.Add(new RenameFileResult(path));
+                        RenameFileUpdate? update = UpdateAndSave(d, oldFullFileName, newFullFileName);
+                        if (update != null)
+                            results.Add(new RenameFileResult(path, null, update.OccurrencesRenamed, update.OccurrenceProblems));
                     }
                     catch (Exception ex)
                     {
@@ -324,6 +355,29 @@ namespace InventorAddin.Commands
                 }
 
                 return results;
+            }
+
+            public IReadOnlyList<string> OpenDocumentsReferencing(string oldFullFileName)
+            {
+                var found = new List<string>();
+                foreach (Document d in OpenDocuments())
+                {
+                    string path = ComSafe.Get(() => d.FullFileName) ?? string.Empty;
+                    if (path.Length == 0 || SamePath(path, oldFullFileName))
+                        continue;
+
+                    // Fail safe: a document whose references cannot be read counts as still using the old file, so
+                    // the old file is kept.
+                    bool? uses = TryReferences(d, oldFullFileName, out string? error);
+                    if (uses == null)
+                        AddinServices.Log.Warn(
+                            $"Rename: the references of open file '{path}' could not be read ({error}); it counts as still using '{oldFullFileName}'.");
+
+                    if (uses != false)
+                        found.Add(path);
+                }
+
+                return found;
             }
 
             public void WriteDescription(string partName)
@@ -335,22 +389,81 @@ namespace InventorAddin.Commands
             public void DeleteFile(string fullFileName) => IOFile.Delete(fullFileName);
 
             /// <summary>
-            /// Replaces each reference to <paramref name="oldFullFileName"/> in <paramref name="doc"/>. True when one was
-            /// replaced. There is no <c>Document.ReferencedFileDescriptors</c>; it goes through <c>doc.File</c>.
+            /// Null when <paramref name="doc"/> has no direct reference to the old or the new path. Otherwise replaces each
+            /// reference to the old path with the new one, renames the occurrences named after the old file, then sets
+            /// <c>Dirty = true</c> and saves (spike 052). There is no <c>Document.ReferencedFileDescriptors</c>; it goes
+            /// through <c>doc.File</c>.
             /// </summary>
-            private static bool ReplaceReferences(Document doc, string oldFullFileName, string newFullFileName)
+            private static RenameFileUpdate? UpdateAndSave(Document doc, string oldFullFileName, string newFullFileName)
             {
-                bool changed = false;
+                bool uses = false;
                 foreach (FileDescriptor fd in doc.File.ReferencedFileDescriptors)
                 {
-                    if (SamePath(fd.FullFileName, oldFullFileName))
+                    string? path = ComSafe.Get(() => fd.FullFileName);
+                    if (SamePath(path, oldFullFileName))
                     {
                         fd.ReplaceReference(newFullFileName);
-                        changed = true;
+                        uses = true;
+                    }
+                    else if (SamePath(path, newFullFileName))
+                    {
+                        uses = true;
                     }
                 }
 
-                return changed;
+                if (!uses)
+                    return null;
+
+                var problems = new List<OccurrenceProblem>();
+                int renamed = RenameOccurrences(doc, oldFullFileName, newFullFileName, problems);
+
+                // After the occurrence renames, right before the save, so the save always writes.
+                doc.Dirty = true;
+                doc.Save();
+                return new RenameFileUpdate(renamed, problems.Count > 0 ? problems : null);
+            }
+
+            /// <summary>
+            /// In an assembly, renames each top-level occurrence of the renamed file whose name
+            /// <see cref="RenamePlan.RenamedOccurrence"/> renames. The occurrence's file is matched against the new path,
+            /// and the old one too, for a closed assembly whose occurrences may still read the old path after
+            /// <c>ReplaceReference</c>. A failure is added to <paramref name="problems"/> and the rest go on. The count renamed.
+            /// </summary>
+            private static int RenameOccurrences(
+                Document doc, string oldFullFileName, string newFullFileName, List<OccurrenceProblem> problems)
+            {
+                if (doc is not AssemblyDocument asm)
+                    return 0;
+
+                ComponentOccurrences? occurrences = ComSafe.Get(() => asm.ComponentDefinition.Occurrences);
+                if (occurrences == null)
+                    return 0;
+
+                int renamed = 0;
+                foreach (ComponentOccurrence occ in occurrences)
+                {
+                    string name = ComSafe.Get(() => occ.Name) ?? string.Empty;
+                    string? newName = RenamePlan.RenamedOccurrence(name, oldFullFileName, newFullFileName);
+                    if (newName == null)
+                        continue;
+
+                    string file = RenamePlan.FileOfDocumentName(
+                        ComSafe.Get(() => occ.ReferencedDocumentDescriptor.FullDocumentName));
+                    if (!SamePath(file, newFullFileName) && !SamePath(file, oldFullFileName))
+                        continue;
+
+                    try
+                    {
+                        occ.Name = newName;
+                        renamed++;
+                    }
+                    catch (Exception ex)
+                    {
+                        problems.Add(new OccurrenceProblem(name, ex.Message));
+                    }
+                }
+
+                return renamed;
             }
         }
     }
