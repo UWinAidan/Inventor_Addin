@@ -43,17 +43,19 @@ public static class RibbonLayout
         RibbonEnvironment.Assembly,
     };
 
+    // Button sizes (Aidan, 2026-10-11, spec 02): New Part, Part Properties and Create Print are large; every other
+    // button is small.
     private static readonly PanelDefinition[] Definitions =
     {
         new(RibbonIds.CadAutomationPanelId, RibbonIds.CadAutomationPanelName, DeveloperOnly: false, new ButtonDefinition[]
         {
-            new(CommandNames.NewPart, ButtonSize.Small, IconNames.NewPart, NewFileEnvironments),
+            new(CommandNames.NewPart, ButtonSize.Large, IconNames.NewPart, NewFileEnvironments),
             // Spec 02, "Commands: Save As Copy": a copy of the active part or assembly.
             new(CommandNames.SaveAsCopy, ButtonSize.Small, IconNames.SaveAsCopy, ModelEnvironments),
             // Spec 02, "Commands: Save As and Replace": the selected component in the active assembly.
             new(CommandNames.SaveAsReplace, ButtonSize.Small, IconNames.SaveAsReplace, AssemblyEnvironments),
             // Spec 07: parts and assemblies only, not drawings and not with no document open.
-            new(CommandNames.PartProperties, ButtonSize.Small, IconNames.PartProperties, ModelEnvironments),
+            new(CommandNames.PartProperties, ButtonSize.Large, IconNames.PartProperties, ModelEnvironments),
             // ZeroDoc gets no Settings or About button until spec 01 open question 4 is answered.
             new(CommandNames.Settings, ButtonSize.Small, IconNames.Settings, DocumentEnvironments),
             new(CommandNames.About, ButtonSize.Small, IconNames.About, DocumentEnvironments),

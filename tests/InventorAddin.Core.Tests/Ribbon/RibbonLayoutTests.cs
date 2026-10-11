@@ -75,7 +75,7 @@ public sealed class RibbonLayoutTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void Part_FirstPanelIsCadAutomation_WithSmallNewPartThenSaveAsCopyThenPartPropertiesThenSettingsThenAbout(bool showDeveloperTools)
+    public void Part_FirstPanelIsCadAutomation_WithLargeNewPartThenSaveAsCopyThenPartPropertiesThenSettingsThenAbout(bool showDeveloperTools)
     {
         var panel = RibbonLayout.For(RibbonEnvironment.Part, showDeveloperTools)[0];
 
@@ -84,9 +84,9 @@ public sealed class RibbonLayoutTests
         Assert.Equal(
             new[]
             {
-                new ButtonLayout($"{Branding.IdPrefix}_NewPart", ButtonSize.Small, IconNames.NewPart),
+                new ButtonLayout($"{Branding.IdPrefix}_NewPart", ButtonSize.Large, IconNames.NewPart),
                 new ButtonLayout($"{Branding.IdPrefix}_SaveAsCopy", ButtonSize.Small, IconNames.SaveAsCopy),
-                new ButtonLayout($"{Branding.IdPrefix}_PartProperties", ButtonSize.Small, IconNames.PartProperties),
+                new ButtonLayout($"{Branding.IdPrefix}_PartProperties", ButtonSize.Large, IconNames.PartProperties),
                 new ButtonLayout($"{Branding.IdPrefix}_Settings", ButtonSize.Small, IconNames.Settings),
                 new ButtonLayout($"{Branding.IdPrefix}_About", ButtonSize.Small, IconNames.About),
             },
@@ -105,10 +105,10 @@ public sealed class RibbonLayoutTests
         Assert.Equal(
             new[]
             {
-                new ButtonLayout($"{Branding.IdPrefix}_NewPart", ButtonSize.Small, IconNames.NewPart),
+                new ButtonLayout($"{Branding.IdPrefix}_NewPart", ButtonSize.Large, IconNames.NewPart),
                 new ButtonLayout($"{Branding.IdPrefix}_SaveAsCopy", ButtonSize.Small, IconNames.SaveAsCopy),
                 new ButtonLayout($"{Branding.IdPrefix}_SaveAsReplace", ButtonSize.Small, IconNames.SaveAsReplace),
-                new ButtonLayout($"{Branding.IdPrefix}_PartProperties", ButtonSize.Small, IconNames.PartProperties),
+                new ButtonLayout($"{Branding.IdPrefix}_PartProperties", ButtonSize.Large, IconNames.PartProperties),
                 new ButtonLayout($"{Branding.IdPrefix}_Settings", ButtonSize.Small, IconNames.Settings),
                 new ButtonLayout($"{Branding.IdPrefix}_About", ButtonSize.Small, IconNames.About),
             },
@@ -159,7 +159,7 @@ public sealed class RibbonLayoutTests
         {
             var panel = Assert.Single(panels, p => p.Id == RibbonIds.CadAutomationPanelId);
             Assert.Equal(
-                new ButtonLayout(CommandNames.NewPart, ButtonSize.Small, IconNames.NewPart),
+                new ButtonLayout(CommandNames.NewPart, ButtonSize.Large, IconNames.NewPart),
                 panel.Buttons[0]);
         }
     }
@@ -309,7 +309,7 @@ public sealed class RibbonLayoutTests
             new[] { RibbonIds.CadAutomationPanelId, RibbonIds.ModellingPanelId, RibbonIds.DeveloperPanelId },
             panels.Select(p => p.Id));
         Assert.Equal(
-            new[] { new ButtonLayout($"{Branding.IdPrefix}_NewPart", ButtonSize.Small, IconNames.NewPart) },
+            new[] { new ButtonLayout($"{Branding.IdPrefix}_NewPart", ButtonSize.Large, IconNames.NewPart) },
             panels[0].Buttons);
         Assert.Equal(
             new[] { new ButtonLayout($"{Branding.IdPrefix}_MassUpdate", ButtonSize.Small, IconNames.MassUpdate) },
@@ -328,7 +328,7 @@ public sealed class RibbonLayoutTests
 
         Assert.Equal(new[] { RibbonIds.CadAutomationPanelId, RibbonIds.ModellingPanelId }, panels.Select(p => p.Id));
         Assert.Equal(
-            new[] { new ButtonLayout($"{Branding.IdPrefix}_NewPart", ButtonSize.Small, IconNames.NewPart) },
+            new[] { new ButtonLayout($"{Branding.IdPrefix}_NewPart", ButtonSize.Large, IconNames.NewPart) },
             panels[0].Buttons);
         Assert.Equal(
             new[] { new ButtonLayout($"{Branding.IdPrefix}_MassUpdate", ButtonSize.Small, IconNames.MassUpdate) },
@@ -441,6 +441,52 @@ public sealed class RibbonLayoutTests
 
         Assert.NotEmpty(buttons);
         Assert.All(buttons, b => Assert.Equal(iconName, b.IconName));
+    }
+
+    // Aidan, 2026-10-11 (spec 02): New Part, Part Properties and Create Print are large; every other button is small.
+    // Changing a size here should be a deliberate decision, not a side effect.
+    [Theory]
+    [InlineData(CommandNames.NewPart, ButtonSize.Large)]
+    [InlineData(CommandNames.PartProperties, ButtonSize.Large)]
+    [InlineData(CommandNames.CreatePrint, ButtonSize.Large)]
+    [InlineData(CommandNames.SaveAsCopy, ButtonSize.Small)]
+    [InlineData(CommandNames.SaveAsReplace, ButtonSize.Small)]
+    [InlineData(CommandNames.Settings, ButtonSize.Small)]
+    [InlineData(CommandNames.About, ButtonSize.Small)]
+    [InlineData(CommandNames.MassUpdate, ButtonSize.Small)]
+    [InlineData(CommandNames.ExportModelData, ButtonSize.Small)]
+    [InlineData(CommandNames.ExportLibraries, ButtonSize.Small)]
+    public void EachCommand_HasItsSize_InEveryEnvironment(string command, ButtonSize size)
+    {
+        var buttons = RibbonEnvironments.All
+            .SelectMany(e => RibbonLayout.For(e, showDeveloperTools: true))
+            .SelectMany(p => p.Buttons)
+            .Where(b => b.CommandInternalName == command)
+            .ToList();
+
+        Assert.NotEmpty(buttons);
+        Assert.All(buttons, b => Assert.Equal(size, b.Size));
+    }
+
+    [Fact]
+    public void ButtonSizes_CoverEveryButtonOnTheRibbon()
+    {
+        // When a button is added, add it to EachCommand_HasItsSize_InEveryEnvironment as well.
+        var commands = RibbonEnvironments.All
+            .SelectMany(e => RibbonLayout.For(e, showDeveloperTools: true))
+            .SelectMany(p => p.Buttons)
+            .Select(b => b.CommandInternalName)
+            .Distinct()
+            .OrderBy(n => n, StringComparer.Ordinal);
+
+        Assert.Equal(
+            new[]
+            {
+                CommandNames.About, CommandNames.CreatePrint, CommandNames.ExportLibraries, CommandNames.ExportModelData,
+                CommandNames.MassUpdate, CommandNames.NewPart, CommandNames.PartProperties, CommandNames.SaveAsCopy,
+                CommandNames.SaveAsReplace, CommandNames.Settings,
+            }.OrderBy(n => n, StringComparer.Ordinal),
+            commands);
     }
 
     [Fact]

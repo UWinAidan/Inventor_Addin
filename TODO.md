@@ -86,6 +86,7 @@ Small things noticed while building. None is urgent. The parent turns these into
 - The agent definitions say "the AWB Addin add-in", which repeats "add-in". (task 011)
 
 **Ribbon icons**
+- `RibbonSetup.AddButton` returns early when a control with the command's name is already on the panel, so if Inventor ever keeps the add-in's controls between sessions a size change would not show. Only if a button shows its old size. (task 056)
 - When Inventor refuses the icons but has already created the definition, the log says "the button shows text only" and then that the definition was reused; the first line may be untrue. (task 042)
 - Task 030: embed only `UI/Icons/*.png`. The `.svg` sources sit in the same folder and must stay out of the build. (task 024)
 

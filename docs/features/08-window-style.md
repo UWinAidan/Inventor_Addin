@@ -139,7 +139,11 @@ Replaced in M2 (task 039) by spec 02, "Part number": a Part Number in the `AWB-1
 
 ## Ribbon icons
 
-- Every ribbon button gets an icon in 16 px and 32 px: Part Properties, Settings, About, Export Model Data, Export Libraries.
+- Every ribbon button gets an icon in 16 px and 32 px. The ribbon shows the 32 px icon on a large button and the 16 px icon on a small one. The buttons on the ribbon today, by panel, with their size (Aidan, 2026-10-11, spec 02):
+  - CAD Automation: New Part (large), Save As Copy (small), Save As and Replace (small), Part Properties (large), Settings (small), About (small)
+  - Drawing Tools: Create Print (large)
+  - Modelling: Mass Update (small)
+  - Developer: Export Model Data (small), Export Libraries (small)
 - Simple line icons, one visual weight, readable on both Inventor themes. Provide a light-theme and a dark-theme version if one drawing does not read on both.
 - Our own drawings only. Do not copy Inventor's or anyone else's icons.
 - A command with no icon keeps working as text only.
