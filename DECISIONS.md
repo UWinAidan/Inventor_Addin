@@ -126,3 +126,4 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-10-11 | After saving a copy the add-in reads its Part Number back and fails the copy if it is not the new number | Default | spec 02, task 060 |
 | 2026-10-11 | Save As and Replace works on the top-level assembly open in the window, also while a sub-assembly is edited in place | Default | spec 02, task 060 |
 | 2026-10-11 | M2 fix run in a local session on Aidan's PC: spike 052 first, then 053 to 060, each built on Windows before its commit | Default | `docs/PLAN.md` |
+| 2026-10-11 | Rename allows a change of case only, so old lower-case files can be converted: it goes through a temporary name in two steps, and updates references, drawings, occurrences and the register as any rename does. Replaces the default that refused it | Aidan | spec 02, task 061 |

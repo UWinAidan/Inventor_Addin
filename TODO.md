@@ -58,7 +58,6 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 **Numbering (spec 02), not blocking**
 - Questions 13, 15 to 17, 19 to 22 and 26 in spec 02: a well-formed number not in the register, what to do with duplicates, Save As and Replace on every occurrence, opening Part Properties after creating a file, a register row that cannot be read, Mass Update's Detailer, a registered number on two files, a file named only `AWB-10001.ipt`, and Mass Update assigning a number an unticked file carries. Each has a default the tasks build. Question 14 was answered and 18 settled on 2026-10-11
-- Rename refuses a change of case only (Windows sees the same file), so an old lower-case file cannot be upper-cased by Rename alone. Should Rename allow it, for example by saving under a temporary name first? (task 054)
 
 **Distribution, not blocking**
 - Whether and when to add an installer and a download page. It was to be decided when M2 was planned and is still parked
