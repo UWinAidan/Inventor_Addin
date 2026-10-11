@@ -4,9 +4,10 @@ using System.Text;
 namespace InventorAddin.Core.Numbering;
 
 /// <summary>
-/// The file name rule from spec 02, "File names and the part name": <c>{number},{name}{extension}</c> with the
-/// part name's spaces written as underscores, for example <c>AWB-10001,mounting_bracket.ipt</c>. A file without a
-/// number is <c>{name}{extension}</c>. Only the first comma separates the number, so a comma inside the name is allowed.
+/// The file name rule from spec 02, "File names and the part name": <c>{name},{number}{extension}</c> with the
+/// part name's spaces written as underscores, for example <c>MOUNTING_BRACKET,AWB-10005.ipt</c> (Aidan, 2026-10-11). A
+/// file without a number is <c>{name}{extension}</c>. Only the last comma separates the number, so a comma inside the
+/// name is allowed.
 /// </summary>
 public static class PartFileName
 {
@@ -104,7 +105,7 @@ public static class PartFileName
     }
 
     /// <summary>
-    /// The file name for a part: <c>{number},{name}{extension}</c>, or <c>{name}{extension}</c> when
+    /// The file name for a part: <c>{name},{number}{extension}</c>, or <c>{name}{extension}</c> when
     /// <paramref name="number"/> is null. The name is normalised (<see cref="NormaliseName"/>) and its spaces written
     /// as underscores. <paramref name="extension"/> includes its dot, for example <c>.ipt</c>. Throws
     /// <see cref="ArgumentException"/> for an extension without a leading dot, or a name that fails
@@ -125,8 +126,8 @@ public static class PartFileName
             throw new ArgumentException(problem, nameof(name));
         }
 
-        var fileName = NormaliseName(name).Replace(' ', '_') + extension;
-        return number is { } n ? $"{n}{NumberSeparator}{fileName}" : fileName;
+        var stem = NormaliseName(name).Replace(' ', '_');
+        return number is { } n ? $"{stem}{NumberSeparator}{n}{extension}" : stem + extension;
     }
 
     /// <summary>
@@ -147,14 +148,34 @@ public static class PartFileName
 
     /// <summary>
     /// True when the file name in <paramref name="fullFileName"/> (without folder and extension) has a comma and the
-    /// text before the first comma is a part number (<see cref="PartNumber.TryParse"/>).
+    /// text after the last comma is a part number (<see cref="PartNumber.TryParse"/>). A file in the old number-first
+    /// order, <c>AWB-10005,BRACKET.ipt</c>, holds no number by this rule.
     /// </summary>
     public static bool TryReadNumber(string? fullFileName, out PartNumber number)
     {
-        number = default;
-        var stem = Stem(fullFileName);
-        var comma = stem.IndexOf(NumberSeparator);
-        return comma >= 0 && PartNumber.TryParse(stem[..comma], out number);
+        var found = SplitStem(Stem(fullFileName), out _);
+        number = found ?? default;
+        return found is not null;
+    }
+
+    /// <summary>
+    /// Splits a file name without folder and extension into its name and number: the one rule
+    /// <see cref="TryReadNumber"/> and <c>PartName.FromFileName</c> share (spec 02, "Reading the number and the part
+    /// name"). When <paramref name="stem"/> has a comma and the text after the last comma is a part number, that is the
+    /// number and <paramref name="nameText"/> is everything before that comma; otherwise the number is null and
+    /// <paramref name="nameText"/> is the whole stem. The name is returned as written, underscores and all.
+    /// </summary>
+    internal static PartNumber? SplitStem(string stem, out string nameText)
+    {
+        var comma = stem.LastIndexOf(NumberSeparator);
+        if (comma >= 0 && PartNumber.TryParse(stem[(comma + 1)..], out var number))
+        {
+            nameText = stem[..comma];
+            return number;
+        }
+
+        nameText = stem;
+        return null;
     }
 
     /// <summary>

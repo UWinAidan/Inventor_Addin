@@ -83,13 +83,13 @@ public sealed class RegisterPartNumberAssignerTests : IDisposable
     {
         var request = RegisterPartNumberAssigner.RequestFor(Snapshot() with
         {
-            FullFileName = @"C:\Work\AWB-10500,mounting_bracket.ipt",
+            FullFileName = @"C:\Work\mounting_bracket,AWB-10500.ipt",
         });
 
         Assert.Equal("mounting bracket", request.Name);
         Assert.Equal("PM", request.PartType);
         Assert.Equal(DocumentKind.SheetMetalPart, request.Kind);
-        Assert.Equal(@"C:\Work\AWB-10500,mounting_bracket.ipt", request.FilePath);
+        Assert.Equal(@"C:\Work\mounting_bracket,AWB-10500.ipt", request.FilePath);
     }
 
     [Fact]

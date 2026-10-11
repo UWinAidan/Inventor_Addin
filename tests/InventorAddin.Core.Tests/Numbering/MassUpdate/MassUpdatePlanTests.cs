@@ -16,7 +16,7 @@ public sealed class MassUpdatePlanTests
     private static readonly PartRegister Register = new(
     [
         new RegisterEntry(
-            new PartNumber(10001), "test plate", "M", DocumentKind.Part, @"C:\Work\AWB-10001,test_plate.ipt",
+            new PartNumber(10001), "test plate", "M", DocumentKind.Part, @"C:\Work\test_plate,AWB-10001.ipt",
             new DateTimeOffset(2026, 10, 10, 9, 0, 0, TimeSpan.Zero), "someone", "TESTPC"),
     ]);
 
@@ -244,7 +244,7 @@ public sealed class MassUpdatePlanTests
     public void EntryForRegisteringAnExistingNumberCarriesTheFileDetails()
     {
         var plan = MassUpdatePlan.Build(
-            [(State(@"C:\Work\Sub\AWB-10005,side_frame.iam", "AWB-10005", partType: " a ", kind: DocumentKind.Assembly), MassUpdateActions.Register)],
+            [(State(@"C:\Work\Sub\side_frame,AWB-10005.iam", "AWB-10005", partType: " a ", kind: DocumentKind.Assembly), MassUpdateActions.Register)],
             Designer);
         var update = Assert.Single(plan.Updates);
         var at = new DateTimeOffset(2026, 10, 10, 15, 0, 0, TimeSpan.Zero);
@@ -253,7 +253,7 @@ public sealed class MassUpdatePlanTests
 
         Assert.Equal(
             new RegisterEntry(
-                new PartNumber(10005), "side frame", "A", DocumentKind.Assembly, @"C:\Work\Sub\AWB-10005,side_frame.iam",
+                new PartNumber(10005), "side frame", "A", DocumentKind.Assembly, @"C:\Work\Sub\side_frame,AWB-10005.iam",
                 at, "testlogin", "TESTPC"),
             entry);
     }
@@ -282,11 +282,11 @@ public sealed class MassUpdatePlanTests
     public void RequestForCarriesTheSameDetailsAsTheEntry()
     {
         var update = Assert.Single(MassUpdatePlan.Build(
-            [(State(@"C:\Work\Sub\AWB-10005,side_frame.iam", "AWB-10005", partType: " a ", kind: DocumentKind.Assembly), MassUpdateActions.Register)],
+            [(State(@"C:\Work\Sub\side_frame,AWB-10005.iam", "AWB-10005", partType: " a ", kind: DocumentKind.Assembly), MassUpdateActions.Register)],
             Designer).Updates);
 
         Assert.Equal(
-            new RegisterRequest("side frame", "A", DocumentKind.Assembly, @"C:\Work\Sub\AWB-10005,side_frame.iam"),
+            new RegisterRequest("side frame", "A", DocumentKind.Assembly, @"C:\Work\Sub\side_frame,AWB-10005.iam"),
             update.RequestFor());
     }
 

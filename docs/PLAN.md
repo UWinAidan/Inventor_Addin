@@ -119,7 +119,7 @@ Left out until Aidan agrees: the reviewer styling checklist and the PowerShell b
 
 ### M2: Part creation and numbering (spec 02)
 
-Part numbers `AWB-10001` from a register on the NAS with a local copy on each PC, file names `AWB-10001,name.ipt`, and the commands that create, copy, rename, print and bulk-update files. Aidan answered the spec's numbering questions on 2026-10-10; the rest have defaults.
+Part numbers `AWB-10001` from a register on the NAS with a local copy on each PC, file names `NAME,AWB-10001.ipt` (name first since 2026-10-11), and the commands that create, copy, rename, print and bulk-update files. Aidan answered the spec's numbering questions on 2026-10-10; the rest have defaults.
 
 Planned 2026-10-10. Run in number order; each task depends only on lower numbers.
 
@@ -191,7 +191,7 @@ Folded in from `TODO.md` follow-ups: delete `PropertyReader.Set` and the unbound
 | 060 | windows build | 052, 055 | none |
 
 - [x] 052 Spike: rename references, copies and the selection in a sub-assembly (Windows)
-- [ ] 053 File names put the name first and the number last (item 7)
+- [x] 053 File names put the name first and the number last (item 7)
 - [ ] 054 Names in capitals, and assemblies start with ASSY_ (items 8, 10)
 - [ ] 055 Author is written with the same name as Designer (item 11)
 - [ ] 056 Ribbon button sizes by importance (item 12)

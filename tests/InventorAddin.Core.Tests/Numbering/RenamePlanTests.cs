@@ -23,14 +23,15 @@ public sealed class RenamePlanTests : IDisposable
     // NewFileName
 
     [Theory]
-    [InlineData(@"C:\Work\AWB-10001,mounting_bracket.ipt", "base plate", @"C:\Work\AWB-10001,base_plate.ipt")]
-    [InlineData(@"C:\Work\awb-10001,mounting_bracket.ipt", "base plate", @"C:\Work\AWB-10001,base_plate.ipt")]
-    [InlineData(@"C:\Work\AWB-10002,frame.iam", "  main   frame ", @"C:\Work\AWB-10002,main_frame.iam")]
-    [InlineData(@"C:\Work\AWB-10002,frame.IAM", "frame, welded", @"C:\Work\AWB-10002,frame,_welded.IAM")]
+    [InlineData(@"C:\Work\mounting_bracket,AWB-10001.ipt", "base plate", @"C:\Work\base_plate,AWB-10001.ipt")]
+    [InlineData(@"C:\Work\mounting_bracket,awb-10001.ipt", "base plate", @"C:\Work\base_plate,AWB-10001.ipt")]
+    [InlineData(@"C:\Work\frame,AWB-10002.iam", "  main   frame ", @"C:\Work\main_frame,AWB-10002.iam")]
+    [InlineData(@"C:\Work\frame,AWB-10002.IAM", "frame, welded", @"C:\Work\frame,_welded,AWB-10002.IAM")]
     [InlineData(@"C:\Old\Old_bracket.v2.ipt", "new bracket", @"C:\Old\new_bracket.ipt")]
     [InlineData(@"C:\Old\a,b.ipt", "c", @"C:\Old\c.ipt")]
-    [InlineData(@"C:\Old\AWB-1,b.ipt", "c", @"C:\Old\c.ipt")]
-    [InlineData("/home/test/AWB-10003,plate.ipt", "big plate", "/home/test/AWB-10003,big_plate.ipt")]
+    [InlineData(@"C:\Old\b,AWB-1.ipt", "c", @"C:\Old\c.ipt")]
+    [InlineData(@"C:\Old\AWB-10005,BRACKET.ipt", "bracket", @"C:\Old\bracket.ipt")]
+    [InlineData("/home/test/plate,AWB-10003.ipt", "big plate", "/home/test/big_plate,AWB-10003.ipt")]
     public void NewFileName_KeepsFolderExtensionAndNumber(string oldPath, string newName, string expected)
     {
         Assert.Equal(expected, RenamePlan.NewFileName(oldPath, newName));
@@ -42,7 +43,7 @@ public sealed class RenamePlanTests : IDisposable
     public void NewFileName_AFileNumberedByGenerate_WhoseNameHasNoNumber_GetsItsRegisteredNumber()
     {
         Assert.Equal(
-            @"C:\Old\AWB-10007,new_bracket.ipt",
+            @"C:\Old\new_bracket,AWB-10007.ipt",
             RenamePlan.NewFileName(@"C:\Old\old_bracket.ipt", "new bracket", new PartNumber(10007)));
     }
 
@@ -51,34 +52,51 @@ public sealed class RenamePlanTests : IDisposable
     {
         // Part Number blank, so not registered: the caller passes null.
         Assert.Equal(
-            @"C:\Work\AWB-10001,base_plate.ipt",
-            RenamePlan.NewFileName(@"C:\Work\AWB-10001,plate.ipt", "base plate", registeredNumber: null));
+            @"C:\Work\base_plate,AWB-10001.ipt",
+            RenamePlan.NewFileName(@"C:\Work\plate,AWB-10001.ipt", "base plate", registeredNumber: null));
     }
 
     [Fact]
     public void NewFileName_TheRegisteredNumberWins_OverADifferentNumberInTheName()
     {
         Assert.Equal(
-            @"C:\Work\AWB-10005,base_plate.ipt",
-            RenamePlan.NewFileName(@"C:\Work\AWB-10001,plate.ipt", "base plate", new PartNumber(10005)));
+            @"C:\Work\base_plate,AWB-10005.ipt",
+            RenamePlan.NewFileName(@"C:\Work\plate,AWB-10001.ipt", "base plate", new PartNumber(10005)));
     }
 
     [Fact]
     public void NumberToKeep_RegisteredThenFileNameThenNone()
     {
         Assert.Equal(new PartNumber(10007), RenamePlan.NumberToKeep(@"C:\Old\plate.ipt", new PartNumber(10007)));
-        Assert.Equal(new PartNumber(10007), RenamePlan.NumberToKeep(@"C:\W\AWB-10001,plate.ipt", new PartNumber(10007)));
-        Assert.Equal(new PartNumber(10001), RenamePlan.NumberToKeep(@"C:\W\AWB-10001,plate.ipt", null));
+        Assert.Equal(new PartNumber(10007), RenamePlan.NumberToKeep(@"C:\W\plate,AWB-10001.ipt", new PartNumber(10007)));
+        Assert.Equal(new PartNumber(10001), RenamePlan.NumberToKeep(@"C:\W\plate,AWB-10001.ipt", null));
         Assert.Null(RenamePlan.NumberToKeep(@"C:\Old\plate.ipt", null));
         Assert.Null(RenamePlan.NumberToKeep(@"C:\Old\a,b.ipt", null));
     }
 
     [Fact]
-    public void ValidateNewName_CommaAllowedForAGenerateNumberedFile_RefusedWhenTheResultHasNoNumber()
+    public void NumberToKeep_AnOldNumberFirstFile_HasNoNumberInItsName()
+    {
+        Assert.Null(RenamePlan.NumberToKeep(@"C:\Old\AWB-10005,BRACKET.ipt", null));
+        Assert.Equal(new PartNumber(10005), RenamePlan.NumberToKeep(@"C:\Old\AWB-10005,BRACKET.ipt", new PartNumber(10005)));
+    }
+
+    [Fact]
+    public void NewFileName_AnOldNumberFirstFile_WithItsRegisteredNumber_GetsTheNewOrder()
+    {
+        Assert.Equal(
+            @"C:\Old\BRACKET,AWB-10005.ipt",
+            RenamePlan.NewFileName(@"C:\Old\AWB-10005,BRACKET.ipt", "BRACKET", new PartNumber(10005)));
+        Assert.Null(RenamePlan.ValidateNewName(@"C:\Old\AWB-10005,BRACKET.ipt", "BRACKET", new PartNumber(10005)));
+    }
+
+    [Fact]
+    public void ValidateNewName_CommaAllowed_WithOrWithoutANumber()
     {
         Assert.Null(RenamePlan.ValidateNewName(@"C:\Old\plate.ipt", "plate, big", new PartNumber(10007)));
-        Assert.Equal(RenamePlan.CommaWithoutNumberMessage, RenamePlan.ValidateNewName(@"C:\Old\plate.ipt", "plate, big", null));
-        Assert.Null(RenamePlan.ValidateNewName(@"C:\Work\AWB-10001,plate.ipt", "plate, big", null));
+        Assert.Null(RenamePlan.ValidateNewName(@"C:\Old\plate.ipt", "plate, big", null));
+        Assert.Null(RenamePlan.ValidateNewName(@"C:\Old\plate.ipt", "A,B", null));
+        Assert.Null(RenamePlan.ValidateNewName(@"C:\Work\plate,AWB-10001.ipt", "plate, big", null));
     }
 
     [Fact]
@@ -103,7 +121,7 @@ public sealed class RenamePlanTests : IDisposable
     [Fact]
     public void ValidateNewName_AcceptsANewName()
     {
-        Assert.Null(RenamePlan.ValidateNewName(@"C:\Work\AWB-10001,plate.ipt", "base plate"));
+        Assert.Null(RenamePlan.ValidateNewName(@"C:\Work\plate,AWB-10001.ipt", "base plate"));
         Assert.Null(RenamePlan.ValidateNewName(@"C:\Old\plate.ipt", "base plate"));
     }
 
@@ -123,17 +141,36 @@ public sealed class RenamePlanTests : IDisposable
     }
 
     [Fact]
-    public void ValidateNewName_CommaRefusedOnlyWhenTheFileNameHasNoNumber()
+    public void ValidateNewName_ANameEndingInANumber_IsRefusedOnlyWhenTheFileNameHasNoNumber()
     {
-        Assert.Equal(RenamePlan.CommaWithoutNumberMessage, RenamePlan.ValidateNewName(@"C:\Old\plate.ipt", "plate, big"));
-        Assert.Equal(RenamePlan.CommaWithoutNumberMessage, RenamePlan.ValidateNewName(@"C:\Old\a,b.ipt", "plate, big"));
-        Assert.Null(RenamePlan.ValidateNewName(@"C:\Work\AWB-10001,plate.ipt", "plate, big"));
+        Assert.Equal(RenamePlan.NameEndsWithNumberMessage, RenamePlan.ValidateNewName(@"C:\Old\plate.ipt", "plate,AWB-10009"));
+        Assert.Equal(RenamePlan.NameEndsWithNumberMessage, RenamePlan.ValidateNewName(@"C:\Old\a,b.ipt", "a,b,awb-10009"));
+        Assert.Equal(RenamePlan.NameEndsWithNumberMessage, RenamePlan.ValidateNewName(@"C:\Old\AWB-10005,BRACKET.ipt", "BRACKET,AWB-10005"));
+        Assert.Null(RenamePlan.ValidateNewName(@"C:\Old\plate.ipt", "plate,AWB-10009", new PartNumber(10007)));
+        Assert.Null(RenamePlan.ValidateNewName(@"C:\Work\plate,AWB-10001.ipt", "plate,AWB-10009"));
     }
 
     [Theory]
-    [InlineData(@"C:\Work\AWB-10001,mounting_bracket.ipt", "mounting bracket")]
-    [InlineData(@"C:\Work\AWB-10001,mounting_bracket.ipt", "mounting_bracket")]
-    [InlineData(@"C:\Work\AWB-10001,mounting_bracket.ipt", "Mounting Bracket")]
+    [InlineData("AWB-10009,plate")]
+    [InlineData("plate, AWB-10009")]
+    [InlineData("plate,AWB-1")]
+    [InlineData("plate,big")]
+    public void ValidateNewName_ACommaNotFollowedByANumber_IsAcceptedWithoutANumber(string typed)
+    {
+        Assert.Null(RenamePlan.ValidateNewName(@"C:\Old\plate.ipt", typed));
+    }
+
+    [Fact]
+    public void NameEndsWithNumberMessage_SaysWhy()
+    {
+        Assert.Contains("comma and a part number", RenamePlan.NameEndsWithNumberMessage, StringComparison.Ordinal);
+        Assert.DoesNotContain("first comma", RenamePlan.NameEndsWithNumberMessage, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(@"C:\Work\mounting_bracket,AWB-10001.ipt", "mounting bracket")]
+    [InlineData(@"C:\Work\mounting_bracket,AWB-10001.ipt", "mounting_bracket")]
+    [InlineData(@"C:\Work\mounting_bracket,AWB-10001.ipt", "Mounting Bracket")]
     [InlineData(@"C:\Old\plate.ipt", " plate ")]
     public void ValidateNewName_SameFileIsRefused(string oldPath, string typed)
     {
@@ -144,16 +181,16 @@ public sealed class RenamePlanTests : IDisposable
     public void ValidateNewName_PathTooLong()
     {
         var folder = @"C:\" + new string('f', 230);
-        var problem = RenamePlan.ValidateNewName(folder + @"\AWB-10001,plate.ipt", new string('n', 40));
+        var problem = RenamePlan.ValidateNewName(folder + @"\plate,AWB-10001.ipt", new string('n', 40));
 
-        Assert.Equal(PartFileName.ValidatePath(folder + @"\", "AWB-10001," + new string('n', 40) + ".ipt"), problem);
+        Assert.Equal(PartFileName.ValidatePath(folder + @"\", new string('n', 40) + ",AWB-10001.ipt"), problem);
         Assert.NotNull(problem);
     }
 
     [Fact]
     public void TargetExistsMessage_NamesTheFile()
     {
-        Assert.Contains("AWB-10001,plate.ipt", RenamePlan.TargetExistsMessage("AWB-10001,plate.ipt"), StringComparison.Ordinal);
+        Assert.Contains("plate,AWB-10001.ipt", RenamePlan.TargetExistsMessage("plate,AWB-10001.ipt"), StringComparison.Ordinal);
     }
 
     // SearchFolders
@@ -161,7 +198,7 @@ public sealed class RenamePlanTests : IDisposable
     [Fact]
     public void SearchFolders_WorkFolderThenOthers_TrimmedWithoutBlanks()
     {
-        var folders = RenamePlan.SearchFolders(@" C:\Cad\ ", [@"D:\More", "", "  ", null, @"E:\Old\"], @"C:\Cad\AWB-10001,plate.ipt");
+        var folders = RenamePlan.SearchFolders(@" C:\Cad\ ", [@"D:\More", "", "  ", null, @"E:\Old\"], @"C:\Cad\plate,AWB-10001.ipt");
 
         Assert.Equal([@"C:\Cad", @"D:\More", @"E:\Old"], folders);
     }
@@ -360,7 +397,7 @@ public sealed class RenamePlanTests : IDisposable
     [Fact]
     public void ConfirmationMessage_NamesBothFiles_TheCounts_TheFolders_AndThatUndoCannotRevertIt()
     {
-        var request = new RenameRequest(@"C:\Cad\AWB-10001,plate.ipt", @"C:\Cad\AWB-10001,base_plate.ipt", "base plate");
+        var request = new RenameRequest(@"C:\Cad\plate,AWB-10001.ipt", @"C:\Cad\base_plate,AWB-10001.ipt", "base plate");
         var search = new RenameSearchList(
             [@"C:\Cad\a.iam", @"C:\Cad\b.idw", @"D:\More\c.iam"],
             [@"C:\Cad", @"D:\More"],
@@ -368,7 +405,7 @@ public sealed class RenamePlanTests : IDisposable
 
         var text = RenamePlan.ConfirmationMessage(request, search);
 
-        Assert.Contains("Rename AWB-10001,plate.ipt to AWB-10001,base_plate.ipt?", text, StringComparison.Ordinal);
+        Assert.Contains("Rename plate,AWB-10001.ipt to base_plate,AWB-10001.ipt?", text, StringComparison.Ordinal);
         Assert.Contains("3 assemblies, drawings and presentations in 2 folders will be searched", text, StringComparison.Ordinal);
         Assert.Contains(@"- C:\Cad", text, StringComparison.Ordinal);
         Assert.Contains(@"- D:\More", text, StringComparison.Ordinal);

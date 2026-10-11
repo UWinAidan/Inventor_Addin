@@ -118,15 +118,24 @@ public sealed class PartFileNameTests
     // Build
 
     [Theory]
-    [InlineData("mounting bracket", ".ipt", "AWB-10001,mounting_bracket.ipt")]
-    [InlineData("mounting_bracket", ".ipt", "AWB-10001,mounting_bracket.ipt")]
-    [InlineData("  mounting   bracket ", ".iam", "AWB-10001,mounting_bracket.iam")]
-    [InlineData("Mounting Bracket", ".ipt", "AWB-10001,Mounting_Bracket.ipt")]
-    [InlineData("plate, 10mm", ".ipt", "AWB-10001,plate,_10mm.ipt")]
-    [InlineData("bracket.v2", ".idw", "AWB-10001,bracket.v2.idw")]
-    public void Build_WithNumber(string name, string extension, string expected)
+    [InlineData("mounting bracket", ".ipt", "mounting_bracket,AWB-10001.ipt")]
+    [InlineData("mounting_bracket", ".ipt", "mounting_bracket,AWB-10001.ipt")]
+    [InlineData("  mounting   bracket ", ".iam", "mounting_bracket,AWB-10001.iam")]
+    [InlineData("Mounting Bracket", ".ipt", "Mounting_Bracket,AWB-10001.ipt")]
+    [InlineData("MOUNTING BRACKET", ".ipt", "MOUNTING_BRACKET,AWB-10001.ipt")]
+    [InlineData("plate, 10mm", ".ipt", "plate,_10mm,AWB-10001.ipt")]
+    [InlineData("bracket.v2", ".idw", "bracket.v2,AWB-10001.idw")]
+    public void Build_WithNumber_IsNameCommaNumber(string name, string extension, string expected)
     {
         Assert.Equal(expected, PartFileName.Build(Number, name, extension));
+    }
+
+    [Fact]
+    public void Build_SpecExample()
+    {
+        Assert.Equal(
+            "MOUNTING_BRACKET,AWB-10005.ipt",
+            PartFileName.Build(PartNumber.Parse("AWB-10005"), "MOUNTING BRACKET", ".ipt"));
     }
 
     [Fact]
@@ -192,19 +201,23 @@ public sealed class PartFileNameTests
     [Fact]
     public void ValidatePath_ShortPath_GivesNull()
     {
-        Assert.Null(PartFileName.ValidatePath(@"C:\Work", "AWB-10001,mounting_bracket.ipt"));
+        Assert.Null(PartFileName.ValidatePath(@"C:\Work", "MOUNTING_BRACKET,AWB-10001.ipt"));
     }
 
     // TryReadNumber
 
     [Theory]
-    [InlineData(@"C:\Work\AWB-10001,mounting_bracket.ipt", "AWB-10001")]
-    [InlineData("/home/someone/work/AWB-10001,mounting_bracket.ipt", "AWB-10001")]
-    [InlineData(@"C:\Work\AWB-10001,plate,_10mm.ipt", "AWB-10001")]
-    [InlineData(@"C:\Work\awb-23456,bracket.ipt", "AWB-23456")]
-    [InlineData(@"C:\Work\AWB-10001,.ipt", "AWB-10001")]
-    [InlineData("AWB-99999,frame.iam", "AWB-99999")]
-    public void TryReadNumber_NumberBeforeFirstComma(string fullFileName, string expected)
+    [InlineData("A,AWB-10001.ipt", "AWB-10001")]
+    [InlineData("A,B,AWB-10001.ipt", "AWB-10001")]
+    [InlineData(",AWB-10001.ipt", "AWB-10001")]
+    [InlineData(@"C:\Work\MOUNTING_BRACKET,AWB-10001.ipt", "AWB-10001")]
+    [InlineData("/home/someone/work/mounting_bracket,AWB-10001.ipt", "AWB-10001")]
+    [InlineData(@"C:\Work\plate,_10mm,AWB-10001.ipt", "AWB-10001")]
+    [InlineData(@"C:\Work\bracket,awb-23456.ipt", "AWB-23456")]
+    [InlineData(@"C:\Work\bracket, AWB-23456 .ipt", "AWB-23456")]
+    [InlineData(@"C:\Work,A\Sub,AWB-10002\BRACKET,AWB-10001.ipt", "AWB-10001")]
+    [InlineData("FRAME,AWB-99999.iam", "AWB-99999")]
+    public void TryReadNumber_NumberAfterLastComma(string fullFileName, string expected)
     {
         Assert.True(PartFileName.TryReadNumber(fullFileName, out var number));
         Assert.Equal(expected, number.ToString());
@@ -213,12 +226,16 @@ public sealed class PartFileNameTests
     [Theory]
     [InlineData(null)]
     [InlineData("")]
+    [InlineData("A.ipt")]
+    [InlineData("A,B.ipt")]
     [InlineData(@"C:\Work\Old_bracket.v2.ipt")]
     [InlineData(@"C:\Work\AWB-10001.ipt")]
-    [InlineData(@"C:\Work\notanumber,name.ipt")]
-    [InlineData(@"C:\Work\AWB-1000,name.ipt")]
-    [InlineData(@"C:\AWB-10001,folder\bracket.ipt")]
-    [InlineData(@"C:\Work\name,AWB-10001.ipt")]
+    [InlineData(@"C:\Work\name,notanumber.ipt")]
+    [InlineData(@"C:\Work\name,AWB-1000.ipt")]
+    [InlineData(@"C:\Work\name,AWB-10001,.ipt")]
+    [InlineData(@"C:\folder,AWB-10001\bracket.ipt")]
+    [InlineData(@"C:\Work\AWB-10001,A.ipt")]
+    [InlineData(@"C:\Work\AWB-10005,BRACKET.ipt")]
     public void TryReadNumber_NoNumber(string? fullFileName)
     {
         Assert.False(PartFileName.TryReadNumber(fullFileName, out var number));
@@ -248,6 +265,8 @@ public sealed class PartFileNameTests
     [Theory]
     [InlineData("old bracket")]
     [InlineData("bracket.v2")]
+    [InlineData("A,B")]
+    [InlineData("plate, 10mm")]
     public void BuildThenRead_WithoutNumber_GivesNormalisedNameAndNoNumber(string typed)
     {
         var fileName = PartFileName.Build(null, typed, ".ipt");

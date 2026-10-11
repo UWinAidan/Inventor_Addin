@@ -126,7 +126,7 @@ public sealed class SaveAsCopyViewModel : ObservableObject
 
     public bool HasWarning => _warning.Length > 0;
 
-    /// <summary>The original's file name, without its folder, for example <c>AWB-10001,mounting_bracket.ipt</c>.</summary>
+    /// <summary>The original's file name, without its folder, for example <c>MOUNTING_BRACKET,AWB-10001.ipt</c>.</summary>
     public string HeaderSubline => FileNameOnly(_originalFullFileName);
 
     /// <summary>

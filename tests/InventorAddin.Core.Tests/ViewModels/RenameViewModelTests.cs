@@ -6,7 +6,7 @@ namespace InventorAddin.Core.Tests.ViewModels;
 
 public sealed class RenameViewModelTests
 {
-    private const string OldPath = @"C:\Cad\AWB-10001,mounting_bracket.ipt";
+    private const string OldPath = @"C:\Cad\mounting_bracket,AWB-10001.ipt";
 
     private readonly List<RenameRequest> _requests = [];
     private readonly HashSet<string> _existing = new(StringComparer.OrdinalIgnoreCase);
@@ -41,7 +41,7 @@ public sealed class RenameViewModelTests
         var vm = Create();
 
         Assert.Equal("Rename", vm.HeaderTitle);
-        Assert.Equal("AWB-10001,mounting_bracket.ipt", vm.HeaderSubline);
+        Assert.Equal("mounting_bracket,AWB-10001.ipt", vm.HeaderSubline);
         Assert.Equal("mounting bracket", vm.CurrentName);
         Assert.Equal("mounting bracket", vm.NewName);
         Assert.Equal(new PartNumber(10001), vm.NumberKept);
@@ -58,8 +58,8 @@ public sealed class RenameViewModelTests
 
         vm.NewName = "  base   plate ";
 
-        Assert.Equal("AWB-10001,base_plate.ipt", vm.NewFileNamePreview);
-        Assert.Equal(@"C:\Cad\AWB-10001,base_plate.ipt", vm.NewFullFileName);
+        Assert.Equal("base_plate,AWB-10001.ipt", vm.NewFileNamePreview);
+        Assert.Equal(@"C:\Cad\base_plate,AWB-10001.ipt", vm.NewFullFileName);
         Assert.Null(vm.ValidationMessage);
         Assert.Equal(string.Empty, vm.StatusText);
         Assert.False(vm.HasError);
@@ -82,14 +82,27 @@ public sealed class RenameViewModelTests
     }
 
     [Fact]
-    public void ACommaInAFileWithoutANumber_IsRefused()
+    public void ACommaInAFileWithoutANumber_IsAccepted()
     {
         var vm = Create(@"C:\Old\bracket.ipt");
 
         vm.NewName = "bracket, left";
 
         Assert.Null(vm.NumberKept);
-        Assert.Equal(RenamePlan.CommaWithoutNumberMessage, vm.ValidationMessage);
+        Assert.Null(vm.ValidationMessage);
+        Assert.Equal("bracket,_left.ipt", vm.NewFileNamePreview);
+        Assert.True(vm.CanRename);
+    }
+
+    [Fact]
+    public void ANameEndingInANumber_InAFileWithoutANumber_IsRefused()
+    {
+        var vm = Create(@"C:\Old\bracket.ipt");
+
+        vm.NewName = "bracket,AWB-10009";
+
+        Assert.Null(vm.NumberKept);
+        Assert.Equal(RenamePlan.NameEndsWithNumberMessage, vm.ValidationMessage);
         Assert.False(vm.CanRename);
     }
 
@@ -101,12 +114,12 @@ public sealed class RenameViewModelTests
         Assert.Equal(new PartNumber(10007), vm.NumberKept);
         // Keeping the name still renames the file: it gains the number.
         Assert.Null(vm.ValidationMessage);
-        Assert.Equal("AWB-10007,bracket.ipt", vm.NewFileNamePreview);
+        Assert.Equal("bracket,AWB-10007.ipt", vm.NewFileNamePreview);
 
         vm.NewName = "bracket, left";
         vm.RenameCommand.Execute(null);
 
-        Assert.Equal(@"C:\Old\AWB-10007,bracket,_left.ipt", Assert.Single(_requests).NewFullFileName);
+        Assert.Equal(@"C:\Old\bracket,_left,AWB-10007.ipt", Assert.Single(_requests).NewFullFileName);
     }
 
     [Fact]
@@ -117,20 +130,20 @@ public sealed class RenameViewModelTests
         vm.NewName = "base plate";
 
         Assert.Equal(new PartNumber(10001), vm.NumberKept);
-        Assert.Equal("AWB-10001,base_plate.ipt", vm.NewFileNamePreview);
+        Assert.Equal("base_plate,AWB-10001.ipt", vm.NewFileNamePreview);
     }
 
     [Fact]
     public void ATargetThatExists_IsRefusedBeforeAnythingChanges()
     {
-        _existing.Add(@"C:\Cad\AWB-10001,base_plate.ipt");
+        _existing.Add(@"C:\Cad\base_plate,AWB-10001.ipt");
         var vm = Create();
 
         vm.NewName = "base plate";
         vm.RenameCommand.Execute(null);
 
-        Assert.Equal(RenamePlan.TargetExistsMessage("AWB-10001,base_plate.ipt"), vm.ValidationMessage);
-        Assert.Equal("AWB-10001,base_plate.ipt", vm.NewFileNamePreview);
+        Assert.Equal(RenamePlan.TargetExistsMessage("base_plate,AWB-10001.ipt"), vm.ValidationMessage);
+        Assert.Equal("base_plate,AWB-10001.ipt", vm.NewFileNamePreview);
         Assert.False(vm.CanRename);
         Assert.Empty(_requests);
     }
@@ -150,7 +163,7 @@ public sealed class RenameViewModelTests
         vm.RenameCommand.Execute(null);
 
         var request = Assert.Single(_requests);
-        Assert.Equal(new RenameRequest(OldPath, @"C:\Cad\AWB-10001,base_plate.ipt", "base plate"), request);
+        Assert.Equal(new RenameRequest(OldPath, @"C:\Cad\base_plate,AWB-10001.ipt", "base plate"), request);
         Assert.Contains(RenameViewModel.StartingText, statuses);
         Assert.Contains("Checking 1 of 1: asm.iam", statuses);
         Assert.True(vm.IsDone);
@@ -158,9 +171,9 @@ public sealed class RenameViewModelTests
         Assert.False(vm.IsRunning);
         Assert.False(vm.CanRename);
         Assert.False(vm.HasError);
-        Assert.Equal("Renamed to AWB-10001,base_plate.ipt. 1 file updated.", vm.StatusText);
+        Assert.Equal("Renamed to base_plate,AWB-10001.ipt. 1 file updated.", vm.StatusText);
         Assert.Equal(RenameViewModel.UpdatedPrefix + @"C:\Cad\asm.iam", vm.ResultText);
-        Assert.Equal(new PartRenameOutcome(@"C:\Cad\AWB-10001,base_plate.ipt", "base plate", true), vm.Outcome);
+        Assert.Equal(new PartRenameOutcome(@"C:\Cad\base_plate,AWB-10001.ipt", "base plate", true), vm.Outcome);
     }
 
     [Fact]
@@ -211,7 +224,7 @@ public sealed class RenameViewModelTests
         vm.RenameCommand.Execute(null);
 
         Assert.True(vm.HasError);
-        Assert.Equal("Renamed to AWB-10001,base_plate.ipt. 1 file updated, 1 not updated. The old file was kept.", vm.StatusText);
+        Assert.Equal("Renamed to base_plate,AWB-10001.ipt. 1 file updated, 1 not updated. The old file was kept.", vm.StatusText);
         Assert.Equal(
             string.Join(
                 Environment.NewLine,

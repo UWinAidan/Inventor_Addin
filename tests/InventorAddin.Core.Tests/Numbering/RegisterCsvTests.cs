@@ -14,7 +14,7 @@ public sealed class RegisterCsvTests
         string name = "test plate",
         string partType = "P",
         DocumentKind kind = DocumentKind.Part,
-        string filePath = @"C:\Work\AWB-10001,test_plate.ipt",
+        string filePath = @"C:\Work\test_plate,AWB-10001.ipt",
         DateTimeOffset? at = null) =>
         new(new PartNumber(value), name, partType, kind, filePath, at ?? At, "testuser", "TESTPC");
 
@@ -85,7 +85,7 @@ public sealed class RegisterCsvTests
 
         Assert.Equal(
             Header + "\r\n"
-            + "AWB-10001,test plate,P,Part,\"C:\\Work\\AWB-10001,test_plate.ipt\",2026-10-10T14:03:00Z,testuser,TESTPC\r\n",
+            + "AWB-10001,test plate,P,Part,\"C:\\Work\\test_plate,AWB-10001.ipt\",2026-10-10T14:03:00Z,testuser,TESTPC\r\n",
             text);
     }
 
@@ -133,7 +133,7 @@ public sealed class RegisterCsvTests
     {
         var text = Header + "\r\n"
             + "AWB-10002,second,,Assembly,C:\\Work\\second.iam,2026-10-10T14:03:00Z,testuser,TESTPC\r\n"
-            + "AWB-10001,test plate,P,Part,\"C:\\Work\\AWB-10001,test_plate.ipt\",2026-10-10T14:03:00Z,testuser,TESTPC\r\n";
+            + "AWB-10001,test plate,P,Part,\"C:\\Work\\test_plate,AWB-10001.ipt\",2026-10-10T14:03:00Z,testuser,TESTPC\r\n";
 
         var result = RegisterCsv.Read(text);
 
@@ -146,7 +146,7 @@ public sealed class RegisterCsvTests
     [Fact]
     public void ReadAcceptsLfLineEndings()
     {
-        var text = Header + "\nAWB-10001,test plate,P,Part,\"C:\\Work\\AWB-10001,test_plate.ipt\",2026-10-10T14:03:00Z,testuser,TESTPC\n";
+        var text = Header + "\nAWB-10001,test plate,P,Part,\"C:\\Work\\test_plate,AWB-10001.ipt\",2026-10-10T14:03:00Z,testuser,TESTPC\n";
 
         var result = RegisterCsv.Read(text);
 
@@ -157,7 +157,7 @@ public sealed class RegisterCsvTests
     [Fact]
     public void ReadAcceptsAByteOrderMark()
     {
-        var text = "\uFEFF" + Header + "\r\nAWB-10001,test plate,P,Part,\"C:\\Work\\AWB-10001,test_plate.ipt\",2026-10-10T14:03:00Z,testuser,TESTPC";
+        var text = "\uFEFF" + Header + "\r\nAWB-10001,test plate,P,Part,\"C:\\Work\\test_plate,AWB-10001.ipt\",2026-10-10T14:03:00Z,testuser,TESTPC";
 
         var result = RegisterCsv.Read(text);
 
@@ -203,7 +203,7 @@ public sealed class RegisterCsvTests
     public void ReadFindsColumnsByNameIgnoringCaseAndOrderAndIgnoresExtraColumns()
     {
         var text = "computer,Notes,ASSIGNEDBY,assignedat,filepath,kind,parttype,name,number\r\n"
-            + "TESTPC,checked by hand,testuser,2026-10-10T14:03:00Z,\"C:\\Work\\AWB-10001,test_plate.ipt\",part,P,test plate,AWB-10001\r\n";
+            + "TESTPC,checked by hand,testuser,2026-10-10T14:03:00Z,\"C:\\Work\\test_plate,AWB-10001.ipt\",part,P,test plate,AWB-10001\r\n";
 
         var result = RegisterCsv.Read(text);
 
@@ -349,8 +349,8 @@ public sealed class RegisterCsvTests
         RegisterEntry[] entries =
         [
             Entry(),
-            Entry(10002, "bracket, left", "", DocumentKind.SheetMetalPart, @"C:\Work\AWB-10002,bracket,_left.ipt"),
-            Entry(10003, "the \"big\" frame", "A", DocumentKind.Assembly, @"C:\Work\AWB-10003,frame.iam"),
+            Entry(10002, "bracket, left", "", DocumentKind.SheetMetalPart, @"C:\Work\bracket,_left,AWB-10002.ipt"),
+            Entry(10003, "the \"big\" frame", "A", DocumentKind.Assembly, @"C:\Work\frame,AWB-10003.iam"),
             Entry(10004, "two\r\nlines\nand \"quotes\", commas", "P", DocumentKind.Part, @"C:\Work\odd.ipt"),
             Entry(10005, "", "", DocumentKind.Part, "", new DateTimeOffset(2027, 1, 2, 3, 4, 5, TimeSpan.Zero)),
             Entry(10006, " leading and trailing spaces ", " P ", DocumentKind.Part, @"C:\Work\x.ipt"),

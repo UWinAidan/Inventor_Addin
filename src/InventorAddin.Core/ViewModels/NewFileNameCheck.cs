@@ -8,7 +8,7 @@ namespace InventorAddin.Core.ViewModels;
 /// </summary>
 /// <param name="FileName">
 /// The file name with <see cref="NumberPlaceholder"/> for the number, for example
-/// <c>AWB-?????,mounting_bracket.ipt</c>; empty while the name is invalid.
+/// <c>MOUNTING_BRACKET,AWB-?????.ipt</c>; empty while the name is invalid.
 /// </param>
 /// <param name="Problem">
 /// The first problem: the part name (<see cref="PartFileName.ValidateName"/>), then a blank folder
@@ -29,9 +29,13 @@ public sealed record NewFileNameCheck(string FileName, string? Problem)
         var trimmedFolder = folder?.Trim() ?? string.Empty;
         var nameProblem = PartFileName.ValidateName(partName);
 
-        var fileName = nameProblem is null
-            ? NumberPlaceholder + PartFileName.NumberSeparator + PartFileName.Build(null, partName!, extension)
-            : string.Empty;
+        var fileName = string.Empty;
+        if (nameProblem is null)
+        {
+            // The name part as Build writes it, then the placeholder where the number goes.
+            var withoutNumber = PartFileName.Build(null, partName!, extension);
+            fileName = withoutNumber[..^extension.Length] + PartFileName.NumberSeparator + NumberPlaceholder + extension;
+        }
 
         var problem = nameProblem
             ?? (trimmedFolder.Length == 0 ? ChooseFolderMessage : null)

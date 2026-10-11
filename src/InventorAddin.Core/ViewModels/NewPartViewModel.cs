@@ -168,7 +168,7 @@ public sealed class NewPartViewModel : ObservableObject
 
     /// <summary>
     /// The file name the part will get, with <see cref="NumberPlaceholder"/> for the number, for example
-    /// <c>AWB-?????,mounting_bracket.ipt</c>; empty while the name is invalid.
+    /// <c>MOUNTING_BRACKET,AWB-?????.ipt</c>; empty while the name is invalid.
     /// </summary>
     public string FileNamePreview => _fileNamePreview;
 

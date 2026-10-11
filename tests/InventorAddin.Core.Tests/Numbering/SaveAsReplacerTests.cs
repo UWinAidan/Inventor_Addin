@@ -26,9 +26,9 @@ public sealed class SaveAsReplacerTests : IDisposable
         _cad = Path.Combine(_root, "cad");
         Directory.CreateDirectory(_shared);
         Directory.CreateDirectory(_cad);
-        _component = Path.Combine(_cad, "AWB-10001,test_bracket.ipt");
+        _component = Path.Combine(_cad, "test_bracket,AWB-10001.ipt");
         File.WriteAllText(_component, "original");
-        _subAssembly = Path.Combine(_cad, "AWB-10002,test_frame.iam");
+        _subAssembly = Path.Combine(_cad, "test_frame,AWB-10002.iam");
     }
 
     public void Dispose()
@@ -39,7 +39,7 @@ public sealed class SaveAsReplacerTests : IDisposable
 
     private string SharedPath => Path.Combine(_shared, RegisterStore.SharedFileName);
 
-    private string CopyPath => Path.Combine(_cad, "AWB-10001,test_bracket_copy.ipt");
+    private string CopyPath => Path.Combine(_cad, "test_bracket_copy,AWB-10001.ipt");
 
     private RegisterStore Store() => new(_shared, _local, new FakeEnvironment(), _log, TimeSpan.FromMilliseconds(200));
 
@@ -128,7 +128,7 @@ public sealed class SaveAsReplacerTests : IDisposable
     public void Check_ReadOnlySubAssembly_StopsNamingIt()
     {
         Assert.Equal(
-            SaveAsReplacer.ReadOnlySubAssemblyMessage("AWB-10002,test_frame.iam (Frame:1)"),
+            SaveAsReplacer.ReadOnlySubAssemblyMessage("test_frame,AWB-10002.iam (Frame:1)"),
             SaveAsReplacer.Check(Nested(EditBlock.ReadOnlyFile)));
     }
 
@@ -136,7 +136,7 @@ public sealed class SaveAsReplacerTests : IDisposable
     public void Check_NotModifiableSubAssembly_StopsNamingIt()
     {
         Assert.Equal(
-            SaveAsReplacer.NotModifiableSubAssemblyMessage("AWB-10002,test_frame.iam (Frame:1)"),
+            SaveAsReplacer.NotModifiableSubAssemblyMessage("test_frame,AWB-10002.iam (Frame:1)"),
             SaveAsReplacer.Check(Nested(EditBlock.NotModifiable)));
     }
 
@@ -159,7 +159,7 @@ public sealed class SaveAsReplacerTests : IDisposable
     // Naming and the warning
 
     [Theory]
-    [InlineData(@"C:\Work\AWB-10002,frame.iam", "Frame:1", "AWB-10002,frame.iam (Frame:1)")]
+    [InlineData(@"C:\Work\frame,AWB-10002.iam", "Frame:1", "frame,AWB-10002.iam (Frame:1)")]
     [InlineData("/home/user/cad/frame.iam", null, "frame.iam")]
     [InlineData("/home/user/cad/frame.iam", "  ", "frame.iam")]
     [InlineData("", "Frame:1", "Frame:1")]
@@ -186,7 +186,7 @@ public sealed class SaveAsReplacerTests : IDisposable
 
         Assert.True(Nested().InSubAssembly);
         Assert.NotNull(warning);
-        Assert.Contains("AWB-10002,test_frame.iam (Frame:1)", warning, StringComparison.Ordinal);
+        Assert.Contains("test_frame,AWB-10002.iam (Frame:1)", warning, StringComparison.Ordinal);
         Assert.Contains("is saved", warning, StringComparison.Ordinal);
         Assert.Contains("every assembly that uses", warning, StringComparison.Ordinal);
         Assert.Contains("Undo cannot put it back", warning, StringComparison.Ordinal);
@@ -281,7 +281,7 @@ public sealed class SaveAsReplacerTests : IDisposable
     {
         var ex = Assert.Throws<NewPartException>(() => Replacer(Nested(EditBlock.ReadOnlyFile)).Replace(Request()));
 
-        Assert.Equal(SaveAsReplacer.ReadOnlySubAssemblyMessage("AWB-10002,test_frame.iam (Frame:1)"), ex.Message);
+        Assert.Equal(SaveAsReplacer.ReadOnlySubAssemblyMessage("test_frame,AWB-10002.iam (Frame:1)"), ex.Message);
         Assert.Empty(_target.Calls);
         Assert.False(File.Exists(CopyPath));
     }
@@ -295,7 +295,7 @@ public sealed class SaveAsReplacerTests : IDisposable
         var ex = Assert.Throws<NewPartException>(() => Replacer(Nested()).Replace(Request()));
 
         Assert.Equal(
-            SaveAsReplacer.SubAssemblySaveFailedMessage("AWB-10001", "AWB-10002,test_frame.iam (Frame:1)", "Disk full."),
+            SaveAsReplacer.SubAssemblySaveFailedMessage("AWB-10001", "test_frame,AWB-10002.iam (Frame:1)", "Disk full."),
             ex.Message);
         Assert.Equal("AWB-10001", ex.AssignedNumber);
         Assert.Same(failure, ex.InnerException);

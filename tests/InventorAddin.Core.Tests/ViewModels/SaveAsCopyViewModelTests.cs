@@ -8,7 +8,7 @@ namespace InventorAddin.Core.Tests.ViewModels;
 
 public sealed class SaveAsCopyViewModelTests
 {
-    private const string Original = @"C:\Work\Parts\AWB-10001,mounting_bracket.ipt";
+    private const string Original = @"C:\Work\Parts\mounting_bracket,AWB-10001.ipt";
 
     private static SaveAsCopyViewModel Create(
         string original = Original,
@@ -36,7 +36,7 @@ public sealed class SaveAsCopyViewModelTests
         Assert.Equal(@"C:\Work\Parts", vm.Folder);
         Assert.Equal(DocumentKind.Part, vm.Kind);
         Assert.Equal("Test Designer", vm.Designer);
-        Assert.Equal("AWB-?????,mounting_bracket.ipt", vm.FileNamePreview);
+        Assert.Equal("mounting_bracket,AWB-?????.ipt", vm.FileNamePreview);
         Assert.Null(vm.ValidationMessage);
         Assert.True(vm.CanSave);
         Assert.True(vm.SaveCommand.CanExecute(null));
@@ -49,7 +49,24 @@ public sealed class SaveAsCopyViewModelTests
         var vm = Create();
 
         Assert.Equal("Save As Copy", vm.HeaderTitle);
-        Assert.Equal("AWB-10001,mounting_bracket.ipt", vm.HeaderSubline);
+        Assert.Equal("mounting_bracket,AWB-10001.ipt", vm.HeaderSubline);
+    }
+
+    [Fact]
+    public void NameFirstFile_PrefillsTheNameWithoutItsNumber()
+    {
+        var vm = Create(original: @"C:\Work\BRACKET,AWB-10005.ipt");
+
+        Assert.Equal("BRACKET", vm.PartName);
+        Assert.Equal("BRACKET,AWB-?????.ipt", vm.FileNamePreview);
+    }
+
+    [Fact]
+    public void OldNumberFirstFile_PrefillsItsWholeName()
+    {
+        var vm = Create(original: @"C:\Work\AWB-10005,BRACKET.ipt");
+
+        Assert.Equal("AWB-10005,BRACKET", vm.PartName);
     }
 
     [Fact]
@@ -60,7 +77,7 @@ public sealed class SaveAsCopyViewModelTests
         Assert.Equal("Old bracket.v2", vm.PartName);
         Assert.Equal("/home/user/cad", vm.Folder);
         Assert.Equal("Old_bracket.v2.ipt", vm.HeaderSubline);
-        Assert.Equal("AWB-?????,Old_bracket.v2.ipt", vm.FileNamePreview);
+        Assert.Equal("Old_bracket.v2,AWB-?????.ipt", vm.FileNamePreview);
     }
 
     [Theory]
@@ -70,7 +87,7 @@ public sealed class SaveAsCopyViewModelTests
     [InlineData(DocumentKind.WeldmentAssembly, true)]
     public void Note_OnlyForAssemblies_SaysTheComponentsAreShared(DocumentKind kind, bool hasNote)
     {
-        var vm = Create(original: @"C:\Work\AWB-10001,frame.iam", kind: kind);
+        var vm = Create(original: @"C:\Work\frame,AWB-10001.iam", kind: kind);
 
         Assert.Equal(hasNote, vm.HasNote);
         Assert.Equal(hasNote ? SaveAsCopyCreator.AssemblyNote : string.Empty, vm.Note);
@@ -79,9 +96,9 @@ public sealed class SaveAsCopyViewModelTests
     [Fact]
     public void AssemblyCopy_KeepsTheAssemblyExtension()
     {
-        var vm = Create(original: @"C:\Work\AWB-10001,frame.iam", kind: DocumentKind.Assembly, partType: "A");
+        var vm = Create(original: @"C:\Work\frame,AWB-10001.iam", kind: DocumentKind.Assembly, partType: "A");
 
-        Assert.Equal("AWB-?????,frame.iam", vm.FileNamePreview);
+        Assert.Equal("frame,AWB-?????.iam", vm.FileNamePreview);
     }
 
     // Part type
@@ -149,7 +166,7 @@ public sealed class SaveAsCopyViewModelTests
 
         vm.PartName = "left  bracket";
 
-        Assert.Equal("AWB-?????,left_bracket.ipt", vm.FileNamePreview);
+        Assert.Equal("left_bracket,AWB-?????.ipt", vm.FileNamePreview);
         Assert.Contains(nameof(vm.PartName), changed);
         Assert.Contains(nameof(vm.FileNamePreview), changed);
         Assert.Contains(nameof(vm.ValidationMessage), changed);
@@ -181,7 +198,7 @@ public sealed class SaveAsCopyViewModelTests
         vm.PartName = "bracket, left";
 
         Assert.Null(vm.ValidationMessage);
-        Assert.Equal("AWB-?????,bracket,_left.ipt", vm.FileNamePreview);
+        Assert.Equal("bracket,_left,AWB-?????.ipt", vm.FileNamePreview);
     }
 
     [Fact]
@@ -270,7 +287,7 @@ public sealed class SaveAsCopyViewModelTests
         Assert.Equal("Save As and Replace", vm.HeaderTitle);
         Assert.Equal(SaveAsCopyViewModel.ReplaceHeaderTitleText, vm.HeaderTitle);
         Assert.Equal("_Save and replace", vm.SaveButtonText);
-        Assert.Equal("AWB-10001,mounting_bracket.ipt", vm.HeaderSubline);
+        Assert.Equal("mounting_bracket,AWB-10001.ipt", vm.HeaderSubline);
         Assert.False(vm.HasWarning);
     }
 
@@ -309,13 +326,13 @@ public sealed class SaveAsCopyViewModelTests
     {
         var selection = new ReplaceSelection(
             Original, DocumentKind.Part, EditBlock.None, EditBlock.None,
-            SubAssemblyFullFileName: @"C:\Work\AWB-10002,frame.iam", SubAssemblyOccurrenceName: "Frame:1");
+            SubAssemblyFullFileName: @"C:\Work\frame,AWB-10002.iam", SubAssemblyOccurrenceName: "Frame:1");
 
         var vm = SaveAsCopyViewModel.ForReplace(
             Original, DocumentKind.Part, "M", null, SaveAsReplacer.SubAssemblyWarning(selection));
 
         Assert.True(vm.HasWarning);
-        Assert.Contains("AWB-10002,frame.iam (Frame:1)", vm.Warning, StringComparison.Ordinal);
+        Assert.Contains("frame,AWB-10002.iam (Frame:1)", vm.Warning, StringComparison.Ordinal);
     }
 
     [Fact]

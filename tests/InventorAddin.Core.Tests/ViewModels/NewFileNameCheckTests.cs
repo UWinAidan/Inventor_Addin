@@ -10,8 +10,17 @@ public sealed class NewFileNameCheckTests
     {
         var check = NewFileNameCheck.For("  mounting  bracket ", ".ipt", @" C:\Work ");
 
-        Assert.Equal("AWB-?????,mounting_bracket.ipt", check.FileName);
+        Assert.Equal("mounting_bracket,AWB-?????.ipt", check.FileName);
         Assert.Null(check.Problem);
+    }
+
+    [Theory]
+    [InlineData("MOUNTING BRACKET", ".ipt", "MOUNTING_BRACKET,AWB-?????.ipt")]
+    [InlineData("FRAME", ".iam", "FRAME,AWB-?????.iam")]
+    [InlineData("A,B", ".ipt", "A,B,AWB-?????.ipt")]
+    public void Preview_IsNameThenPlaceholderNumber(string name, string extension, string expected)
+    {
+        Assert.Equal(expected, NewFileNameCheck.For(name, extension, @"C:\Work").FileName);
     }
 
     [Fact]
@@ -31,7 +40,7 @@ public sealed class NewFileNameCheckTests
     {
         var check = NewFileNameCheck.For("plate", ".ipt", folder);
 
-        Assert.Equal("AWB-?????,plate.ipt", check.FileName);
+        Assert.Equal("plate,AWB-?????.ipt", check.FileName);
         Assert.Equal(NewFileNameCheck.ChooseFolderMessage, check.Problem);
     }
 

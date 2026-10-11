@@ -12,7 +12,7 @@
         DialogWindow style so the window still sizes to its content if the shared styles fail to load.
 
         Spec 02, "Commands: New Part": file type, part type, part name, units and folder, with a preview of the file
-        name (number shown as AWB-?????). Designer and Detailer are not asked; they come from Settings.
+        name, name first and number last (number shown as AWB-?????). Designer and Detailer are not asked; they come from Settings.
         The folder's Browse button sits beside its box in the shared SideButton style, as in Settings.
 
         Access keys: F file type, U units, N part name, T part type, O folder, B browse, C create.
@@ -88,7 +88,7 @@
                              Text="{Binding Folder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                 </DockPanel>
             </controls:FieldRow>
-            <!-- The file name with AWB-????? for the number; empty while the part name is not valid. -->
+            <!-- The file name, name first and AWB-????? for the number (NAME,AWB-?????.ipt); empty while the part name is not valid. -->
             <controls:FieldRow Label="File name">
                 <TextBlock Style="{DynamicResource IdentifierText}" Text="{Binding FileNamePreview, Mode=OneWay}" />
             </controls:FieldRow>

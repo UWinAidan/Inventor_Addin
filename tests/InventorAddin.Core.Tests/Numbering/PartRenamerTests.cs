@@ -6,8 +6,8 @@ namespace InventorAddin.Core.Tests.Numbering;
 
 public sealed class PartRenamerTests : IDisposable
 {
-    private const string OldPath = @"C:\Cad\AWB-10001,plate.ipt";
-    private const string NewPath = @"C:\Cad\AWB-10001,base_plate.ipt";
+    private const string OldPath = @"C:\Cad\plate,AWB-10001.ipt";
+    private const string NewPath = @"C:\Cad\base_plate,AWB-10001.ipt";
 
     private static readonly RenameRequest Request = new(OldPath, NewPath, "base plate");
 
@@ -55,10 +55,10 @@ public sealed class PartRenamerTests : IDisposable
     [Fact]
     public void Run_SkipsTheRenamedFileItself_AsOldOrNewPath()
     {
-        var oldAsm = @"C:\Cad\AWB-10002,frame.iam";
-        var newAsm = @"C:\Cad\AWB-10002,main_frame.iam";
+        var oldAsm = @"C:\Cad\frame,AWB-10002.iam";
+        var newAsm = @"C:\Cad\main_frame,AWB-10002.iam";
 
-        Renamer().Run(new RenameRequest(oldAsm, newAsm, "main frame"), [@"c:\cad\awb-10002,FRAME.iam", newAsm, @"C:\Cad\top.iam"]);
+        Renamer().Run(new RenameRequest(oldAsm, newAsm, "main frame"), [@"c:\cad\FRAME,awb-10002.iam", newAsm, @"C:\Cad\top.iam"]);
 
         Assert.Equal([@"Update C:\Cad\top.iam"], _target.Calls.Where(c => c.StartsWith("Update", StringComparison.Ordinal)));
     }

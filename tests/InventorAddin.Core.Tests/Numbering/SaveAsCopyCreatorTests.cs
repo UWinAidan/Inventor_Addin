@@ -26,7 +26,7 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
         _cad = Path.Combine(_root, "cad");
         Directory.CreateDirectory(_shared);
         Directory.CreateDirectory(_cad);
-        _original = Path.Combine(_cad, "AWB-10001,test_bracket.ipt");
+        _original = Path.Combine(_cad, "test_bracket,AWB-10001.ipt");
         File.WriteAllText(_original, "original");
     }
 
@@ -64,7 +64,7 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
     // Helpers
 
     [Theory]
-    [InlineData(@"C:\Work\AWB-10001,plate.ipt", ".ipt")]
+    [InlineData(@"C:\Work\plate,AWB-10001.ipt", ".ipt")]
     [InlineData("/home/user/cad/Assembly.IAM", ".IAM")]
     [InlineData(@"C:\Work.v2\plate", "")]
     [InlineData(@"C:\Work\plate.", "")]
@@ -105,7 +105,7 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
 
         var result = Creator().Copy(Request());
 
-        var expectedPath = Path.Combine(_cad, "AWB-10002,test_bracket_copy.ipt");
+        var expectedPath = Path.Combine(_cad, "test_bracket_copy,AWB-10002.ipt");
         Assert.Equal("AWB-10002", result.PartNumber);
         Assert.Equal(expectedPath, result.FullPath);
         Assert.False(result.Offline);
@@ -127,9 +127,9 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
     }
 
     [Theory]
-    [InlineData(DocumentKind.Assembly, "Plate.iam", "AWB-10001,new_plate.iam")]
-    [InlineData(DocumentKind.WeldmentAssembly, "Frame.iam", "AWB-10001,new_plate.iam")]
-    [InlineData(DocumentKind.SheetMetalPart, "old_plate.ipt", "AWB-10001,new_plate.ipt")]
+    [InlineData(DocumentKind.Assembly, "Plate.iam", "new_plate,AWB-10001.iam")]
+    [InlineData(DocumentKind.WeldmentAssembly, "Frame.iam", "new_plate,AWB-10001.iam")]
+    [InlineData(DocumentKind.SheetMetalPart, "old_plate.ipt", "new_plate,AWB-10001.ipt")]
     public void Copy_KeepsTheOriginalsExtension_AndRegistersItsKind(DocumentKind kind, string originalName, string copyName)
     {
         var original = Path.Combine(_cad, originalName);
@@ -146,7 +146,7 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
     {
         var result = Creator().Copy(Request(name: "  left_bracket, long  "));
 
-        Assert.Equal(Path.Combine(_cad, "AWB-10001,left_bracket,_long.ipt"), result.FullPath);
+        Assert.Equal(Path.Combine(_cad, "left_bracket,_long,AWB-10001.ipt"), result.FullPath);
         Assert.Equal("left bracket, long", Read(SharedPath).Single().Name);
         Assert.Equal(
             CreationProperties.Build(new PartNumber(10001), "left bracket, long", "M", "Test Designer"),
@@ -183,7 +183,7 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
         WriteShared(10001);
         Directory.CreateDirectory(_local);
         File.WriteAllText(PendingPath, RegisterCsv.Write([new RegisterEntry(
-            new PartNumber(10001), "mine", "", DocumentKind.Part, @"C:\Mine\AWB-10001,mine.ipt", Now, "testuser", "TESTPC")]));
+            new PartNumber(10001), "mine", "", DocumentKind.Part, @"C:\Mine\mine,AWB-10001.ipt", Now, "testuser", "TESTPC")]));
 
         var result = Creator().Copy(Request());
 
@@ -239,7 +239,7 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
     [Fact]
     public void OriginalNotAFullPath_StopsBeforeAssigning()
     {
-        var ex = Assert.Throws<NewPartException>(() => Creator().Copy(Request(original: "relative/AWB-10001,plate.ipt")));
+        var ex = Assert.Throws<NewPartException>(() => Creator().Copy(Request(original: "relative/plate,AWB-10001.ipt")));
 
         Assert.Equal(NewPartCreator.NotFullPathMessage, ex.Message);
         AssertNothingAssignedOrCopied();
@@ -249,7 +249,7 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
     public void FileWithTheNextNumberAlreadyThere_StopsWithoutTakingTheNumber()
     {
         WriteShared(10001);
-        var existing = Path.Combine(_cad, "AWB-10002,test_bracket_copy.ipt");
+        var existing = Path.Combine(_cad, "test_bracket_copy,AWB-10002.ipt");
         File.WriteAllText(existing, "not a part");
 
         var ex = Assert.Throws<NewPartException>(() => Creator().Copy(Request()));
@@ -287,7 +287,7 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
     [Fact]
     public void FileAppearsAfterAssigning_StopsNamingTheNumber_AndLeavesThatFileAlone()
     {
-        var path = Path.Combine(_cad, "AWB-10001,test_bracket_copy.ipt");
+        var path = Path.Combine(_cad, "test_bracket_copy,AWB-10001.ipt");
         _log.OnInfo = message =>
         {
             if (message.StartsWith("Part number AWB-10001 assigned", StringComparison.Ordinal))
@@ -312,7 +312,7 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
         var failure = new InvalidOperationException("Inventor said no.");
         _source.FailAt = failingStep;
         _source.Failure = failure;
-        var path = Path.Combine(_cad, "AWB-10001,test_bracket_copy.ipt");
+        var path = Path.Combine(_cad, "test_bracket_copy,AWB-10001.ipt");
 
         var ex = Assert.Throws<NewPartException>(() => Creator().Copy(Request()));
 
@@ -336,7 +336,7 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
         _source.FailAt = "write";
         _source.Failure = new InvalidOperationException("Inventor said no.");
         _source.CloseFailure = new InvalidOperationException("Cannot close.");
-        var path = Path.Combine(_cad, "AWB-10001,test_bracket_copy.ipt");
+        var path = Path.Combine(_cad, "test_bracket_copy,AWB-10001.ipt");
 
         var ex = Assert.Throws<NewPartException>(
             () => Creator(deleteFile: _ => throw new IOException("In use.")).Copy(Request()));

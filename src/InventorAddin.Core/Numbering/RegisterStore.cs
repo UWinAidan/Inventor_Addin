@@ -126,7 +126,7 @@ public sealed class RegisterStore
 
     /// <summary>
     /// As <see cref="Assign(RegisterRequest)"/>, for a file whose path holds the number, such as a new file named
-    /// <c>{number},{name}.ipt</c>. <paramref name="requestFor"/> is called once with the number about to be assigned,
+    /// <c>{name},{number}.ipt</c>. <paramref name="requestFor"/> is called once with the number about to be assigned,
     /// before its row is written (under the lock when the shared register is reached). If it throws, nothing is
     /// assigned, no register file is changed, and the exception propagates.
     /// </summary>

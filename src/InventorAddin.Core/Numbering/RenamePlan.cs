@@ -32,10 +32,13 @@ public static class RenamePlan
         "That is the file's current name. Windows does not tell file names apart by case, so a change of case alone " +
         "is not a rename.";
 
-    /// <summary>Spec 02 question 18 (Default): a name with a comma is refused when the new file name has no part number.</summary>
-    public const string CommaWithoutNumberMessage =
-        "This file has no part number, so its new name will not start with one and a comma cannot be used: the part " +
-        "name is read from after the first comma, and the text before it would be lost.";
+    /// <summary>
+    /// Spec 02 question 18 (Default): when the new file name has no part number, a name whose text after its last comma
+    /// is itself a part number is refused, since the file name would read back as having that number.
+    /// </summary>
+    public const string NameEndsWithNumberMessage =
+        "This file has no part number, so its new name must not end with a comma and a part number: the file would " +
+        "read as numbered with it, and that part of the name would be lost.";
 
     public const string NotSavedMessage = "Save the file before renaming it.";
 
@@ -52,7 +55,7 @@ public static class RenamePlan
 
     /// <summary>
     /// The renamed file's full path: the same folder and extension as <paramref name="fullFileName"/>, and the file
-    /// name <c>{number},{new_name}</c> with the number from <see cref="NumberToKeep"/>, or <c>{new_name}</c> when there is
+    /// name <c>{new_name},{number}</c> with the number from <see cref="NumberToKeep"/>, or <c>{new_name}</c> when there is
     /// none, built by <see cref="PartFileName.Build"/>. Throws <see cref="ArgumentException"/> for a blank path, a file
     /// without an extension, or a name <see cref="PartFileName.ValidateName"/> refuses.
     /// </summary>
@@ -77,8 +80,9 @@ public static class RenamePlan
 
     /// <summary>
     /// Null when <paramref name="typed"/> can be the new name of <paramref name="fullFileName"/>, otherwise a message for
-    /// the first problem: the name (<see cref="PartFileName.ValidateName"/>), a comma when the new file name will have no
-    /// number (<see cref="NumberToKeep"/>; <see cref="CommaWithoutNumberMessage"/>), the path length
+    /// the first problem: the name (<see cref="PartFileName.ValidateName"/>), a name that would read back as numbered
+    /// when the new file name will have no number (<see cref="NumberToKeep"/>; <see cref="NameEndsWithNumberMessage"/>;
+    /// any other comma is allowed), the path length
     /// (<see cref="PartFileName.ValidatePath"/>), then a name that gives the same file (<see cref="SameFileMessage"/>).
     /// Whether the new file already exists is the caller's check. A blank <paramref name="fullFileName"/> gives
     /// <see cref="NotSavedMessage"/>.
@@ -97,13 +101,12 @@ public static class RenamePlan
             return nameProblem;
         }
 
-        if (NumberToKeep(fullFileName, registeredNumber) is null
-            && PartFileName.NormaliseName(typed).Contains(PartFileName.NumberSeparator))
+        var newPath = NewFileName(fullFileName, typed!, registeredNumber);
+        if (NumberToKeep(fullFileName, registeredNumber) is null && PartFileName.TryReadNumber(newPath, out _))
         {
-            return CommaWithoutNumberMessage;
+            return NameEndsWithNumberMessage;
         }
 
-        var newPath = NewFileName(fullFileName, typed!, registeredNumber);
         var cut = newPath.LastIndexOfAny(FolderSeparators) + 1;
         var pathProblem = PartFileName.ValidatePath(newPath[..cut], newPath[cut..]);
         if (pathProblem is not null)

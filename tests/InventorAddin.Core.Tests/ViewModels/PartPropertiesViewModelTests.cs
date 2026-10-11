@@ -219,8 +219,8 @@ public sealed class PartPropertiesViewModelTests
     // Part number display (spec 02, "Display in Part Properties")
 
     [Theory]
-    [InlineData(@"C:\Work\AWB-10001,bracket.ipt", "AWB-10001", "AWB-10001", true, true, null)]
-    [InlineData(@"C:\Work\AWB-10001,bracket.ipt", "  awb-10001 ", "AWB-10001", true, true, null)]
+    [InlineData(@"C:\Work\bracket,AWB-10001.ipt", "AWB-10001", "AWB-10001", true, true, null)]
+    [InlineData(@"C:\Work\bracket,AWB-10001.ipt", "  awb-10001 ", "AWB-10001", true, true, null)]
     [InlineData(@"C:\Work\bracket.ipt", "AWB-10500", "AWB-10500", true, false, "Not in the register")]
     [InlineData(@"C:\Work\bracket.ipt", "bracket", "Not assigned", false, false, null)]
     [InlineData(@"C:\Work\bracket.ipt", "PN-0001", "Not assigned", false, false, null)]
@@ -243,11 +243,11 @@ public sealed class PartPropertiesViewModelTests
 
     /// <summary>
     /// Inventor reports the file name as the Part Number when none is set. In the new file-name format that is
-    /// <c>AWB-10001,test_plate</c>, which is not a part number, even when the number before the comma is registered.
+    /// <c>test_plate,AWB-10001</c>, which is not a part number, even when the number after the comma is registered.
     /// </summary>
     [Theory]
-    [InlineData(@"C:\Work\AWB-10001,test_plate.ipt", "AWB-10001,test_plate")]
-    [InlineData(@"C:\Work\AWB-10001,a,b.ipt", "AWB-10001,a,b")]
+    [InlineData(@"C:\Work\test_plate,AWB-10001.ipt", "test_plate,AWB-10001")]
+    [InlineData(@"C:\Work\a,b,AWB-10001.ipt", "a,b,AWB-10001")]
     [InlineData(@"C:\Work\old_bracket.ipt", "old_bracket")]
     public void PartNumberDisplay_FileNameFallbackIsNotAssigned(string fullFileName, string partNumber)
     {
@@ -1527,7 +1527,7 @@ public sealed class PartPropertiesViewModelTests
 
     private static PartPropertiesSnapshot Numbered() => Complete() with
     {
-        FullFileName = @"C:\Work\AWB-10001,mounting_bracket.ipt",
+        FullFileName = @"C:\Work\mounting_bracket,AWB-10001.ipt",
         Description = "mounting bracket",
     };
 
@@ -1556,7 +1556,7 @@ public sealed class PartPropertiesViewModelTests
     {
         var renamer = new FakeRenamer
         {
-            Result = new PartRenameOutcome(@"C:\Work\AWB-10001,base_plate.ipt", "base plate", DescriptionWritten: true),
+            Result = new PartRenameOutcome(@"C:\Work\base_plate,AWB-10001.ipt", "base plate", DescriptionWritten: true),
         };
         var vm = Create(Numbered(), renamer: renamer);
         var changes = RecordPropertyChanges(vm);
@@ -1566,8 +1566,8 @@ public sealed class PartPropertiesViewModelTests
         Assert.Equal(1, renamer.Calls);
         Assert.Equal("base plate", vm.HeaderTitle);
         Assert.Equal("base plate", vm.PartNameDisplay);
-        Assert.Equal("Part" + PartPropertiesViewModel.HeaderSeparator + "AWB-10001,base_plate.ipt", vm.HeaderSubline);
-        Assert.Equal("Renamed to AWB-10001,base_plate.ipt.", vm.StatusText);
+        Assert.Equal("Part" + PartPropertiesViewModel.HeaderSeparator + "base_plate,AWB-10001.ipt", vm.HeaderSubline);
+        Assert.Equal("Renamed to base_plate,AWB-10001.ipt.", vm.StatusText);
         Assert.False(vm.HasError);
         Assert.Contains(nameof(vm.HeaderTitle), changes);
         Assert.Contains(nameof(vm.HeaderSubline), changes);
@@ -1582,7 +1582,7 @@ public sealed class PartPropertiesViewModelTests
         var target = new FakeTarget();
         var renamer = new FakeRenamer
         {
-            Result = new PartRenameOutcome(@"C:\Work\AWB-10001,base_plate.ipt", "base plate", DescriptionWritten: false),
+            Result = new PartRenameOutcome(@"C:\Work\base_plate,AWB-10001.ipt", "base plate", DescriptionWritten: false),
         };
         var vm = Create(Numbered(), target, renamer: renamer);
 
@@ -1629,7 +1629,7 @@ public sealed class PartPropertiesViewModelTests
         var target = new FakeTarget();
         var renamer = new FakeRenamer
         {
-            Result = new PartRenameOutcome(@"C:\Work\AWB-10001,base_plate.ipt", "base plate", DescriptionWritten: true),
+            Result = new PartRenameOutcome(@"C:\Work\base_plate,AWB-10001.ipt", "base plate", DescriptionWritten: true),
         };
         var vm = Create(Numbered(), target, renamer: renamer);
         vm.Designer = "New Designer";
@@ -1648,7 +1648,7 @@ public sealed class PartPropertiesViewModelTests
         var target = new FakeTarget();
         var renamer = new FakeRenamer
         {
-            Result = new PartRenameOutcome(@"C:\Work\AWB-10001,base_plate.ipt", "base plate", DescriptionWritten: true),
+            Result = new PartRenameOutcome(@"C:\Work\base_plate,AWB-10001.ipt", "base plate", DescriptionWritten: true),
         };
         var vm = Create(Numbered() with { Description = "something else" }, target, renamer: renamer);
         Assert.True(vm.HasChanges);
@@ -1667,7 +1667,7 @@ public sealed class PartPropertiesViewModelTests
         var target = new FakeTarget();
         var renamer = new FakeRenamer
         {
-            Result = new PartRenameOutcome(@"C:\Work\AWB-10001,base_plate.ipt", "base plate", DescriptionWritten: false),
+            Result = new PartRenameOutcome(@"C:\Work\base_plate,AWB-10001.ipt", "base plate", DescriptionWritten: false),
         };
         var vm = Create(Numbered() with { Description = "something else" }, target, renamer: renamer);
 

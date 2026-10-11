@@ -201,7 +201,7 @@ public sealed class SaveAsReplacer
 
     /// <summary>
     /// The sub-assembly as the messages name it: its file name, with its occurrence name when known, for example
-    /// <c>AWB-10005,frame.iam (Sub:1)</c>. Empty for a top-level occurrence.
+    /// <c>FRAME,AWB-10005.iam (Sub:1)</c>. Empty for a top-level occurrence.
     /// </summary>
     public static string SubAssemblyName(ReplaceSelection selection)
     {

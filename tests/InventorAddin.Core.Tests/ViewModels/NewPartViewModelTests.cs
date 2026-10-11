@@ -175,10 +175,10 @@ public sealed class NewPartViewModelTests
     }
 
     [Theory]
-    [InlineData(NewFileKind.Part, "  mounting   bracket ", "AWB-?????,mounting_bracket.ipt")]
-    [InlineData(NewFileKind.SheetMetalPart, "Cover_Plate", "AWB-?????,Cover_Plate.ipt")]
-    [InlineData(NewFileKind.Assembly, "gearbox", "AWB-?????,gearbox.iam")]
-    [InlineData(NewFileKind.Part, "plate, 10mm", "AWB-?????,plate,_10mm.ipt")]
+    [InlineData(NewFileKind.Part, "  mounting   bracket ", "mounting_bracket,AWB-?????.ipt")]
+    [InlineData(NewFileKind.SheetMetalPart, "Cover_Plate", "Cover_Plate,AWB-?????.ipt")]
+    [InlineData(NewFileKind.Assembly, "gearbox", "gearbox,AWB-?????.iam")]
+    [InlineData(NewFileKind.Part, "plate, 10mm", "plate,_10mm,AWB-?????.ipt")]
     public void FileNamePreview_ShowsPlaceholderNameAndExtension(NewFileKind kind, string name, string expected)
     {
         var vm = Create();
@@ -209,7 +209,7 @@ public sealed class NewPartViewModelTests
 
         vm.PartName = "plate";
 
-        Assert.Equal("AWB-?????,plate.ipt", vm.FileNamePreview);
+        Assert.Equal("plate,AWB-?????.ipt", vm.FileNamePreview);
         Assert.Equal(NewPartViewModel.ChooseFolderMessage, vm.ValidationMessage);
     }
 
@@ -254,7 +254,7 @@ public sealed class NewPartViewModelTests
     {
         var vm = Create();
         vm.PartName = "plate";
-        var fileName = "AWB-?????,plate.ipt";
+        var fileName = "plate,AWB-?????.ipt";
 
         // Folder + separator + file name: exactly at the limit is accepted, one more is not.
         vm.Folder = new string('f', PartFileName.MaxPathLength - fileName.Length - 1);
@@ -271,7 +271,7 @@ public sealed class NewPartViewModelTests
     {
         var vm = Create();
         vm.PartName = "plate";
-        var folder = new string('f', PartFileName.MaxPathLength - "AWB-?????,plate.ipt".Length - 1);
+        var folder = new string('f', PartFileName.MaxPathLength - "plate,AWB-?????.ipt".Length - 1);
 
         vm.Folder = "  " + folder + "  ";
 
@@ -283,7 +283,7 @@ public sealed class NewPartViewModelTests
     {
         var vm = Create();
         vm.PartName = "gearbox";
-        vm.Folder = new string('f', PartFileName.MaxPathLength - "AWB-?????,gearbox.ipt".Length - 1);
+        vm.Folder = new string('f', PartFileName.MaxPathLength - "gearbox,AWB-?????.ipt".Length - 1);
         Assert.Null(vm.ValidationMessage);
 
         // Same length: .iam and .ipt. Still valid.

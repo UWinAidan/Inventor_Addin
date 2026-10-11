@@ -14,7 +14,7 @@ public sealed class ScannedFileStateTests
     private static readonly PartRegister Register = new(
     [
         new RegisterEntry(
-            new PartNumber(10001), "test plate", "M", DocumentKind.Part, @"C:\Work\AWB-10001,test_plate.ipt",
+            new PartNumber(10001), "test plate", "M", DocumentKind.Part, @"C:\Work\test_plate,AWB-10001.ipt",
             new DateTimeOffset(2026, 10, 10, 9, 0, 0, TimeSpan.Zero), "someone", "TESTPC"),
     ]);
 

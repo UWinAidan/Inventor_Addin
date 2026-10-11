@@ -16,7 +16,7 @@ public sealed class MassUpdateViewModelTests
     private static readonly PartRegister Register = new(
     [
         new RegisterEntry(
-            new PartNumber(10001), "test plate", "M", DocumentKind.Part, @"C:\Work\Project\AWB-10001,test_plate.ipt",
+            new PartNumber(10001), "test plate", "M", DocumentKind.Part, @"C:\Work\Project\test_plate,AWB-10001.ipt",
             new DateTimeOffset(2026, 10, 10, 9, 0, 0, TimeSpan.Zero), "someone", "TESTPC"),
     ]);
 
@@ -468,9 +468,9 @@ public sealed class MassUpdateViewModelTests
     [Fact]
     public void DuplicateTextNamesTheFirstFileOnly()
     {
-        var duplicate = new MassUpdateDuplicate(new PartNumber(10001), @"C:\A\AWB-10001,plate.ipt", @"C:\B\copy.ipt");
+        var duplicate = new MassUpdateDuplicate(new PartNumber(10001), @"C:\A\plate,AWB-10001.ipt", @"C:\B\copy.ipt");
 
-        Assert.Equal("Not registered: AWB-10001 is also on AWB-10001,plate.ipt", MassUpdateViewModel.DuplicateText(duplicate));
+        Assert.Equal("Not registered: AWB-10001 is also on plate,AWB-10001.ipt", MassUpdateViewModel.DuplicateText(duplicate));
     }
 
     [Fact]

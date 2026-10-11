@@ -110,7 +110,7 @@ public sealed class RenameViewModel : ObservableObject
     /// <summary>The current part name (<see cref="PartName.FromFileName"/>).</summary>
     public string CurrentName { get; }
 
-    /// <summary>The part number the new file name starts with (<see cref="RenamePlan.NumberToKeep"/>), or null for none.</summary>
+    /// <summary>The part number the new file name ends with (<see cref="RenamePlan.NumberToKeep"/>), or null for none.</summary>
     public PartNumber? NumberKept { get; }
 
     /// <summary>The new part name as typed; pre-filled with <see cref="CurrentName"/>.</summary>

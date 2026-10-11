@@ -32,7 +32,7 @@ public static class PrintPlan
 
     /// <summary>
     /// The model's folder and file name with <paramref name="drawingExtension"/> in place of the model's extension:
-    /// <c>C:\Work\AWB-10001,test_plate.ipt</c> and <c>.dwg</c> give <c>C:\Work\AWB-10001,test_plate.dwg</c>.
+    /// <c>C:\Work\TEST_PLATE,AWB-10001.ipt</c> and <c>.dwg</c> give <c>C:\Work\TEST_PLATE,AWB-10001.dwg</c>.
     /// Only the last extension of the file name is replaced; dots in the folder are left alone. Works on Windows paths
     /// on any platform, so it does not use <see cref="Path"/>.
     /// </summary>

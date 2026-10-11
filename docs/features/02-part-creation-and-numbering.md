@@ -231,7 +231,7 @@ Answered by Aidan on 2026-10-10:
 8. **Different numbering for assemblies and parts?** No: one shared sequence.
 9. **What counts as "already has a number"?** In the format and in the register.
 10. **Is the register design accepted?** Yes, with the folder in Settings and the default above.
-11. **How is the part name read from a file name?** Everything after the first comma, underscores as spaces.
+11. **How is the part name read from a file name?** Everything after the first comma, underscores as spaces. Replaced on 2026-10-11: everything before the last comma when the text after it is a part number.
 12. **Where does Rename look for referencing files?** The active project's workspace. Replaced by question 23's answer.
 
 Answered by Aidan on 2026-10-10, after spike 032:

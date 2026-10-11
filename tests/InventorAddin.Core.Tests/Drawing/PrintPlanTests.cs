@@ -12,14 +12,14 @@ public sealed class PrintPlanTests
     // DrawingFileName
 
     [Theory]
-    [InlineData(@"C:\Work\AWB-10001,test_plate.ipt", ".dwg", @"C:\Work\AWB-10001,test_plate.dwg")]
-    [InlineData(@"C:\Work\AWB-10001,test_plate.ipt", ".idw", @"C:\Work\AWB-10001,test_plate.idw")]
-    [InlineData(@"C:\Work\AWB-10002,frame.iam", ".dwg", @"C:\Work\AWB-10002,frame.dwg")]
-    [InlineData(@"C:\Work\AWB-10001,test_plate.ipt", "dwg", @"C:\Work\AWB-10001,test_plate.dwg")]
+    [InlineData(@"C:\Work\test_plate,AWB-10001.ipt", ".dwg", @"C:\Work\test_plate,AWB-10001.dwg")]
+    [InlineData(@"C:\Work\test_plate,AWB-10001.ipt", ".idw", @"C:\Work\test_plate,AWB-10001.idw")]
+    [InlineData(@"C:\Work\frame,AWB-10002.iam", ".dwg", @"C:\Work\frame,AWB-10002.dwg")]
+    [InlineData(@"C:\Work\test_plate,AWB-10001.ipt", "dwg", @"C:\Work\test_plate,AWB-10001.dwg")]
     [InlineData(@"C:\Work.v2\bracket.v3.ipt", ".dwg", @"C:\Work.v2\bracket.v3.dwg")]
     [InlineData(@"C:\Work.v2\bracket", ".dwg", @"C:\Work.v2\bracket.dwg")]
-    [InlineData(@"\\nas\share\AWB-10003,plate, 10mm.ipt", ".dwg", @"\\nas\share\AWB-10003,plate, 10mm.dwg")]
-    [InlineData("/home/test/AWB-10004,shaft.ipt", ".dwg", "/home/test/AWB-10004,shaft.dwg")]
+    [InlineData(@"\\nas\share\plate, 10mm,AWB-10003.ipt", ".dwg", @"\\nas\share\plate, 10mm,AWB-10003.dwg")]
+    [InlineData("/home/test/shaft,AWB-10004.ipt", ".dwg", "/home/test/shaft,AWB-10004.dwg")]
     public void DrawingFileName_ReplacesTheModelExtensionWithTheDrawingExtension(string model, string extension, string expected)
     {
         Assert.Equal(expected, PrintPlan.DrawingFileName(model, extension));
@@ -48,16 +48,16 @@ public sealed class PrintPlanTests
     public void ExistingPrintCandidates_PreferredExtensionFirstThenTheOther()
     {
         Assert.Equal(
-            new[] { @"C:\Work\AWB-10001,a.dwg", @"C:\Work\AWB-10001,a.idw" },
-            PrintPlan.ExistingPrintCandidates(@"C:\Work\AWB-10001,a.ipt", ".dwg"));
+            new[] { @"C:\Work\a,AWB-10001.dwg", @"C:\Work\a,AWB-10001.idw" },
+            PrintPlan.ExistingPrintCandidates(@"C:\Work\a,AWB-10001.ipt", ".dwg"));
         Assert.Equal(
-            new[] { @"C:\Work\AWB-10001,a.idw", @"C:\Work\AWB-10001,a.dwg" },
-            PrintPlan.ExistingPrintCandidates(@"C:\Work\AWB-10001,a.ipt", ".idw"));
+            new[] { @"C:\Work\a,AWB-10001.idw", @"C:\Work\a,AWB-10001.dwg" },
+            PrintPlan.ExistingPrintCandidates(@"C:\Work\a,AWB-10001.ipt", ".idw"));
 
         // The preferred extension is kept as given, and the other one is still found ignoring case.
         Assert.Equal(
-            new[] { @"C:\Work\AWB-10001,a.IDW", @"C:\Work\AWB-10001,a.dwg" },
-            PrintPlan.ExistingPrintCandidates(@"C:\Work\AWB-10001,a.ipt", "IDW"));
+            new[] { @"C:\Work\a,AWB-10001.IDW", @"C:\Work\a,AWB-10001.dwg" },
+            PrintPlan.ExistingPrintCandidates(@"C:\Work\a,AWB-10001.ipt", "IDW"));
     }
 
     [Fact]
