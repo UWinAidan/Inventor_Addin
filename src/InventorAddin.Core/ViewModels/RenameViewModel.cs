@@ -1,5 +1,6 @@
 using System.Globalization;
 using InventorAddin.Core.Logging;
+using InventorAddin.Core.Models;
 using InventorAddin.Core.Numbering;
 using InventorAddin.Core.PartProperties;
 
@@ -48,6 +49,7 @@ public sealed class RenameViewModel : ObservableObject
     private readonly Func<RenameRequest, Action<string>, RenameResult?> _run;
     private readonly ILog _log;
     private readonly PartNumber? _registeredNumber;
+    private readonly DocumentKind _kind;
 
     private string _newName;
     private string? _validationMessage;
@@ -71,12 +73,17 @@ public sealed class RenameViewModel : ObservableObject
     /// The file's Part Number when the register holds it (<c>RegisterStore.HasNumber</c>), otherwise null. The new file
     /// name keeps it (<see cref="RenamePlan.NumberToKeep"/>).
     /// </param>
+    /// <param name="kind">
+    /// The open file's kind. An assembly's or weldment's new name gets <see cref="PartFileName.AssemblyPrefix"/>
+    /// (<see cref="PartFileName.ForKind"/>).
+    /// </param>
     public RenameViewModel(
         string fullFileName,
         Func<string, bool> targetExists,
         Func<RenameRequest, Action<string>, RenameResult?> run,
         ILog? log = null,
-        PartNumber? registeredNumber = null)
+        PartNumber? registeredNumber = null,
+        DocumentKind kind = DocumentKind.Part)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(fullFileName);
         ArgumentNullException.ThrowIfNull(targetExists);
@@ -90,6 +97,7 @@ public sealed class RenameViewModel : ObservableObject
         CurrentName = PartName.FromFileName(_fullFileName);
         _newName = CurrentName;
         _registeredNumber = registeredNumber;
+        _kind = kind;
         NumberKept = RenamePlan.NumberToKeep(_fullFileName, registeredNumber);
 
         RenameCommand = new RelayCommand(Rename, () => CanRename);
@@ -241,10 +249,10 @@ public sealed class RenameViewModel : ObservableObject
     private void Validate()
     {
         _newFullFileName = string.Empty;
-        _validationMessage = RenamePlan.ValidateNewName(_fullFileName, _newName, _registeredNumber);
+        _validationMessage = RenamePlan.ValidateNewName(_fullFileName, _newName, _registeredNumber, _kind);
         if (_validationMessage is null)
         {
-            _newFullFileName = RenamePlan.NewFileName(_fullFileName, _newName, _registeredNumber);
+            _newFullFileName = RenamePlan.NewFileName(_fullFileName, _newName, _registeredNumber, _kind);
             if (_targetExists(_newFullFileName))
                 _validationMessage = RenamePlan.TargetExistsMessage(RenamePlan.FileNameOnly(_newFullFileName));
         }
@@ -260,7 +268,7 @@ public sealed class RenameViewModel : ObservableObject
         if (!CanRename)
             return;
 
-        var request = new RenameRequest(_fullFileName, _newFullFileName, PartFileName.NormaliseName(_newName));
+        var request = new RenameRequest(_fullFileName, _newFullFileName, PartFileName.ForKind(_newName, _kind));
 
         _isRunning = true;
         _progressText = StartingText;

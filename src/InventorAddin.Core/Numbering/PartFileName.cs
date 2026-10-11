@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using InventorAddin.Core.Models;
 
 namespace InventorAddin.Core.Numbering;
 
@@ -31,8 +32,18 @@ public static class PartFileName
     private static readonly char[] FolderSeparators = { '\\', '/' };
 
     /// <summary>
-    /// The part name as typed, tidied: trimmed, each underscore turned into a space, and each run of white space
-    /// collapsed to one space. Case is kept. Null gives <c>""</c>.
+    /// What an assembly's name starts with (Aidan, 2026-10-11). In a normalised name it is followed by a space, in a
+    /// file name by an underscore: <c>ASSY GEARBOX</c>, <c>ASSY_GEARBOX,AWB-10006.iam</c>.
+    /// </summary>
+    public const string AssemblyPrefix = "ASSY";
+
+    /// <summary>The refusal for an assembly name that is only <see cref="AssemblyPrefix"/> (Default).</summary>
+    public const string AssemblyNameMissingMessage = $"Enter a name after {AssemblyPrefix}_.";
+
+    /// <summary>
+    /// The part name as typed, tidied: trimmed, each underscore turned into a space, each run of white space
+    /// collapsed to one space, and made upper case in the invariant culture (Aidan, 2026-10-11, spec 02 question 14).
+    /// Null gives <c>""</c>.
     /// </summary>
     public static string NormaliseName(string? typed)
     {
@@ -60,7 +71,51 @@ public static class PartFileName
             builder.Append(c);
         }
 
-        return builder.ToString();
+        return builder.ToString().ToUpperInvariant();
+    }
+
+    /// <summary>
+    /// True for the kinds whose names start with <see cref="AssemblyPrefix"/>: an assembly or a weldment. Parts and
+    /// sheet metal parts are never prefixed.
+    /// </summary>
+    public static bool TakesAssemblyPrefix(DocumentKind kind) =>
+        kind is DocumentKind.Assembly or DocumentKind.WeldmentAssembly;
+
+    /// <summary>
+    /// The name a file of <paramref name="kind"/> gets from <paramref name="typed"/>: <see cref="NormaliseName"/>, then
+    /// for an assembly or weldment (<see cref="TakesAssemblyPrefix"/>) <see cref="AssemblyPrefix"/> and a space in front
+    /// unless the name already starts with them. So <c>gearbox</c>, <c>ASSY_GEARBOX</c> and <c>assy  gearbox</c> all
+    /// give <c>ASSY GEARBOX</c>, and <c>ASSYGEARBOX</c> gives <c>ASSY ASSYGEARBOX</c>. A blank name, and a name that is
+    /// only the prefix, are returned as they are; <see cref="ValidateNameForKind"/> refuses them.
+    /// </summary>
+    public static string ForKind(string? typed, DocumentKind kind)
+    {
+        var name = NormaliseName(typed);
+        if (!TakesAssemblyPrefix(kind)
+            || name.Length == 0
+            || name == AssemblyPrefix
+            || name.StartsWith(AssemblyPrefix + " ", StringComparison.Ordinal))
+        {
+            return name;
+        }
+
+        return AssemblyPrefix + " " + name;
+    }
+
+    /// <summary>
+    /// Null when <paramref name="typed"/> can name a file of <paramref name="kind"/>, otherwise a message:
+    /// <see cref="ValidateName"/>, then for an assembly or weldment a name that is only <see cref="AssemblyPrefix"/>
+    /// (<see cref="AssemblyNameMissingMessage"/>).
+    /// </summary>
+    public static string? ValidateNameForKind(string? typed, DocumentKind kind)
+    {
+        var problem = ValidateName(typed);
+        if (problem is not null)
+        {
+            return problem;
+        }
+
+        return TakesAssemblyPrefix(kind) && NormaliseName(typed) == AssemblyPrefix ? AssemblyNameMissingMessage : null;
     }
 
     /// <summary>

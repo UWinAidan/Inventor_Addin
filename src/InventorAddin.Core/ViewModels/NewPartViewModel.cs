@@ -5,8 +5,9 @@ using InventorAddin.Core.Settings;
 namespace InventorAddin.Core.ViewModels;
 
 /// <summary>
-/// What the New Part dialog asks the command to create. <see cref="PartName"/> is normalised
-/// (<see cref="PartFileName.NormaliseName"/>), <see cref="PartType"/> is the code in the list's spelling or
+/// What the New Part dialog asks the command to create. <see cref="PartName"/> is normalised and upper case, with
+/// <see cref="PartFileName.AssemblyPrefix"/> in front for an assembly (<see cref="PartFileName.ForKind"/>),
+/// <see cref="PartType"/> is the code in the list's spelling or
 /// <c>""</c>, and <see cref="Folder"/> is trimmed.
 /// </summary>
 public sealed record NewPartRequest(NewFileKind Kind, string PartName, string PartType, UnitsSystem Units, string Folder);
@@ -201,7 +202,7 @@ public sealed class NewPartViewModel : ObservableObject
 
     private void Recalculate()
     {
-        var preview = NewFileNameCheck.For(_partName, _kind.Extension(), _folder);
+        var preview = NewFileNameCheck.For(_partName, _kind.Extension(), _folder, _kind.DocumentKindOf());
         _fileNamePreview = preview.FileName;
         _validationMessage = preview.Problem;
     }
@@ -211,7 +212,7 @@ public sealed class NewPartViewModel : ObservableObject
         if (!CanCreate)
             return;
 
-        Request = new NewPartRequest(_kind, PartFileName.NormaliseName(_partName), _partType, _units, _folder.Trim());
+        Request = new NewPartRequest(_kind, PartFileName.ForKind(_partName, _kind.DocumentKindOf()), _partType, _units, _folder.Trim());
         OnPropertyChanged(nameof(Request));
         CloseRequested?.Invoke(this, EventArgs.Empty);
     }

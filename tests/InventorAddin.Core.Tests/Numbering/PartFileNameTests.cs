@@ -1,3 +1,4 @@
+using InventorAddin.Core.Models;
 using InventorAddin.Core.Numbering;
 using InventorAddin.Core.PartProperties;
 
@@ -14,14 +15,15 @@ public sealed class PartFileNameTests
     [InlineData("", "")]
     [InlineData("   ", "")]
     [InlineData("___", "")]
-    [InlineData("mounting bracket", "mounting bracket")]
-    [InlineData("mounting_bracket", "mounting bracket")]
-    [InlineData("  mounting   bracket  ", "mounting bracket")]
-    [InlineData("mounting \t_ bracket", "mounting bracket")]
-    [InlineData("_mounting_bracket_", "mounting bracket")]
-    [InlineData("Mounting Bracket", "Mounting Bracket")]
-    [InlineData("plate, 10mm", "plate, 10mm")]
-    public void NormaliseName_TrimsTurnsUnderscoresToSpacesAndCollapsesWhiteSpace(string? typed, string expected)
+    [InlineData("mounting bracket", "MOUNTING BRACKET")]
+    [InlineData("mounting_bracket", "MOUNTING BRACKET")]
+    [InlineData("  mounting   bracket  ", "MOUNTING BRACKET")]
+    [InlineData("mounting \t_ bracket", "MOUNTING BRACKET")]
+    [InlineData("_mounting_bracket_", "MOUNTING BRACKET")]
+    [InlineData("Mounting Bracket", "MOUNTING BRACKET")]
+    [InlineData("plate, 10mm", "PLATE, 10MM")]
+    [InlineData("pièce, été", "PIÈCE, ÉTÉ")]
+    public void NormaliseName_TrimsTurnsUnderscoresToSpacesCollapsesWhiteSpaceAndUpperCases(string? typed, string expected)
     {
         Assert.Equal(expected, PartFileName.NormaliseName(typed));
     }
@@ -118,13 +120,14 @@ public sealed class PartFileNameTests
     // Build
 
     [Theory]
-    [InlineData("mounting bracket", ".ipt", "mounting_bracket,AWB-10001.ipt")]
-    [InlineData("mounting_bracket", ".ipt", "mounting_bracket,AWB-10001.ipt")]
-    [InlineData("  mounting   bracket ", ".iam", "mounting_bracket,AWB-10001.iam")]
-    [InlineData("Mounting Bracket", ".ipt", "Mounting_Bracket,AWB-10001.ipt")]
+    [InlineData("mounting bracket", ".ipt", "MOUNTING_BRACKET,AWB-10001.ipt")]
+    [InlineData("mounting_bracket", ".ipt", "MOUNTING_BRACKET,AWB-10001.ipt")]
+    [InlineData("  mounting   bracket ", ".iam", "MOUNTING_BRACKET,AWB-10001.iam")]
+    [InlineData("Mounting Bracket", ".ipt", "MOUNTING_BRACKET,AWB-10001.ipt")]
     [InlineData("MOUNTING BRACKET", ".ipt", "MOUNTING_BRACKET,AWB-10001.ipt")]
-    [InlineData("plate, 10mm", ".ipt", "plate,_10mm,AWB-10001.ipt")]
-    [InlineData("bracket.v2", ".idw", "bracket.v2,AWB-10001.idw")]
+    [InlineData("plate, 10mm", ".ipt", "PLATE,_10MM,AWB-10001.ipt")]
+    [InlineData("bracket.v2", ".idw", "BRACKET.V2,AWB-10001.idw")]
+    [InlineData("pièce", ".ipt", "PIÈCE,AWB-10001.ipt")]
     public void Build_WithNumber_IsNameCommaNumber(string name, string extension, string expected)
     {
         Assert.Equal(expected, PartFileName.Build(Number, name, extension));
@@ -141,7 +144,88 @@ public sealed class PartFileNameTests
     [Fact]
     public void Build_WithoutNumber_IsNameAndExtension()
     {
-        Assert.Equal("old_bracket.ipt", PartFileName.Build(null, "old bracket", ".ipt"));
+        Assert.Equal("OLD_BRACKET.ipt", PartFileName.Build(null, "old bracket", ".ipt"));
+    }
+
+    // ForKind and ValidateNameForKind
+
+    [Theory]
+    [InlineData("GEARBOX")]
+    [InlineData("gearbox")]
+    [InlineData("ASSY_GEARBOX")]
+    [InlineData("assy gearbox")]
+    [InlineData("ASSY  GEARBOX")]
+    [InlineData("  assy__gearbox ")]
+    public void ForKind_Assembly_AddsThePrefixOnce(string typed)
+    {
+        Assert.Equal("ASSY GEARBOX", PartFileName.ForKind(typed, DocumentKind.Assembly));
+    }
+
+    [Fact]
+    public void ForKind_Weldment_AddsThePrefix()
+    {
+        Assert.Equal("ASSY FRAME", PartFileName.ForKind("frame", DocumentKind.WeldmentAssembly));
+    }
+
+    [Fact]
+    public void ForKind_PrefixNotFollowedByASpace_IsPartOfTheName()
+    {
+        Assert.Equal("ASSY ASSYGEARBOX", PartFileName.ForKind("ASSYGEARBOX", DocumentKind.Assembly));
+    }
+
+    [Theory]
+    [InlineData(DocumentKind.Part)]
+    [InlineData(DocumentKind.SheetMetalPart)]
+    public void ForKind_Parts_AreNeverPrefixed(DocumentKind kind)
+    {
+        Assert.Equal("GEARBOX", PartFileName.ForKind("gearbox", kind));
+        Assert.Equal("ASSY GEARBOX", PartFileName.ForKind("assy_gearbox", kind));
+    }
+
+    [Fact]
+    public void ForKind_UpperCasesACommaAndANonAsciiLetter()
+    {
+        Assert.Equal("ASSY PIÈCE, ÉTÉ", PartFileName.ForKind("pièce, été", DocumentKind.Assembly));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("  ")]
+    public void ForKind_BlankName_StaysBlank(string? typed)
+    {
+        Assert.Equal(string.Empty, PartFileName.ForKind(typed, DocumentKind.Assembly));
+    }
+
+    [Fact]
+    public void ForKind_Assembly_BuildsTheFileNameWithTheUnderscorePrefix()
+    {
+        Assert.Equal(
+            "ASSY_GEARBOX,AWB-10006.iam",
+            PartFileName.Build(PartNumber.Parse("AWB-10006"), PartFileName.ForKind("GEARBOX", DocumentKind.Assembly), ".iam"));
+    }
+
+    [Theory]
+    [InlineData("ASSY")]
+    [InlineData("ASSY_")]
+    [InlineData(" assy ")]
+    public void ValidateNameForKind_OnlyThePrefix_IsRefusedForAnAssembly(string typed)
+    {
+        Assert.Equal("Enter a name after ASSY_.", PartFileName.ValidateNameForKind(typed, DocumentKind.Assembly));
+        Assert.Equal("Enter a name after ASSY_.", PartFileName.ValidateNameForKind(typed, DocumentKind.WeldmentAssembly));
+    }
+
+    [Fact]
+    public void ValidateNameForKind_OnlyThePrefix_IsANameForAPart()
+    {
+        Assert.Null(PartFileName.ValidateNameForKind("ASSY", DocumentKind.Part));
+    }
+
+    [Fact]
+    public void ValidateNameForKind_OtherProblems_ComeFromValidateName()
+    {
+        Assert.Equal(PartFileName.ValidateName(" "), PartFileName.ValidateNameForKind(" ", DocumentKind.Assembly));
+        Assert.Equal(PartFileName.ValidateName("a*b"), PartFileName.ValidateNameForKind("a*b", DocumentKind.Assembly));
+        Assert.Null(PartFileName.ValidateNameForKind("gearbox", DocumentKind.Assembly));
     }
 
     [Theory]

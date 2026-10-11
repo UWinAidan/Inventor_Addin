@@ -39,7 +39,7 @@ public sealed class SaveAsReplacerTests : IDisposable
 
     private string SharedPath => Path.Combine(_shared, RegisterStore.SharedFileName);
 
-    private string CopyPath => Path.Combine(_cad, "test_bracket_copy,AWB-10001.ipt");
+    private string CopyPath => Path.Combine(_cad, "TEST_BRACKET_COPY,AWB-10001.ipt");
 
     private RegisterStore Store() => new(_shared, _local, new FakeEnvironment(), _log, TimeSpan.FromMilliseconds(200));
 
@@ -56,7 +56,7 @@ public sealed class SaveAsReplacerTests : IDisposable
     private SaveAsReplacer Replacer(ReplaceSelection selection) =>
         new(Store(), _target, selection, "Test Designer", _log);
 
-    private SaveAsCopyRequest Request() => new(_component, DocumentKind.Part, "test bracket copy", "M");
+    private SaveAsCopyRequest Request() => new(_component, DocumentKind.Part, "TEST BRACKET COPY", "M");
 
     private static List<RegisterEntry> Read(string path) => RegisterCsv.Read(File.ReadAllText(path)).Entries.ToList();
 

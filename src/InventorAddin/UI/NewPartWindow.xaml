@@ -45,6 +45,7 @@
         <controls:FormSection Heading="Identity">
             <controls:FieldRow Label="Part _name" Target="{Binding ElementName=PartNameBox}">
                 <TextBox x:Name="PartNameBox"
+                         CharacterCasing="Upper"
                          Text="{Binding PartName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
             </controls:FieldRow>
             <controls:FieldRow Label="Part _type" Target="{Binding ElementName=PartTypeBox}">

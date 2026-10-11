@@ -36,7 +36,7 @@ public sealed class SaveAsCopyViewModelTests
         Assert.Equal(@"C:\Work\Parts", vm.Folder);
         Assert.Equal(DocumentKind.Part, vm.Kind);
         Assert.Equal("Test Designer", vm.Designer);
-        Assert.Equal("mounting_bracket,AWB-?????.ipt", vm.FileNamePreview);
+        Assert.Equal("MOUNTING_BRACKET,AWB-?????.ipt", vm.FileNamePreview);
         Assert.Null(vm.ValidationMessage);
         Assert.True(vm.CanSave);
         Assert.True(vm.SaveCommand.CanExecute(null));
@@ -77,7 +77,7 @@ public sealed class SaveAsCopyViewModelTests
         Assert.Equal("Old bracket.v2", vm.PartName);
         Assert.Equal("/home/user/cad", vm.Folder);
         Assert.Equal("Old_bracket.v2.ipt", vm.HeaderSubline);
-        Assert.Equal("Old_bracket.v2,AWB-?????.ipt", vm.FileNamePreview);
+        Assert.Equal("OLD_BRACKET.V2,AWB-?????.ipt", vm.FileNamePreview);
     }
 
     [Theory]
@@ -98,7 +98,7 @@ public sealed class SaveAsCopyViewModelTests
     {
         var vm = Create(original: @"C:\Work\frame,AWB-10001.iam", kind: DocumentKind.Assembly, partType: "A");
 
-        Assert.Equal("frame,AWB-?????.iam", vm.FileNamePreview);
+        Assert.Equal("ASSY_FRAME,AWB-?????.iam", vm.FileNamePreview);
     }
 
     // Part type
@@ -166,7 +166,7 @@ public sealed class SaveAsCopyViewModelTests
 
         vm.PartName = "left  bracket";
 
-        Assert.Equal("left_bracket,AWB-?????.ipt", vm.FileNamePreview);
+        Assert.Equal("LEFT_BRACKET,AWB-?????.ipt", vm.FileNamePreview);
         Assert.Contains(nameof(vm.PartName), changed);
         Assert.Contains(nameof(vm.FileNamePreview), changed);
         Assert.Contains(nameof(vm.ValidationMessage), changed);
@@ -198,7 +198,7 @@ public sealed class SaveAsCopyViewModelTests
         vm.PartName = "bracket, left";
 
         Assert.Null(vm.ValidationMessage);
-        Assert.Equal("bracket,_left,AWB-?????.ipt", vm.FileNamePreview);
+        Assert.Equal("BRACKET,_LEFT,AWB-?????.ipt", vm.FileNamePreview);
     }
 
     [Fact]
@@ -240,7 +240,7 @@ public sealed class SaveAsCopyViewModelTests
 
         vm.SaveCommand.Execute(null);
 
-        Assert.Equal(new SaveAsCopyRequest(Original, DocumentKind.Part, "new bracket", "PM"), vm.Request);
+        Assert.Equal(new SaveAsCopyRequest(Original, DocumentKind.Part, "NEW BRACKET", "PM"), vm.Request);
         Assert.Equal(1, closed);
     }
 
@@ -343,6 +343,57 @@ public sealed class SaveAsCopyViewModelTests
 
         vm.SaveCommand.Execute(null);
 
-        Assert.Equal(new SaveAsCopyRequest(Original, DocumentKind.Part, "new bracket", "M"), vm.Request);
+        Assert.Equal(new SaveAsCopyRequest(Original, DocumentKind.Part, "NEW BRACKET", "M"), vm.Request);
+    }
+
+    // The assembly prefix
+
+    [Theory]
+    [InlineData(DocumentKind.Assembly)]
+    [InlineData(DocumentKind.WeldmentAssembly)]
+    public void AssemblyCopy_GetsThePrefixInThePreviewAndTheRequest(DocumentKind kind)
+    {
+        const string original = @"C:\Work\ASSY_GEARBOX,AWB-10006.iam";
+        var vm = Create(original: original, kind: kind, partType: "A");
+        Assert.Equal("ASSY GEARBOX", vm.PartName);
+        Assert.Equal("ASSY_GEARBOX,AWB-?????.iam", vm.FileNamePreview);
+
+        vm.PartName = "new gearbox";
+        Assert.Equal("ASSY_NEW_GEARBOX,AWB-?????.iam", vm.FileNamePreview);
+
+        vm.SaveCommand.Execute(null);
+        Assert.Equal(new SaveAsCopyRequest(original, kind, "ASSY NEW GEARBOX", "A"), vm.Request);
+    }
+
+    [Fact]
+    public void ForReplace_AssemblyCopy_GetsThePrefixInThePreviewAndTheRequest()
+    {
+        const string component = @"C:\Work\GEARBOX,AWB-10006.iam";
+        var vm = SaveAsCopyViewModel.ForReplace(component, DocumentKind.Assembly, "A", null, null);
+        Assert.Equal("ASSY_GEARBOX,AWB-?????.iam", vm.FileNamePreview);
+
+        vm.SaveCommand.Execute(null);
+        Assert.Equal(new SaveAsCopyRequest(component, DocumentKind.Assembly, "ASSY GEARBOX", "A"), vm.Request);
+    }
+
+    [Fact]
+    public void AssemblyCopy_OnlyThePrefix_IsRefused()
+    {
+        var vm = Create(original: @"C:\Work\GEARBOX,AWB-10006.iam", kind: DocumentKind.Assembly, partType: "A");
+
+        vm.PartName = "assy";
+
+        Assert.Equal(PartFileName.AssemblyNameMissingMessage, vm.ValidationMessage);
+        Assert.False(vm.CanSave);
+    }
+
+    [Fact]
+    public void PartCopy_IsNotPrefixed()
+    {
+        var vm = Create();
+
+        vm.PartName = "gearbox";
+
+        Assert.Equal("GEARBOX,AWB-?????.ipt", vm.FileNamePreview);
     }
 }

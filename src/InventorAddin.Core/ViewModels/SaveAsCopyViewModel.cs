@@ -82,7 +82,7 @@ public sealed class SaveAsCopyViewModel : ObservableObject
         PartTypeOptions = PartTypeOption.ListFor(fileType);
 
         _partName = InventorAddin.Core.PartProperties.PartName.FromFileName(_originalFullFileName);
-        _preview = NewFileNameCheck.For(_partName, _extension, Folder);
+        _preview = NewFileNameCheck.For(_partName, _extension, Folder, Kind);
 
         SaveCommand = new RelayCommand(Save, () => CanSave);
     }
@@ -181,7 +181,7 @@ public sealed class SaveAsCopyViewModel : ObservableObject
 
             _partName = value;
             OnPropertyChanged();
-            _preview = NewFileNameCheck.For(_partName, _extension, Folder);
+            _preview = NewFileNameCheck.For(_partName, _extension, Folder, Kind);
             OnPropertyChanged(nameof(FileNamePreview));
             OnPropertyChanged(nameof(ValidationMessage));
             OnPropertyChanged(nameof(CanSave));
@@ -208,7 +208,7 @@ public sealed class SaveAsCopyViewModel : ObservableObject
         if (!CanSave)
             return;
 
-        Request = new SaveAsCopyRequest(_originalFullFileName, Kind, PartFileName.NormaliseName(_partName), _partType);
+        Request = new SaveAsCopyRequest(_originalFullFileName, Kind, PartFileName.ForKind(_partName, Kind), _partType);
         OnPropertyChanged(nameof(Request));
         CloseRequested?.Invoke(this, EventArgs.Empty);
     }

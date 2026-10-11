@@ -1,5 +1,6 @@
 using System.Globalization;
 using InventorAddin.Core.Logging;
+using InventorAddin.Core.Models;
 using InventorAddin.Core.Numbering.MassUpdate;
 
 namespace InventorAddin.Core.Numbering;
@@ -60,7 +61,14 @@ public static class RenamePlan
     /// without an extension, or a name <see cref="PartFileName.ValidateName"/> refuses.
     /// </summary>
     /// <param name="registeredNumber">The file's Part Number when the register holds it (<c>RegisterStore.HasNumber</c>); otherwise null.</param>
-    public static string NewFileName(string fullFileName, string newName, PartNumber? registeredNumber = null)
+    /// <param name="kind">
+    /// The file's kind: an assembly's new name gets <see cref="PartFileName.AssemblyPrefix"/> (<see cref="PartFileName.ForKind"/>).
+    /// </param>
+    public static string NewFileName(
+        string fullFileName,
+        string newName,
+        PartNumber? registeredNumber = null,
+        DocumentKind kind = DocumentKind.Part)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(fullFileName);
         ArgumentNullException.ThrowIfNull(newName);
@@ -75,7 +83,8 @@ public static class RenamePlan
             throw new ArgumentException($"The file \"{path}\" has no extension.", nameof(fullFileName));
         }
 
-        return folder + PartFileName.Build(NumberToKeep(path, registeredNumber), newName, oldName[dot..]);
+        return folder + PartFileName.Build(
+            NumberToKeep(path, registeredNumber), PartFileName.ForKind(newName, kind), oldName[dot..]);
     }
 
     /// <summary>
@@ -88,20 +97,25 @@ public static class RenamePlan
     /// <see cref="NotSavedMessage"/>.
     /// </summary>
     /// <param name="registeredNumber">As for <see cref="NewFileName"/>.</param>
-    public static string? ValidateNewName(string? fullFileName, string? typed, PartNumber? registeredNumber = null)
+    /// <param name="kind">As for <see cref="NewFileName"/>; the name is checked by <see cref="PartFileName.ValidateNameForKind"/>.</param>
+    public static string? ValidateNewName(
+        string? fullFileName,
+        string? typed,
+        PartNumber? registeredNumber = null,
+        DocumentKind kind = DocumentKind.Part)
     {
         if (string.IsNullOrWhiteSpace(fullFileName))
         {
             return NotSavedMessage;
         }
 
-        var nameProblem = PartFileName.ValidateName(typed);
+        var nameProblem = PartFileName.ValidateNameForKind(typed, kind);
         if (nameProblem is not null)
         {
             return nameProblem;
         }
 
-        var newPath = NewFileName(fullFileName, typed!, registeredNumber);
+        var newPath = NewFileName(fullFileName, typed!, registeredNumber, kind);
         if (NumberToKeep(fullFileName, registeredNumber) is null && PartFileName.TryReadNumber(newPath, out _))
         {
             return NameEndsWithNumberMessage;

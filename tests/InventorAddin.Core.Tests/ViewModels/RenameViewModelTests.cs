@@ -1,4 +1,5 @@
 using InventorAddin.Core.Logging;
+using InventorAddin.Core.Models;
 using InventorAddin.Core.Numbering;
 using InventorAddin.Core.ViewModels;
 
@@ -15,8 +16,59 @@ public sealed class RenameViewModelTests
         string path = OldPath,
         Func<RenameRequest, Action<string>, RenameResult?>? run = null,
         ILog? log = null,
-        PartNumber? registeredNumber = null) =>
-        new(path, _existing.Contains, run ?? Succeed, log, registeredNumber);
+        PartNumber? registeredNumber = null,
+        DocumentKind kind = DocumentKind.Part) =>
+        new(path, _existing.Contains, run ?? Succeed, log, registeredNumber, kind);
+
+    // The assembly prefix
+
+    [Theory]
+    [InlineData(DocumentKind.Assembly)]
+    [InlineData(DocumentKind.WeldmentAssembly)]
+    public void Assembly_NewName_GetsThePrefix_InThePreviewAndTheRequest(DocumentKind kind)
+    {
+        const string path = @"C:\Cad\ASSY_GEARBOX,AWB-10006.iam";
+        var vm = Create(path: path, kind: kind);
+
+        vm.NewName = "NEW GEARBOX";
+
+        Assert.Equal("ASSY_NEW_GEARBOX,AWB-10006.iam", vm.NewFileNamePreview);
+        vm.RenameCommand.Execute(null);
+        Assert.Equal(
+            new RenameRequest(path, @"C:\Cad\ASSY_NEW_GEARBOX,AWB-10006.iam", "ASSY NEW GEARBOX"),
+            Assert.Single(_requests));
+    }
+
+    [Fact]
+    public void Assembly_NameAlreadyPrefixed_IsNotPrefixedTwice()
+    {
+        var vm = Create(path: @"C:\Cad\ASSY_GEARBOX,AWB-10006.iam", kind: DocumentKind.Assembly);
+
+        vm.NewName = "assy_new gearbox";
+
+        Assert.Equal("ASSY_NEW_GEARBOX,AWB-10006.iam", vm.NewFileNamePreview);
+    }
+
+    [Fact]
+    public void Assembly_OnlyThePrefix_IsRefused()
+    {
+        var vm = Create(path: @"C:\Cad\ASSY_GEARBOX,AWB-10006.iam", kind: DocumentKind.Assembly);
+
+        vm.NewName = "ASSY";
+
+        Assert.Equal(PartFileName.AssemblyNameMissingMessage, vm.ValidationMessage);
+        Assert.False(vm.CanRename);
+    }
+
+    [Fact]
+    public void Part_NewName_IsNotPrefixed()
+    {
+        var vm = Create();
+
+        vm.NewName = "gearbox";
+
+        Assert.Equal("GEARBOX,AWB-10001.ipt", vm.NewFileNamePreview);
+    }
 
     private RenameResult? Succeed(RenameRequest request, Action<string> progress)
     {
@@ -58,8 +110,8 @@ public sealed class RenameViewModelTests
 
         vm.NewName = "  base   plate ";
 
-        Assert.Equal("base_plate,AWB-10001.ipt", vm.NewFileNamePreview);
-        Assert.Equal(@"C:\Cad\base_plate,AWB-10001.ipt", vm.NewFullFileName);
+        Assert.Equal("BASE_PLATE,AWB-10001.ipt", vm.NewFileNamePreview);
+        Assert.Equal(@"C:\Cad\BASE_PLATE,AWB-10001.ipt", vm.NewFullFileName);
         Assert.Null(vm.ValidationMessage);
         Assert.Equal(string.Empty, vm.StatusText);
         Assert.False(vm.HasError);
@@ -90,7 +142,7 @@ public sealed class RenameViewModelTests
 
         Assert.Null(vm.NumberKept);
         Assert.Null(vm.ValidationMessage);
-        Assert.Equal("bracket,_left.ipt", vm.NewFileNamePreview);
+        Assert.Equal("BRACKET,_LEFT.ipt", vm.NewFileNamePreview);
         Assert.True(vm.CanRename);
     }
 
@@ -114,12 +166,12 @@ public sealed class RenameViewModelTests
         Assert.Equal(new PartNumber(10007), vm.NumberKept);
         // Keeping the name still renames the file: it gains the number.
         Assert.Null(vm.ValidationMessage);
-        Assert.Equal("bracket,AWB-10007.ipt", vm.NewFileNamePreview);
+        Assert.Equal("BRACKET,AWB-10007.ipt", vm.NewFileNamePreview);
 
         vm.NewName = "bracket, left";
         vm.RenameCommand.Execute(null);
 
-        Assert.Equal(@"C:\Old\bracket,_left,AWB-10007.ipt", Assert.Single(_requests).NewFullFileName);
+        Assert.Equal(@"C:\Old\BRACKET,_LEFT,AWB-10007.ipt", Assert.Single(_requests).NewFullFileName);
     }
 
     [Fact]
@@ -130,20 +182,20 @@ public sealed class RenameViewModelTests
         vm.NewName = "base plate";
 
         Assert.Equal(new PartNumber(10001), vm.NumberKept);
-        Assert.Equal("base_plate,AWB-10001.ipt", vm.NewFileNamePreview);
+        Assert.Equal("BASE_PLATE,AWB-10001.ipt", vm.NewFileNamePreview);
     }
 
     [Fact]
     public void ATargetThatExists_IsRefusedBeforeAnythingChanges()
     {
-        _existing.Add(@"C:\Cad\base_plate,AWB-10001.ipt");
+        _existing.Add(@"C:\Cad\BASE_PLATE,AWB-10001.ipt");
         var vm = Create();
 
         vm.NewName = "base plate";
         vm.RenameCommand.Execute(null);
 
-        Assert.Equal(RenamePlan.TargetExistsMessage("base_plate,AWB-10001.ipt"), vm.ValidationMessage);
-        Assert.Equal("base_plate,AWB-10001.ipt", vm.NewFileNamePreview);
+        Assert.Equal(RenamePlan.TargetExistsMessage("BASE_PLATE,AWB-10001.ipt"), vm.ValidationMessage);
+        Assert.Equal("BASE_PLATE,AWB-10001.ipt", vm.NewFileNamePreview);
         Assert.False(vm.CanRename);
         Assert.Empty(_requests);
     }
@@ -163,7 +215,7 @@ public sealed class RenameViewModelTests
         vm.RenameCommand.Execute(null);
 
         var request = Assert.Single(_requests);
-        Assert.Equal(new RenameRequest(OldPath, @"C:\Cad\base_plate,AWB-10001.ipt", "base plate"), request);
+        Assert.Equal(new RenameRequest(OldPath, @"C:\Cad\BASE_PLATE,AWB-10001.ipt", "BASE PLATE"), request);
         Assert.Contains(RenameViewModel.StartingText, statuses);
         Assert.Contains("Checking 1 of 1: asm.iam", statuses);
         Assert.True(vm.IsDone);
@@ -171,9 +223,9 @@ public sealed class RenameViewModelTests
         Assert.False(vm.IsRunning);
         Assert.False(vm.CanRename);
         Assert.False(vm.HasError);
-        Assert.Equal("Renamed to base_plate,AWB-10001.ipt. 1 file updated.", vm.StatusText);
+        Assert.Equal("Renamed to BASE_PLATE,AWB-10001.ipt. 1 file updated.", vm.StatusText);
         Assert.Equal(RenameViewModel.UpdatedPrefix + @"C:\Cad\asm.iam", vm.ResultText);
-        Assert.Equal(new PartRenameOutcome(@"C:\Cad\base_plate,AWB-10001.ipt", "base plate", true), vm.Outcome);
+        Assert.Equal(new PartRenameOutcome(@"C:\Cad\BASE_PLATE,AWB-10001.ipt", "BASE PLATE", true), vm.Outcome);
     }
 
     [Fact]
@@ -224,7 +276,7 @@ public sealed class RenameViewModelTests
         vm.RenameCommand.Execute(null);
 
         Assert.True(vm.HasError);
-        Assert.Equal("Renamed to base_plate,AWB-10001.ipt. 1 file updated, 1 not updated. The old file was kept.", vm.StatusText);
+        Assert.Equal("Renamed to BASE_PLATE,AWB-10001.ipt. 1 file updated, 1 not updated. The old file was kept.", vm.StatusText);
         Assert.Equal(
             string.Join(
                 Environment.NewLine,

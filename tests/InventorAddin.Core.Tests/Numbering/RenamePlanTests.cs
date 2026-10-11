@@ -1,3 +1,4 @@
+using InventorAddin.Core.Models;
 using InventorAddin.Core.Numbering;
 
 namespace InventorAddin.Core.Tests.Numbering;
@@ -23,15 +24,15 @@ public sealed class RenamePlanTests : IDisposable
     // NewFileName
 
     [Theory]
-    [InlineData(@"C:\Work\mounting_bracket,AWB-10001.ipt", "base plate", @"C:\Work\base_plate,AWB-10001.ipt")]
-    [InlineData(@"C:\Work\mounting_bracket,awb-10001.ipt", "base plate", @"C:\Work\base_plate,AWB-10001.ipt")]
-    [InlineData(@"C:\Work\frame,AWB-10002.iam", "  main   frame ", @"C:\Work\main_frame,AWB-10002.iam")]
-    [InlineData(@"C:\Work\frame,AWB-10002.IAM", "frame, welded", @"C:\Work\frame,_welded,AWB-10002.IAM")]
-    [InlineData(@"C:\Old\Old_bracket.v2.ipt", "new bracket", @"C:\Old\new_bracket.ipt")]
-    [InlineData(@"C:\Old\a,b.ipt", "c", @"C:\Old\c.ipt")]
-    [InlineData(@"C:\Old\b,AWB-1.ipt", "c", @"C:\Old\c.ipt")]
-    [InlineData(@"C:\Old\AWB-10005,BRACKET.ipt", "bracket", @"C:\Old\bracket.ipt")]
-    [InlineData("/home/test/plate,AWB-10003.ipt", "big plate", "/home/test/big_plate,AWB-10003.ipt")]
+    [InlineData(@"C:\Work\mounting_bracket,AWB-10001.ipt", "base plate", @"C:\Work\BASE_PLATE,AWB-10001.ipt")]
+    [InlineData(@"C:\Work\mounting_bracket,awb-10001.ipt", "base plate", @"C:\Work\BASE_PLATE,AWB-10001.ipt")]
+    [InlineData(@"C:\Work\frame,AWB-10002.iam", "  main   frame ", @"C:\Work\MAIN_FRAME,AWB-10002.iam")]
+    [InlineData(@"C:\Work\frame,AWB-10002.IAM", "frame, welded", @"C:\Work\FRAME,_WELDED,AWB-10002.IAM")]
+    [InlineData(@"C:\Old\Old_bracket.v2.ipt", "new bracket", @"C:\Old\NEW_BRACKET.ipt")]
+    [InlineData(@"C:\Old\a,b.ipt", "c", @"C:\Old\C.ipt")]
+    [InlineData(@"C:\Old\b,AWB-1.ipt", "c", @"C:\Old\C.ipt")]
+    [InlineData(@"C:\Old\AWB-10005,BRACKET.ipt", "bracket", @"C:\Old\BRACKET.ipt")]
+    [InlineData("/home/test/plate,AWB-10003.ipt", "big plate", "/home/test/BIG_PLATE,AWB-10003.ipt")]
     public void NewFileName_KeepsFolderExtensionAndNumber(string oldPath, string newName, string expected)
     {
         Assert.Equal(expected, RenamePlan.NewFileName(oldPath, newName));
@@ -43,7 +44,7 @@ public sealed class RenamePlanTests : IDisposable
     public void NewFileName_AFileNumberedByGenerate_WhoseNameHasNoNumber_GetsItsRegisteredNumber()
     {
         Assert.Equal(
-            @"C:\Old\new_bracket,AWB-10007.ipt",
+            @"C:\Old\NEW_BRACKET,AWB-10007.ipt",
             RenamePlan.NewFileName(@"C:\Old\old_bracket.ipt", "new bracket", new PartNumber(10007)));
     }
 
@@ -52,7 +53,7 @@ public sealed class RenamePlanTests : IDisposable
     {
         // Part Number blank, so not registered: the caller passes null.
         Assert.Equal(
-            @"C:\Work\base_plate,AWB-10001.ipt",
+            @"C:\Work\BASE_PLATE,AWB-10001.ipt",
             RenamePlan.NewFileName(@"C:\Work\plate,AWB-10001.ipt", "base plate", registeredNumber: null));
     }
 
@@ -60,8 +61,46 @@ public sealed class RenamePlanTests : IDisposable
     public void NewFileName_TheRegisteredNumberWins_OverADifferentNumberInTheName()
     {
         Assert.Equal(
-            @"C:\Work\base_plate,AWB-10005.ipt",
+            @"C:\Work\BASE_PLATE,AWB-10005.ipt",
             RenamePlan.NewFileName(@"C:\Work\plate,AWB-10001.ipt", "base plate", new PartNumber(10005)));
+    }
+
+    [Theory]
+    [InlineData(DocumentKind.Assembly)]
+    [InlineData(DocumentKind.WeldmentAssembly)]
+    public void NewFileName_Assembly_GetsThePrefixOnce(DocumentKind kind)
+    {
+        Assert.Equal(
+            @"C:\Work\ASSY_NEW_GEARBOX,AWB-10006.iam",
+            RenamePlan.NewFileName(@"C:\Work\GEARBOX,AWB-10006.iam", "NEW GEARBOX", null, kind));
+        Assert.Equal(
+            @"C:\Work\ASSY_NEW_GEARBOX,AWB-10006.iam",
+            RenamePlan.NewFileName(@"C:\Work\GEARBOX,AWB-10006.iam", "assy_new gearbox", null, kind));
+    }
+
+    [Fact]
+    public void NewFileName_Part_IsNotPrefixed()
+    {
+        Assert.Equal(
+            @"C:\Work\NEW_PLATE,AWB-10001.ipt",
+            RenamePlan.NewFileName(@"C:\Work\PLATE,AWB-10001.ipt", "new plate", null, DocumentKind.Part));
+    }
+
+    [Fact]
+    public void ValidateNewName_Assembly_OnlyThePrefix_IsRefused()
+    {
+        Assert.Equal(
+            PartFileName.AssemblyNameMissingMessage,
+            RenamePlan.ValidateNewName(@"C:\Work\GEARBOX,AWB-10006.iam", "ASSY_", null, DocumentKind.Assembly));
+    }
+
+    [Fact]
+    public void ValidateNewName_Assembly_AddingThePrefix_IsARename()
+    {
+        Assert.Null(RenamePlan.ValidateNewName(@"C:\Work\GEARBOX,AWB-10006.iam", "GEARBOX", null, DocumentKind.Assembly));
+        Assert.Equal(
+            RenamePlan.SameFileMessage,
+            RenamePlan.ValidateNewName(@"C:\Work\ASSY_GEARBOX,AWB-10006.iam", "GEARBOX", null, DocumentKind.Assembly));
     }
 
     [Fact]

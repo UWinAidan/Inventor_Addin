@@ -78,7 +78,8 @@ namespace InventorAddin.Commands
                     ? number
                     : null;
 
-            var viewModel = new RenameViewModel(oldPath, TargetExists, Run, AddinServices.Log, _registeredNumber);
+            var viewModel = new RenameViewModel(
+                oldPath, TargetExists, Run, AddinServices.Log, _registeredNumber, ComSafe.Get(() => DocumentKinds.Of(_doc)));
             _window = new RenameWindow(viewModel);
             try
             {
