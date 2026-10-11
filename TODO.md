@@ -77,6 +77,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 Small things noticed while building. None is urgent. The parent turns these into tasks when planning a milestone that touches the same code.
 
 **Build and workflow**
+- Core tests that probe a temporary folder (NewPartCreator, SaveAsCopyCreator, SaveAsReplacer, RegisterStore, RenamePlan) sometimes hit the 3 s folder-probe timeout on Aidan's PC, probably because the repo is in OneDrive; a rerun passes. Give the tests a longer timeout or a fake probe. (task 055 review)
 - There is no `global.json`, so the cloud and Windows may build with different .NET SDKs. Pin it if builds start to differ. (task 001)
 - **Make the deploy line visible in a plain `dotnet build`.** On Aidan's PC the `Deployed add-in to ...` line only appears with `-tl:off`: the terminal logger hides high-importance messages. Make it show in a plain `dotnet build InventorAddin.slnx` (for example a `Directory.Build.rsp` with `-tl:off`, or another way the terminal logger prints), then update step 3 of "Aidan's part" in `docs/WORKFLOW.md` to match. (task 025, Windows check 2026-10-07)
 - **Cut the deploy copy retries.** With Inventor open the build succeeds, but the `NOT deployed` case prints about 10 warnings, one per `Copy` retry. Set `Retries` low (0 or 1) on both copies so it is a line or two. Any copy failure is still reported as a lock; the MSBuild warning above it shows the real cause. One attempt with Inventor open crashed with `MSB4166` (child node exited); the rerun was fine. (task 025, Windows check 2026-10-07)
@@ -105,6 +106,7 @@ Small things noticed while building. None is urgent. The parent turns these into
 - A shared style for a button beside a text box (for example `BrowseButton`), so Browse can sit on the register folder row. New Part's folder field will want it. (task 037)
 
 **Part properties**
+- Author: when only Author needs fixing, the window shows the general "Pre-filled values will be written when you apply." line, though no field changed; consider its own wording. If the Default designer is also listed under Other names, Part Properties never copies it into Author, so a Windows-name Author stays; skip the Author write only when the Designer means you and is not the Default designer. (task 055)
 - One Apply writes one log line plus one per property. Keep the summary line and log the per-property lines only on failure. (tasks 018, 019)
 - Weight is read through code that also computes volume, area and centre of mass. On a large assembly the window may open slowly; read only the mass, or read it after the window opens. (task 018)
 - `PartPropertiesViewModel.Ok()` has no guard for invalid values when called from code. The window cannot reach it today. (task 016)

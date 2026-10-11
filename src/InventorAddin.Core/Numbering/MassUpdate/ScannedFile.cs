@@ -15,6 +15,7 @@ namespace InventorAddin.Core.Numbering.MassUpdate;
 /// <param name="Kind">Part, sheet metal part, assembly or weldment.</param>
 /// <param name="OpenInInventor">True when the file is open in Inventor; it is then skipped.</param>
 /// <param name="ReadError">Why the file could not be read, or null when it was read.</param>
+/// <param name="Author">The Author property as read (spec 02, Aidan, 2026-10-11).</param>
 public sealed record ScannedFile(
     string FullPath,
     string PartNumber,
@@ -23,13 +24,15 @@ public sealed record ScannedFile(
     string PartType,
     DocumentKind Kind,
     bool OpenInInventor = false,
-    string? ReadError = null)
+    string? ReadError = null,
+    string Author = "")
 {
     private readonly string _fullPath = FullPath ?? "";
     private readonly string _partNumber = PartNumber ?? "";
     private readonly string _designer = Designer ?? "";
     private readonly string _detailer = Detailer ?? "";
     private readonly string _partType = PartType ?? "";
+    private readonly string _author = Author ?? "";
 
     public string FullPath { get => _fullPath; init => _fullPath = value ?? ""; }
 
@@ -40,6 +43,8 @@ public sealed record ScannedFile(
     public string Detailer { get => _detailer; init => _detailer = value ?? ""; }
 
     public string PartType { get => _partType; init => _partType = value ?? ""; }
+
+    public string Author { get => _author; init => _author = value ?? ""; }
 }
 
 /// <summary>Whether a scanned file has a part number (spec 02, "Has a number").</summary>
@@ -68,8 +73,8 @@ public enum MassUpdateActions
     Assign = 2,
 
     /// <summary>
-    /// Replace a Designer or Detailer that means the user (the Windows user name or one of the Other names) with the
-    /// Default designer.
+    /// Replace a Designer, Author or Detailer that means the user (the Windows user name or one of the Other names)
+    /// with the Default designer.
     /// </summary>
     ReplaceNames = 4,
 }
@@ -83,6 +88,7 @@ public enum MassUpdateActions
 /// (<see cref="PersonNames.MeansMe"/>).
 /// </param>
 /// <param name="DetailerIsMe">True when Detailer means the user, as <paramref name="DesignerIsMe"/>.</param>
+/// <param name="AuthorIsMe">True when Author means the user, as <paramref name="DesignerIsMe"/>.</param>
 /// <param name="Actions">The actions that apply. None when <see cref="BlockedReason"/> is set.</param>
 /// <param name="BlockedReason">Why the file offers no action (open in Inventor, or the read error), or null.</param>
 public sealed record ScannedFileState(
@@ -91,6 +97,7 @@ public sealed record ScannedFileState(
     PartNumber? Number,
     bool DesignerIsMe,
     bool DetailerIsMe,
+    bool AuthorIsMe,
     MassUpdateActions Actions,
     string? BlockedReason)
 {
@@ -102,9 +109,9 @@ public sealed record ScannedFileState(
     /// <summary>
     /// The state of <paramref name="file"/> against <paramref name="register"/> and
     /// <paramref name="namesThatMeanMe"/> (<see cref="PersonNames.NamesThatMeanMe"/>). Register applies to a
-    /// well-formed, unregistered number; Assign to a file with no number; Replace names when Designer or Detailer
-    /// means the user (<see cref="PersonNames.MeansMe"/>, whatever the Default designer is). A file open in Inventor,
-    /// or with a read error, offers no action and gives the reason, the open file first.
+    /// well-formed, unregistered number; Assign to a file with no number; Replace names when Designer, Detailer or
+    /// Author means the user (<see cref="PersonNames.MeansMe"/>, whatever the Default designer is). A file open in
+    /// Inventor, or with a read error, offers no action and gives the reason, the open file first.
     /// </summary>
     public static ScannedFileState For(ScannedFile file, PartRegister register, IReadOnlyCollection<string> namesThatMeanMe)
     {
@@ -119,6 +126,7 @@ public sealed record ScannedFileState(
 
         var designerIsMe = PersonNames.MeansMe(file.Designer, namesThatMeanMe);
         var detailerIsMe = PersonNames.MeansMe(file.Detailer, namesThatMeanMe);
+        var authorIsMe = PersonNames.MeansMe(file.Author, namesThatMeanMe);
 
         var blocked = file.OpenInInventor
             ? OpenInInventorText
@@ -134,12 +142,12 @@ public sealed record ScannedFileState(
                 _ => MassUpdateActions.None,
             };
 
-            if (designerIsMe || detailerIsMe)
+            if (designerIsMe || detailerIsMe || authorIsMe)
             {
                 actions |= MassUpdateActions.ReplaceNames;
             }
         }
 
-        return new ScannedFileState(file, numberState, number, designerIsMe, detailerIsMe, actions, blocked);
+        return new ScannedFileState(file, numberState, number, designerIsMe, detailerIsMe, authorIsMe, actions, blocked);
     }
 }

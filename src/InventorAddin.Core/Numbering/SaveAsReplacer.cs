@@ -110,7 +110,7 @@ public sealed class SaveAsReplacer
     /// <param name="store">The session's register.</param>
     /// <param name="target">The selected occurrence and its component in Inventor.</param>
     /// <param name="selection">What was read from the selection; it has passed <see cref="Check"/>.</param>
-    /// <param name="defaultDesigner">Designer and Detailer for the copy, from Settings; blank writes neither.</param>
+    /// <param name="defaultDesigner">Designer, Author and Detailer for the copy, from Settings; blank writes none.</param>
     /// <param name="log">Where failures are recorded.</param>
     /// <param name="folderExists">Passed to <see cref="SaveAsCopyCreator"/>.</param>
     /// <param name="deleteFile">Passed to <see cref="SaveAsCopyCreator"/>.</param>

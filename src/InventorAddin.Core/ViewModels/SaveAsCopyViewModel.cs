@@ -17,9 +17,9 @@ namespace InventorAddin.Core.ViewModels;
 /// say Save As and Replace, the original is the selected component, and <see cref="Warning"/> carries
 /// <see cref="SaveAsReplacer.SubAssemblyWarning"/> when the component sits inside a sub-assembly.
 /// </para>
-/// Designer and Detailer are not fields: they come from <c>DefaultDesigner</c> in Settings, as in New Part. A blank
-/// part type on the original pre-fills the kind's default (A for an assembly, W for a weldment), as Part Properties
-/// and New Part do (Default).
+/// Designer, Author and Detailer are not fields: they come from <c>DefaultDesigner</c> in Settings, as in New Part. A
+/// blank part type on the original pre-fills the kind's default (A for an assembly, W for a weldment), as Part
+/// Properties and New Part do (Default).
 /// </remarks>
 public sealed class SaveAsCopyViewModel : ObservableObject
 {
@@ -44,7 +44,7 @@ public sealed class SaveAsCopyViewModel : ObservableObject
     /// <param name="originalFullFileName">The open original's full path; it has been saved.</param>
     /// <param name="kind">The original's kind.</param>
     /// <param name="originalPartType">The original's Part Type, as read.</param>
-    /// <param name="defaultDesigner">Designer and Detailer for the copy, from Settings.</param>
+    /// <param name="defaultDesigner">Designer, Author and Detailer for the copy, from Settings.</param>
     public SaveAsCopyViewModel(
         string originalFullFileName,
         DocumentKind kind,
@@ -94,7 +94,7 @@ public sealed class SaveAsCopyViewModel : ObservableObject
     /// <param name="componentFullFileName">The selected component's file; it has been saved.</param>
     /// <param name="kind">The component's kind.</param>
     /// <param name="componentPartType">The component's Part Type, as read.</param>
-    /// <param name="defaultDesigner">Designer and Detailer for the copy, from Settings.</param>
+    /// <param name="defaultDesigner">Designer, Author and Detailer for the copy, from Settings.</param>
     /// <param name="warning">
     /// <see cref="SaveAsReplacer.SubAssemblyWarning"/> when the component is inside a sub-assembly; null or blank for a
     /// top-level component.
@@ -143,7 +143,9 @@ public sealed class SaveAsCopyViewModel : ObservableObject
     /// <summary>The original's folder, where the copy is saved. Not editable.</summary>
     public string Folder { get; }
 
-    /// <summary>The Designer and Detailer the copy will get (<c>DefaultDesigner</c>, trimmed); may be blank.</summary>
+    /// <summary>
+    /// The Designer, Author and Detailer the copy will get (<c>DefaultDesigner</c>, trimmed); may be blank.
+    /// </summary>
     public string Designer { get; }
 
     /// <summary>The blank entry, <see cref="PartTypes.All"/>, and the original's code when it is not in the list.</summary>

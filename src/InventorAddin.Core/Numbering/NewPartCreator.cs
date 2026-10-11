@@ -82,7 +82,7 @@ public sealed class NewPartCreator
 
     /// <param name="store">The session's register.</param>
     /// <param name="documents">Finds templates and creates documents in Inventor.</param>
-    /// <param name="defaultDesigner">Designer and Detailer for the new file, from Settings; blank writes neither.</param>
+    /// <param name="defaultDesigner">Designer, Author and Detailer for the new file, from Settings; blank writes none.</param>
     /// <param name="log">Where failures are recorded.</param>
     /// <param name="folderExists">
     /// Whether a folder exists. By default <see cref="Directory.Exists(string)"/> on a background task that counts as

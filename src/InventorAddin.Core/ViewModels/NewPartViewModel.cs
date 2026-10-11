@@ -22,8 +22,8 @@ public sealed record NewFileKindOption(NewFileKind Kind, string DisplayText);
 /// raises <see cref="CloseRequested"/>; the command assigns the number and creates the file.
 /// </summary>
 /// <remarks>
-/// Designer and Detailer are not fields: they come from <c>DefaultDesigner</c> in Settings (Default). Whether the
-/// target file already exists is checked by the command, which knows the real number.
+/// Designer, Author and Detailer are not fields: they come from <c>DefaultDesigner</c> in Settings (Default). Whether
+/// the target file already exists is checked by the command, which knows the real number.
 /// </remarks>
 public sealed class NewPartViewModel : ObservableObject
 {
@@ -73,7 +73,9 @@ public sealed class NewPartViewModel : ObservableObject
 
     public string HeaderSubline => Branding.ProductName;
 
-    /// <summary>The Designer and Detailer the new file will get (<c>DefaultDesigner</c>, trimmed); may be blank.</summary>
+    /// <summary>
+    /// The Designer, Author and Detailer the new file will get (<c>DefaultDesigner</c>, trimmed); may be blank.
+    /// </summary>
     public string Designer { get; }
 
     /// <summary>Part, Sheet metal part, Assembly.</summary>

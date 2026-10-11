@@ -246,7 +246,7 @@ public sealed record MassUpdateApplyResult(IReadOnlyList<FileUpdateResult> Resul
 /// (<see cref="RegisterBusyException"/>, <see cref="RegisterUnreadableException"/>; spec 02 question 19) Apply stops
 /// before any file changes. Then, for each <see cref="FileUpdate"/>: opens the file when it has something to write
 /// (a file whose only update is Register is never opened or saved); does the register action through
-/// <see cref="RegisterStore"/>; writes the Part Number for an assigned number, and Designer and Detailer for name
+/// <see cref="RegisterStore"/>; writes the Part Number for an assigned number, and Designer, Author and Detailer for name
 /// replacement; saves and closes. One file failing does not stop the others. A register failure part way stops the
 /// run: the remaining files are reported as not changed.
 /// </summary>

@@ -27,8 +27,10 @@ public sealed class MassUpdatePlanTests
         string detailer = "Alex Example",
         string partType = "M",
         DocumentKind kind = DocumentKind.Part,
-        bool open = false) =>
-        ScannedFileState.For(new ScannedFile(path, partNumber, designer, detailer, partType, kind, open), Register, [User]);
+        bool open = false,
+        string author = "Alex Example") =>
+        ScannedFileState.For(
+            new ScannedFile(path, partNumber, designer, detailer, partType, kind, open, Author: author), Register, [User]);
 
     [Fact]
     public void NothingTickedGivesAnEmptyPlan()
@@ -105,6 +107,58 @@ public sealed class MassUpdatePlanTests
                 PropertyWrite.SetText(PartPropertyStorage.Detailer, Designer),
             ],
             update.Writes);
+    }
+
+    [Fact]
+    public void ReplaceNamesSetsAllThreeWhenAllAreTheWindowsUser()
+    {
+        var plan = MassUpdatePlan.Build(
+            [(State(@"C:\Work\a.ipt", "AWB-10001", designer: User, detailer: User, author: " TestLogin "),
+                MassUpdateActions.ReplaceNames)],
+            Designer);
+
+        Assert.Equal(
+            [
+                PropertyWrite.SetText(PartPropertyStorage.Designer, Designer),
+                PropertyWrite.SetText(PartPropertyStorage.Author, Designer),
+                PropertyWrite.SetText(PartPropertyStorage.Detailer, Designer),
+            ],
+            Assert.Single(plan.Updates).Writes);
+    }
+
+    [Fact]
+    public void ReplaceNamesSetsAnAuthorThatIsTheWindowsUser_AndLeavesTheOtherNames()
+    {
+        var plan = MassUpdatePlan.Build(
+            [(State(@"C:\Work\a.ipt", "AWB-10001", designer: "Sam Sample", detailer: "Sam Sample", author: User),
+                MassUpdateActions.ReplaceNames)],
+            Designer);
+
+        Assert.Equal([PropertyWrite.SetText(PartPropertyStorage.Author, Designer)], Assert.Single(plan.Updates).Writes);
+    }
+
+    [Fact]
+    public void ReplaceNamesSetsAnAuthorThatIsAnOtherName()
+    {
+        var state = ScannedFileState.For(
+            new ScannedFile(@"C:\Work\a.ipt", "AWB-10001", "Sam Sample", "Sam Sample", "M", DocumentKind.Part, Author: "t.login"),
+            Register,
+            PersonNames.NamesThatMeanMe(User, "T.Login"));
+
+        var plan = MassUpdatePlan.Build([(state, MassUpdateActions.ReplaceNames)], Designer);
+
+        var write = Assert.Single(Assert.Single(plan.Updates).Writes);
+        Assert.Equal((PartPropertyStorage.Author, Designer), (write.Location, write.TextValue));
+    }
+
+    [Fact]
+    public void ReplaceNamesLeavesAnAuthorThatIsNotTheUser()
+    {
+        var plan = MassUpdatePlan.Build(
+            [(State(@"C:\Work\a.ipt", "AWB-10001", designer: User, author: "Sam Sample"), MassUpdateActions.ReplaceNames)],
+            Designer);
+
+        Assert.DoesNotContain(Assert.Single(plan.Updates).Writes, w => w.Location == PartPropertyStorage.Author);
     }
 
     [Fact]

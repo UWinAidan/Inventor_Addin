@@ -76,7 +76,7 @@ public sealed class SaveAsCopyCreator
 
     /// <param name="store">The session's register.</param>
     /// <param name="source">The open original in Inventor.</param>
-    /// <param name="defaultDesigner">Designer and Detailer for the copy, from Settings; blank writes neither.</param>
+    /// <param name="defaultDesigner">Designer, Author and Detailer for the copy, from Settings; blank writes none.</param>
     /// <param name="log">Where failures are recorded.</param>
     /// <param name="folderExists">Whether a folder exists; by default <see cref="NewPartCreator"/>'s probe with a timeout.</param>
     /// <param name="deleteFile">Deletes a half-made copy; <see cref="File.Delete"/> by default.</param>

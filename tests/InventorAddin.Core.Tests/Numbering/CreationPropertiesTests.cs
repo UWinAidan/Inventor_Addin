@@ -22,6 +22,7 @@ public sealed class CreationPropertiesTests
                 (PartPropertyStorage.PartNumber, "AWB-10042"),
                 (PartPropertyStorage.Description, "MOUNTING BRACKET"),
                 (PartPropertyStorage.Designer, "Test Designer"),
+                (PartPropertyStorage.Author, "Test Designer"),
                 (PartPropertyStorage.Detailer, "Test Designer"),
                 (PartPropertyStorage.PartType, "M"),
             },
@@ -36,6 +37,7 @@ public sealed class CreationPropertiesTests
 
         Assert.Equal("MOUNTING BRACKET", writes.Single(w => w.Location == PartPropertyStorage.Description).TextValue);
         Assert.Equal("Test Designer", writes.Single(w => w.Location == PartPropertyStorage.Designer).TextValue);
+        Assert.Equal("Test Designer", writes.Single(w => w.Location == PartPropertyStorage.Author).TextValue);
         Assert.Equal("Test Designer", writes.Single(w => w.Location == PartPropertyStorage.Detailer).TextValue);
     }
 
@@ -43,7 +45,7 @@ public sealed class CreationPropertiesTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Build_BlankDesigner_LeavesOutDesignerAndDetailer(string? designer)
+    public void Build_BlankDesigner_LeavesOutDesignerAuthorAndDetailer(string? designer)
     {
         var writes = CreationProperties.Build(Number, "plate", "M", designer);
 
@@ -61,7 +63,7 @@ public sealed class CreationPropertiesTests
         var writes = CreationProperties.Build(Number, "plate", partType, "Test Designer");
 
         Assert.DoesNotContain(writes, w => w.Location == PartPropertyStorage.PartType);
-        Assert.Equal(4, writes.Count);
+        Assert.Equal(5, writes.Count);
     }
 
     [Theory]

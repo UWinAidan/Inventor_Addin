@@ -76,6 +76,7 @@ public sealed class PartPropertiesViewModelTests
         Description = "Bracket",
         PartType = "M",
         Designer = "Alex Example",
+        Author = "Alex Example",
         Detailer = "Sam Sample",
         Cost = 12.5m,
         Material = "Test Steel",
@@ -665,6 +666,7 @@ public sealed class PartPropertiesViewModelTests
             w => Assert.Equal((PartPropertyStorage.Description, "Bracket"), (w.Location, w.TextValue)),
             w => Assert.Equal((PartPropertyStorage.PartType, "A"), (w.Location, w.TextValue)),
             w => Assert.Equal((PartPropertyStorage.Designer, DefaultDesigner), (w.Location, w.TextValue)),
+            w => Assert.Equal((PartPropertyStorage.Author, DefaultDesigner), (w.Location, w.TextValue)),
             w => Assert.Equal((PartPropertyStorage.Detailer, DefaultDesigner), (w.Location, w.TextValue)));
     }
 
@@ -696,6 +698,7 @@ public sealed class PartPropertiesViewModelTests
         Assert.Collection(
             Assert.Single(target.Calls),
             w => Assert.Equal((PartPropertyStorage.Designer, Person), (w.Location, w.TextValue)),
+            w => Assert.Equal((PartPropertyStorage.Author, Person), (w.Location, w.TextValue)),
             w => Assert.Equal((PartPropertyStorage.Detailer, Person), (w.Location, w.TextValue)));
     }
 
@@ -731,6 +734,98 @@ public sealed class PartPropertiesViewModelTests
         Assert.True(vm.HasChanges);
     }
 
+    // Author follows Designer (spec 02, 2026-10-11)
+
+    [Fact]
+    public void WindowsUserAsAuthorOnly_IsAChange_AndApplyWritesOnlyAuthor()
+    {
+        var target = new FakeTarget();
+        var vm = Create(
+            Complete() with { Author = WindowsUser },
+            target,
+            defaultDesigner: Person,
+            windowsUserName: WindowsUser);
+
+        Assert.Equal("Alex Example", vm.Designer);
+        Assert.True(vm.HasChanges);
+        Assert.True(vm.ApplyCommand.CanExecute(null));
+
+        vm.ApplyCommand.Execute(null);
+
+        var write = Assert.Single(Assert.Single(target.Calls));
+        Assert.Equal((PartPropertyStorage.Author, "Alex Example"), (write.Location, write.TextValue));
+        Assert.False(vm.HasChanges);
+    }
+
+    [Fact]
+    public void AuthorOnlyToFix_OkWritesIt()
+    {
+        var target = new FakeTarget();
+        var vm = Create(Complete() with { Author = "Someone Else" }, target);
+
+        vm.OkCommand.Execute(null);
+
+        var write = Assert.Single(Assert.Single(target.Calls));
+        Assert.Equal((PartPropertyStorage.Author, "Alex Example"), (write.Location, write.TextValue));
+    }
+
+    [Fact]
+    public void BlankDesigner_WithNoDefaultDesigner_LeavesAuthorAlone()
+    {
+        var vm = Create(
+            Complete() with { Designer = null, Author = WindowsUser },
+            defaultDesigner: null,
+            windowsUserName: WindowsUser);
+
+        Assert.Equal(string.Empty, vm.Designer);
+        Assert.False(vm.HasChanges);
+    }
+
+    [Fact]
+    public void WindowsUserAsDesigner_WithNoDefaultDesigner_IsNotCopiedOverARealAuthor()
+    {
+        var target = new FakeTarget();
+        var vm = Create(
+            Complete() with { Designer = WindowsUser, Author = "Jane Real", Detailer = WindowsUser },
+            target,
+            defaultDesigner: null,
+            windowsUserName: WindowsUser);
+
+        Assert.Equal(WindowsUser, vm.Designer);
+        Assert.False(vm.HasChanges);
+        Assert.False(vm.ApplyCommand.CanExecute(null));
+
+        vm.OkCommand.Execute(null);
+        Assert.Empty(target.Calls);
+    }
+
+    [Fact]
+    public void OtherNameAsDesigner_WithNoDefaultDesigner_IsNotCopiedOverARealAuthor()
+    {
+        var vm = Create(
+            Complete() with { Designer = OtherName, Author = "Jane Real", Detailer = OtherName },
+            defaultDesigner: null,
+            namesThatMeanMe: MyNames);
+
+        Assert.Equal(OtherName, vm.Designer);
+        Assert.False(vm.HasChanges);
+    }
+
+    [Fact]
+    public void EditedDesigner_IsWrittenToAuthorToo()
+    {
+        var target = new FakeTarget();
+        var vm = Create(Complete(), target);
+
+        vm.Designer = "  Jo Other ";
+        vm.ApplyCommand.Execute(null);
+
+        Assert.Collection(
+            Assert.Single(target.Calls),
+            w => Assert.Equal((PartPropertyStorage.Designer, "Jo Other"), (w.Location, w.TextValue)),
+            w => Assert.Equal((PartPropertyStorage.Author, "Jo Other"), (w.Location, w.TextValue)));
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -738,7 +833,7 @@ public sealed class PartPropertiesViewModelTests
     public void WindowsUser_WithNoDefaultDesigner_IsShownUnchanged(string? defaultDesigner)
     {
         var vm = Create(
-            Complete() with { Designer = WindowsUser, Detailer = WindowsUser },
+            Complete() with { Designer = WindowsUser, Author = WindowsUser, Detailer = WindowsUser },
             defaultDesigner: defaultDesigner,
             windowsUserName: WindowsUser);
 
@@ -772,7 +867,7 @@ public sealed class PartPropertiesViewModelTests
     public void DesignerOtherThanTheWindowsUser_IsKept(string? defaultDesigner)
     {
         var vm = Create(
-            Complete() with { Designer = "testuser2", Detailer = "Sam Sample" },
+            Complete() with { Designer = "testuser2", Author = "testuser2", Detailer = "Sam Sample" },
             defaultDesigner: defaultDesigner,
             windowsUserName: WindowsUser);
 
@@ -787,7 +882,7 @@ public sealed class PartPropertiesViewModelTests
     public void NoWindowsUserName_BehavesAsBefore(string? windowsUserName)
     {
         var vm = Create(
-            Complete() with { Designer = WindowsUser, Detailer = WindowsUser },
+            Complete() with { Designer = WindowsUser, Author = WindowsUser, Detailer = WindowsUser },
             defaultDesigner: Person,
             windowsUserName: windowsUserName);
 
@@ -853,6 +948,7 @@ public sealed class PartPropertiesViewModelTests
         Assert.Collection(
             Assert.Single(target.Calls),
             w => Assert.Equal((PartPropertyStorage.Designer, Person), (w.Location, w.TextValue)),
+            w => Assert.Equal((PartPropertyStorage.Author, Person), (w.Location, w.TextValue)),
             w => Assert.Equal((PartPropertyStorage.Detailer, Person), (w.Location, w.TextValue)));
     }
 
@@ -860,7 +956,7 @@ public sealed class PartPropertiesViewModelTests
     public void OtherName_WithNoDefaultDesigner_IsShownUnchanged()
     {
         var vm = Create(
-            Complete() with { Designer = OtherName, Detailer = OtherName },
+            Complete() with { Designer = OtherName, Author = OtherName, Detailer = OtherName },
             defaultDesigner: null,
             namesThatMeanMe: MyNames);
 
@@ -873,7 +969,7 @@ public sealed class PartPropertiesViewModelTests
     public void NameNotInTheList_IsKept()
     {
         var vm = Create(
-            Complete() with { Designer = "T.User2", Detailer = "Sam Sample" },
+            Complete() with { Designer = "T.User2", Author = "T.User2", Detailer = "Sam Sample" },
             defaultDesigner: Person,
             namesThatMeanMe: MyNames);
 
@@ -1045,6 +1141,7 @@ public sealed class PartPropertiesViewModelTests
             writes,
             w => Assert.Equal((PropertyWriteAction.Remove, PartPropertyStorage.PartType), (w.Action, w.Location)),
             w => Assert.Equal((PartPropertyStorage.Designer, "Other Person"), (w.Location, w.TextValue)),
+            w => Assert.Equal((PartPropertyStorage.Author, "Other Person"), (w.Location, w.TextValue)),
             w => Assert.Equal((PropertyWriteAction.Remove, PartPropertyStorage.Detailer), (w.Action, w.Location)),
             w => Assert.Equal((PartPropertyStorage.Cost, (decimal?)7.5m), (w.Location, w.CurrencyValue)));
 
@@ -1065,8 +1162,11 @@ public sealed class PartPropertiesViewModelTests
         Assert.True(vm.HasChanges);
         vm.ApplyCommand.Execute(null);
         Assert.Equal(2, target.Calls.Count);
-        var write = Assert.Single(target.Calls[1]);
-        Assert.Equal("Alex Example", write.TextValue);
+        // Author was rebased to the first apply's Designer, so it follows again.
+        Assert.Collection(
+            target.Calls[1],
+            w => Assert.Equal((PartPropertyStorage.Designer, "Alex Example"), (w.Location, w.TextValue)),
+            w => Assert.Equal((PartPropertyStorage.Author, "Alex Example"), (w.Location, w.TextValue)));
     }
 
     [Fact]
@@ -1108,7 +1208,7 @@ public sealed class PartPropertiesViewModelTests
         Assert.Equal("Other Person", vm.Detailer);
         vm.ApplyCommand.Execute(null);
         Assert.Equal(
-            new[] { PartPropertyStorage.Designer, PartPropertyStorage.Detailer },
+            new[] { PartPropertyStorage.Designer, PartPropertyStorage.Author, PartPropertyStorage.Detailer },
             target.Calls[1].Select(w => w.Location));
     }
 
@@ -1124,8 +1224,9 @@ public sealed class PartPropertiesViewModelTests
         vm.ApplyCommand.Execute(null);
 
         var line = Assert.Single(log.Infos);
-        Assert.Contains("3", line);
+        Assert.Contains("4", line);
         Assert.Contains("Designer", line);
+        Assert.Contains("Author", line);
         Assert.Contains("Detailer", line);
         Assert.Contains("Cost", line);
         Assert.DoesNotContain("Secret Person", line);
@@ -1638,7 +1739,7 @@ public sealed class PartPropertiesViewModelTests
         vm.ApplyCommand.Execute(null);
 
         var writes = Assert.Single(target.Calls);
-        Assert.Equal([PartPropertyStorage.Designer], writes.Select(w => w.Location));
+        Assert.Equal([PartPropertyStorage.Designer, PartPropertyStorage.Author], writes.Select(w => w.Location));
     }
 
     [Fact]

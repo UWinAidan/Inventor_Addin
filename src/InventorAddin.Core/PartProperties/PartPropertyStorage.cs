@@ -40,6 +40,13 @@ public static class PartPropertyStorage
     public static readonly PropertyLocation Designer =
         new(PropertySetNames.DesignTracking, "Designer", PropertyValueKind.Text);
 
+    /// <summary>
+    /// The standard Author property. Kept equal to Designer (spec 02, Aidan, 2026-10-11): Inventor fills it with the
+    /// Windows user name on every new file. Not shown in Part Properties.
+    /// </summary>
+    public static readonly PropertyLocation Author =
+        new(PropertySetNames.Summary, "Author", PropertyValueKind.Text);
+
     public static readonly PropertyLocation Detailer =
         new(PropertySetNames.UserDefined, "Detailer", PropertyValueKind.Text);
 

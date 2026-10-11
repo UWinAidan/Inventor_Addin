@@ -93,15 +93,31 @@ public sealed class MassUpdateRow : ObservableObject
                     _ => NoNumberText,
                 };
 
-            var names = (State.DesignerIsMe, State.DetailerIsMe) switch
+            var fields = new List<string>(3);
+            if (State.DesignerIsMe)
             {
-                (true, true) => "your name as Designer and Detailer",
-                (true, false) => "your name as Designer",
-                (false, true) => "your name as Detailer",
-                _ => null,
-            };
+                fields.Add("Designer");
+            }
 
-            return names is null ? number : $"{number}; {names}";
+            if (State.AuthorIsMe)
+            {
+                fields.Add("Author");
+            }
+
+            if (State.DetailerIsMe)
+            {
+                fields.Add("Detailer");
+            }
+
+            if (fields.Count == 0)
+            {
+                return number;
+            }
+
+            var names = fields.Count == 1
+                ? fields[0]
+                : string.Join(", ", fields.Take(fields.Count - 1)) + " and " + fields[^1];
+            return $"{number}; your name as {names}";
         }
     }
 

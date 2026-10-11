@@ -40,6 +40,9 @@ public sealed record PartPropertiesSnapshot
 
     public string? Detailer { get; init; }
 
+    /// <summary>The standard Author property. Not shown; Apply keeps it equal to Designer (spec 02).</summary>
+    public string? Author { get; init; }
+
     /// <summary>The standard Cost property; null when it could not be read.</summary>
     public decimal? Cost { get; init; }
 

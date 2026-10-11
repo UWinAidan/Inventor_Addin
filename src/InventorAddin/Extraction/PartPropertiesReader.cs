@@ -27,6 +27,7 @@ namespace InventorAddin.Extraction
                 PartType = ReadText(doc, PartPropertyStorage.PartType),
                 Designer = ReadText(doc, PartPropertyStorage.Designer),
                 Detailer = ReadText(doc, PartPropertyStorage.Detailer),
+                Author = ReadText(doc, PartPropertyStorage.Author),
                 Cost = ReadCost(doc, PartPropertyStorage.Cost),
                 Material = ReadMaterial(doc, kind),
                 Finish = ReadText(doc, PartPropertyStorage.Finish),

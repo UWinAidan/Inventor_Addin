@@ -194,7 +194,7 @@ Folded in from `TODO.md` follow-ups: delete `PropertyReader.Set` and the unbound
 - [x] 052 Spike: rename references, copies and the selection in a sub-assembly (Windows)
 - [x] 053 File names put the name first and the number last (item 7)
 - [x] 054 Names in capitals, and assemblies start with ASSY_ (items 8, 10)
-- [ ] 055 Author is written with the same name as Designer (item 11)
+- [x] 055 Author is written with the same name as Designer (item 11)
 - [ ] 056 Ribbon button sizes by importance (item 12)
 - [ ] 057 Create Print saves in a Prints subfolder (item 9)
 - [ ] 058 Rename never breaks a reference, and renames occurrences (bugs 1, 3)

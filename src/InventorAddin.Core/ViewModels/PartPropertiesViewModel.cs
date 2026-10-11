@@ -81,6 +81,7 @@ public sealed class PartPropertiesViewModel : ObservableObject
     private readonly IPartNumberAssigner _assigner;
     private readonly IPartRenamer? _renamer;
     private readonly CultureInfo _culture;
+    private readonly IReadOnlyCollection<string> _namesThatMeanMe;
     private readonly ILog _log;
 
     // What the file holds: as read at open, then as written by each successful apply.
@@ -119,7 +120,7 @@ public sealed class PartPropertiesViewModel : ObservableObject
     /// <param name="defaultDesigner">The Default designer from Settings.</param>
     /// <param name="namesThatMeanMe">
     /// The names that count as a blank Designer or Detailer: the Windows user name and the Other names from Settings
-    /// (<see cref="PersonNames.NamesThatMeanMe"/>).
+    /// (<see cref="PersonNames.NamesThatMeanMe"/>). A Designer equal to one of them is never copied into Author.
     /// </param>
     /// <param name="culture">The culture the cost is shown and typed in.</param>
     /// <param name="log">Where writes and failures are logged.</param>
@@ -147,6 +148,7 @@ public sealed class PartPropertiesViewModel : ObservableObject
         _assigner = assigner;
         _renamer = renamer;
         _culture = culture;
+        _namesThatMeanMe = namesThatMeanMe;
         _log = log ?? NullLog.Instance;
 
         IsEditable = snapshot.EditBlock == EditBlock.None;
@@ -518,7 +520,8 @@ public sealed class PartPropertiesViewModel : ObservableObject
         if (!IsEditable || !PropertyValues.TryParseCost(_costText, _culture, out var cost, out _))
             return false;
 
-        writes = PartPropertiesWritePlan.Build(_original, new PartEditedValues(_partType, _designer, _detailer, cost));
+        writes = PartPropertiesWritePlan.Build(
+            _original, new PartEditedValues(_partType, _designer, _detailer, cost), _namesThatMeanMe);
         return true;
     }
 
@@ -702,6 +705,8 @@ public sealed class PartPropertiesViewModel : ObservableObject
                 snapshot = snapshot with { PartType = text };
             else if (location == PartPropertyStorage.Designer)
                 snapshot = snapshot with { Designer = text };
+            else if (location == PartPropertyStorage.Author)
+                snapshot = snapshot with { Author = text };
             else if (location == PartPropertyStorage.Detailer)
                 snapshot = snapshot with { Detailer = text };
             else if (location == PartPropertyStorage.Cost)
