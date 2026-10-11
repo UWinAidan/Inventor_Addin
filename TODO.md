@@ -2,26 +2,17 @@
 
 Everything that needs doing and is not already a task in `docs/PLAN.md`. Kept current by the parent session: items are added when they come up and removed when they are done or turned into a task. Where the project stands is in `STATUS.md`; why things are the way they are is in `DECISIONS.md`.
 
-Last updated: 2026-10-10
+Last updated: 2026-10-11
 
 ## Next up
 
-1. Aidan builds M2 run 2 on Windows (`dotnet build InventorAddin.slnx`), fixes any compile errors, and works through the run 2 checks below.
-2. Aidan finishes the remaining run 1 and Part Properties checks below.
+1. The M2 fix run (tasks 053 to 060) runs in a local session on Aidan's PC.
+2. Aidan works through the fix run's checks in Inventor, then finishes the remaining run 1 and Part Properties checks below.
 3. Plan the next milestone once M2 is tested; M3 to M6 wait on Aidan's decisions listed below.
 
 ## Waiting on Aidan: checks in Inventor
 
-**M2 run 2** (full steps in each task's Verification section; nothing here has been compiled)
-- [ ] 049 Settings: "New file units", Work folder and Other folders with Browse (including a dead drive and `Q:\x`), Other names (10 steps)
-- [ ] 050 AssignedBy is the Default designer, falling back to the Windows user name (5 steps)
-- [ ] 051 Other names count like the Windows user name in Part Properties (7 steps)
-- [ ] 043 New Part: dialog, templates, number, properties, save, failures, Undo after creation (12 steps)
-- [ ] 044 Create Print: ANSI template, `.dwg`, scale, Part Number, existing print (11 steps)
-- [ ] 045 Save As Copy: the original keeps its name and edits; in-place edit; part open in an assembly (11 steps)
-- [ ] 046 Save As and Replace: top-level with one Undo; inside a sub-assembly with the warning and save (8 steps)
-- [ ] 047 Rename: references in open and closed files, register update, skipped folder, plain AutoCAD `.dwg` (14 steps)
-- [ ] 048 Mass Update: scan, open files, register, assign, replace names, duplicates, register errors (10 steps)
+**M2 run 2** was checked on 2026-10-11. Six bugs and six changes became tasks 052 to 060; every other run 2 check passed.
 
 **M2 run 1** (full steps in each task's Verification section). Aidan's run 1 checks found three things, now tasks 049 to 051; tick the rest here when confirmed
 - [ ] Task 037, Settings: units dropdown and register folder, Browse, validation, access keys, an unknown units value in `settings.json`; is "Units for new files" cut off?
@@ -57,6 +48,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 **Drawing tools (spec 05), blocks M5**
 - Which of the listed commands are wanted, and what the unclear ones should do
+- The custom print templates: sheet sizes, sheet colours, and the title block, designed with Aidan (noted 2026-10-11)
 
 **iLogic (spec 06), blocks M6**
 - Which rules, and whether they are internal or external
@@ -65,7 +57,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Questions 1 to 8 in spec 08: accent colour, dark title bar, icon style, and five defaults added while planning (never-saved header and part number, theme names, Inventor version row, the XAML rules test)
 
 **Numbering (spec 02), not blocking**
-- Questions 13 to 22 and 26 in spec 02: a well-formed number not in the register, case in file names, what to do with duplicates, Save As and Replace on every occurrence, opening Part Properties after creating a file, a comma in the name of a file with no number, a register row that cannot be read, Mass Update's Detailer, a registered number on two files, a file named only `AWB-10001.ipt`, and Mass Update assigning a number an unticked file carries. Each has a default the tasks build
+- Questions 13, 15 to 17, 19 to 22 and 26 in spec 02: a well-formed number not in the register, what to do with duplicates, Save As and Replace on every occurrence, opening Part Properties after creating a file, a register row that cannot be read, Mass Update's Detailer, a registered number on two files, a file named only `AWB-10001.ipt`, and Mass Update assigning a number an unticked file carries. Each has a default the tasks build. Question 14 was answered and 18 settled on 2026-10-11
 
 **Distribution, not blocking**
 - Whether and when to add an installer and a download page. It was to be decided when M2 was planned and is still parked
@@ -93,7 +85,6 @@ Small things noticed while building. None is urgent. The parent turns these into
 - The agent definitions say "the AWB Addin add-in", which repeats "add-in". (task 011)
 
 **Ribbon icons**
-- Spec 08's "Ribbon icons" list names only the first five buttons. Tasks 043 to 048 should each add their command's icon there. (task 042)
 - When Inventor refuses the icons but has already created the definition, the log says "the button shows text only" and then that the definition was reused; the first line may be untrue. (task 042)
 - Task 030: embed only `UI/Icons/*.png`. The `.svg` sources sit in the same folder and must stay out of the build. (task 024)
 
@@ -125,7 +116,7 @@ Small things noticed while building. None is urgent. The parent turns these into
 **Numbering**
 - Mass Update: a file whose number was already registered but whose names were replaced is reported as an error, not a change; give `FileUpdateResult` a note field. A first-sync `IOException` says "a number may already have been taken" when none was; use that message only part way. Parts left loaded by an assembly closed earlier may show as "Open in Inventor" (try `Documents.CloseAll(true)` if so). The window does not redraw during the sync (about 8 s) or a slow folder listing. The list's scroll bar does not follow the dark theme; spec 08 has no list styles. (task 048)
 - Rename: Inventor freezes while CAD folders are listed (up to 3 s per unreachable folder, 60 s per slow one); move the wait off the UI thread with progress. The Rename window is owned by Inventor, not Part Properties (needs an owner overload in `WindowHost`). The result list uses the four-line text box with no visible scroll bar. Spec 08 should list the Part name row with Rename. (task 047)
-- Save As and Replace: `kReferencesChangeCmdType` may suit it better than `kShapeEditCmdType`. Saving the sub-assembly with `Save()` may save its other unsaved files or show a dialog; consider `SilentOperation` around it and say so in the warning. `((AssemblyComponentDefinition)x).Parent` returns the sub-assembly document directly and avoids the unconfirmed `.Document`. Check which document holds the selection while a sub-assembly is edited in place. Spec 08 should name the button. (task 046 review)
+- Save As and Replace: `kReferencesChangeCmdType` may suit it better than `kShapeEditCmdType`. Saving the sub-assembly with `Save()` may save its other unsaved files or show a dialog; consider `SilentOperation` around it and say so in the warning. `((AssemblyComponentDefinition)x).Parent` returns the sub-assembly document directly and avoids the unconfirmed `.Document`. Spec 08 should name the button. (task 046 review)
 - Save As Copy: rename `NewPartException` and `NewPartResult` to neutral names now that copy commands share them; `NewPartCommand.cs` probably has an unused `using System;`. Spec 08 should list the Save As Copy icon and dialog. (task 045)
 - Create Print uses the active document, so while editing a part in place inside an assembly it prints the assembly. Its messages say "part" for assemblies too. An existing print is offered before the template is looked up. "metric"/"imperial" wording is in both `NewPartCreator` and `PrintPlan`; share it. Spec 08's icon list should name Create Print. (task 044)
 - New Part writes its properties in a transaction, so one Undo on the new part clears Part Number and Description in memory; saving then leaves a file without its number while the register keeps the row. Spike 032 found no transaction is needed on a new document: drop it, or keep it if Aidan prefers (043 checklist step 12). (task 043 review)

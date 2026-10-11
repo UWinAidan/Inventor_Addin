@@ -106,3 +106,23 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-10-10 | Rename keeps the old file whenever any file failed or any search folder was skipped; it refuses a change of case only, and stops before changing anything when an open document that uses the file has unsaved changes. Folders must answer in 3 s and list in 60 s | Default | task 047 |
 | 2026-10-10 | Mass Update registers existing numbers before assigning new ones; opens a file before assigning its number; stops the rest of the run on a register failure part way; does not re-add a number registered by someone else since the scan; scans on this PC's copy if the sync fails but then refuses Apply; fails read-only files before any number is taken; disables Apply after a run until the next scan; lists at most 320 px of rows before scrolling | Default | task 048 |
 | 2026-10-10 | Mass Update does not skip numbers carried by unticked, unregistered scanned files when assigning | Default | spec 02, question 26 |
+| 2026-10-11 | File names put the name first and the number last: `NAME,AWB-10005.ipt`. The number is the text after the last comma; the name is everything before it. Replaces the number-first file name | Aidan | spec 02 |
+| 2026-10-11 | Part names are upper case: the name boxes type in capitals, and file names and Description are upper case. Answers question 14 | Aidan | spec 02, question 14 |
+| 2026-10-11 | Assemblies always start with `ASSY_`; the add-in adds it when missing and never twice, in every command that names an assembly (New Part, Save As Copy, Save As and Replace, Rename). Description stays equal to the name (`ASSY GEARBOX`) | Aidan | spec 02 |
+| 2026-10-11 | Create Print saves in a `Prints` subfolder of the model's folder, creating it when missing; Create Print and Rename look there | Aidan | spec 02 |
+| 2026-10-11 | A rename must never break a reference; Rename also renames the part's drawings and the assembly occurrences named after the old file | Aidan | spec 02 |
+| 2026-10-11 | Each copy made by Save As Copy or Save As and Replace gets its own new number | Aidan | spec 02 |
+| 2026-10-11 | Author is written with the same name as Designer and is treated like Designer in Part Properties, Mass Update and the Other names rule | Aidan | spec 02 |
+| 2026-10-11 | Ribbon sizes by importance: New Part, Part Properties and Create Print large, the rest small. No Generate ribbon button | Aidan | spec 02, spec 08 |
+| 2026-10-11 | M5 gets custom print templates with several sheet sizes, sheet colours and a title block designed with Aidan, reading every property from the model | Aidan | `docs/PLAN.md` |
+| 2026-10-11 | A file name holds a number only when the text after its last comma is a part number; otherwise the whole name is the part name. Old number-first files are read as having no number in the file name | Default | spec 02 |
+| 2026-10-11 | A comma is allowed in any part name, except that a name for a file with no number is refused when the text after its last comma is a part number. Replaces the 2026-10-10 default for question 18 | Default | spec 02, question 18 |
+| 2026-10-11 | Reading a name from a file name keeps its case, so an old lower-case file's Description stays as its file name has it | Default | spec 02 |
+| 2026-10-11 | An assembly name that is only `ASSY` is refused ("Enter a name after ASSY_.") | Default | spec 02 |
+| 2026-10-11 | Prints made before the Prints folder are still found beside the model by Create Print and Rename, and Rename renames them where they are | Default | spec 02 |
+| 2026-10-11 | Rename marks every file it updates as changed before saving it (spike 052: a repointed open document is not dirty and `Save` writes nothing), and keeps the old file while any open document still points at it | Default | spec 02, task 058 |
+| 2026-10-11 | A drawing whose new name is taken keeps its name, is updated, and is reported | Default | spec 02, task 059 |
+| 2026-10-11 | Author is not shown in Part Properties; Apply writes it equal to a non-blank Designer and never clears it | Default | spec 02, task 055 |
+| 2026-10-11 | After saving a copy the add-in reads its Part Number back and fails the copy if it is not the new number | Default | spec 02, task 060 |
+| 2026-10-11 | Save As and Replace works on the top-level assembly open in the window, also while a sub-assembly is edited in place | Default | spec 02, task 060 |
+| 2026-10-11 | M2 fix run in a local session on Aidan's PC: spike 052 first, then 053 to 060, each built on Windows before its commit | Default | `docs/PLAN.md` |

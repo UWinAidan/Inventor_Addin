@@ -23,7 +23,7 @@ Earlier (2026-10-06):
 On 2026-10-10:
 
 - **Part number format: `AWB-10001`.** The prefix `AWB`, a dash, and five digits. The first number is `AWB-10001`. Parts, sheet metal parts and assemblies share **one sequence**. The part type is not in the number.
-- **File names: number, comma, name**, with underscores for spaces: `AWB-10001,mounting_bracket.ipt`. The part name is everything after the first comma, with underscores shown as spaces: `mounting bracket`.
+- **File names: number, comma, name**, with underscores for spaces: `AWB-10001,mounting_bracket.ipt`. The part name is everything after the first comma, with underscores shown as spaces: `mounting bracket`. Replaced on 2026-10-11: name first, then number (below).
 - **The register design is accepted.** One register file in a folder set in Settings, by default `B:\aidan\AWB_Design_Data` (Aidan's NAS, reached over Tailscale), with a local copy on each PC. When the NAS cannot be reached, numbers are assigned from the local copy, synced later, and any number handed out twice is reported.
 - **"Already has a number"** means the Part Number matches the format **and** is in the register.
 - **Templates:** Inventor's own default templates for now. Metric by default, with an imperial option. A templates-folder setting comes later, when Aidan has made his own templates.
@@ -40,6 +40,17 @@ On 2026-10-10:
 - **Old files carry the Windows login name** (for example `4aida`) as Designer and Detailer. Part Properties treats a Designer or Detailer equal to the Windows user name as blank and pre-fills it from Settings. The folder scan or a Mass Update command replaces it in bulk.
 - **A custom drawing template is a separate item for M5**, not part of this spec. Its title block must read every property from the model, not copy them into the drawing.
 
+On 2026-10-11, from the run 2 checks:
+
+- **File names: name first, then number:** `MOUNTING_BRACKET,AWB-10005.ipt`. The number is the text after the **last** comma; the name is everything before it. Replaces "number, comma, name" above.
+- **Names are upper case.** The name boxes in New Part, Save As Copy, Save As and Replace and Rename type in capitals, and file names and Description are upper case. Answers question 14.
+- **Assemblies always start with `ASSY_`.** For an assembly the add-in adds the prefix when the name lacks it and never adds it twice: `GEARBOX` gives `ASSY_GEARBOX,AWB-10006.iam`. Every name box for an assembly does this: New Part, Save As Copy, Save As and Replace and Rename. Description stays equal to the name, so it reads `ASSY GEARBOX`.
+- **Prints live in a `Prints` subfolder** of the model's folder, created when missing. Create Print saves there, and Create Print and Rename look there for a model's print.
+- **Rename must never break a reference.** It also renames the part's drawings to match its new name, and renames assembly occurrences named after the old file (`OLD_NAME,AWB-10005:1` becomes `NEW_NAME,AWB-10005:1`).
+- **Each copy gets its own new number** (Save As Copy, Save As and Replace).
+- **Author is written with the same name as Designer**, and Part Properties, Mass Update and the Other names rule treat Author as they treat Designer.
+- **Ribbon sizes by importance:** New Part, Part Properties and Create Print are large buttons; every other button is small. There is no Generate ribbon button; Generate stays in Part Properties.
+
 ## Part number
 
 - Format `AWB-` followed by exactly five digits, `AWB-10001` to `AWB-99999`. Parsing ignores surrounding spaces and the case of the prefix (`awb-10001` reads as `AWB-10001`); writing always uses `AWB` in capitals.
@@ -49,10 +60,12 @@ On 2026-10-10:
 
 ## File names and the part name
 
-- **Building a file name** from a number, a part name and an extension: `{number},{name}{extension}`, with each run of spaces in the name replaced by one underscore. A file without a number (an old file renamed) is just `{name}{extension}`.
-- **The name as typed** is trimmed and runs of white space become one space. The case is kept as typed (Default, open question 14). An underscore typed in the name reads back as a space, so typing `mounting_bracket` and `mounting bracket` give the same file.
-- **Characters not allowed** in a Windows file name (`\ / : * ? " < > |` and control characters) are rejected with a message naming the character, not replaced. So are a blank name, a name ending in a dot, and Windows reserved names (`CON`, `NUL`, `COM1` and the rest). A comma inside the name is allowed: only the first comma separates the number.
-- **Reading the part name** from a file name: the file name without folder and extension; if it contains a comma, everything after the first comma; then underscores shown as spaces, trimmed. A file name with no comma (an old file) gives its whole name, also with underscores shown as spaces (Default). `PartName.FromFileName` changes to this rule, so the Part Properties header and the Description it writes follow it.
+- **Building a file name** from a number, a part name and an extension: `{name},{number}{extension}` (Aidan, 2026-10-11), with each run of spaces in the name replaced by one underscore: `MOUNTING_BRACKET,AWB-10005.ipt`. A file without a number (an old file renamed) is just `{name}{extension}`.
+- **The name as typed** is trimmed, runs of white space become one space, and it is made upper case (Aidan, 2026-10-11, question 14). An underscore typed in the name reads back as a space, so typing `mounting_bracket` and `MOUNTING BRACKET` give the same file. The name boxes type in capitals as well, so the box shows what the file will be called.
+- **Assemblies start with `ASSY_`** (Aidan, 2026-10-11). For an assembly or weldment, a name that does not already start with `ASSY` followed by a space or underscore gets `ASSY ` put in front, so `GEARBOX` and `ASSY_GEARBOX` both give `ASSY_GEARBOX,AWB-10006.iam`. A name that is only `ASSY` is refused with "Enter a name after ASSY_." (Default). Parts and sheet metal parts are never prefixed. The preview line shows the prefix.
+- **Characters not allowed** in a Windows file name (`\ / : * ? " < > |` and control characters) are rejected with a message naming the character, not replaced. So are a blank name, a name ending in a dot, and Windows reserved names (`CON`, `NUL`, `COM1` and the rest). A comma inside the name is allowed: only the last comma separates the number.
+- **Reading the number and the part name** from a file name (Aidan, 2026-10-11): take the file name without folder and extension. If it contains a comma and the text after the **last** comma is a part number, that is the number and the name is everything before that comma. Otherwise the file name holds no number and the name is the whole of it (Default). Then underscores are shown as spaces, trimmed. `PartName.FromFileName` follows this rule, so the Part Properties header and the Description it writes follow it. Reading does not change case, so an old lower-case file keeps its Description as its file name has it (Default).
+- **Files named in the old number-first format** (`AWB-10005,BRACKET.ipt`, made during the run 2 checks) are read as having no number in the file name, so their name reads as `AWB-10005,BRACKET` (Default). Rename keeps their registered Part Number, so renaming one gives it the new format.
 - **The full path** of a new file must be shorter than 260 characters. The add-in checks this before it assigns a number.
 
 ## The register
@@ -115,6 +128,7 @@ Values with a comma, quote or line break are quoted, quotes doubled. Rows are ne
 | Part Number | the assigned number |
 | Description | the part name, with spaces |
 | Designer | `DefaultDesigner` from Settings; not written when that is blank |
+| Author | the same as Designer (Aidan, 2026-10-11); standard property `Author` in the summary information set |
 | Detailer | the same as Designer (spec 07, "Detailer follows Designer") |
 | Part Type | the code chosen in the dialog; not written when blank |
 
@@ -140,32 +154,37 @@ Designer and Detailer are not in the dialog; they come from Settings and can be 
 **Save As Copy** (CAD Automation panel; Part and Assembly ribbons)
 
 - Copies the active part or assembly under a new number into the same folder. The dialog asks for the name and part type, pre-filled from the original.
-- Writes the creation properties on the copy (number, Description, part type, and Designer and Detailer from Settings); everything else is kept from the original (Default). Opens the copy.
+- Writes the creation properties on the copy (number, Description, part type, and Designer, Author and Detailer from Settings); everything else is kept from the original (Default). Opens the copy.
+- **Each copy gets its own new number** (Aidan, 2026-10-11). After saving the copy, the add-in reads its Part Number back and stops with an error if it is not the number just assigned. The name box is pre-filled with the original's name without its number.
 
 **Save As and Replace** (CAD Automation panel; Assembly ribbon)
 
 - With one component selected in the active assembly: makes a copy as Save As Copy does, then replaces **that occurrence only** with the copy (Default, open question 16).
 - A component inside a sub-assembly can be selected (Aidan, question 25). The occurrence is replaced inside the sub-assembly, and the sub-assembly is saved. The dialog says so, because every assembly that uses the sub-assembly changes and Undo cannot put the saved file back.
+- The selection is read from the top-level assembly open in the window, also while a sub-assembly is being edited in place (spike 052: the selection is held by the top-level document then, and the sub-assembly's own selection is empty).
 
 **Rename** (button beside the part name in Part Properties)
 
-- Asks for a new part name. The file gets `{number},{new_name}` if it has a number, or `{new_name}` if not.
-- Renames the file and updates every assembly, drawing and presentation in the CAD folders from Settings that references it (Aidan, question 23), then sets Description to the new name and updates the file path in the register entry.
-- Skips Inventor's `OldVersions` folders. Lists what it updated, and anything it could not update.
-- Method (spike 032): save the open file under the new name, which repoints open assemblies; then open each closed referencing file invisibly, replace the reference through `Document.File.ReferencedFileDescriptors`, save and close it; save the open files the rename changed; then delete the old file.
+- Asks for a new part name. The file gets `{new_name},{number}` if it has a number, or `{new_name}` if not.
+- Renames the file and updates every assembly, drawing and presentation in the CAD folders from Settings that references it (Aidan, question 23), then sets Description to the new name and updates the file path in the register entry. The model's `Prints` folder is always searched.
+- **Never breaks a reference** (Aidan, 2026-10-11). Every file found that uses the renamed file is saved pointing at the new name, whether it was open or closed. The old file is deleted only when every file found was updated, every folder was searched, and no document open in Inventor still points at the old name; otherwise it is kept and the result says why.
+- **Renames the part's drawings** (Aidan, 2026-10-11). A drawing (`.dwg` or `.idw`) in the model's folder or its `Prints` folder, whose file name without extension equals the model's old one and which uses the model, is saved under the model's new file name with its own extension, in the same folder (Default), and its old file deleted. If a file with the new name already exists, that drawing keeps its name, is still updated, and the result says so.
+- **Renames occurrences** (Aidan, 2026-10-11). In each assembly updated, an occurrence of the renamed file whose name is the old file name without extension, a colon and a number (`OLD_NAME,AWB-10005:1`, ignoring case) is renamed to the new file name with the same number. Occurrences given any other name are left alone.
+- Skips Inventor's `OldVersions` folders. Lists what it updated, the drawings it renamed, and anything it could not update.
+- Method (spikes 032 and 052): save the open file under the new name, which repoints open documents in memory **without marking them changed**; then open each closed referencing file invisibly and replace the reference through `Document.File.ReferencedFileDescriptors`. Every file updated, open or closed, is marked changed (`Dirty = true`) before it is saved, because Inventor's `Save` writes nothing for a document it does not consider changed (spike 052). Then the old file is deleted.
 
 **Create Print** (Drawing Tools panel, large button; Part and Assembly ribbons)
 
-- Needs the model saved. Creates a drawing from Inventor's default drawing template in the units set by `DefaultUnits` (Default), places a front base view of the model centred on the first sheet at a standard scale that fits, and saves it beside the model with the same file name and the drawing template's extension (`AWB-10001,mounting_bracket.idw`).
+- Needs the model saved. Creates a drawing from Inventor's default drawing template in the units set by `DefaultUnits` (Default), places a front base view of the model centred on the first sheet at a standard scale that fits, and saves it in the `Prints` subfolder of the model's folder (Aidan, 2026-10-11), creating the folder when missing, with the model's file name and the drawing template's extension (`Prints\MOUNTING_BRACKET,AWB-10001.dwg`).
 - Writes the model's Part Number into the drawing's Part Number when the model has a number. Nothing else is copied; the M5 title block will read the model's properties.
-- If the drawing file already exists, offers to open it instead (Default).
+- If the drawing file already exists, offers to open it instead (Default). It looks in `Prints` first, then beside the model, where prints made before 2026-10-11 were saved (Default).
 - Works on assemblies too (Default; Aidan said "part").
 
 **Mass Update** (Modelling panel; Part, Assembly and ZeroDoc ribbons) (Default: the folder scan and Mass Update are one command)
 
 - Scans a folder, by default the Work folder from Settings (Aidan, question 23), with Browse. Includes subfolders, skips `OldVersions`, reads `.ipt` and `.iam` files.
 - Lists every file with its file name, Part Number, whether it has a number (in the register), and whether Designer or Detailer equals the Windows user name.
-- Offers three actions, each on the files ticked: **register** a number that is in the format but not in the register; **assign** a new number to a file without one (the file is not renamed); **replace** a Designer or Detailer equal to the Windows user name or one of the Other names with the values from Settings.
+- Offers three actions, each on the files ticked: **register** a number that is in the format but not in the register; **assign** a new number to a file without one (the file is not renamed); **replace** a Designer, Detailer or Author (Aidan, 2026-10-11) equal to the Windows user name or one of the Other names with the values from Settings.
 - Each changed file is saved. This cannot be undone with Inventor's Undo, so the add-in asks for confirmation first, saying how many files will change.
 - Files open in Inventor are skipped and listed as "open in Inventor".
 
@@ -173,6 +192,7 @@ Designer and Detailer are not in the dialog; they come from Settings and can be 
 
 - In Part Properties, a Designer or Detailer equal to the Windows user name (ignoring case and surrounding spaces) counts as blank. Designer pre-fills from `DefaultDesigner`; Detailer then follows Designer. As with every pre-fill, nothing is written until Apply.
 - The same applies to a Designer or Detailer equal to any name in Settings' **Other names** (comma-separated; Aidan, 2026-10-10, task 051), in Part Properties and in Mass Update.
+- **Author is treated like Designer** (Aidan, 2026-10-11). Part Properties writes Author equal to Designer on every Apply that leaves them different, so Author is never left as the Windows user name. Author is not shown as a field of its own (Default). Mass Update lists and replaces an Author equal to one of your names the way it does Designer.
 - Mass Update's row and count text says "your name" rather than "Windows user name", since the match may be an Other name (Default, task 048).
 - When `DefaultDesigner` is blank the rule does not apply and the value is shown as it is (Default), so Apply never clears a Designer with nothing to replace it.
 
@@ -223,11 +243,11 @@ Answered by Aidan on 2026-10-10, after spike 032:
 Still open (each has a Default above, so none blocks planning):
 
 13. A Part Number in the format that is not in the register (a number from another PC not yet synced, or typed by hand). Default: it counts as no number, the window shows it with "Not in the register" and offers Generate, and Mass Update offers to register it. Should Part Properties offer "Register this number" instead of Generate?
-14. Case in file names. Default: kept as typed (`AWB-10001,Mounting_Bracket.ipt` stays). Should names be made lower case, as in the example?
+14. ~~Case in file names.~~ Answered by Aidan on 2026-10-11: upper case. See "File names and the part name".
 15. Duplicates found at sync. Default: both rows kept and reported; Aidan fixes them by hand. Should the add-in offer to renumber the offline file?
 16. Save As and Replace. Default: replaces only the selected occurrence. Should it replace every occurrence of that part in the assembly?
 17. Should New Part, Save As Copy and Create Print open the new file's Part Properties window straight after creating it?
-18. A comma in the name of a file with no part number. The name is read from after the first comma, so `a,b.ipt` reads back as `b`. Default: a name containing a comma is refused when the file has no part number (Rename on an old file); the reading rule stays as Aidan set it. Should the name instead be read from after the first comma only when the text before it is a part number?
+18. ~~A comma in the name of a file with no part number.~~ Settled by the name-first rule (Aidan, 2026-10-11): the number is read only when the text after the last comma is a part number, so `A,B.ipt` reads back as `A,B`. Default: a comma is allowed in any name, except that a name for a file with no number is refused when the text after its last comma is itself a part number, since it would read back as one. Replaces the earlier default.
 19. A register row that cannot be read (a bad date or number after an edit in Excel), or a column deleted from the file. Writing the file back would drop it, and rows are never removed by the add-in. Default: the add-in refuses to assign or sync while the shared register has such a row or column, and names the lines to fix. Should a row with a good Number but another bad value still count as issued, so assignment can continue?
 20. Mass Update on a file whose Designer is a real name and whose Detailer is the Windows user name. Default: Detailer is set to the Default designer from Settings. Part Properties instead makes Detailer follow the file's Designer. Should Mass Update do the same?
 21. A file carrying a number the register holds for a different file (for example a copy made in Explorer). Default: it counts as having a number, because the check ignores the path. Should Mass Update flag a number carried by two scanned files even when it is registered?
