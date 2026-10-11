@@ -141,8 +141,8 @@ public sealed class RenamePlanTests : IDisposable
     [Fact]
     public void ValidateNewName_KeepingTheNameOfAGenerateNumberedFile_IsARename_ThatAddsTheNumber()
     {
-        Assert.Null(RenamePlan.ValidateNewName(@"C:\Old\plate.ipt", "plate", new PartNumber(10007)));
-        Assert.Equal(RenamePlan.SameFileMessage, RenamePlan.ValidateNewName(@"C:\Old\plate.ipt", "plate", null));
+        Assert.Null(RenamePlan.ValidateNewName(@"C:\Old\PLATE.ipt", "plate", new PartNumber(10007)));
+        Assert.Equal(RenamePlan.SameFileMessage, RenamePlan.ValidateNewName(@"C:\Old\PLATE.ipt", "plate", null));
     }
 
     [Theory]
@@ -207,13 +207,114 @@ public sealed class RenamePlanTests : IDisposable
     }
 
     [Theory]
-    [InlineData(@"C:\Work\mounting_bracket,AWB-10001.ipt", "mounting bracket")]
-    [InlineData(@"C:\Work\mounting_bracket,AWB-10001.ipt", "mounting_bracket")]
-    [InlineData(@"C:\Work\mounting_bracket,AWB-10001.ipt", "Mounting Bracket")]
-    [InlineData(@"C:\Old\plate.ipt", " plate ")]
-    public void ValidateNewName_SameFileIsRefused(string oldPath, string typed)
+    [InlineData(@"C:\Work\MOUNTING_BRACKET,AWB-10001.ipt", "mounting bracket")]
+    [InlineData(@"C:\Work\MOUNTING_BRACKET,AWB-10001.ipt", "mounting_bracket")]
+    [InlineData(@"C:\Work\MOUNTING_BRACKET,AWB-10001.ipt", "Mounting Bracket")]
+    [InlineData(@"C:\Old\PLATE.ipt", " plate ")]
+    public void ValidateNewName_ExactlyTheCurrentName_IsRefused(string oldPath, string typed)
     {
         Assert.Equal(RenamePlan.SameFileMessage, RenamePlan.ValidateNewName(oldPath, typed));
+    }
+
+    [Theory]
+    [InlineData(@"C:\Work\mounting_bracket,AWB-10001.ipt", "mounting bracket")]
+    [InlineData(@"C:\Work\mounting_bracket,AWB-10001.ipt", "mounting_bracket")]
+    [InlineData(@"C:\Work\Mounting_Bracket,AWB-10001.ipt", "MOUNTING BRACKET")]
+    [InlineData(@"C:\Work\MOUNTING_BRACKET,awb-10001.ipt", "mounting bracket")]
+    [InlineData(@"C:\Old\plate.ipt", " plate ")]
+    public void ValidateNewName_AChangeOfCaseOnly_IsARename(string oldPath, string typed)
+    {
+        Assert.Null(RenamePlan.ValidateNewName(oldPath, typed));
+        Assert.True(RenamePlan.IsCaseOnlyChange(oldPath, RenamePlan.NewFileName(oldPath, typed)));
+    }
+
+    [Fact]
+    public void SameFileMessage_SaysItIsTheCurrentName_AndNoLongerMentionsCase()
+    {
+        Assert.Contains("current name", RenamePlan.SameFileMessage, StringComparison.Ordinal);
+        Assert.DoesNotContain("case", RenamePlan.SameFileMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData(@"C:\Cad\plate.ipt", @"C:\Cad\PLATE.ipt", true)]
+    [InlineData(@"C:\Cad\plate.ipt", @" C:\Cad\PLATE.ipt ", true)]
+    [InlineData(@"C:\Cad\plate.ipt", @"C:\Cad\plate.ipt", false)]
+    [InlineData(@"C:\Cad\plate.ipt", @"C:\Cad\base_plate.ipt", false)]
+    [InlineData(@"C:\Cad\plate.ipt", @"C:\Cad\plate.iam", false)]
+    [InlineData("", "", false)]
+    [InlineData(null, @"C:\Cad\PLATE.ipt", false)]
+    public void IsCaseOnlyChange(string? oldPath, string? newPath, bool expected)
+    {
+        Assert.Equal(expected, RenamePlan.IsCaseOnlyChange(oldPath, newPath));
+    }
+
+    [Fact]
+    public void TemporaryFileName_SameFolderAndExtension_AndNotAPartFileName()
+    {
+        var guid = new Guid("0123456789abcdef0123456789abcdef");
+
+        var temp = RenamePlan.TemporaryFileName(@"\\nas\cad\Sub\mounting_bracket,AWB-10001.ipt", _ => false, () => guid);
+
+        Assert.Equal(@"\\nas\cad\Sub\~RENAME-0123456789abcdef0123456789abcdef.ipt", temp);
+        Assert.True(RenamePlan.IsTemporaryFileName(temp));
+        Assert.False(PartFileName.TryReadNumber(temp, out _));
+        Assert.DoesNotContain(',', RenamePlan.FileNameOnly(temp));
+    }
+
+    [Fact]
+    public void TemporaryFileName_SkipsANameThatIsTaken()
+    {
+        var guids = new Queue<Guid>([new Guid("11111111111111111111111111111111"), new Guid("22222222222222222222222222222222")]);
+        var asked = new List<string>();
+
+        var temp = RenamePlan.TemporaryFileName(
+            @"C:\Cad\plate.iam", p => { asked.Add(p); return p.Contains("1111", StringComparison.Ordinal); }, guids.Dequeue);
+
+        Assert.Equal(@"C:\Cad\~RENAME-22222222222222222222222222222222.iam", temp);
+        Assert.Equal(2, asked.Count);
+    }
+
+    [Fact]
+    public void TemporaryFileName_EveryNameTaken_Throws()
+    {
+        var calls = 0;
+
+        Assert.Throws<IOException>(() => RenamePlan.TemporaryFileName(@"C:\Cad\plate.ipt", _ => { calls++; return true; }));
+        Assert.Equal(RenamePlan.TemporaryNameAttempts, calls);
+    }
+
+    [Fact]
+    public void TemporaryFileName_RealGuids_AreDifferent()
+    {
+        Assert.NotEqual(
+            RenamePlan.TemporaryFileName(@"C:\Cad\plate.ipt", _ => false),
+            RenamePlan.TemporaryFileName(@"C:\Cad\plate.ipt", _ => false));
+    }
+
+    [Theory]
+    [InlineData(@"C:\Cad\~RENAME-abc.ipt", true)]
+    [InlineData(@"C:\Cad\~rename-abc.ipt", true)]
+    [InlineData(@"C:\~RENAME-\plate.ipt", false)]
+    [InlineData(@"C:\Cad\plate.ipt", false)]
+    [InlineData(null, false)]
+    public void IsTemporaryFileName(string? path, bool expected)
+    {
+        Assert.Equal(expected, RenamePlan.IsTemporaryFileName(path));
+    }
+
+    [Fact]
+    public void ConfirmationMessage_ACaseOnlyChange_SaysItGoesThroughATemporaryName()
+    {
+        var search = new RenameSearchList([], [@"C:\Cad"], []);
+
+        var caseOnly = RenamePlan.ConfirmationMessage(
+            new RenameRequest(@"C:\Cad\plate.ipt", @"C:\Cad\PLATE.ipt", "PLATE"), search);
+        var other = RenamePlan.ConfirmationMessage(
+            new RenameRequest(@"C:\Cad\plate.ipt", @"C:\Cad\BASE_PLATE.ipt", "BASE PLATE"), search);
+
+        Assert.Contains("Only the case of the name changes", caseOnly, StringComparison.Ordinal);
+        Assert.Contains("temporary name", caseOnly, StringComparison.Ordinal);
+        Assert.DoesNotContain("temporary name", other, StringComparison.Ordinal);
     }
 
     [Fact]

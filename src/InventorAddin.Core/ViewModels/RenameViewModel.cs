@@ -63,7 +63,8 @@ public sealed class RenameViewModel : ObservableObject
     /// <param name="fullFileName">The open file's full path; it has been saved.</param>
     /// <param name="targetExists">
     /// True when a file already exists at the given full path (or is open in Inventor under it). Called as the name is
-    /// typed, for a valid name only.
+    /// typed, for a valid name only, and not for a change of case only (<see cref="RenamePlan.IsCaseOnlyChange"/>), whose
+    /// new name is the file itself.
     /// </param>
     /// <param name="run">
     /// Confirms and renames, reporting progress through the action it is given. Returns null when the user did not
@@ -174,7 +175,7 @@ public sealed class RenameViewModel : ObservableObject
 
     /// <summary>What the Part Properties window takes back: null unless the file was renamed.</summary>
     public PartRenameOutcome? Outcome => _result is { Renamed: true } r
-        ? new PartRenameOutcome(r.Request.NewFullFileName, r.Request.NewName, r.DescriptionWritten)
+        ? new PartRenameOutcome(r.FullFileNameNow, r.Request.NewName, r.DescriptionWritten)
         : null;
 
     /// <summary>The footer line: the validation message, the progress, or the summary of the result.</summary>
@@ -214,7 +215,7 @@ public sealed class RenameViewModel : ObservableObject
 
         var text = string.Create(
             CultureInfo.InvariantCulture,
-            $"Renamed to {RenamePlan.FileNameOnly(result.Request.NewFullFileName)}. {Files(result.UpdatedCount)} updated");
+            $"Renamed to {RenamePlan.FileNameOnly(result.FullFileNameNow)}. {Files(result.UpdatedCount)} updated");
         if (result.FailedCount > 0)
             text += string.Create(CultureInfo.InvariantCulture, $", {result.FailedCount} not updated");
         if (result.OccurrencesRenamed > 0)
@@ -271,7 +272,8 @@ public sealed class RenameViewModel : ObservableObject
         if (_validationMessage is null)
         {
             _newFullFileName = RenamePlan.NewFileName(_fullFileName, _newName, _registeredNumber, _kind);
-            if (_targetExists(_newFullFileName))
+            // A change of case only names the file itself, which is not a file in the way (task 061).
+            if (!RenamePlan.IsCaseOnlyChange(_fullFileName, _newFullFileName) && _targetExists(_newFullFileName))
                 _validationMessage = RenamePlan.TargetExistsMessage(RenamePlan.FileNameOnly(_newFullFileName));
         }
 

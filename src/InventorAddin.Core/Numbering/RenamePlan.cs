@@ -30,9 +30,17 @@ public static class RenamePlan
     /// <summary>How long listing one reachable folder may take before it is skipped (Default).</summary>
     public static readonly TimeSpan FolderListTimeout = TimeSpan.FromSeconds(60);
 
-    public const string SameFileMessage =
-        "That is the file's current name. Windows does not tell file names apart by case, so a change of case alone " +
-        "is not a rename.";
+    /// <summary>The new file name is exactly the current one. A change of case only is a rename (task 061).</summary>
+    public const string SameFileMessage = "That is the file's current name. Type a different name.";
+
+    /// <summary>
+    /// The start of the temporary file name a change of case only goes through (task 061): it has no comma, so it can
+    /// never read as a part file name with a number.
+    /// </summary>
+    public const string TemporaryNamePrefix = "~RENAME-";
+
+    /// <summary>How many temporary names <see cref="TemporaryFileName"/> tries before it gives up.</summary>
+    public const int TemporaryNameAttempts = 10;
 
     /// <summary>
     /// Spec 02 question 18 (Default): when the new file name has no part number, a name whose text after its last comma
@@ -93,8 +101,10 @@ public static class RenamePlan
     /// the first problem: the name (<see cref="PartFileName.ValidateName"/>), a name that would read back as numbered
     /// when the new file name will have no number (<see cref="NumberToKeep"/>; <see cref="NameEndsWithNumberMessage"/>;
     /// any other comma is allowed), the path length
-    /// (<see cref="PartFileName.ValidatePath"/>), then a name that gives the same file (<see cref="SameFileMessage"/>).
-    /// Whether the new file already exists is the caller's check. A blank <paramref name="fullFileName"/> gives
+    /// (<see cref="PartFileName.ValidatePath"/>), then a name that gives exactly the current file name
+    /// (<see cref="SameFileMessage"/>). A name that differs from the current one in case only is accepted
+    /// (<see cref="IsCaseOnlyChange"/>; Aidan, task 061). Whether the new file already exists is the caller's check,
+    /// which a change of case only skips. A blank <paramref name="fullFileName"/> gives
     /// <see cref="NotSavedMessage"/>.
     /// </summary>
     /// <param name="registeredNumber">As for <see cref="NewFileName"/>.</param>
@@ -129,8 +139,61 @@ public static class RenamePlan
             return pathProblem;
         }
 
-        return string.Equals(newPath, fullFileName.Trim(), StringComparison.OrdinalIgnoreCase) ? SameFileMessage : null;
+        return string.Equals(newPath, fullFileName.Trim(), StringComparison.Ordinal) ? SameFileMessage : null;
     }
+
+    /// <summary>
+    /// True when <paramref name="newFullFileName"/> names the same file as <paramref name="oldFullFileName"/> to Windows
+    /// (equal ignoring case, after trimming) but is spelled differently: a change of case only (task 061). Such a rename
+    /// goes through a temporary name (<see cref="TemporaryFileName"/>), and the new name is not taken by the file itself.
+    /// </summary>
+    public static bool IsCaseOnlyChange(string? oldFullFileName, string? newFullFileName)
+    {
+        var oldPath = oldFullFileName?.Trim() ?? string.Empty;
+        var newPath = newFullFileName?.Trim() ?? string.Empty;
+        return oldPath.Length > 0
+            && string.Equals(oldPath, newPath, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(oldPath, newPath, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The temporary full path a change of case only goes through (task 061): the same folder and extension as
+    /// <paramref name="fullFileName"/>, and the file name <see cref="TemporaryNamePrefix"/> followed by a new GUID in 32
+    /// digits, which has no comma and so never reads as a part file name. A name <paramref name="exists"/> reports as
+    /// taken is skipped; after <see cref="TemporaryNameAttempts"/> taken names it throws <see cref="IOException"/>.
+    /// </summary>
+    /// <param name="exists">True when a file exists at the path, or a document is open under it.</param>
+    /// <param name="newGuid">Replaces <see cref="Guid.NewGuid"/>; for tests.</param>
+    public static string TemporaryFileName(string fullFileName, Func<string, bool> exists, Func<Guid>? newGuid = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(fullFileName);
+        ArgumentNullException.ThrowIfNull(exists);
+
+        var path = fullFileName.Trim();
+        var cut = path.LastIndexOfAny(FolderSeparators) + 1;
+        var name = path[cut..];
+        var dot = name.LastIndexOf('.');
+        if (dot < 0)
+        {
+            throw new ArgumentException($"The file \"{path}\" has no extension.", nameof(fullFileName));
+        }
+
+        var guid = newGuid ?? Guid.NewGuid;
+        for (var i = 0; i < TemporaryNameAttempts; i++)
+        {
+            var candidate = path[..cut] + TemporaryNamePrefix + guid().ToString("N", CultureInfo.InvariantCulture) + name[dot..];
+            if (!exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        throw new IOException("No free temporary name could be found in the file's folder.");
+    }
+
+    /// <summary>True when the file name of <paramref name="fullFileName"/> starts with <see cref="TemporaryNamePrefix"/>, ignoring case.</summary>
+    public static bool IsTemporaryFileName(string? fullFileName) =>
+        FileNameOnly(fullFileName?.Trim()).StartsWith(TemporaryNamePrefix, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Why Rename stops before it starts when open documents that use the file have unsaved changes (Default): Rename
@@ -361,6 +424,12 @@ public static class RenamePlan
             : $"{Count(search.Files.Count, "assembly, drawing or presentation", "assemblies, drawings and presentations")} " +
               $"in {Count(search.Folders.Count, "folder", "folders")} will be searched, and each one that uses the file " +
               "is updated and saved. Expect a second or two for each file that uses it.";
+
+        if (IsCaseOnlyChange(request.OldFullFileName, request.NewFullFileName))
+        {
+            text += nl + nl + "Only the case of the name changes. Windows treats both names as the same file, so it is " +
+                    "renamed in two steps: to a temporary name, then to the new one.";
+        }
 
         var drawings = DrawingsOfModel(request.OldFullFileName, request.NewFullFileName, search.Files);
         if (drawings.Count > 0)
@@ -616,14 +685,25 @@ public sealed record RenameNote(string Text, bool IsProblem);
 /// <param name="DescriptionWritten">True when Description was set to the new name and saved.</param>
 /// <param name="Files">Each referencing file updated, or that failed, in the order handled.</param>
 /// <param name="Notes">Everything else to report, in order.</param>
+/// <param name="TemporaryFullFileName">
+/// For a change of case only (task 061) that stopped after its first step: the temporary name the file now has, which
+/// every file updated uses. Null when the file has its new name, or was not renamed.
+/// </param>
 public sealed record RenameResult(
     RenameRequest Request,
     bool Renamed,
     bool OldFileDeleted,
     bool DescriptionWritten,
     IReadOnlyList<RenameFileResult> Files,
-    IReadOnlyList<RenameNote> Notes)
+    IReadOnlyList<RenameNote> Notes,
+    string? TemporaryFullFileName = null)
 {
+    /// <summary>
+    /// Where the file is once Rename has run: <see cref="TemporaryFullFileName"/> when it stopped there, otherwise the
+    /// new name (also when nothing was renamed; check <see cref="Renamed"/>).
+    /// </summary>
+    public string FullFileNameNow => TemporaryFullFileName ?? Request.NewFullFileName;
+
     public int UpdatedCount => Files.Count(f => f.Updated);
 
     public int FailedCount => Files.Count(f => !f.Updated);
@@ -710,7 +790,7 @@ public interface IRenameTarget
 /// and save the other open documents that use it; set Description to the new
 /// name; delete the old file only when every file was updated, every folder searched, and no open document still
 /// references it; update the register entry when the file has a registered number. Every outcome goes into the
-/// <see cref="RenameResult"/>.
+/// <see cref="RenameResult"/>. A change of case only runs these steps twice, through a temporary name (task 061).
 /// </summary>
 /// <remarks>
 /// A failure part way keeps the old file, so a file that could not be updated still opens; the result says which
@@ -723,16 +803,19 @@ public sealed class PartRenamer
     private readonly IRenameTarget _target;
     private readonly RegisterStore? _store;
     private readonly ILog _log;
+    private readonly Func<Guid>? _newGuid;
 
     /// <param name="target">Inventor.</param>
     /// <param name="store">The session's register, for the entry update; null when the file has no registered number.</param>
     /// <param name="log">Where each step is recorded.</param>
-    public PartRenamer(IRenameTarget target, RegisterStore? store = null, ILog? log = null)
+    /// <param name="newGuid">Replaces <see cref="Guid.NewGuid"/> for the temporary name of a change of case only; for tests.</param>
+    public PartRenamer(IRenameTarget target, RegisterStore? store = null, ILog? log = null, Func<Guid>? newGuid = null)
     {
         ArgumentNullException.ThrowIfNull(target);
         _target = target;
         _store = store;
         _log = log ?? NullLog.Instance;
+        _newGuid = newGuid;
     }
 
     public static string RenameFailedMessage(string reason) =>
@@ -802,6 +885,28 @@ public sealed class PartRenamer
         $"The drawing was renamed to {RenamePlan.FileNameOnly(newDrawingFullFileName)} and closed, but could not be " +
         $"opened again: {reason} Open it by hand.";
 
+    /// <summary>
+    /// A change of case only stopped after its first step because the old file had to be kept (task 061): the file has
+    /// the temporary name, which every file updated uses, and the new name cannot be given while the old file exists.
+    /// </summary>
+    public static string StoppedAtTemporaryNameOldFileKeptMessage(
+        string oldFullFileName, string temporaryFullFileName, string newFullFileName) =>
+        "Only the case of the name changes, so the file is renamed in two steps through a temporary name. It stopped " +
+        $"after the first step, because the old file {RenamePlan.FileNameOnly(oldFullFileName)} was kept (see above). " +
+        $"The file is now named {RenamePlan.FileNameOnly(temporaryFullFileName)}, and every file that was updated uses " +
+        "that name. Once nothing uses the old file, delete it, then run Rename again on " +
+        $"{RenamePlan.FileNameOnly(temporaryFullFileName)} to name it {RenamePlan.FileNameOnly(newFullFileName)}.";
+
+    /// <summary>
+    /// A change of case only could not save the file under its new name in the second step (task 061): it keeps the
+    /// temporary name, which every file updated uses.
+    /// </summary>
+    public static string StoppedAtTemporaryNameMessage(string temporaryFullFileName, string newFullFileName, string reason) =>
+        "Only the case of the name changes, so the file is renamed in two steps through a temporary name. The second " +
+        $"step could not save it as {RenamePlan.FileNameOnly(newFullFileName)}: {reason} The file is now named " +
+        $"{RenamePlan.FileNameOnly(temporaryFullFileName)}, and every file that was updated uses that name. Run Rename " +
+        $"again on it to name it {RenamePlan.FileNameOnly(newFullFileName)}.";
+
     /// <summary>Runs the steps.</summary>
     /// <param name="request">The rename.</param>
     /// <param name="filesToSearch">The candidate files (<see cref="RenameSearchList.Files"/>).</param>
@@ -810,6 +915,13 @@ public sealed class PartRenamer
     /// <param name="skippedFolders">
     /// The search folders that were not listed (<see cref="RenameSearchList.Skipped"/>). Any at all keeps the old file.
     /// </param>
+    /// <remarks>
+    /// A change of case only (<see cref="RenamePlan.IsCaseOnlyChange"/>; task 061) runs the steps twice under the one
+    /// confirmation already given: old name to a temporary name (<see cref="RenamePlan.TemporaryFileName"/>), then the
+    /// temporary name to the new one, since saving a document under a name that differs only in case would write over
+    /// itself. The second step runs only when the first deleted the old file; otherwise the file keeps the temporary
+    /// name and the result says so.
+    /// </remarks>
     public RenameResult Run(
         RenameRequest request,
         IReadOnlyList<string> filesToSearch,
@@ -820,10 +932,174 @@ public sealed class PartRenamer
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(filesToSearch);
 
-        var files = new List<RenameFileResult>();
-        var notes = new List<RenameNote>();
+        if (RenamePlan.IsCaseOnlyChange(request.OldFullFileName, request.NewFullFileName))
+        {
+            return RunCaseOnly(request, filesToSearch, registeredNumber, progress, skippedFolders);
+        }
+
         var oldPath = request.OldFullFileName;
         var newPath = request.NewFullFileName;
+        var step = RunStep(oldPath, newPath, filesToSearch, progress, skippedFolders, request.NewName);
+        if (step.SaveAsError is { } error)
+        {
+            return NotRenamed(request, error, step.Notes);
+        }
+
+        // 6. The register entry (Default).
+        var notes = step.Notes;
+        if (registeredNumber is { } number && _store is not null)
+        {
+            notes.Add(UpdateRegister(number, request, newPath));
+        }
+
+        LogFinished(oldPath, newPath, step.Files, step.OldDeleted);
+        return new RenameResult(
+            request, true, step.OldDeleted, step.DescriptionWritten, step.Files.AsReadOnly(), notes.AsReadOnly());
+    }
+
+    /// <summary>The two steps of a change of case only (task 061), through a temporary name.</summary>
+    private RenameResult RunCaseOnly(
+        RenameRequest request,
+        IReadOnlyList<string> filesToSearch,
+        PartNumber? registeredNumber,
+        Action<string>? progress,
+        IReadOnlyList<SkippedFolder>? skippedFolders)
+    {
+        var oldPath = request.OldFullFileName;
+        var newPath = request.NewFullFileName;
+
+        string tempPath;
+        try
+        {
+            tempPath = RenamePlan.TemporaryFileName(oldPath, _target.FileExists, _newGuid);
+        }
+        catch (Exception ex)
+        {
+            _log.Error($"Rename: no temporary name could be found for '{oldPath}'. Nothing was changed.", ex);
+            return NotRenamed(request, ex.Message, []);
+        }
+
+        _log.Info($"Rename: only the case changes; '{oldPath}' is renamed through '{tempPath}'.");
+
+        // First step: old name to the temporary name. Nothing has changed if its SaveAs fails.
+        var first = RunStep(oldPath, tempPath, filesToSearch, progress, skippedFolders, descriptionName: null);
+        if (first.SaveAsError is { } error)
+        {
+            return NotRenamed(request, error, first.Notes);
+        }
+
+        // The second step saves under a name Windows treats as the old file's, so it runs only once the old file is gone.
+        if (!first.OldDeleted)
+        {
+            _log.Warn($"Rename: stopped at '{tempPath}', because '{oldPath}' was kept.");
+            first.Notes.Add(new RenameNote(
+                StoppedAtTemporaryNameOldFileKeptMessage(oldPath, tempPath, newPath), IsProblem: true));
+            return StoppedAtTemporaryName(request, registeredNumber, tempPath, first);
+        }
+
+        // Second step: the temporary name to the new one. It searches the same list, with each drawing the first step
+        // renamed under its temporary name (task 059's implementer note).
+        var secondFiles = filesToSearch
+            .Select(f => first.MovedDrawings.TryGetValue(f, out var moved) ? moved : f)
+            .Concat(first.CopiedDrawings)
+            .ToList();
+        var second = RunStep(tempPath, newPath, secondFiles, progress, skippedFolders: null, request.NewName);
+        if (second.SaveAsError is { } secondError)
+        {
+            _log.Warn($"Rename: stopped at '{tempPath}': it could not be saved as '{newPath}': {secondError}");
+            first.Notes.Add(new RenameNote(
+                StoppedAtTemporaryNameMessage(tempPath, newPath, secondError), IsProblem: true));
+            return StoppedAtTemporaryName(request, registeredNumber, tempPath, first);
+        }
+
+        var files = MergeSteps(first, second);
+        var notes = first.Notes.Concat(second.Notes).ToList();
+        if (registeredNumber is { } number && _store is not null)
+        {
+            notes.Add(UpdateRegister(number, request, newPath));
+        }
+
+        LogFinished(oldPath, newPath, files, second.OldDeleted);
+        return new RenameResult(
+            request, true, second.OldDeleted, second.DescriptionWritten, files.AsReadOnly(), notes.AsReadOnly());
+    }
+
+    /// <summary>
+    /// A change of case only that ends under its temporary name: Description is still written, and the register entry
+    /// names the temporary file, where the file is.
+    /// </summary>
+    private RenameResult StoppedAtTemporaryName(
+        RenameRequest request, PartNumber? registeredNumber, string tempPath, StepOutcome first)
+    {
+        var notes = first.Notes;
+        var descriptionWritten = WriteDescription(request.NewName, notes);
+        if (registeredNumber is { } number && _store is not null)
+        {
+            notes.Add(UpdateRegister(number, request, tempPath));
+        }
+
+        LogFinished(request.OldFullFileName, tempPath, first.Files, first.OldDeleted);
+        return new RenameResult(
+            request, true, first.OldDeleted, descriptionWritten, first.Files.AsReadOnly(), notes.AsReadOnly(), tempPath);
+    }
+
+    /// <summary>
+    /// The two steps' file lists as one: each file once, under the name it was found by, in the first step's order and
+    /// then any the second step found alone. A file in both takes the second step's outcome, keeps the first step's
+    /// occurrence problems, and keeps the first step's new name when the second could not rename it.
+    /// </summary>
+    private static List<RenameFileResult> MergeSteps(StepOutcome first, StepOutcome second)
+    {
+        var foundAs = first.MovedDrawings.ToDictionary(p => p.Value, p => p.Key, StringComparer.OrdinalIgnoreCase);
+        var secondByName = new Dictionary<string, RenameFileResult>(StringComparer.OrdinalIgnoreCase);
+        var secondOrder = new List<string>();
+        foreach (var file in second.Files)
+        {
+            var name = foundAs.TryGetValue(file.FullFileName, out var original) ? original : file.FullFileName;
+            if (secondByName.TryAdd(name, file with { FullFileName = name }))
+            {
+                secondOrder.Add(name);
+            }
+        }
+
+        var merged = new List<RenameFileResult>();
+        foreach (var a in first.Files)
+        {
+            if (!secondByName.Remove(a.FullFileName, out var b))
+            {
+                merged.Add(a);
+                continue;
+            }
+
+            var problems = (a.OccurrenceProblems ?? []).Concat(b.OccurrenceProblems ?? []).ToList();
+            merged.Add(b with
+            {
+                OccurrencesRenamed = b.Updated ? b.OccurrencesRenamed : a.OccurrencesRenamed,
+                OccurrenceProblems = problems.Count > 0 ? problems : null,
+                RenamedTo = b.RenamedTo ?? a.RenamedTo,
+            });
+        }
+
+        merged.AddRange(secondOrder.Where(secondByName.ContainsKey).Select(n => secondByName[n]));
+        return merged;
+    }
+
+    /// <summary>
+    /// One rename from <paramref name="oldPath"/> to <paramref name="newPath"/>: save under the new name, update the
+    /// files found, save the open documents repointed, write Description when <paramref name="descriptionName"/> is
+    /// given, and delete the old file under task 058's rules. The register is the caller's.
+    /// </summary>
+    private StepOutcome RunStep(
+        string oldPath,
+        string newPath,
+        IReadOnlyList<string> filesToSearch,
+        Action<string>? progress,
+        IReadOnlyList<SkippedFolder>? skippedFolders,
+        string? descriptionName)
+    {
+        var step = new StepOutcome();
+        var files = step.Files;
+        var notes = step.Notes;
 
         // 1. Save under the new name. Nothing has changed if this fails.
         try
@@ -833,8 +1109,8 @@ public sealed class PartRenamer
         catch (Exception ex)
         {
             _log.Error($"Rename: '{oldPath}' could not be saved as '{newPath}'. Nothing was changed.", ex);
-            notes.Add(new RenameNote(RenameFailedMessage(ex.Message), IsProblem: true));
-            return new RenameResult(request, false, false, false, files, notes);
+            step.SaveAsError = ex.Message;
+            return step;
         }
 
         _log.Info($"Rename: '{oldPath}' saved as '{newPath}'. Searching {filesToSearch.Count} files for references.");
@@ -855,7 +1131,7 @@ public sealed class PartRenamer
             {
                 if (drawings.TryGetValue(file, out var newDrawing))
                 {
-                    UpdateDrawing(file, newDrawing, oldPath, newPath, files, notes, handled);
+                    UpdateDrawing(file, newDrawing, oldPath, newPath, step, handled);
                 }
                 else if (_target.UpdateReferences(file, oldPath, newPath) is { } update)
                 {
@@ -902,21 +1178,13 @@ public sealed class PartRenamer
         }
 
         // 4. Description follows the new name.
-        var descriptionWritten = false;
-        try
+        if (descriptionName is not null)
         {
-            _target.WriteDescription(request.NewName);
-            descriptionWritten = true;
-        }
-        catch (Exception ex)
-        {
-            notes.Add(new RenameNote(DescriptionFailedMessage(ex.Message), IsProblem: true));
-            _log.Error("Rename: Description could not be written.", ex);
+            step.DescriptionWritten = WriteDescription(descriptionName, notes);
         }
 
         // 5. The old file goes last, and only when nothing still uses it: every file found was updated, every search
         //    folder was searched, and no open document still references it.
-        var oldDeleted = false;
         var someFailed = files.Any(f => !f.Updated) || openFilesFailed;
         var someSkipped = skippedFolders is { Count: > 0 };
         if (someFailed)
@@ -957,7 +1225,7 @@ public sealed class PartRenamer
             try
             {
                 _target.DeleteFile(oldPath);
-                oldDeleted = true;
+                step.OldDeleted = true;
             }
             catch (Exception ex)
             {
@@ -966,18 +1234,56 @@ public sealed class PartRenamer
             }
         }
 
-        // 6. The register entry (Default).
-        if (registeredNumber is { } number && _store is not null)
-        {
-            notes.Add(UpdateRegister(number, request));
-        }
+        return step;
+    }
 
+    /// <summary>Sets Description to the new name; a failure is a note.</summary>
+    private bool WriteDescription(string name, List<RenameNote> notes)
+    {
+        try
+        {
+            _target.WriteDescription(name);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            notes.Add(new RenameNote(DescriptionFailedMessage(ex.Message), IsProblem: true));
+            _log.Error("Rename: Description could not be written.", ex);
+            return false;
+        }
+    }
+
+    private static RenameResult NotRenamed(RenameRequest request, string reason, List<RenameNote> notes)
+    {
+        notes.Add(new RenameNote(RenameFailedMessage(reason), IsProblem: true));
+        return new RenameResult(request, false, false, false, [], notes.AsReadOnly());
+    }
+
+    private void LogFinished(string oldPath, string newPath, List<RenameFileResult> files, bool oldDeleted) =>
         _log.Info(
             $"Rename: finished '{oldPath}' -> '{newPath}': {files.Count(f => f.Updated)} updated, " +
             $"{files.Count(f => !f.Updated)} not updated, {files.Sum(f => f.OccurrencesRenamed)} occurrences renamed, " +
             $"{files.Count(f => f.RenamedTo is not null)} drawings renamed, old file {(oldDeleted ? "deleted" : "kept")}.");
 
-        return new RenameResult(request, true, oldDeleted, descriptionWritten, files.AsReadOnly(), notes.AsReadOnly());
+    /// <summary>What one step of <see cref="RunStep"/> did.</summary>
+    private sealed class StepOutcome
+    {
+        /// <summary>Why the file could not be saved under the step's new name; null when it was.</summary>
+        public string? SaveAsError { get; set; }
+
+        public bool OldDeleted { get; set; }
+
+        public bool DescriptionWritten { get; set; }
+
+        public List<RenameFileResult> Files { get; } = [];
+
+        public List<RenameNote> Notes { get; } = [];
+
+        /// <summary>Drawings of the model renamed whose old file was deleted: old path to new path.</summary>
+        public Dictionary<string, string> MovedDrawings { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>The new paths of drawings renamed whose old file could not be deleted, so both files exist.</summary>
+        public List<string> CopiedDrawings { get; } = [];
     }
 
     /// <summary>Records a file updated by <see cref="IRenameTarget.UpdateReferences"/>, with its occurrence notes.</summary>
@@ -1000,10 +1306,11 @@ public sealed class PartRenamer
         string newDrawing,
         string oldPath,
         string newPath,
-        List<RenameFileResult> files,
-        List<RenameNote> notes,
+        StepOutcome step,
         HashSet<string> handled)
     {
+        var files = step.Files;
+        var notes = step.Notes;
         string? takenNote;
         try
         {
@@ -1043,6 +1350,15 @@ public sealed class PartRenamer
         handled.Add(newDrawing);
         _log.Info($"Rename: drawing '{file}' updated and renamed to '{newDrawing}'.");
 
+        if (drawing.OldFileNotDeletedReason is null)
+        {
+            step.MovedDrawings[file] = newDrawing;
+        }
+        else
+        {
+            step.CopiedDrawings.Add(newDrawing);
+        }
+
         if (drawing.OldFileNotDeletedReason is { } notDeleted)
         {
             notes.Add(new RenameNote(DrawingOldFileNotDeletedMessage(file, newDrawing, notDeleted), IsProblem: true));
@@ -1066,11 +1382,12 @@ public sealed class PartRenamer
         }
     }
 
-    private RenameNote UpdateRegister(PartNumber number, RenameRequest request)
+    /// <summary>Points the register entry from the old file to <paramref name="fullFileNameNow"/>, where the file is.</summary>
+    private RenameNote UpdateRegister(PartNumber number, RenameRequest request, string fullFileNameNow)
     {
         try
         {
-            var result = _store!.UpdateEntry(number, request.NewFullFileName, request.NewName, request.OldFullFileName);
+            var result = _store!.UpdateEntry(number, fullFileNameNow, request.NewName, request.OldFullFileName);
             if (!result.Found)
             {
                 return new RenameNote($"The register does not hold {number}, so no register entry was changed.", IsProblem: true);

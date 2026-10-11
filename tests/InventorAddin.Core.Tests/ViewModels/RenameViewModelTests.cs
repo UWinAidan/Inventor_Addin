@@ -88,8 +88,9 @@ public sealed class RenameViewModelTests
     }
 
     [Fact]
-    public void OpensWithTheCurrentName_WhichCannotBeUsed()
+    public void OpensWithTheCurrentName_ALowerCaseFile_CanBeRenamedToUpperCaseAsItIs()
     {
+        _existing.Add(OldPath);
         var vm = Create();
 
         Assert.Equal("Rename", vm.HeaderTitle);
@@ -97,10 +98,65 @@ public sealed class RenameViewModelTests
         Assert.Equal("mounting bracket", vm.CurrentName);
         Assert.Equal("mounting bracket", vm.NewName);
         Assert.Equal(new PartNumber(10001), vm.NumberKept);
+        Assert.Equal("MOUNTING_BRACKET,AWB-10001.ipt", vm.NewFileNamePreview);
+        Assert.Null(vm.ValidationMessage);
+        Assert.True(vm.CanRename);
+        Assert.True(vm.IsEditing);
+    }
+
+    [Fact]
+    public void OpensWithTheCurrentName_AnUpperCaseFile_CannotBeRenamedToItself()
+    {
+        const string path = @"C:\Cad\MOUNTING_BRACKET,AWB-10001.ipt";
+        _existing.Add(path);
+        var vm = Create(path: path);
+
         Assert.Equal(RenamePlan.SameFileMessage, vm.ValidationMessage);
         Assert.False(vm.CanRename);
         Assert.False(vm.RenameCommand.CanExecute(null));
-        Assert.True(vm.IsEditing);
+    }
+
+    [Fact]
+    public void ACaseOnlyChange_DoesNotAskWhetherTheFileItselfExists()
+    {
+        var asked = new List<string>();
+        var vm = new RenameViewModel(OldPath, p => { asked.Add(p); return true; }, Succeed);
+
+        Assert.Empty(asked);
+        Assert.True(vm.CanRename);
+
+        vm.RenameCommand.Execute(null);
+        Assert.Equal(
+            new RenameRequest(OldPath, @"C:\Cad\MOUNTING_BRACKET,AWB-10001.ipt", "MOUNTING BRACKET"),
+            Assert.Single(_requests));
+    }
+
+    [Fact]
+    public void AnotherName_StillAsksWhetherItExists()
+    {
+        _existing.Add(@"C:\Cad\base_plate,AWB-10001.ipt");
+        var vm = Create();
+
+        vm.NewName = "base plate";
+
+        Assert.Equal(RenamePlan.TargetExistsMessage("BASE_PLATE,AWB-10001.ipt"), vm.ValidationMessage);
+        Assert.False(vm.CanRename);
+    }
+
+    [Fact]
+    public void ARenameLeftUnderTheTemporaryName_GivesThatNameBack_AndSaysIt()
+    {
+        const string temp = @"C:\Cad\~RENAME-0123456789abcdef0123456789abcdef.ipt";
+        var vm = Create(run: (request, _) => new RenameResult(
+            request, Renamed: true, OldFileDeleted: false, DescriptionWritten: true, [],
+            [new RenameNote("stopped", IsProblem: true)], temp));
+
+        vm.RenameCommand.Execute(null);
+
+        Assert.Equal(new PartRenameOutcome(temp, "MOUNTING BRACKET", true), vm.Outcome);
+        Assert.StartsWith(
+            "Renamed to ~RENAME-0123456789abcdef0123456789abcdef.ipt.", vm.StatusText, StringComparison.Ordinal);
+        Assert.True(vm.HasError);
     }
 
     [Fact]

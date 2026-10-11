@@ -93,7 +93,11 @@ namespace InventorAddin.Commands
             return viewModel.Outcome;
         }
 
-        /// <summary>A file on disk, or a document open in Inventor, already has this name.</summary>
+        /// <summary>
+        /// A file on disk, or a document open in Inventor, already has this name, ignoring case. For a change of case only
+        /// that is the file itself, so the view-model does not ask (task 061); <see cref="PartRenamer"/> renames it
+        /// through a temporary name.
+        /// </summary>
         private static bool TargetExists(string fullFileName) =>
             IOFile.Exists(fullFileName) || FindOpen(fullFileName) != null;
 
