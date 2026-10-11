@@ -32,6 +32,12 @@ public interface ICopiedDocument
     /// <summary>Saves the copy under its own name.</summary>
     void Save();
 
+    /// <summary>
+    /// The copy's Part Number as it reads now, or null when it has none. Read after <see cref="Save"/> to check that
+    /// the copy kept the number just assigned (task 060).
+    /// </summary>
+    string? ReadPartNumber();
+
     /// <summary>Closes the copy without saving it.</summary>
     void CloseWithoutSaving();
 }
@@ -48,7 +54,8 @@ public sealed record SaveAsCopyRequest(string OriginalFullPath, DocumentKind Kin
 /// assembly; check the name and the original's folder; assign the next number through the register, checking that no
 /// file with the new name exists before its row is written; check again; save a copy of the original under
 /// <see cref="PartFileName.Build"/> in the original's folder; open the copy; write <see cref="CreationProperties"/>
-/// on it; save it. Everything else on the copy is kept from the original (Default). The folder check, the assignment
+/// on it; save it; read its Part Number back, which must be the number just assigned (Aidan, 2026-10-11: each copy gets
+/// its own new number). Everything else on the copy is kept from the original (Default). The folder check, the assignment
 /// and their messages are <see cref="NewPartCreator"/>'s, so both commands fail the same way.
 /// </summary>
 /// <remarks>
@@ -109,6 +116,19 @@ public sealed class SaveAsCopyCreator
     public static string FailedAfterAssignMessage(string number, string reason) =>
         $"Part number {number} was assigned, but the copy could not be made: {reason} The number stays in the register.";
 
+    /// <summary>
+    /// Why the copy is refused when its Part Number, read back after saving, is not <paramref name="assigned"/>. It is
+    /// the reason in <see cref="FailedAfterAssignMessage"/>.
+    /// </summary>
+    public static string NumberNotKeptReason(string assigned, string? readBack) =>
+        string.IsNullOrWhiteSpace(readBack)
+            ? $"The copy did not keep its new number {assigned}: its Part Number is blank after saving."
+            : $"The copy did not keep its new number {assigned}: its Part Number reads '{readBack.Trim()}' after saving.";
+
+    /// <summary>True when <paramref name="readBack"/> is <paramref name="assigned"/>, ignoring white space around it.</summary>
+    public static bool KeptNumber(string assigned, string? readBack) =>
+        string.Equals(readBack?.Trim(), assigned, StringComparison.Ordinal);
+
     public static string NotRemovedMessage(string fullPath) =>
         $"The unfinished copy '{fullPath}' could not be removed; delete it by hand.";
 
@@ -168,6 +188,7 @@ public sealed class SaveAsCopyCreator
         // 4. Check again, save the copy, open it, write, save. Any failure from here leaves the number in the register.
         var mayRemove = false;
         ICopiedDocument? copy = null;
+        string? readBack = null;
         try
         {
             if (File.Exists(path))
@@ -180,6 +201,13 @@ public sealed class SaveAsCopyCreator
             copy = _source.OpenCopy(path);
             copy.WriteProperties(CreationProperties.Build(assignment.PartNumber, partName, partType, _defaultDesigner));
             copy.Save();
+
+            // 5. The copy must carry the number just assigned (task 060). A wrong number fails like any step above.
+            readBack = copy.ReadPartNumber();
+            if (!KeptNumber(assigned, readBack))
+            {
+                throw new InvalidOperationException(NumberNotKeptReason(assigned, readBack));
+            }
         }
         catch (Exception ex)
         {
@@ -203,7 +231,7 @@ public sealed class SaveAsCopyCreator
             throw new NewPartException(message, assigned, ex);
         }
 
-        _log.Info($"Save As Copy: '{original}' copied to '{path}' as {assigned}.");
+        _log.Info($"Save As Copy: '{original}' copied to '{path}' as {assigned}; its Part Number reads back as {readBack}.");
         var duplicates = assignment.Duplicates.Select(PartNumberAssignment.DescribeDuplicate).ToList();
         return new NewPartResult(assigned, path, assignment.Offline, duplicates.AsReadOnly());
     }

@@ -104,9 +104,18 @@ namespace InventorAddin.Commands
             }
         }
 
+        /// <summary>
+        /// The document the command works on: the kind check, <see cref="Run"/> and the transaction all use it. By
+        /// default the document being edited, <c>ActiveEditDocument</c>, which is a part or sub-assembly while it is
+        /// edited in place. A command that needs the top-level document open in the window overrides this with
+        /// <c>InventorHost.ActiveDocument</c> (task 060: while a sub-assembly is edited in place, the selection is held
+        /// by the top-level document, spike 052).
+        /// </summary>
+        protected virtual Document? DocumentToEdit => InventorHost.ActiveEditDocument;
+
         protected sealed override void Execute()
         {
-            Document? doc = InventorHost.ActiveEditDocument;
+            Document? doc = DocumentToEdit;
             if (doc == null)
             {
                 ShowInfo("Open a document first.");

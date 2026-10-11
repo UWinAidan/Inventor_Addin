@@ -117,6 +117,7 @@ Small things noticed while building. None is urgent. The parent turns these into
 - The window's local `ValueOrPlaceholder` and `IdentifierOrPlaceholder` styles could become shared pieces. (task 029)
 
 **Numbering**
+- Copies: a Part Number that cannot be read back is reported as "blank after saving" and the exception is not logged; log it in `InventorNewDocument.ReadPartNumber`. The selection log uses the COM type name, not `ObjectTypeEnum`. (task 060)
 - Rename drawings: a drawing that was open but hidden (loaded by something else) is reopened visibly. If a renamed drawing's old file cannot be deleted, both files stay (both point at the renamed part) and a note asks to delete the old one by hand. Untested in Inventor: whether `Documents.Open(path, true)` activates the reopened drawing, and `Save` followed by `SaveAs` on an invisibly opened drawing. (task 059)
 - Rename: when an occurrence's new name is already taken in the assembly, that occurrence keeps its name and a note says so; the add-in does not pick another number. Occurrences in sub-assemblies are renamed only through the sub-assembly's own update. Untested in Inventor: whether a closed assembly's occurrences read the old or new path after `ReplaceReference` (the code accepts either), and setting a name on a suppressed occurrence or with several model states. (task 058)
 - Create Print: an old print found beside the model is opened where it is, not moved into `Prints`; the "already exists" question does not say where the print was found. (task 057)

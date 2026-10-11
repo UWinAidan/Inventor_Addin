@@ -199,7 +199,7 @@ Folded in from `TODO.md` follow-ups: delete `PropertyReader.Set` and the unbound
 - [x] 057 Create Print saves in a Prints subfolder (item 9)
 - [x] 058 Rename never breaks a reference, and renames occurrences (bugs 1, 3)
 - [x] 059 Rename renames the part's drawings (bugs 2, 5)
-- [ ] 060 Save As and Replace finds the selection in a sub-assembly; copies check their number (bugs 4, 6)
+- [x] 060 Save As and Replace finds the selection in a sub-assembly; copies check their number (bugs 4, 6)
 - [ ] 061 Rename allows a change of case only (Aidan, 2026-10-11)
 
 Folded in from `TODO.md`: spec 08's ribbon icon list (056), and Save As and Replace's "which document holds the selection while a sub-assembly is edited in place" (052, 060). Bug 6 did not reproduce: every copy from the checks has its own number on disk (spike 052); 060 adds a read-back check.

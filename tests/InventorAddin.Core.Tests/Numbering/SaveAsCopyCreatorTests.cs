@@ -111,7 +111,8 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
         Assert.False(result.Offline);
         Assert.Empty(result.DuplicateMessages);
 
-        Assert.Equal([$"copy {expectedPath}", $"open {expectedPath}", "write", "save"], _source.Calls);
+        Assert.Equal([$"copy {expectedPath}", $"open {expectedPath}", "write", "save", "read"], _source.Calls);
+        Assert.Contains(_log.Infos, m => m.Contains("reads back as AWB-10002", StringComparison.Ordinal));
 
         var copy = Assert.Single(_source.Opened);
         Assert.Equal(CreationProperties.Build(new PartNumber(10002), "TEST BRACKET COPY", "M", "Test Designer"), copy.Writes);
@@ -307,6 +308,7 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
     [InlineData("open", false)]
     [InlineData("write", true)]
     [InlineData("save", true)]
+    [InlineData("read", true)]
     public void FailureAfterAssigning_SaysWhichNumber_ClosesAndRemovesTheCopy_AndTheRowStays(string failingStep, bool opened)
     {
         var failure = new InvalidOperationException("Inventor said no.");
@@ -350,6 +352,62 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
         Assert.Contains(_log.Errors, e => e.Ex is IOException { Message: "In use." });
     }
 
+    // The copy must keep its new number (task 060)
+
+    [Theory]
+    [InlineData("AWB-10002", true)]
+    [InlineData("  AWB-10002 ", true)]
+    [InlineData("AWB-10001", false)]
+    [InlineData("awb-10002", false)]
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    public void KeptNumber(string? readBack, bool expected)
+    {
+        Assert.Equal(expected, SaveAsCopyCreator.KeptNumber("AWB-10002", readBack));
+    }
+
+    [Fact]
+    public void NumberNotKeptReason_NamesBothNumbers_OrSaysBlank()
+    {
+        Assert.Equal(
+            "The copy did not keep its new number AWB-10002: its Part Number reads 'AWB-10001' after saving.",
+            SaveAsCopyCreator.NumberNotKeptReason("AWB-10002", " AWB-10001 "));
+        Assert.Equal(
+            "The copy did not keep its new number AWB-10002: its Part Number is blank after saving.",
+            SaveAsCopyCreator.NumberNotKeptReason("AWB-10002", null));
+        Assert.Equal(
+            "The copy did not keep its new number AWB-10002: its Part Number is blank after saving.",
+            SaveAsCopyCreator.NumberNotKeptReason("AWB-10002", "  "));
+    }
+
+    [Theory]
+    [InlineData("AWB-10001")]
+    [InlineData("")]
+    [InlineData(null)]
+    public void CopyDidNotKeepItsNumber_Fails_ClosesAndRemovesTheCopy_AndTheRowStays(string? readBack)
+    {
+        // For example the original's number, as if the write had not stuck.
+        _source.ReadBack = _ => readBack;
+        WriteShared(10001);
+        var path = Path.Combine(_cad, "TEST_BRACKET_COPY,AWB-10002.ipt");
+
+        var ex = Assert.Throws<NewPartException>(() => Creator().Copy(Request()));
+
+        Assert.Equal(
+            SaveAsCopyCreator.FailedAfterAssignMessage(
+                "AWB-10002", SaveAsCopyCreator.NumberNotKeptReason("AWB-10002", readBack)),
+            ex.Message);
+        Assert.Contains("did not keep its new number", ex.Message, StringComparison.Ordinal);
+        Assert.Equal("AWB-10002", ex.AssignedNumber);
+        Assert.Equal([10001, 10002], Read(SharedPath).Select(e => e.Number.Value));
+        Assert.Equal([$"copy {path}", $"open {path}", "write", "save", "read"], _source.Calls);
+        Assert.True(Assert.Single(_source.Opened).Closed);
+        Assert.False(File.Exists(path));
+        Assert.Equal("original", File.ReadAllText(_original));
+        Assert.Contains(_log.Errors, e => e.Message.Contains("AWB-10002", StringComparison.Ordinal));
+        Assert.DoesNotContain(_log.Infos, m => m.StartsWith("Save As Copy:", StringComparison.Ordinal));
+    }
+
     [Fact]
     public void Constructor_RejectsNulls()
     {
@@ -372,6 +430,9 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
         public string? FailAt { get; set; }
         public Exception? Failure { get; set; }
         public Exception? CloseFailure { get; set; }
+
+        /// <summary>What the copy's Part Number reads after saving, given the writes; null reads back what was written.</summary>
+        public Func<IReadOnlyList<PropertyWrite>?, string?>? ReadBack { get; set; }
 
         public void SaveCopyAs(string fullPath)
         {
@@ -416,6 +477,18 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
                 throw _owner.Failure!;
         }
 
+        public string? ReadPartNumber()
+        {
+            _owner.Calls.Add("read");
+            if (_owner.FailAt == "read")
+                throw _owner.Failure!;
+            if (_owner.ReadBack is not null)
+                return _owner.ReadBack(Writes);
+
+            // By default the copy reads back the Part Number written on it.
+            return Writes?.Single(w => w.Location == PartPropertyStorage.PartNumber).TextValue;
+        }
+
         public void CloseWithoutSaving()
         {
             Closed = true;
@@ -436,8 +509,15 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
     private sealed class RecordingLog : ILog
     {
         public List<(string Message, Exception? Ex)> Errors { get; } = [];
+        public List<string> Infos { get; } = [];
         public Action<string>? OnInfo { get; set; }
-        public void Info(string message) => OnInfo?.Invoke(message);
+
+        public void Info(string message)
+        {
+            Infos.Add(message);
+            OnInfo?.Invoke(message);
+        }
+
         public void Warn(string message) { }
         public void Error(string message, Exception? ex = null) => Errors.Add((message, ex));
     }

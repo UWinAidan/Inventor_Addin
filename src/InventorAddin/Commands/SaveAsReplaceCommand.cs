@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Inventor;
 using InventorAddin.Core.Models;
 using InventorAddin.Core.Numbering;
@@ -39,6 +40,11 @@ namespace InventorAddin.Commands
             "Copy the selected component under the next part number and a new name, and replace it with the copy.";
 
         protected override CommandTypesEnum CommandType => CommandTypesEnum.kShapeEditCmdType;
+
+        // The top-level assembly open in the window, also while a sub-assembly is edited in place: the selection is held
+        // by the top-level document then, and the sub-assembly's own SelectSet is empty (spike 052, task 060). The kind
+        // check, the selection, the transaction and the replace all use it.
+        protected override Document? DocumentToEdit => InventorHost.ActiveDocument;
 
         protected override bool CanRunOn(DocumentKind kind) => kind.IsAssembly();
 
@@ -125,15 +131,32 @@ namespace InventorAddin.Commands
         /// <summary>
         /// The one selected component occurrence (spike 032: <c>SelectSet</c> is 1-based; a
         /// <c>ComponentOccurrenceProxy</c> inside a sub-assembly is also a <c>ComponentOccurrence</c>), or null when
-        /// nothing, more than one thing, or something other than an occurrence is selected.
+        /// nothing, more than one thing, or something other than an occurrence is selected. A null is logged with the
+        /// count and each item's type, so a report can be diagnosed from the log (task 060).
         /// </summary>
         private static ComponentOccurrence? ReadSelectedOccurrence(Document doc)
         {
             SelectSet? selectSet = ComSafe.Get(() => doc.SelectSet);
-            if (selectSet == null || ComSafe.Get(() => selectSet.Count) != 1)
-                return null;
+            int count = (selectSet == null ? null : ComSafe.Get(() => (int?)selectSet.Count)) ?? -1;
 
-            return ComSafe.Get(() => selectSet[1]) as ComponentOccurrence;
+            if (selectSet != null && count == 1)
+            {
+                if (ComSafe.Get(() => selectSet[1]) is ComponentOccurrence occurrence)
+                    return occurrence;
+            }
+
+            var types = new List<string?>();
+            for (int i = 1; selectSet != null && i <= count; i++)
+            {
+                int index = i;
+                object? item = ComSafe.Get(() => selectSet[index]);
+
+                // The COM type name (for example ComponentOccurrenceProxy), read without dynamic.
+                types.Add(item == null ? null : Microsoft.VisualBasic.Information.TypeName(item));
+            }
+
+            AddinServices.Log.Info(SaveAsReplacer.SelectionNotOneComponentLog(count, types));
+            return null;
         }
 
         /// <summary>
@@ -266,8 +289,8 @@ namespace InventorAddin.Commands
                 _copy = null;
             }
 
-            // A proxy's Replace edits the sub-assembly (spike 032). The transaction is on the active assembly either way;
-            // a failure aborts it.
+            // A proxy's Replace edits the sub-assembly (spike 032). The transaction is on the top-level assembly
+            // (ActiveDocument) either way, also while a sub-assembly is edited in place (task 060); a failure aborts it.
             public void ReplaceOccurrence(string copyFullPath) =>
                 _command.RunInTransaction(_assembly, () => _occurrence.Replace(copyFullPath, false));
 
