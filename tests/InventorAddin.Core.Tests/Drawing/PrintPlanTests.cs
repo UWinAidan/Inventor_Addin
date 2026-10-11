@@ -9,26 +9,67 @@ public sealed class PrintPlanTests
     private const double SheetWidthCm = 86.36;
     private const double SheetHeightCm = 55.88;
 
-    // DrawingFileName
+    // PrintsFolder
+
+    [Fact]
+    public void PrintsFolderName_IsPrints()
+    {
+        Assert.Equal("Prints", PrintPlan.PrintsFolderName);
+    }
 
     [Theory]
-    [InlineData(@"C:\Work\test_plate,AWB-10001.ipt", ".dwg", @"C:\Work\test_plate,AWB-10001.dwg")]
-    [InlineData(@"C:\Work\test_plate,AWB-10001.ipt", ".idw", @"C:\Work\test_plate,AWB-10001.idw")]
-    [InlineData(@"C:\Work\frame,AWB-10002.iam", ".dwg", @"C:\Work\frame,AWB-10002.dwg")]
-    [InlineData(@"C:\Work\test_plate,AWB-10001.ipt", "dwg", @"C:\Work\test_plate,AWB-10001.dwg")]
-    [InlineData(@"C:\Work.v2\bracket.v3.ipt", ".dwg", @"C:\Work.v2\bracket.v3.dwg")]
-    [InlineData(@"C:\Work.v2\bracket", ".dwg", @"C:\Work.v2\bracket.dwg")]
-    [InlineData(@"\\nas\share\plate, 10mm,AWB-10003.ipt", ".dwg", @"\\nas\share\plate, 10mm,AWB-10003.dwg")]
-    [InlineData("/home/test/shaft,AWB-10004.ipt", ".dwg", "/home/test/shaft,AWB-10004.dwg")]
-    public void DrawingFileName_ReplacesTheModelExtensionWithTheDrawingExtension(string model, string extension, string expected)
+    [InlineData(@"C:\CAD\BRACKET,AWB-10005.ipt", @"C:\CAD\Prints")]
+    [InlineData(@"C:\Work.v2\bracket.v3.ipt", @"C:\Work.v2\Prints")]
+    [InlineData(@"\\nas\share\plate, 10mm,AWB-10003.ipt", @"\\nas\share\Prints")]
+    [InlineData("/home/test/shaft,AWB-10004.ipt", "/home/test/Prints")]
+    [InlineData(@"C:\Mixed/sub\frame.iam", @"C:\Mixed/sub\Prints")]
+    [InlineData(@"C:/Mixed\sub/frame.iam", @"C:/Mixed\sub/Prints")]
+    [InlineData(@"  C:\Work\a.ipt  ", @"C:\Work\Prints")]
+    [InlineData("a.ipt", "Prints")]
+    public void PrintsFolder_IsThePrintsSubfolderOfTheModelsFolder(string model, string expected)
     {
-        Assert.Equal(expected, PrintPlan.DrawingFileName(model, extension));
+        Assert.Equal(expected, PrintPlan.PrintsFolder(model));
     }
 
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
     [InlineData(@"C:\Work\")]
+    public void PrintsFolder_RejectsAModelWithNoFileName(string model)
+    {
+        Assert.Throws<ArgumentException>(() => PrintPlan.PrintsFolder(model));
+    }
+
+    // DrawingFileName
+
+    [Theory]
+    [InlineData(@"C:\CAD\BRACKET,AWB-10005.ipt", ".dwg", @"C:\CAD\Prints\BRACKET,AWB-10005.dwg")]
+    [InlineData(@"C:\Work\test_plate,AWB-10001.ipt", ".idw", @"C:\Work\Prints\test_plate,AWB-10001.idw")]
+    [InlineData(@"C:\Work\frame,AWB-10002.iam", ".dwg", @"C:\Work\Prints\frame,AWB-10002.dwg")]
+    [InlineData(@"C:\Work\test_plate,AWB-10001.ipt", "dwg", @"C:\Work\Prints\test_plate,AWB-10001.dwg")]
+    [InlineData(@"C:\Work.v2\bracket.v3.ipt", ".dwg", @"C:\Work.v2\Prints\bracket.v3.dwg")]
+    [InlineData(@"C:\Work.v2\bracket", ".dwg", @"C:\Work.v2\Prints\bracket.dwg")]
+    [InlineData(@"\\nas\share\plate, 10mm,AWB-10003.ipt", ".dwg", @"\\nas\share\Prints\plate, 10mm,AWB-10003.dwg")]
+    [InlineData("/home/test/shaft,AWB-10004.ipt", ".dwg", "/home/test/Prints/shaft,AWB-10004.dwg")]
+    [InlineData("a.ipt", ".dwg", @"Prints\a.dwg")]
+    public void DrawingFileName_IsTheModelNameWithTheDrawingExtensionInPrints(string model, string extension, string expected)
+    {
+        Assert.Equal(expected, PrintPlan.DrawingFileName(model, extension));
+    }
+
+    [Fact]
+    public void DrawingFileName_IsInPrintsFolder()
+    {
+        const string model = @"C:\CAD\BRACKET,AWB-10005.ipt";
+
+        Assert.Equal(PrintPlan.PrintsFolder(model) + @"\BRACKET,AWB-10005.dwg", PrintPlan.DrawingFileName(model, ".dwg"));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(@"C:\Work\")]
+    [InlineData("/home/test/")]
     public void DrawingFileName_RejectsAModelWithNoFileName(string model)
     {
         Assert.Throws<ArgumentException>(() => PrintPlan.DrawingFileName(model, ".dwg"));
@@ -45,19 +86,59 @@ public sealed class PrintPlanTests
     // Existing prints
 
     [Fact]
-    public void ExistingPrintCandidates_PreferredExtensionFirstThenTheOther()
+    public void ExistingPrintCandidates_PrintsFolderFirstThenBesideTheModel_PreferredExtensionFirstInEach()
     {
         Assert.Equal(
-            new[] { @"C:\Work\a,AWB-10001.dwg", @"C:\Work\a,AWB-10001.idw" },
+            new[]
+            {
+                @"C:\Work\Prints\a,AWB-10001.dwg", @"C:\Work\Prints\a,AWB-10001.idw",
+                @"C:\Work\a,AWB-10001.dwg", @"C:\Work\a,AWB-10001.idw",
+            },
             PrintPlan.ExistingPrintCandidates(@"C:\Work\a,AWB-10001.ipt", ".dwg"));
         Assert.Equal(
-            new[] { @"C:\Work\a,AWB-10001.idw", @"C:\Work\a,AWB-10001.dwg" },
+            new[]
+            {
+                @"C:\Work\Prints\a,AWB-10001.idw", @"C:\Work\Prints\a,AWB-10001.dwg",
+                @"C:\Work\a,AWB-10001.idw", @"C:\Work\a,AWB-10001.dwg",
+            },
             PrintPlan.ExistingPrintCandidates(@"C:\Work\a,AWB-10001.ipt", ".idw"));
 
         // The preferred extension is kept as given, and the other one is still found ignoring case.
         Assert.Equal(
-            new[] { @"C:\Work\a,AWB-10001.IDW", @"C:\Work\a,AWB-10001.dwg" },
+            new[]
+            {
+                @"C:\Work\Prints\a,AWB-10001.IDW", @"C:\Work\Prints\a,AWB-10001.dwg",
+                @"C:\Work\a,AWB-10001.IDW", @"C:\Work\a,AWB-10001.dwg",
+            },
             PrintPlan.ExistingPrintCandidates(@"C:\Work\a,AWB-10001.ipt", "IDW"));
+    }
+
+    [Fact]
+    public void ExistingPrintCandidates_ForwardSlashes()
+    {
+        Assert.Equal(
+            new[] { "/home/test/Prints/a.dwg", "/home/test/Prints/a.idw", "/home/test/a.dwg", "/home/test/a.idw" },
+            PrintPlan.ExistingPrintCandidates("/home/test/a.ipt", ".dwg"));
+    }
+
+    [Fact]
+    public void ExistingPrintCandidates_NetworkShare()
+    {
+        Assert.Equal(
+            new[]
+            {
+                @"\\nas\share\Prints\plate, 10mm,AWB-10003.idw", @"\\nas\share\Prints\plate, 10mm,AWB-10003.dwg",
+                @"\\nas\share\plate, 10mm,AWB-10003.idw", @"\\nas\share\plate, 10mm,AWB-10003.dwg",
+            },
+            PrintPlan.ExistingPrintCandidates(@"\\nas\share\plate, 10mm,AWB-10003.ipt", ".idw"));
+    }
+
+    [Fact]
+    public void ExistingPrintCandidates_FirstIsTheFileCreatePrintSaves()
+    {
+        const string model = @"C:\Work\a,AWB-10001.ipt";
+
+        Assert.Equal(PrintPlan.DrawingFileName(model, ".idw"), PrintPlan.ExistingPrintCandidates(model, ".idw")[0]);
     }
 
     [Fact]
@@ -67,7 +148,23 @@ public sealed class PrintPlanTests
     }
 
     [Fact]
-    public void FindExistingPrint_OnlyTheOtherExtensionExists_ReturnsIt()
+    public void FindExistingPrint_OnlyTheOtherExtensionInPrintsExists_ReturnsIt()
+    {
+        var onDisk = new HashSet<string> { @"C:\Work\Prints\a.idw" };
+
+        Assert.Equal(@"C:\Work\Prints\a.idw", PrintPlan.FindExistingPrint(@"C:\Work\a.ipt", ".dwg", onDisk.Contains));
+    }
+
+    [Fact]
+    public void FindExistingPrint_BothExistInPrints_ReturnsThePreferredOne()
+    {
+        var onDisk = new HashSet<string> { @"C:\Work\Prints\a.idw", @"C:\Work\Prints\a.dwg" };
+
+        Assert.Equal(@"C:\Work\Prints\a.dwg", PrintPlan.FindExistingPrint(@"C:\Work\a.ipt", ".dwg", onDisk.Contains));
+    }
+
+    [Fact]
+    public void FindExistingPrint_OnlyAnOldPrintBesideTheModel_ReturnsIt()
     {
         var onDisk = new HashSet<string> { @"C:\Work\a.idw" };
 
@@ -75,7 +172,16 @@ public sealed class PrintPlanTests
     }
 
     [Fact]
-    public void FindExistingPrint_BothExist_ReturnsThePreferredOne()
+    public void FindExistingPrint_PrintsFolderWinsOverBesideTheModel()
+    {
+        // Even the other extension in Prints comes before the preferred one beside the model.
+        var onDisk = new HashSet<string> { @"C:\Work\a.dwg", @"C:\Work\Prints\a.idw" };
+
+        Assert.Equal(@"C:\Work\Prints\a.idw", PrintPlan.FindExistingPrint(@"C:\Work\a.ipt", ".dwg", onDisk.Contains));
+    }
+
+    [Fact]
+    public void FindExistingPrint_BothExistBesideTheModel_ReturnsThePreferredOne()
     {
         var onDisk = new HashSet<string> { @"C:\Work\a.idw", @"C:\Work\a.dwg" };
 

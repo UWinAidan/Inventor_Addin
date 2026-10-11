@@ -7,6 +7,7 @@ using InventorAddin.Core.Ribbon;
 using InventorAddin.Core.Settings;
 using InventorAddin.Extraction;
 using Forms = System.Windows.Forms;
+using IODirectory = System.IO.Directory;
 using IOFile = System.IO.File;
 using IOPath = System.IO.Path;
 
@@ -15,7 +16,8 @@ namespace InventorAddin.Commands
     /// <summary>
     /// Create Print (spec 02, "Commands: Create Print"): makes a drawing of the active part or assembly from Inventor's
     /// drawing template, with one front base view centred on the first sheet at a standard scale that fits, saves it
-    /// beside the model under the same name, and leaves it open. The file name, the scale and the messages are decided
+    /// under the model's name in the <c>Prints</c> subfolder of the model's folder (created when missing), and leaves it
+    /// open. The file name, the scale and the messages are decided
     /// in <see cref="PrintPlan"/> (Core); this class reads Inventor and applies the result, by the calls spike 032
     /// confirmed.
     /// </summary>
@@ -27,7 +29,8 @@ namespace InventorAddin.Commands
     {
         public override string InternalName => CommandNames.CreatePrint;
         public override string DisplayName => "Create Print";
-        public override string Description => "Create a drawing of this part or assembly, with a front view, saved beside it.";
+        public override string Description =>
+            "Create a drawing of this part or assembly, with a front view, saved in its folder's Prints folder.";
 
         protected override CommandTypesEnum CommandType => CommandTypesEnum.kFileOperationsCmdType;
 
@@ -58,7 +61,8 @@ namespace InventorAddin.Commands
             string? template = Templates.DrawingFor(units);
             string preferredExtension = template != null ? IOPath.GetExtension(template) : PrintPlan.DrawingExtensions[0];
 
-            // An existing print, with either drawing extension, is offered instead of making a new one.
+            // An existing print, with either drawing extension, in Prints or (made before 2026-10-11) beside the model,
+            // is offered instead of making a new one.
             string? existing = PrintPlan.FindExistingPrint(modelPath, preferredExtension, IOFile.Exists);
             if (existing != null)
             {
@@ -82,6 +86,7 @@ namespace InventorAddin.Commands
                 return;
             }
 
+            string printsFolder = PrintPlan.PrintsFolder(modelPath);
             string drawingPath = PrintPlan.DrawingFileName(modelPath, IOPath.GetExtension(template));
             string? partNumber = ModelPartNumber(model);
 
@@ -89,7 +94,7 @@ namespace InventorAddin.Commands
             Forms.Cursor.Current = Forms.Cursors.WaitCursor;
             try
             {
-                Create(model, template, drawingPath, viewWidthCm, viewHeightCm, partNumber);
+                Create(model, template, printsFolder, drawingPath, viewWidthCm, viewHeightCm, partNumber);
             }
             finally
             {
@@ -99,10 +104,11 @@ namespace InventorAddin.Commands
 
         /// <summary>
         /// Creates, fills and saves the drawing. Any failure closes the half-made drawing without saving and says which
-        /// step failed.
+        /// step failed. The <paramref name="printsFolder"/> is created, when missing, just before saving.
         /// </summary>
         private void Create(
-            Document model, string template, string drawingPath, double viewWidthCm, double viewHeightCm, string? partNumber)
+            Document model, string template, string printsFolder, string drawingPath,
+            double viewWidthCm, double viewHeightCm, string? partNumber)
         {
             string step = "creating the drawing from the template";
             Document? drawing = null;
@@ -129,6 +135,10 @@ namespace InventorAddin.Commands
                         PropertyWriter.Apply(drawingDoc, new[] { PropertyWrite.SetText(PartPropertyStorage.PartNumber, partNumber) });
                     }
                 });
+
+                // Does nothing when the folder already exists.
+                step = $"creating the folder '{printsFolder}'";
+                IODirectory.CreateDirectory(printsFolder);
 
                 step = $"saving it as '{drawingPath}'";
                 drawing.SaveAs(drawingPath, false);

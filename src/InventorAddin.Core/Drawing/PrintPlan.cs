@@ -3,8 +3,8 @@ using InventorAddin.Core.Settings;
 namespace InventorAddin.Core.Drawing;
 
 /// <summary>
-/// The decisions behind Create Print (spec 02, "Commands: Create Print"): the drawing's file name, which existing
-/// drawing beside the model counts as "a print already exists", the scale of the front base view, and the messages.
+/// The decisions behind Create Print (spec 02, "Commands: Create Print"): the drawing's file name in the model's
+/// <c>Prints</c> folder, which existing drawing counts as "a print already exists", the scale of the front base view, and the messages.
 /// </summary>
 public static class PrintPlan
 {
@@ -30,41 +30,50 @@ public static class PrintPlan
     public const string NoGeometryMessage =
         "The model has no geometry to show in a front view, so no print was created.";
 
+    /// <summary>The subfolder of the model's folder that holds its prints (Aidan, 2026-10-11).</summary>
+    public const string PrintsFolderName = "Prints";
+
     /// <summary>
-    /// The model's folder and file name with <paramref name="drawingExtension"/> in place of the model's extension:
-    /// <c>C:\Work\TEST_PLATE,AWB-10001.ipt</c> and <c>.dwg</c> give <c>C:\Work\TEST_PLATE,AWB-10001.dwg</c>.
-    /// Only the last extension of the file name is replaced; dots in the folder are left alone. Works on Windows paths
-    /// on any platform, so it does not use <see cref="Path"/>.
+    /// The <see cref="PrintsFolderName"/> folder inside the model's folder: <c>C:\Work\TEST_PLATE,AWB-10001.ipt</c>
+    /// gives <c>C:\Work\Prints</c>. Joins with the separator the model's path uses last (<c>\</c> or <c>/</c>). Works on
+    /// Windows paths on any platform, so it does not use <see cref="Path"/>.
+    /// </summary>
+    /// <param name="modelFullFileName">The saved model's full file name.</param>
+    public static string PrintsFolder(string modelFullFileName) =>
+        SplitModelPath(modelFullFileName).Folder + PrintsFolderName;
+
+    /// <summary>
+    /// The model's file name with <paramref name="drawingExtension"/> in place of the model's extension, in the
+    /// <see cref="PrintsFolder"/>: <c>C:\Work\TEST_PLATE,AWB-10001.ipt</c> and <c>.dwg</c> give
+    /// <c>C:\Work\Prints\TEST_PLATE,AWB-10001.dwg</c>. Only the last extension of the file name is replaced; dots in
+    /// the folder are left alone. Works on Windows paths on any platform, so it does not use <see cref="Path"/>.
     /// </summary>
     /// <param name="modelFullFileName">The saved model's full file name.</param>
     /// <param name="drawingExtension">The drawing template's extension, with or without the leading dot.</param>
     public static string DrawingFileName(string modelFullFileName, string drawingExtension)
     {
-        if (string.IsNullOrWhiteSpace(modelFullFileName))
-            throw new ArgumentException("The model has no file name.", nameof(modelFullFileName));
-        string extension = NormaliseExtension(drawingExtension);
-
-        string model = modelFullFileName.Trim();
-        int nameStart = model.LastIndexOfAny(new[] { '\\', '/' }) + 1;
-        if (nameStart >= model.Length)
-            throw new ArgumentException($"'{modelFullFileName}' has no file name.", nameof(modelFullFileName));
-
-        int dot = model.LastIndexOf('.');
-        string withoutExtension = dot > nameStart ? model[..dot] : model;
-        return withoutExtension + extension;
+        ModelPath model = SplitModelPath(modelFullFileName);
+        return model.InPrintsFolder() + NormaliseExtension(drawingExtension);
     }
 
     /// <summary>
-    /// The drawing files that count as an existing print of the model, in the order to look for them:
-    /// <paramref name="preferredExtension"/> first, then the other drawing extensions (spec 02: an <c>.idw</c> or
-    /// <c>.dwg</c> beside the model both count).
+    /// The drawing files that count as an existing print of the model, in the order to look for them: in the
+    /// <see cref="PrintsFolder"/> with <paramref name="preferredExtension"/> and then the other drawing extension, then
+    /// beside the model with the same two, where prints made before 2026-10-11 were saved (Default). An <c>.idw</c> or
+    /// <c>.dwg</c> both count (spec 02).
     /// </summary>
     public static IReadOnlyList<string> ExistingPrintCandidates(string modelFullFileName, string preferredExtension)
     {
+        ModelPath model = SplitModelPath(modelFullFileName);
         string preferred = NormaliseExtension(preferredExtension);
-        return new[] { preferred }
+        string[] extensions = new[] { preferred }
             .Concat(DrawingExtensions.Where(e => !string.Equals(e, preferred, StringComparison.OrdinalIgnoreCase)))
-            .Select(e => DrawingFileName(modelFullFileName, e))
+            .ToArray();
+
+        string inPrints = model.InPrintsFolder();
+        string beside = model.Folder + model.NameWithoutExtension;
+        return extensions.Select(e => inPrints + e)
+            .Concat(extensions.Select(e => beside + e))
             .ToArray();
     }
 
@@ -129,6 +138,33 @@ public static class PrintPlan
     {
         if (!(value > 0) || double.IsInfinity(value))
             throw new ArgumentOutOfRangeException(name, value, "Sizes must be positive, finite numbers of centimetres.");
+    }
+
+    private static ModelPath SplitModelPath(string modelFullFileName)
+    {
+        if (string.IsNullOrWhiteSpace(modelFullFileName))
+            throw new ArgumentException("The model has no file name.", nameof(modelFullFileName));
+
+        string model = modelFullFileName.Trim();
+        int lastSeparator = model.LastIndexOfAny(new[] { '\\', '/' });
+        int nameStart = lastSeparator + 1;
+        if (nameStart >= model.Length)
+            throw new ArgumentException($"'{modelFullFileName}' has no file name.", nameof(modelFullFileName));
+
+        char separator = lastSeparator >= 0 ? model[lastSeparator] : '\\';
+        int dot = model.LastIndexOf('.');
+        string name = dot > nameStart ? model[nameStart..dot] : model[nameStart..];
+        return new ModelPath(model[..nameStart], name, separator);
+    }
+
+    /// <summary>
+    /// A model's folder (with its trailing separator, or empty when the path has no folder), its file name without
+    /// the extension, and the separator to join with.
+    /// </summary>
+    private readonly record struct ModelPath(string Folder, string NameWithoutExtension, char Separator)
+    {
+        /// <summary>The model's name, without an extension, in its <see cref="PrintsFolderName"/> folder.</summary>
+        public string InPrintsFolder() => Folder + PrintsFolderName + Separator + NameWithoutExtension;
     }
 
     private static string NormaliseExtension(string extension)
