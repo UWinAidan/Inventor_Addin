@@ -11,7 +11,7 @@ Last updated: 2026-10-11
 | Foundations (M0) | 01 | **Done, tested in Inventor** | Settings, log, ribbon, error reporting, Settings and About windows, editing-command base, "AWB Addin" branding |
 | Part properties window (M1) | 07 | **Built and merged, partly tested in Inventor** | Opens on parts and assemblies, pre-fills, writes and undoes correctly. A never-saved part shows New part, Not saved yet and Not assigned; the blank Part type entry can be clicked. Some checklist steps not yet reported; see `TODO.md` |
 | Window style and icons (M1b) | 08 | **Done, tested in Inventor** | Tasks 020 to 031. Shared look in light and dark, all three windows restyled, icons on ribbon and headers, XAML rules test. Every check passed on Windows. Two follow-ups on the build's deploy line are in `TODO.md` |
-| Part creation and numbering (M2) | 02 | **Fix run planned** | Run 2 checked on Windows 2026-10-11: six bugs and six changes. Spike 052 found the causes. Fix run 053 to 060 planned, run locally on Aidan's PC |
+| Part creation and numbering (M2) | 02 | **Built, fix run not yet tested in Inventor** | Run 2 checked on Windows 2026-10-11: six bugs and six changes. Spike 052 found the causes in Inventor. Fix run 053 to 061 built and compiled on Aidan's PC (local branch `claude/m2-fix-run`, not pushed); none of it tested in Inventor yet |
 | Material and finish (M3) | 03 | Not started | Waiting on Aidan's finish list and a Windows spike |
 | Hole table wizard (M4) | 04 | Not started | Core half needs three answers; add-in half needs a Windows spike |
 | Drawing tools (M5) | 05 | Not started | Waiting on which commands Aidan wants. Will include a custom drawing template |
@@ -32,5 +32,5 @@ States used: Not started, Planned, In progress, Built (merged, not tested in Inv
 
 ## Numbers
 
-- Tasks finished: 51 (001 to 051)
-- Core tests: 1861 after task 048; they run in the cloud and on Windows with `dotnet test tests/InventorAddin.Core.Tests`
+- Tasks finished: 61 (001 to 061)
+- Core tests: 2157 after task 061; they run in the cloud and on Windows with `dotnet test tests/InventorAddin.Core.Tests`
