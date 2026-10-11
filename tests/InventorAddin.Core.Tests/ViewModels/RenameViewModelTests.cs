@@ -336,6 +336,41 @@ public sealed class RenameViewModelTests
     }
 
     [Fact]
+    public void ResultLines_ADrawingRenamed_IsListedAmongTheUpdatedFiles_WithItsNewName()
+    {
+        var result = new RenameResult(
+            new RenameRequest(OldPath, @"C:\Cad\x.ipt", "x"), true, true, true,
+            [
+                new RenameFileResult(@"C:\Cad\asm.iam"),
+                new RenameFileResult(@"C:\Cad\Prints\mounting_bracket,AWB-10001.dwg", RenamedTo: @"C:\Cad\Prints\x.dwg"),
+            ],
+            []);
+
+        Assert.Equal(
+            string.Join(
+                Environment.NewLine,
+                RenameViewModel.UpdatedPrefix + @"C:\Cad\asm.iam",
+                RenameViewModel.UpdatedPrefix + @"C:\Cad\Prints\mounting_bracket,AWB-10001.dwg, renamed to x.dwg"),
+            RenameViewModel.ResultLines(result));
+        Assert.Equal("Renamed to x.ipt. 2 files updated, 1 drawing renamed.", RenameViewModel.Summary(result));
+    }
+
+    [Fact]
+    public void Summary_SaysHowManyDrawingsWereRenamed_AfterTheOccurrences()
+    {
+        var result = new RenameResult(
+            new RenameRequest(OldPath, @"C:\Cad\x.ipt", "x"), true, true, true,
+            [
+                new RenameFileResult(@"C:\Cad\asm.iam", null, 2),
+                new RenameFileResult(@"C:\Cad\a.dwg", RenamedTo: @"C:\Cad\x.dwg"),
+                new RenameFileResult(@"C:\Cad\Prints\a.idw", RenamedTo: @"C:\Cad\Prints\x.idw"),
+            ],
+            []);
+
+        Assert.Equal("Renamed to x.ipt. 3 files updated, 2 occurrences renamed, 2 drawings renamed.", RenameViewModel.Summary(result));
+    }
+
+    [Fact]
     public void CloseButton_IsCancelBefore_CloseAfter_AndDisabledWhileRunning()
     {
         bool? canCloseWhileRunning = null;

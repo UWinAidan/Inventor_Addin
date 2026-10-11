@@ -1,4 +1,5 @@
 using System.Globalization;
+using InventorAddin.Core.Drawing;
 using InventorAddin.Core.Logging;
 using InventorAddin.Core.Models;
 using InventorAddin.Core.Numbering.MassUpdate;
@@ -312,6 +313,40 @@ public static class RenamePlan
         return new RenameSearchList(CandidateFiles(files), searched.AsReadOnly(), skipped.AsReadOnly());
     }
 
+    /// <summary>
+    /// The drawings Rename renames with the model (spec 02, "Commands: Rename"; task 059): the files of
+    /// <paramref name="files"/> that are prints of the old model by Create Print's rule (<see cref="PrintPlan.IsPrintOf"/>:
+    /// an <c>.idw</c> or <c>.dwg</c> in the model's folder or its <c>Prints</c> folder, in any case, whose file name
+    /// without extension equals the old model's, ignoring case), each once, in the order given. Each comes with its new
+    /// path: the same folder, the new model's file name without extension, and the drawing's own extension. A print
+    /// beside the model is renamed where it is (Default); it is not moved into <c>Prints</c>. Whether the drawing uses
+    /// the model is the target's check.
+    /// </summary>
+    public static IReadOnlyList<DrawingRename> DrawingsOfModel(
+        string oldModelFullFileName,
+        string newModelFullFileName,
+        IEnumerable<string?> files)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(oldModelFullFileName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(newModelFullFileName);
+        ArgumentNullException.ThrowIfNull(files);
+
+        var newStem = Stem(newModelFullFileName);
+        return files
+            .Where(f => PrintPlan.IsPrintOf(oldModelFullFileName, f))
+            .Select(f => f!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(f =>
+            {
+                var path = f.Trim();
+                var cut = path.LastIndexOfAny(FolderSeparators) + 1;
+                var name = path[cut..];
+                return new DrawingRename(f, path[..cut] + newStem + name[name.LastIndexOf('.')..]);
+            })
+            .ToList()
+            .AsReadOnly();
+    }
+
     /// <summary>The confirmation Rename asks before it changes anything.</summary>
     public static string ConfirmationMessage(RenameRequest request, RenameSearchList search)
     {
@@ -326,6 +361,15 @@ public static class RenamePlan
             : $"{Count(search.Files.Count, "assembly, drawing or presentation", "assemblies, drawings and presentations")} " +
               $"in {Count(search.Folders.Count, "folder", "folders")} will be searched, and each one that uses the file " +
               "is updated and saved. Expect a second or two for each file that uses it.";
+
+        var drawings = DrawingsOfModel(request.OldFullFileName, request.NewFullFileName, search.Files);
+        if (drawings.Count > 0)
+        {
+            text += nl + nl + "Drawings named after it that use it are renamed to match, unless a file with the new name " +
+                    "already exists:" +
+                    string.Concat(drawings.Select(d =>
+                        nl + $"- {FileNameOnly(d.OldFullFileName)} to {FileNameOnly(d.NewFullFileName)}"));
+        }
 
         if (search.Folders.Count > 0)
         {
@@ -504,6 +548,11 @@ public sealed record RenameSearchList(
     IReadOnlyList<string> Folders,
     IReadOnlyList<SkippedFolder> Skipped);
 
+/// <summary>A drawing Rename renames with the model (<see cref="RenamePlan.DrawingsOfModel"/>).</summary>
+/// <param name="OldFullFileName">The drawing's path, as found.</param>
+/// <param name="NewFullFileName">Its new path: the same folder and extension, and the model's new file name.</param>
+public sealed record DrawingRename(string OldFullFileName, string NewFullFileName);
+
 /// <summary>A rename to make.</summary>
 /// <param name="OldFullFileName">The open file's current full path.</param>
 /// <param name="NewFullFileName">Its new full path (<see cref="RenamePlan.NewFileName"/>).</param>
@@ -515,11 +564,16 @@ public sealed record RenameRequest(string OldFullFileName, string NewFullFileNam
 /// <param name="Problem">Why it was not updated; null when it was updated and saved.</param>
 /// <param name="OccurrencesRenamed">How many of its occurrences were renamed (<see cref="RenamePlan.RenamedOccurrence"/>).</param>
 /// <param name="OccurrenceProblems">The occurrences that should have been renamed and could not be; null for none.</param>
+/// <param name="RenamedTo">
+/// For a drawing of the model saved under the model's new name (<see cref="RenamePlan.DrawingsOfModel"/>), its new full
+/// path; null otherwise.
+/// </param>
 public sealed record RenameFileResult(
     string FullFileName,
     string? Problem = null,
     int OccurrencesRenamed = 0,
-    IReadOnlyList<OccurrenceProblem>? OccurrenceProblems = null)
+    IReadOnlyList<OccurrenceProblem>? OccurrenceProblems = null,
+    string? RenamedTo = null)
 {
     public bool Updated => Problem is null;
 }
@@ -533,6 +587,24 @@ public sealed record OccurrenceProblem(string OccurrenceName, string Reason);
 /// <param name="OccurrencesRenamed">How many of its occurrences were renamed.</param>
 /// <param name="OccurrenceProblems">The occurrences that could not be renamed; null for none.</param>
 public sealed record RenameFileUpdate(int OccurrencesRenamed = 0, IReadOnlyList<OccurrenceProblem>? OccurrenceProblems = null);
+
+/// <summary>
+/// What <see cref="IRenameTarget.UpdateAndRenameDrawing"/> did to a drawing of the model that uses it. The drawing's
+/// reference to the model was replaced and saved in every case.
+/// </summary>
+/// <param name="NotRenamedReason">
+/// Why the drawing could not be saved under its new name; null when it was. When set, it keeps its old name and uses the
+/// renamed model.
+/// </param>
+/// <param name="OldFileNotDeletedReason">Saved under its new name, but its old file could not be deleted: why.</param>
+/// <param name="NotReopenedReason">Saved under its new name, but it was open and could not be opened again: why.</param>
+public sealed record DrawingRenameUpdate(
+    string? NotRenamedReason = null,
+    string? OldFileNotDeletedReason = null,
+    string? NotReopenedReason = null)
+{
+    public bool Renamed => NotRenamedReason is null;
+}
 
 /// <summary>A line in Rename's result that is not about one referencing file.</summary>
 public sealed record RenameNote(string Text, bool IsProblem);
@@ -558,6 +630,9 @@ public sealed record RenameResult(
 
     /// <summary>How many occurrences were renamed, over every file.</summary>
     public int OccurrencesRenamed => Files.Sum(f => f.OccurrencesRenamed);
+
+    /// <summary>How many drawings of the model were saved under its new name.</summary>
+    public int DrawingsRenamed => Files.Count(f => f.RenamedTo is not null);
 
     /// <summary>True when something did not go as planned: a file not updated or a note that is a problem.</summary>
     public bool HasProblems => !Renamed || FailedCount > 0 || Notes.Any(n => n.IsProblem);
@@ -603,6 +678,24 @@ public interface IRenameTarget
     /// </summary>
     IReadOnlyList<string> OpenDocumentsReferencing(string oldFullFileName);
 
+    /// <summary>True when a file exists on disk at <paramref name="fullFileName"/>, or a document is open in Inventor under it.</summary>
+    bool FileExists(string fullFileName);
+
+    /// <summary>
+    /// For a drawing of the model (<see cref="RenamePlan.DrawingsOfModel"/>; spike 052, section 5): when it uses the
+    /// renamed file, updates and saves it under its old name as <see cref="UpdateReferences"/> does, so it never breaks
+    /// whatever follows; then marks it modified and saves it as <paramref name="newDrawingFullFileName"/>
+    /// (<c>SaveAs(path, false)</c>, keeping its extension), closes it (an open drawing keeps its old file locked until it
+    /// is closed), deletes the old drawing file, and opens it again, visibly, when it was open. Null when it does not use
+    /// the renamed file. Throws only when its reference could not be updated and saved; a failure after that is
+    /// returned in the <see cref="DrawingRenameUpdate"/>.
+    /// </summary>
+    DrawingRenameUpdate? UpdateAndRenameDrawing(
+        string drawingFullFileName,
+        string newDrawingFullFileName,
+        string oldFullFileName,
+        string newFullFileName);
+
     /// <summary>Sets the renamed document's Description to <paramref name="partName"/> and saves it. Throws when it cannot.</summary>
     void WriteDescription(string partName);
 
@@ -613,7 +706,8 @@ public interface IRenameTarget
 /// <summary>
 /// The Rename steps (spec 02, "Commands: Rename"; spikes 032 question 4 and 052 question 1), in this order: save the
 /// open file under its new name, which repoints open documents in memory; update and save each candidate file that uses
-/// the file, renaming its occurrences; update and save the other open documents that use it; set Description to the new
+/// the file, renaming its occurrences, and saving each drawing of the model under the model's new name (task 059); update
+/// and save the other open documents that use it; set Description to the new
 /// name; delete the old file only when every file was updated, every folder searched, and no open document still
 /// references it; update the register entry when the file has a registered number. Every outcome goes into the
 /// <see cref="RenameResult"/>.
@@ -687,6 +781,27 @@ public sealed class PartRenamer
                $"{problem.Reason} The file was still updated.";
     }
 
+    /// <summary>A drawing of the model kept its name because the new one is taken; it was still updated.</summary>
+    public static string DrawingNameTakenMessage(string drawingFullFileName, string newDrawingFullFileName) =>
+        $"The drawing {RenamePlan.FileNameOnly(drawingFullFileName)} was updated but not renamed, because a file named " +
+        $"{RenamePlan.FileNameOnly(newDrawingFullFileName)} already exists there. It keeps its name.";
+
+    /// <summary>A drawing of the model was updated under its old name, but could not be saved under the new one.</summary>
+    public static string DrawingNotRenamedMessage(string drawingFullFileName, string newDrawingFullFileName, string reason) =>
+        $"The drawing {RenamePlan.FileNameOnly(drawingFullFileName)} was updated but could not be renamed to " +
+        $"{RenamePlan.FileNameOnly(newDrawingFullFileName)}: {reason} It keeps its name and uses the renamed file.";
+
+    /// <summary>A drawing was renamed, but its old file is still on disk.</summary>
+    public static string DrawingOldFileNotDeletedMessage(string drawingFullFileName, string newDrawingFullFileName, string reason) =>
+        $"The drawing was renamed to {RenamePlan.FileNameOnly(newDrawingFullFileName)}, but its old file " +
+        $"{RenamePlan.FileNameOnly(drawingFullFileName)} could not be deleted: {reason} Both use the renamed file; delete " +
+        "the old one by hand.";
+
+    /// <summary>A drawing that was open was renamed, but could not be opened again.</summary>
+    public static string DrawingNotReopenedMessage(string newDrawingFullFileName, string reason) =>
+        $"The drawing was renamed to {RenamePlan.FileNameOnly(newDrawingFullFileName)} and closed, but could not be " +
+        $"opened again: {reason} Open it by hand.";
+
     /// <summary>Runs the steps.</summary>
     /// <param name="request">The rename.</param>
     /// <param name="filesToSearch">The candidate files (<see cref="RenameSearchList.Files"/>).</param>
@@ -724,22 +839,27 @@ public sealed class PartRenamer
 
         _log.Info($"Rename: '{oldPath}' saved as '{newPath}'. Searching {filesToSearch.Count} files for references.");
 
-        // 2. Each file found, open or closed: replace the reference, rename occurrences, mark it modified and save.
+        // 2. Each file found, open or closed: replace the reference, rename occurrences, mark it modified and save. A
+        //    drawing of the model is also saved under the model's new name (task 059), in place of the plain update.
         var toSearch = filesToSearch
             .Where(f => !SamePath(f, oldPath) && !SamePath(f, newPath))
             .ToList();
+        var drawings = RenamePlan.DrawingsOfModel(oldPath, newPath, toSearch)
+            .ToDictionary(d => d.OldFullFileName, d => d.NewFullFileName, StringComparer.OrdinalIgnoreCase);
+        var handled = new HashSet<string>(toSearch, StringComparer.OrdinalIgnoreCase);
         for (var i = 0; i < toSearch.Count; i++)
         {
             var file = toSearch[i];
             progress?.Invoke(RenamePlan.ProgressText(i + 1, toSearch.Count, file));
             try
             {
-                if (_target.UpdateReferences(file, oldPath, newPath) is { } update)
+                if (drawings.TryGetValue(file, out var newDrawing))
                 {
-                    var result = new RenameFileResult(file, null, update.OccurrencesRenamed, update.OccurrenceProblems);
-                    files.Add(result);
-                    _log.Info($"Rename: '{file}' updated, {update.OccurrencesRenamed} occurrences renamed.");
-                    AddOccurrenceNotes(result, notes);
+                    UpdateDrawing(file, newDrawing, oldPath, newPath, files, notes, handled);
+                }
+                else if (_target.UpdateReferences(file, oldPath, newPath) is { } update)
+                {
+                    AddUpdated(file, update, files, notes);
                 }
             }
             catch (Exception ex)
@@ -750,12 +870,11 @@ public sealed class PartRenamer
         }
 
         // 3. The other open documents SaveAs repointed in memory: update and save them too. Every file the search
-        //    handled is passed, so none is saved twice.
+        //    handled is passed, and each drawing's new name, so none is saved twice.
         var openFilesFailed = false;
         progress?.Invoke(SavingOpenFilesProgress);
         try
         {
-            var handled = new HashSet<string>(toSearch, StringComparer.OrdinalIgnoreCase);
             foreach (var saved in _target.SaveRepointedDocuments(oldPath, newPath, handled))
             {
                 if (handled.Contains(saved.FullFileName) || files.Any(f => SamePath(f.FullFileName, saved.FullFileName)))
@@ -856,9 +975,85 @@ public sealed class PartRenamer
         _log.Info(
             $"Rename: finished '{oldPath}' -> '{newPath}': {files.Count(f => f.Updated)} updated, " +
             $"{files.Count(f => !f.Updated)} not updated, {files.Sum(f => f.OccurrencesRenamed)} occurrences renamed, " +
-            $"old file {(oldDeleted ? "deleted" : "kept")}.");
+            $"{files.Count(f => f.RenamedTo is not null)} drawings renamed, old file {(oldDeleted ? "deleted" : "kept")}.");
 
         return new RenameResult(request, true, oldDeleted, descriptionWritten, files.AsReadOnly(), notes.AsReadOnly());
+    }
+
+    /// <summary>Records a file updated by <see cref="IRenameTarget.UpdateReferences"/>, with its occurrence notes.</summary>
+    private void AddUpdated(string file, RenameFileUpdate update, List<RenameFileResult> files, List<RenameNote> notes)
+    {
+        var result = new RenameFileResult(file, null, update.OccurrencesRenamed, update.OccurrenceProblems);
+        files.Add(result);
+        _log.Info($"Rename: '{file}' updated, {update.OccurrencesRenamed} occurrences renamed.");
+        AddOccurrenceNotes(result, notes);
+    }
+
+    /// <summary>
+    /// A drawing of the model (task 059). When its new name is free it is updated and saved under it; when the name is
+    /// taken, or cannot be checked, it is only updated, as any other file, and keeps its name. A drawing that does not
+    /// use the model is left alone. Throws, as <see cref="IRenameTarget.UpdateReferences"/> does, only when its reference
+    /// could not be updated; every later failure is a note, since the drawing then uses the renamed file either way.
+    /// </summary>
+    private void UpdateDrawing(
+        string file,
+        string newDrawing,
+        string oldPath,
+        string newPath,
+        List<RenameFileResult> files,
+        List<RenameNote> notes,
+        HashSet<string> handled)
+    {
+        string? takenNote;
+        try
+        {
+            takenNote = _target.FileExists(newDrawing) ? DrawingNameTakenMessage(file, newDrawing) : null;
+        }
+        catch (Exception ex)
+        {
+            takenNote = DrawingNotRenamedMessage(file, newDrawing, ex.Message);
+        }
+
+        if (takenNote is not null)
+        {
+            if (_target.UpdateReferences(file, oldPath, newPath) is { } update)
+            {
+                AddUpdated(file, update, files, notes);
+                notes.Add(new RenameNote(takenNote, IsProblem: true));
+                _log.Warn($"Rename: drawing '{file}' updated but not renamed to '{newDrawing}': {takenNote}");
+            }
+
+            return;
+        }
+
+        if (_target.UpdateAndRenameDrawing(file, newDrawing, oldPath, newPath) is not { } drawing)
+        {
+            return;
+        }
+
+        if (!drawing.Renamed)
+        {
+            files.Add(new RenameFileResult(file));
+            notes.Add(new RenameNote(DrawingNotRenamedMessage(file, newDrawing, drawing.NotRenamedReason!), IsProblem: true));
+            _log.Warn($"Rename: drawing '{file}' updated but not renamed to '{newDrawing}': {drawing.NotRenamedReason}");
+            return;
+        }
+
+        files.Add(new RenameFileResult(file, RenamedTo: newDrawing));
+        handled.Add(newDrawing);
+        _log.Info($"Rename: drawing '{file}' updated and renamed to '{newDrawing}'.");
+
+        if (drawing.OldFileNotDeletedReason is { } notDeleted)
+        {
+            notes.Add(new RenameNote(DrawingOldFileNotDeletedMessage(file, newDrawing, notDeleted), IsProblem: true));
+            _log.Warn($"Rename: old drawing '{file}' could not be deleted: {notDeleted}");
+        }
+
+        if (drawing.NotReopenedReason is { } notReopened)
+        {
+            notes.Add(new RenameNote(DrawingNotReopenedMessage(newDrawing, notReopened), IsProblem: true));
+            _log.Warn($"Rename: drawing '{newDrawing}' could not be opened again: {notReopened}");
+        }
     }
 
     /// <summary>A note, and a log line, for each occurrence of <paramref name="file"/> that could not be renamed.</summary>

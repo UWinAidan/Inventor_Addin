@@ -141,6 +141,39 @@ public sealed class PrintPlanTests
         Assert.Equal(PrintPlan.DrawingFileName(model, ".idw"), PrintPlan.ExistingPrintCandidates(model, ".idw")[0]);
     }
 
+    [Theory]
+    [InlineData(@"C:\Work\Prints\a,AWB-10001.dwg")]
+    [InlineData(@"C:\Work\Prints\a,AWB-10001.idw")]
+    [InlineData(@"c:\work\PRINTS\A,awb-10001.DWG")]
+    [InlineData(@"C:\Work\a,AWB-10001.idw")]
+    [InlineData(@"C:/Work/Prints/a,AWB-10001.dwg")]
+    [InlineData(@" C:\Work\a,AWB-10001.dwg ")]
+    public void IsPrintOf_ACandidateIgnoringCaseAndSlashes_IsAPrint(string drawing)
+    {
+        Assert.True(PrintPlan.IsPrintOf(@"C:\Work\a,AWB-10001.ipt", drawing));
+    }
+
+    [Theory]
+    [InlineData(@"C:\Work\Other\a,AWB-10001.dwg")]
+    [InlineData(@"C:\Work\Prints\Old\a,AWB-10001.dwg")]
+    [InlineData(@"C:\Work\OldVersions\a,AWB-10001.dwg")]
+    [InlineData(@"C:\Work\Prints\b,AWB-10001.dwg")]
+    [InlineData(@"C:\Work\a,AWB-10001.pdf")]
+    [InlineData(@"C:\Work\a,AWB-10001.iam")]
+    [InlineData("")]
+    [InlineData(null)]
+    public void IsPrintOf_AnythingElse_IsNot(string? drawing)
+    {
+        Assert.False(PrintPlan.IsPrintOf(@"C:\Work\a,AWB-10001.ipt", drawing));
+    }
+
+    [Fact]
+    public void IsPrintOf_EveryCandidateCreatePrintLooksFor_IsAPrint()
+    {
+        const string model = @"\\nas\share\plate, 10mm,AWB-10003.ipt";
+        Assert.All(PrintPlan.ExistingPrintCandidates(model, ".idw"), c => Assert.True(PrintPlan.IsPrintOf(model, c)));
+    }
+
     [Fact]
     public void FindExistingPrint_NoneExists_ReturnsNull()
     {

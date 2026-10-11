@@ -38,6 +38,7 @@ public sealed class RenameViewModel : ObservableObject
     public const string HeaderTitleText = "Rename";
     public const string UpdatedPrefix = "Updated: ";
     public const string NotUpdatedPrefix = "Not updated: ";
+    public const string RenamedToPrefix = ", renamed to ";
     public const string NothingElseText = "No other file in the CAD folders uses it.";
     public const string RunErrorPrefix = "Rename failed: ";
     public const string StartingText = "Looking for files that use it...";
@@ -202,7 +203,7 @@ public sealed class RenameViewModel : ObservableObject
 
     /// <summary>
     /// The summary of a result: renamed or not, how many files were updated and how many were not, how many occurrences
-    /// were renamed (when any), and whether the old file was kept.
+    /// were renamed and drawings renamed (when any), and whether the old file was kept.
     /// </summary>
     public static string Summary(RenameResult result)
     {
@@ -223,6 +224,13 @@ public sealed class RenameViewModel : ObservableObject
                 : string.Create(CultureInfo.InvariantCulture, $", {result.OccurrencesRenamed} occurrences renamed");
         }
 
+        if (result.DrawingsRenamed > 0)
+        {
+            text += result.DrawingsRenamed == 1
+                ? ", 1 drawing renamed"
+                : string.Create(CultureInfo.InvariantCulture, $", {result.DrawingsRenamed} drawings renamed");
+        }
+
         text += ".";
         if (!result.OldFileDeleted)
             text += " The old file was kept.";
@@ -230,7 +238,8 @@ public sealed class RenameViewModel : ObservableObject
     }
 
     /// <summary>
-    /// The result list: <see cref="UpdatedPrefix"/> and each updated file, <see cref="NotUpdatedPrefix"/> and each file
+    /// The result list: <see cref="UpdatedPrefix"/> and each updated file (with <see cref="RenamedToPrefix"/> and the new
+    /// name for a drawing renamed with the model), <see cref="NotUpdatedPrefix"/> and each file
     /// that was not with the reason, then each note. <see cref="NothingElseText"/> when the file was renamed and no other
     /// file was changed.
     /// </summary>
@@ -242,7 +251,9 @@ public sealed class RenameViewModel : ObservableObject
         if (result.Renamed && result.Files.Count == 0)
             lines.Add(NothingElseText);
 
-        lines.AddRange(result.Files.Where(f => f.Updated).Select(f => UpdatedPrefix + f.FullFileName));
+        lines.AddRange(result.Files.Where(f => f.Updated).Select(f =>
+            UpdatedPrefix + f.FullFileName +
+            (f.RenamedTo is { } renamedTo ? RenamedToPrefix + RenamePlan.FileNameOnly(renamedTo) : string.Empty)));
         lines.AddRange(result.Files.Where(f => !f.Updated).Select(f => $"{NotUpdatedPrefix}{f.FullFileName}: {f.Problem}"));
         lines.AddRange(result.Notes.Select(n => n.Text));
         return string.Join(Environment.NewLine, lines);

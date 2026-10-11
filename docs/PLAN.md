@@ -198,7 +198,7 @@ Folded in from `TODO.md` follow-ups: delete `PropertyReader.Set` and the unbound
 - [x] 056 Ribbon button sizes by importance (item 12)
 - [x] 057 Create Print saves in a Prints subfolder (item 9)
 - [x] 058 Rename never breaks a reference, and renames occurrences (bugs 1, 3)
-- [ ] 059 Rename renames the part's drawings (bugs 2, 5)
+- [x] 059 Rename renames the part's drawings (bugs 2, 5)
 - [ ] 060 Save As and Replace finds the selection in a sub-assembly; copies check their number (bugs 4, 6)
 - [ ] 061 Rename allows a change of case only (Aidan, 2026-10-11)
 

@@ -339,6 +339,97 @@ public sealed class RenamePlanTests : IDisposable
         Assert.Equal(new[] { asm, drawing, dwg, ipn }.OrderBy(f => f, StringComparer.OrdinalIgnoreCase), files);
     }
 
+    [Fact]
+    public void FilesToSearch_TheRenamedFilesFolderAndItsPrintsFolder_AreAlwaysSearched()
+    {
+        // Task 059: the model's own folder is always listed (or a folder holding it), with its subfolders, so the
+        // drawings Rename renames, beside the model or in Prints, are always among the files found.
+        var model = Path.Combine(_root, "job", "plate,AWB-10001.ipt");
+        var beside = MakeFile("job", "plate,AWB-10001.idw");
+        var print = MakeFile("job", "Prints", "plate,AWB-10001.dwg");
+        var otherCad = Path.Combine(_root, "cad");
+        Directory.CreateDirectory(otherCad);
+
+        var folders = RenamePlan.SearchFolders(otherCad, [], model);
+        var files = RenamePlan.FilesToSearch(folders);
+
+        Assert.Equal([otherCad, Path.Combine(_root, "job")], folders);
+        Assert.Equal(new[] { beside, print }.OrderBy(f => f, StringComparer.OrdinalIgnoreCase), files);
+        Assert.Equal(2, RenamePlan.DrawingsOfModel(model, Path.Combine(_root, "job", "base,AWB-10001.ipt"), files).Count);
+    }
+
+    [Fact]
+    public void SearchFolders_AModelInsideACadFolder_IsCoveredWithItsPrintsFolder()
+    {
+        var folders = RenamePlan.SearchFolders(@"C:\Cad", [], @"C:\Cad\Job\plate.ipt");
+
+        Assert.Equal([@"C:\Cad"], folders);
+    }
+
+    // DrawingsOfModel (task 059)
+
+    [Fact]
+    public void DrawingsOfModel_PrintsBesideTheModelAndInPrints_GetTheNewNameWithTheirOwnExtension()
+    {
+        var drawings = RenamePlan.DrawingsOfModel(
+            @"C:\Cad\plate,AWB-10001.ipt",
+            @"C:\Cad\BASE_PLATE,AWB-10001.ipt",
+            [
+                @"C:\Cad\plate,AWB-10001.idw",
+                @"C:\Cad\Prints\plate,AWB-10001.dwg",
+                @"C:\Cad\PRINTS\PLATE,awb-10001.IDW",
+                @"C:\Cad\asm.iam",
+            ]);
+
+        Assert.Equal(
+            [
+                new DrawingRename(@"C:\Cad\plate,AWB-10001.idw", @"C:\Cad\BASE_PLATE,AWB-10001.idw"),
+                new DrawingRename(@"C:\Cad\Prints\plate,AWB-10001.dwg", @"C:\Cad\Prints\BASE_PLATE,AWB-10001.dwg"),
+                new DrawingRename(@"C:\Cad\PRINTS\PLATE,awb-10001.IDW", @"C:\Cad\PRINTS\BASE_PLATE,AWB-10001.IDW"),
+            ],
+            drawings);
+    }
+
+    [Theory]
+    [InlineData(@"C:\Cad\Other\plate,AWB-10001.dwg")]
+    [InlineData(@"C:\Elsewhere\Prints\plate,AWB-10001.dwg")]
+    [InlineData(@"C:\Cad\Prints\Sub\plate,AWB-10001.dwg")]
+    [InlineData(@"C:\Cad\OldVersions\plate,AWB-10001.dwg")]
+    [InlineData(@"C:\Cad\Prints\OldVersions\plate,AWB-10001.0001.dwg")]
+    [InlineData(@"C:\Cad\plate,AWB-10001 copy.dwg")]
+    [InlineData(@"C:\Cad\plate.dwg")]
+    [InlineData(@"C:\Cad\plate,AWB-10001.iam")]
+    [InlineData(@"C:\Cad\plate,AWB-10001.ipn")]
+    [InlineData(@"C:\Cad\plate,AWB-10001.ipt")]
+    [InlineData("")]
+    [InlineData(null)]
+    public void DrawingsOfModel_AnythingElse_IsNotADrawingOfTheModel(string? file)
+    {
+        Assert.Empty(RenamePlan.DrawingsOfModel(@"C:\Cad\plate,AWB-10001.ipt", @"C:\Cad\base,AWB-10001.ipt", [file]));
+    }
+
+    [Fact]
+    public void DrawingsOfModel_EachDrawingOnce_InTheOrderGiven()
+    {
+        var drawings = RenamePlan.DrawingsOfModel(
+            @"C:\Cad\plate.ipt",
+            @"C:\Cad\base.ipt",
+            [@"C:\Cad\Prints\plate.dwg", @"C:\Cad\plate.dwg", @"c:\cad\prints\PLATE.dwg"]);
+
+        Assert.Equal([@"C:\Cad\Prints\plate.dwg", @"C:\Cad\plate.dwg"], drawings.Select(d => d.OldFullFileName));
+    }
+
+    [Fact]
+    public void DrawingsOfModel_AnAssemblysDrawings_FollowItsNewName()
+    {
+        var drawing = Assert.Single(RenamePlan.DrawingsOfModel(
+            @"\\nas\cad\ASSY_FRAME,AWB-10002.iam",
+            @"\\nas\cad\ASSY_MAIN_FRAME,AWB-10002.iam",
+            [@"\\nas\cad\Prints\ASSY_FRAME,AWB-10002.dwg"]));
+
+        Assert.Equal(@"\\nas\cad\Prints\ASSY_MAIN_FRAME,AWB-10002.dwg", drawing.NewFullFileName);
+    }
+
     // ListFilesToSearch
 
     [Fact]
@@ -450,6 +541,21 @@ public sealed class RenamePlanTests : IDisposable
         Assert.Contains(@"- D:\More", text, StringComparison.Ordinal);
         Assert.Contains(@"- B:\Dropped: " + SkippedFolder.NotReachableReason, text, StringComparison.Ordinal);
         Assert.Contains("cannot be undone with Undo", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ConfirmationMessage_SaysTheDrawingsNamedAfterItAreRenamed_AndListsThem()
+    {
+        var request = new RenameRequest(@"C:\Cad\plate,AWB-10001.ipt", @"C:\Cad\BASE_PLATE,AWB-10001.ipt", "base plate");
+        var withDrawing = new RenameSearchList(
+            [@"C:\Cad\a.iam", @"C:\Cad\Prints\plate,AWB-10001.dwg"], [@"C:\Cad"], []);
+        var without = new RenameSearchList([@"C:\Cad\a.iam"], [@"C:\Cad"], []);
+
+        var text = RenamePlan.ConfirmationMessage(request, withDrawing);
+
+        Assert.Contains("Drawings named after it that use it are renamed to match", text, StringComparison.Ordinal);
+        Assert.Contains("- plate,AWB-10001.dwg to BASE_PLATE,AWB-10001.dwg", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Drawings named after it", RenamePlan.ConfirmationMessage(request, without), StringComparison.Ordinal);
     }
 
     [Fact]

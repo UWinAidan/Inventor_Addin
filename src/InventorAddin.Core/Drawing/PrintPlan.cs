@@ -78,6 +78,24 @@ public static class PrintPlan
     }
 
     /// <summary>
+    /// True when <paramref name="drawingFullFileName"/> is one of the model's <see cref="ExistingPrintCandidates"/>,
+    /// ignoring case and the direction of the slashes: an <c>.idw</c> or <c>.dwg</c> with the model's file name without
+    /// its extension, in the model's <see cref="PrintsFolder"/> or beside the model. Rename uses this rule to find the
+    /// drawings it renames with the model (task 059), so Create Print finds them again afterwards. False for a blank path.
+    /// </summary>
+    /// <param name="modelFullFileName">The model's full file name.</param>
+    /// <param name="drawingFullFileName">The drawing's full file name.</param>
+    public static bool IsPrintOf(string modelFullFileName, string? drawingFullFileName)
+    {
+        if (string.IsNullOrWhiteSpace(drawingFullFileName))
+            return false;
+
+        string drawing = PathKey(drawingFullFileName);
+        return ExistingPrintCandidates(modelFullFileName, DrawingExtensions[0])
+            .Any(c => string.Equals(PathKey(c), drawing, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
     /// The first of <see cref="ExistingPrintCandidates"/> for which <paramref name="exists"/> is true, or null.
     /// </summary>
     public static string? FindExistingPrint(string modelFullFileName, string preferredExtension, Func<string, bool> exists)
@@ -139,6 +157,9 @@ public static class PrintPlan
         if (!(value > 0) || double.IsInfinity(value))
             throw new ArgumentOutOfRangeException(name, value, "Sizes must be positive, finite numbers of centimetres.");
     }
+
+    /// <summary>A path trimmed, with forward slashes turned into backslashes, for comparing.</summary>
+    private static string PathKey(string path) => path.Trim().Replace('/', '\\');
 
     private static ModelPath SplitModelPath(string modelFullFileName)
     {

@@ -281,13 +281,131 @@ namespace InventorAddin.Commands
             public RenameFileUpdate? UpdateReferences(string fullFileName, string oldFullFileName, string newFullFileName)
             {
                 // ReplaceReference works on an open document too (spike 032); an open one is saved, not closed.
+                Document doc = OpenOrFind(fullFileName, out bool wasOpen);
+                try
+                {
+                    return UpdateAndSave(doc, oldFullFileName, newFullFileName);
+                }
+                finally
+                {
+                    // Close(true) skips saving (spike 032): a failed update is not written. A document the user
+                    // already had open stays open.
+                    if (!wasOpen)
+                        ComSafe.Run(() => doc.Close(true));
+                }
+            }
+
+            public bool FileExists(string fullFileName) => TargetExists(fullFileName);
+
+            /// <summary>
+            /// Task 059, spike 052 section 5. The drawing is first updated and saved under its old name as any other file
+            /// (task 058), so from then on it uses the renamed file whatever happens. Then <c>Dirty = true</c> and
+            /// <c>SaveAs(newPath, false)</c> (the new path keeps the drawing's extension: spike 032, a <c>.dwg</c> cannot
+            /// be saved as <c>.idw</c>), <c>Close(true)</c>, which an open drawing needs too, since its old file stays
+            /// locked while it is open, the old file deleted, and an open drawing opened again with
+            /// <c>Documents.Open(newPath, true)</c>, leaving the window that was active before it active.
+            /// </summary>
+            public DrawingRenameUpdate? UpdateAndRenameDrawing(
+                string drawingFullFileName,
+                string newDrawingFullFileName,
+                string oldFullFileName,
+                string newFullFileName)
+            {
+                Document doc = OpenOrFind(drawingFullFileName, out bool wasOpen);
+                bool closed = false;
+                try
+                {
+                    // Throws when the reference cannot be updated and saved: the drawing is then a file not updated.
+                    if (UpdateAndSave(doc, oldFullFileName, newFullFileName) == null)
+                        return null;
+
+                    try
+                    {
+                        doc.Dirty = true;
+                        doc.SaveAs(newDrawingFullFileName, false);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Still under its old name, saved with the new reference. A closed one is closed below.
+                        return new DrawingRenameUpdate(NotRenamedReason: ex.Message);
+                    }
+
+                    // The document is now the new file, just saved, so closing it without saving loses nothing.
+                    closed = true;
+                    try
+                    {
+                        doc.Close(true);
+                    }
+                    catch (Exception ex)
+                    {
+                        AddinServices.Log.Warn($"Rename: drawing '{newDrawingFullFileName}' could not be closed: {ex.Message}");
+                    }
+
+                    string? notDeleted = null;
+                    try
+                    {
+                        IOFile.Delete(drawingFullFileName);
+                    }
+                    catch (Exception ex)
+                    {
+                        notDeleted = ex.Message;
+                    }
+
+                    string? notReopened = null;
+                    if (wasOpen)
+                        notReopened = Reopen(newDrawingFullFileName);
+
+                    return new DrawingRenameUpdate(null, notDeleted, notReopened);
+                }
+                finally
+                {
+                    if (!wasOpen && !closed)
+                        ComSafe.Run(() => doc.Close(true));
+                }
+            }
+
+            /// <summary>
+            /// Opens the renamed drawing again, visibly, as it was before the rename closed it (spike 032 and Create Print:
+            /// <c>Documents.Open(path, true)</c>). The drawing is not activated; if opening it changed the active
+            /// document, the one active before is activated again. That is the window's document, read from
+            /// <c>ActiveDocument</c>, not the renamed one: a part renamed while edited in place inside an assembly is
+            /// <c>ActiveEditDocument</c>, and the assembly is the window to return to. Null when it opened, otherwise the
+            /// reason.
+            /// </summary>
+            private static string? Reopen(string newDrawingFullFileName)
+            {
+                Document? before = ComSafe.Get(() => InventorHost.ActiveDocument);
+                try
+                {
+                    InventorHost.App.Documents.Open(newDrawingFullFileName, true);
+                }
+                catch (Exception ex)
+                {
+                    return ex.Message;
+                }
+
+                Document? after = ComSafe.Get(() => InventorHost.ActiveDocument);
+                if (before != null && (after == null || !(ReferenceEquals(after, before) || SameDocument(after, before))))
+                    ComSafe.Run(() => before.Activate());
+                return null;
+            }
+
+            /// <summary>
+            /// The document Inventor holds for <paramref name="fullFileName"/> when it is open (<paramref name="wasOpen"/>
+            /// true), otherwise the file opened invisibly with <c>SilentOperation</c> (false), for the caller to close.
+            /// </summary>
+            private static Document OpenOrFind(string fullFileName, out bool wasOpen)
+            {
                 Document? open = FindOpen(fullFileName);
                 if (open != null)
-                    return UpdateAndSave(open, oldFullFileName, newFullFileName);
+                {
+                    wasOpen = true;
+                    return open;
+                }
 
                 // FindOpen can miss a document that is open under another spelling of its path (a mapped drive and
                 // its UNC path); Documents.Open then returns that open document. Record what is open first, so such a
-                // document is updated and saved but not closed.
+                // document is treated as open and not closed.
                 List<Document> openBefore = OpenDocuments();
 
                 // SilentOperation only around the invisible open, as spike 032 did.
@@ -304,21 +422,10 @@ namespace InventorAddin.Commands
                     app.SilentOperation = previousSilent;
                 }
 
-                bool wasOpen = openBefore.Exists(d => ReferenceEquals(d, doc) || SameDocument(d, doc));
+                wasOpen = openBefore.Exists(d => ReferenceEquals(d, doc) || SameDocument(d, doc));
                 if (wasOpen)
-                    AddinServices.Log.Info($"Rename: '{fullFileName}' was already open; it is saved and left open.");
-
-                try
-                {
-                    return UpdateAndSave(doc, oldFullFileName, newFullFileName);
-                }
-                finally
-                {
-                    // Close(true) skips saving (spike 032): a failed update is not written. A document the user
-                    // already had open stays open.
-                    if (!wasOpen)
-                        ComSafe.Run(() => doc.Close(true));
-                }
+                    AddinServices.Log.Info($"Rename: '{fullFileName}' was already open; it is treated as open.");
+                return doc;
             }
 
             public IReadOnlyList<RenameFileResult> SaveRepointedDocuments(
