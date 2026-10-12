@@ -20,6 +20,7 @@ Last updated: 2026-10-12
 - [ ] 063 Create Print makes `.idw` from `ANSI (mm).idw` / `ANSI (in).idw`; existing `.dwg` prints still offered; `.idw` preferred when both exist (7 steps)
 - [ ] 064 Ribbon panels Create, Properties, Drawing, (Developer,) AWB on every ribbon; small buttons stacked; no old panel left (6 steps)
 - [ ] 065 Rename with the assembly closed, open, and loaded only through its parent: browser shows the new occurrence names, `LEFT` untouched, no `AWBRENAME-` left; case-only rename (5 steps)
+- [ ] 066 Startup tab: no file (ends on AWB Addin), started by double-clicking a part (tab untouched, and still untouched after closing the part), loaded from the Add-in Manager, a tab clicked in the first seconds, a part opened within 5 s (5 steps)
 
 **M2 run 1** (full steps in each task's Verification section). Aidan's run 1 checks found three things, now tasks 049 to 051; tick the rest here when confirmed
 - [ ] Task 037, Settings: units dropdown and register folder, Browse, validation, access keys, an unknown units value in `settings.json`; is "Units for new files" cut off?
@@ -88,6 +89,9 @@ Small things noticed while building. None is urgent. The parent turns these into
 
 **Rename**
 - The two-step occurrence set (temporary name, then new name) and putting the original name back are add-in code that the Core fake target does not model; only Aidan's checks cover them. In a closed assembly the stored old name cannot be read, so a failed second set leaves the occurrence under `AWBRENAME-…` (reported). A Core test pinning case-only stems through `RenamedOccurrence` would help. (task 065)
+
+**Startup tab**
+- The startup watch cannot tell a tab Aidan clicks from Inventor's own switch back, so a click in the first 5 s can be overridden once. If that is a nuisance, shorten `StartupTabPlan.WatchWindow` to 2 or 3 s (spike 062 measured the switch at 0.5 to 1.5 s). When the tab is not found the log has a warning but no "stopped" line. (task 066)
 
 **Build and workflow**
 - Core tests that probe or list a real temporary folder (NewPartCreator, SaveAsCopyCreator, SaveAsReplacer, RegisterStore, RenamePlan) often hit the 3 s probe or list timeout on Aidan's PC: in one review five of six full runs had 1 to 5 such failures. A rerun usually passes. Give these tests a fake probe or a longer timeout so the suite is reliable. (tasks 055, 057 reviews)
