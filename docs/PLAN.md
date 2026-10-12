@@ -204,6 +204,22 @@ Folded in from `TODO.md` follow-ups: delete `PropertyReader.Set` and the unbound
 
 Folded in from `TODO.md`: spec 08's ribbon icon list (056), and Save As and Replace's "which document holds the selection while a sub-assembly is edited in place" (052, 060). Bug 6 did not reproduce: every copy from the checks has its own number on disk (spike 052); 060 adds a read-back check.
 
+**Fix run 2, planned 2026-10-12** on the same branch, from Aidan's checks of the first fix run (everything else passed): four items. Local session on Aidan's PC. Spike 062 was run first, with Aidan starting Inventor for the startup tab. Run in number order, one at a time.
+
+| Task | Needs | Depends on | Parallel-safe with |
+|---|---|---|---|
+| 062 | **windows** (spike, local session with Aidan) | none | every task |
+| 063 | windows build | none | none |
+| 064 | windows build | none | none |
+| 065 | windows build | 062 | none |
+| 066 | windows build | 062 | none |
+
+- [x] 062 Spike: occurrence names in a closed assembly; the startup tab (Windows)
+- [ ] 063 Create Print makes .idw drawings (item 1)
+- [ ] 064 Ribbon panels: Create, Properties, Drawing, AWB (item 2)
+- [ ] 065 Rename renames occurrences in closed assemblies (item 3)
+- [ ] 066 The AWB Addin tab is active when Inventor starts with no document (item 4)
+
 Not in M2: browser folders (Aidan: no), a templates folder setting (later, with Aidan's own templates), the custom drawing template (M5), and distribution (parked; see below). The two deploy-line follow-ups from task 025 stay in `TODO.md`.
 
 ### M3: Material and finish (spec 03)

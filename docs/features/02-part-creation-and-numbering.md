@@ -136,7 +136,7 @@ Each goes where spec 07's storage table puts it. Nothing else is written.
 
 ## Commands
 
-**New Part** (CAD Automation panel; Part, Assembly and ZeroDoc ribbons, Default)
+**New Part** (Create panel; Part, Assembly and ZeroDoc ribbons, Default)
 
 1. The dialog asks for: file type (part, sheet metal part, assembly), part type (pre-filled A for an assembly, as in spec 07), part name, units (metric or imperial, from Settings), and folder.
 2. The folder defaults to the active document's folder, or the Work folder from Settings when no saved document is open, with a Browse button (Default; Aidan, question 23). With both blank, Browse is needed.
@@ -151,13 +151,13 @@ Designer and Detailer are not in the dialog; they come from Settings and can be 
 - Shown only when the file does not have a number. Disabled, with a note, for a file that has never been saved.
 - Syncs with the register, re-checks, assigns the next number, and writes Part Number in one transaction. The file is not renamed (Default); Rename does that.
 
-**Save As Copy** (CAD Automation panel; Part and Assembly ribbons)
+**Save As Copy** (Create panel; Part and Assembly ribbons)
 
 - Copies the active part or assembly under a new number into the same folder. The dialog asks for the name and part type, pre-filled from the original.
 - Writes the creation properties on the copy (number, Description, part type, and Designer, Author and Detailer from Settings); everything else is kept from the original (Default). Opens the copy.
 - **Each copy gets its own new number** (Aidan, 2026-10-11). After saving the copy, the add-in reads its Part Number back and stops with an error if it is not the number just assigned. The name box is pre-filled with the original's name without its number.
 
-**Save As and Replace** (CAD Automation panel; Assembly ribbon)
+**Save As and Replace** (Create panel; Assembly ribbon)
 
 - With one component selected in the active assembly: makes a copy as Save As Copy does, then replaces **that occurrence only** with the copy (Default, open question 16).
 - A component inside a sub-assembly can be selected (Aidan, question 25). The occurrence is replaced inside the sub-assembly, and the sub-assembly is saved. The dialog says so, because every assembly that uses the sub-assembly changes and Undo cannot put the saved file back.
@@ -169,19 +169,20 @@ Designer and Detailer are not in the dialog; they come from Settings and can be 
 - Renames the file and updates every assembly, drawing and presentation in the CAD folders from Settings that references it (Aidan, question 23), then sets Description to the new name and updates the file path in the register entry. The model's `Prints` folder is always searched.
 - **Never breaks a reference** (Aidan, 2026-10-11). Every file found that uses the renamed file is saved pointing at the new name, whether it was open or closed. The old file is deleted only when every file found was updated, every folder was searched, and no document open in Inventor still points at the old name; otherwise it is kept and the result says why.
 - **Renames the part's drawings** (Aidan, 2026-10-11). A drawing (`.dwg` or `.idw`) in the model's folder or its `Prints` folder, whose file name without extension equals the model's old one and which uses the model, is saved under the model's new file name with its own extension, in the same folder (Default), and its old file deleted. If a file with the new name already exists, that drawing keeps its name, is still updated, and the result says so.
-- **Renames occurrences** (Aidan, 2026-10-11). In each assembly updated, an occurrence of the renamed file whose name is the old file name without extension, a colon and a number (`OLD_NAME,AWB-10005:1`, ignoring case) is renamed to the new file name with the same number. Occurrences given any other name are left alone.
+- **Renames occurrences** (Aidan, 2026-10-11). In each assembly updated, an occurrence of the renamed file whose name is the old file name without extension, a colon and a number (`OLD_NAME,AWB-10005:1`, ignoring case) is renamed to the new file name with the same number. Occurrences given any other name are left alone. This applies to closed assemblies as well as open ones (Aidan, 2026-10-12). Spike 062: in a closed assembly, after the reference is replaced, Inventor reports the occurrence under the new name while the browser keeps the old one, so the add-in also renames an occurrence already reading the new file name and a number, and sets each name through a temporary name first.
 - **A change of case only is a rename** (Aidan, 2026-10-11), so old lower-case files can be converted to upper case. Windows treats the two names as one file, so the add-in renames in two steps through a temporary name in the same folder, then to the final name, with one confirmation. References, drawings, occurrences and the register end up on the final name exactly as for any rename, and no file with the temporary name is left behind. The second step runs only once the old file is gone; if the old file has to be kept (a file not updated, a folder skipped, a document still using it), or the second save fails, Rename stops under the temporary name, every file points at a file that exists, and the result names the temporary file so Rename can be run again from it (Default, task 061). A drawing whose old file could not be deleted may also be left under the temporary name, and is reported.
 - Skips Inventor's `OldVersions` folders. Lists what it updated, the drawings it renamed, and anything it could not update.
 - Method (spikes 032 and 052): save the open file under the new name, which repoints open documents in memory **without marking them changed**; then open each closed referencing file invisibly and replace the reference through `Document.File.ReferencedFileDescriptors`. Every file updated, open or closed, is marked changed (`Dirty = true`) before it is saved, because Inventor's `Save` writes nothing for a document it does not consider changed (spike 052). Then the old file is deleted.
 
-**Create Print** (Drawing Tools panel, large button; Part and Assembly ribbons)
+**Create Print** (Drawing panel, large button; Part and Assembly ribbons)
 
-- Needs the model saved. Creates a drawing from Inventor's default drawing template in the units set by `DefaultUnits` (Default), places a front base view of the model centred on the first sheet at a standard scale that fits, and saves it in the `Prints` subfolder of the model's folder (Aidan, 2026-10-11), creating the folder when missing, with the model's file name and the drawing template's extension (`Prints\MOUNTING_BRACKET,AWB-10001.dwg`).
+- Needs the model saved. Creates an `.idw` drawing (Aidan, 2026-10-12) from Inventor's default `.idw` drawing template in the units set by `DefaultUnits` (Default): `ANSI (mm).idw` for metric, `ANSI (in).idw` for imperial, found beside the `.dwg` template Inventor's lookup returns. It places a front base view of the model centred on the first sheet at a standard scale that fits, and saves it in the `Prints` subfolder of the model's folder (Aidan, 2026-10-11), creating the folder when missing, with the model's file name (`Prints\MOUNTING_BRACKET,AWB-10001.idw`). With no `.idw` template it stops with a message and does not fall back to `.dwg` (Default).
+- Existing `.dwg` prints are still found and opened (Aidan, 2026-10-12); when a model has both, the `.idw` is opened.
 - Writes the model's Part Number into the drawing's Part Number when the model has a number. Nothing else is copied; the M5 title block will read the model's properties.
 - If the drawing file already exists, offers to open it instead (Default). It looks in `Prints` first, then beside the model, where prints made before 2026-10-11 were saved (Default).
 - Works on assemblies too (Default; Aidan said "part").
 
-**Mass Update** (Modelling panel; Part, Assembly and ZeroDoc ribbons) (Default: the folder scan and Mass Update are one command)
+**Mass Update** (Properties panel; Part, Assembly and ZeroDoc ribbons) (Default: the folder scan and Mass Update are one command)
 
 - Scans a folder, by default the Work folder from Settings (Aidan, question 23), with Browse. Includes subfolders, skips `OldVersions`, reads `.ipt` and `.iam` files.
 - Lists every file with its file name, Part Number, whether it has a number (in the register), and whether Designer, Detailer or Author equals the Windows user name or one of the Other names.

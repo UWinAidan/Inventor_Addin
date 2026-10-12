@@ -2,11 +2,11 @@
 
 Everything that needs doing and is not already a task in `docs/PLAN.md`. Kept current by the parent session: items are added when they come up and removed when they are done or turned into a task. Where the project stands is in `STATUS.md`; why things are the way they are is in `DECISIONS.md`.
 
-Last updated: 2026-10-11
+Last updated: 2026-10-12
 
 ## Next up
 
-1. Aidan closes Inventor, runs `dotnet build InventorAddin.slnx` on branch `claude/m2-fix-run` to deploy, and works through the fix run's checks below. The branch is local; push and open a pull request when Aidan says so.
+1. Fix run 2 (tasks 063 to 066 in `docs/PLAN.md`) on branch `claude/m2-fix-run`, then Aidan builds, deploys and works through its checks. The branch is local; push and open a pull request when Aidan says so.
 2. Aidan finishes the remaining run 1 and Part Properties checks below.
 3. Plan the next milestone once M2 is tested; M3 to M6 wait on Aidan's decisions listed below.
 
@@ -14,16 +14,7 @@ Last updated: 2026-10-11
 
 **M2 run 2** was checked on 2026-10-11. Six bugs and six changes became tasks 052 to 061; every other run 2 check passed.
 
-**M2 fix run** (full steps in each task's Verification section; everything compiled on Aidan's PC, nothing tested in Inventor)
-- [ ] 053 File names `NAME,AWB-10005.ipt`: New Part, Save As Copy preview and copy name, Rename of an old number-first file (6 steps)
-- [ ] 054 Capitals in the name boxes, upper-case files and Description, `ASSY_` added once for assemblies in every command (8 steps)
-- [ ] 055 Author written with Designer: New Part, copies, Part Properties (including the blank Default designer case), Mass Update, one Undo (9 steps)
-- [ ] 056 Ribbon: New Part, Part Properties and Create Print large, the rest small, in every environment and both themes (7 steps)
-- [ ] 057 Create Print saves in `Prints`, finds an existing print there or beside the model, folder-creation failure (7 steps)
-- [ ] 058 Rename with the print and assembly open and closed: every reference good after reopening, occurrences renamed, old file deleted only when safe, nothing asks to save on close (9 steps)
-- [ ] 059 Rename renames the part's drawings, open and closed, a taken drawing name, a part edited in place (10 steps)
-- [ ] 060 Save As and Replace on a part inside a sub-assembly edited in place; copies keep their new number; a part edited in place (8 steps)
-- [ ] 061 Case-only Rename of an old lower-case file, with its print and assembly; the stop under the temporary name (10 steps)
+**M2 fix run** (053 to 061) was checked on 2026-10-12: everything passed except occurrence names in a closed assembly, now task 065. Aidan also asked for four items, now fix run 2 (062 to 066).
 
 **M2 run 1** (full steps in each task's Verification section). Aidan's run 1 checks found three things, now tasks 049 to 051; tick the rest here when confirmed
 - [ ] Task 037, Settings: units dropdown and register folder, Browse, validation, access keys, an unknown units value in `settings.json`; is "Units for new files" cut off?
