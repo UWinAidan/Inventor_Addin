@@ -470,12 +470,24 @@ public static class RenamePlan
     }
 
     /// <summary>
+    /// The start of the temporary name an occurrence is given before its new name (task 065, spike 062): letters and a
+    /// dash only, with no comma, so it never reads as a file name with a part number.
+    /// </summary>
+    public const string TemporaryOccurrencePrefix = Branding.ShortName + "RENAME-";
+
+    /// <summary>
     /// The new name of an occurrence of a renamed file (spec 02, "Commands: Rename"; Aidan, 2026-10-11): when
     /// <paramref name="occurrenceName"/> is the old file name without its folder and extension, a colon and one or more
     /// digits (ignoring case), the new file name without folder and extension, a colon and the same digits. Otherwise
     /// null: an occurrence given any other name is left alone. <c>BRACKET,AWB-10005:2</c> becomes
     /// <c>BRACKET_2,AWB-10005:2</c> when <c>BRACKET,AWB-10005.ipt</c> is renamed to <c>BRACKET_2,AWB-10005.ipt</c>.
     /// </summary>
+    /// <remarks>
+    /// A name that is already the new file name, a colon and digits (ignoring case) also gives the new name (task 065):
+    /// in a closed assembly opened invisibly, <c>ComponentOccurrence.Name</c> reads the new file name after
+    /// <c>ReplaceReference</c> while the name stored in the file is still the old one (spike 062), so such an occurrence
+    /// must be set again.
+    /// </remarks>
     public static string? RenamedOccurrence(string? occurrenceName, string? oldFullFileName, string? newFullFileName)
     {
         var oldStem = Stem(oldFullFileName);
@@ -485,7 +497,46 @@ public static class RenamePlan
             return null;
         }
 
-        var prefix = oldStem + ":";
+        var digits = DigitsAfter(occurrenceName, oldStem) ?? DigitsAfter(occurrenceName, newStem);
+        return digits is null ? null : newStem + ":" + digits;
+    }
+
+    /// <summary>
+    /// The temporary name an occurrence is given before it is set to <paramref name="newName"/> (task 065, spike 062):
+    /// setting <c>ComponentOccurrence.Name</c> to the value it already reads changes nothing, so the name is set to this
+    /// first. It is <see cref="TemporaryOccurrencePrefix"/> followed by a GUID in 32 digits, then the colon and digits
+    /// <paramref name="newName"/> ends with, when it ends with them: <c>AWBRENAME-3f2a…:1</c>. Letters, digits and dashes
+    /// only, apart from that suffix.
+    /// </summary>
+    /// <param name="guid">Replaces <see cref="Guid.NewGuid"/>; for tests.</param>
+    public static string TemporaryOccurrenceName(string newName, Guid? guid = null)
+    {
+        ArgumentNullException.ThrowIfNull(newName);
+
+        var colon = newName.LastIndexOf(':');
+        var suffix = colon >= 0 && colon < newName.Length - 1 && newName[(colon + 1)..].All(char.IsAsciiDigit)
+            ? newName[colon..]
+            : string.Empty;
+        return TemporaryOccurrencePrefix + (guid ?? Guid.NewGuid()).ToString("N", CultureInfo.InvariantCulture) + suffix;
+    }
+
+    /// <summary>
+    /// The text added to an occurrence problem's reason when the occurrence could not be given its new name nor its
+    /// original one back (task 065): it says the name it is left under. Empty when <paramref name="leftUnder"/> is blank
+    /// or is <paramref name="originalName"/> (exactly; a change of case is reported).
+    /// </summary>
+    public static string OccurrenceLeftUnderText(string? originalName, string? leftUnder) =>
+        string.IsNullOrWhiteSpace(leftUnder) || string.Equals(leftUnder, originalName, StringComparison.Ordinal)
+            ? string.Empty
+            : $" It could not be given its name back and is now named {leftUnder}.";
+
+    /// <summary>
+    /// The digits after <paramref name="stem"/> and a colon when <paramref name="occurrenceName"/> is exactly that
+    /// (ignoring case) followed by one or more ASCII digits; otherwise null.
+    /// </summary>
+    private static string? DigitsAfter(string occurrenceName, string stem)
+    {
+        var prefix = stem + ":";
         if (occurrenceName.Length <= prefix.Length
             || !occurrenceName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
         {
@@ -493,7 +544,7 @@ public static class RenamePlan
         }
 
         var digits = occurrenceName[prefix.Length..];
-        return digits.All(char.IsAsciiDigit) ? newStem + ":" + digits : null;
+        return digits.All(char.IsAsciiDigit) ? digits : null;
     }
 
     /// <summary>

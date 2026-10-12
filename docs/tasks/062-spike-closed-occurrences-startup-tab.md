@@ -32,6 +32,7 @@ Reproduced: part `BRACKET,AWB-90001.ipt`, assembly with two occurrences, both cl
 - Setting `Name` to the value it already reads (`BRACKET_V2,AWB-90001:1`) changes nothing: the browser still shows the old name after save and reopen.
 - **Setting `Name` to a temporary name first (`TMPNAME:1`), then to `BRACKET_V2,AWB-90001:1`, then `Dirty = true` and `Save`, works**: reopened visibly, the browser shows `BRACKET_V2,AWB-90001:1` and `:2`.
 - Aidan's own assembly, read back after his rename: `Name` reads `BRACKET_V3,AWB-10017:1` and `:2` (the current part), matching the reproduction.
+- Rerun during task 065 with a third occurrence renamed by hand to `LEFT` before the assembly was saved: in the closed assembly `Name` reads `LEFT` before and after `ReplaceReference`, and the browser shows `LEFT` after save and reopen. A custom name is reported as stored, so only default names read as the new file name.
 
 The open-assembly case was confirmed by Aidan's checks (task 058): there `Name` still reads the old name after the part's `SaveAs`, and one set renames it.
 

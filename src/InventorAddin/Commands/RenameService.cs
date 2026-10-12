@@ -538,7 +538,10 @@ namespace InventorAddin.Commands
             /// In an assembly, renames each top-level occurrence of the renamed file whose name
             /// <see cref="RenamePlan.RenamedOccurrence"/> renames. The occurrence's file is matched against the new path,
             /// and the old one too, for a closed assembly whose occurrences may still read the old path after
-            /// <c>ReplaceReference</c>. A failure is added to <paramref name="problems"/> and the rest go on. The count renamed.
+            /// <c>ReplaceReference</c>. Each is set to a temporary name (<see cref="RenamePlan.TemporaryOccurrenceName"/>)
+            /// and then to the new one (task 065, spike 062): in a closed assembly <c>Name</c> already reads the new name
+            /// while the stored name is the old one, and setting the value it reads changes nothing. A failure is added to
+            /// <paramref name="problems"/> and the rest go on. The count renamed.
             /// </summary>
             private static int RenameOccurrences(
                 Document doc, string oldFullFileName, string newFullFileName, List<OccurrenceProblem> problems)
@@ -563,6 +566,18 @@ namespace InventorAddin.Commands
                     if (!SamePath(file, newFullFileName) && !SamePath(file, oldFullFileName))
                         continue;
 
+                    string temporary = RenamePlan.TemporaryOccurrenceName(newName);
+                    try
+                    {
+                        occ.Name = temporary;
+                    }
+                    catch (Exception ex)
+                    {
+                        // Nothing changed: the occurrence keeps its name.
+                        problems.Add(new OccurrenceProblem(name, ex.Message));
+                        continue;
+                    }
+
                     try
                     {
                         occ.Name = newName;
@@ -570,11 +585,32 @@ namespace InventorAddin.Commands
                     }
                     catch (Exception ex)
                     {
-                        problems.Add(new OccurrenceProblem(name, ex.Message));
+                        problems.Add(new OccurrenceProblem(name, ex.Message + RestoreOccurrenceName(occ, name, temporary)));
                     }
                 }
 
                 return renamed;
+            }
+
+            /// <summary>
+            /// After the new name could not be set, puts <paramref name="originalName"/> back on <paramref name="occ"/>.
+            /// Empty when that worked; otherwise the text to add to the problem's reason, naming the name it is left
+            /// under (<see cref="RenamePlan.OccurrenceLeftUnderText"/>).
+            /// </summary>
+            private static string RestoreOccurrenceName(ComponentOccurrence occ, string originalName, string temporaryName)
+            {
+                try
+                {
+                    occ.Name = originalName;
+                    return string.Empty;
+                }
+                catch (Exception ex)
+                {
+                    string leftUnder = ComSafe.Get(() => occ.Name) ?? temporaryName;
+                    AddinServices.Log.Warn(
+                        $"Rename: occurrence '{originalName}' could not be given its name back ({ex.Message}); it is named '{leftUnder}'.");
+                    return RenamePlan.OccurrenceLeftUnderText(originalName, leftUnder);
+                }
             }
         }
     }

@@ -756,6 +756,109 @@ public sealed class RenamePlanTests : IDisposable
         Assert.Null(RenamePlan.RenamedOccurrence("BRACKET,AWB-10005:1", oldPath, newPath));
     }
 
+    // RenamedOccurrence: a name that already reads as the new file name (task 065, spike 062)
+
+    [Theory]
+    [InlineData("BRACKET_2,AWB-10005:1", "BRACKET_2,AWB-10005:1")]
+    [InlineData("BRACKET_2,AWB-10005:2", "BRACKET_2,AWB-10005:2")]
+    [InlineData("BRACKET_2,AWB-10005:12", "BRACKET_2,AWB-10005:12")]
+    [InlineData("BRACKET_2,AWB-10005:007", "BRACKET_2,AWB-10005:007")]
+    [InlineData("bracket_2,awb-10005:3", "BRACKET_2,AWB-10005:3")]
+    public void RenamedOccurrence_AlreadyTheNewFileNameAColonAndDigits_GetsTheNewNameAgain(string name, string expected)
+    {
+        Assert.Equal(expected, RenamePlan.RenamedOccurrence(name, OldBracket, NewBracket));
+    }
+
+    [Theory]
+    [InlineData("BRACKET_2,AWB-10005:2a")]
+    [InlineData("BRACKET_2,AWB-10005 copy:1")]
+    [InlineData("BRACKET_2,AWB-10005:")]
+    [InlineData("BRACKET_2,AWB-10005")]
+    [InlineData("BRACKET_2,AWB-10005:-1")]
+    [InlineData("BRACKET_2,AWB-10005: 1")]
+    [InlineData("BRACKET_2,AWB-10005:1:2")]
+    [InlineData("XBRACKET_2,AWB-10005:1")]
+    [InlineData("BRACKET_2:1")]
+    public void RenamedOccurrence_NearMissesOfTheNewFileName_AreLeftAlone(string name)
+    {
+        Assert.Null(RenamePlan.RenamedOccurrence(name, OldBracket, NewBracket));
+    }
+
+    [Fact]
+    public void RenamedOccurrence_ATemporaryOccurrenceName_IsLeftAlone()
+    {
+        Assert.Null(RenamePlan.RenamedOccurrence(
+            RenamePlan.TemporaryOccurrenceName("BRACKET_2,AWB-10005:1"), OldBracket, NewBracket));
+    }
+
+    // TemporaryOccurrenceName (task 065)
+
+    private static readonly Guid FixedGuid = new("3f2a5b6c-7d8e-4f90-a1b2-c3d4e5f60718");
+
+    [Theory]
+    [InlineData("BRACKET_2,AWB-10005:1", "AWBRENAME-3f2a5b6c7d8e4f90a1b2c3d4e5f60718:1")]
+    [InlineData("BRACKET_2,AWB-10005:12", "AWBRENAME-3f2a5b6c7d8e4f90a1b2c3d4e5f60718:12")]
+    [InlineData("BRACKET_2,AWB-10005:007", "AWBRENAME-3f2a5b6c7d8e4f90a1b2c3d4e5f60718:007")]
+    [InlineData("BRACKET_2,AWB-10005", "AWBRENAME-3f2a5b6c7d8e4f90a1b2c3d4e5f60718")]
+    [InlineData("BRACKET_2,AWB-10005:", "AWBRENAME-3f2a5b6c7d8e4f90a1b2c3d4e5f60718")]
+    [InlineData("BRACKET_2,AWB-10005:1a", "AWBRENAME-3f2a5b6c7d8e4f90a1b2c3d4e5f60718")]
+    [InlineData("", "AWBRENAME-3f2a5b6c7d8e4f90a1b2c3d4e5f60718")]
+    public void TemporaryOccurrenceName_KeepsTheColonAndDigitsOfTheNewName(string newName, string expected)
+    {
+        Assert.Equal(expected, RenamePlan.TemporaryOccurrenceName(newName, FixedGuid));
+    }
+
+    [Fact]
+    public void TemporaryOccurrenceName_LettersDigitsAndDashesOnly_AndNotAFileNameWithANumber()
+    {
+        var temp = RenamePlan.TemporaryOccurrenceName("BRACKET_2,AWB-10005:1", FixedGuid);
+        var beforeSuffix = temp[..temp.LastIndexOf(':')];
+
+        Assert.All(beforeSuffix, c => Assert.True(char.IsAsciiLetterOrDigit(c) || c == '-', $"'{c}'"));
+        Assert.DoesNotContain('~', temp);
+        Assert.DoesNotContain(',', temp);
+        Assert.False(PartFileName.TryReadNumber(beforeSuffix + ".ipt", out _));
+    }
+
+    [Fact]
+    public void TemporaryOccurrenceName_RealGuids_AreDifferent()
+    {
+        Assert.NotEqual(
+            RenamePlan.TemporaryOccurrenceName("BRACKET_2,AWB-10005:1"),
+            RenamePlan.TemporaryOccurrenceName("BRACKET_2,AWB-10005:1"));
+    }
+
+    // OccurrenceLeftUnderText (task 065)
+
+    [Fact]
+    public void OccurrenceLeftUnderText_AnotherName_SaysTheNameItIsLeftUnder()
+    {
+        Assert.Equal(
+            " It could not be given its name back and is now named AWBRENAME-3f2a:1.",
+            RenamePlan.OccurrenceLeftUnderText("BRACKET,AWB-10005:1", "AWBRENAME-3f2a:1"));
+    }
+
+    [Theory]
+    [InlineData("BRACKET,AWB-10005:1", "BRACKET,AWB-10005:1")]
+    [InlineData("BRACKET,AWB-10005:1", "")]
+    [InlineData("BRACKET,AWB-10005:1", null)]
+    public void OccurrenceLeftUnderText_TheOriginalNameOrNone_IsEmpty(string original, string? leftUnder)
+    {
+        Assert.Equal(string.Empty, RenamePlan.OccurrenceLeftUnderText(original, leftUnder));
+    }
+
+    [Fact]
+    public void OccurrenceLeftUnderText_ADifferentCase_IsReported()
+    {
+        Assert.NotEqual(string.Empty, RenamePlan.OccurrenceLeftUnderText("BRACKET,AWB-10005:1", "bracket,AWB-10005:1"));
+    }
+
+    [Fact]
+    public void TemporaryOccurrenceName_Null_Throws()
+    {
+        Assert.Throws<ArgumentNullException>(() => RenamePlan.TemporaryOccurrenceName(null!));
+    }
+
     // FileOfDocumentName
 
     [Theory]

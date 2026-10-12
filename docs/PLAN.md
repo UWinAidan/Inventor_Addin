@@ -217,7 +217,7 @@ Folded in from `TODO.md`: spec 08's ribbon icon list (056), and Save As and Repl
 - [x] 062 Spike: occurrence names in a closed assembly; the startup tab (Windows)
 - [x] 063 Create Print makes .idw drawings (item 1)
 - [x] 064 Ribbon panels: Create, Properties, Drawing, AWB (item 2)
-- [ ] 065 Rename renames occurrences in closed assemblies (item 3)
+- [x] 065 Rename renames occurrences in closed assemblies (item 3)
 - [ ] 066 The AWB Addin tab is active when Inventor starts with no document (item 4)
 
 Not in M2: browser folders (Aidan: no), a templates folder setting (later, with Aidan's own templates), the custom drawing template (M5), and distribution (parked; see below). The two deploy-line follow-ups from task 025 stay in `TODO.md`.
