@@ -6,9 +6,8 @@ Last updated: 2026-10-12
 
 ## Next up
 
-1. Fix run 2 (tasks 063 to 066 in `docs/PLAN.md`) on branch `claude/m2-fix-run`, then Aidan builds, deploys and works through its checks. The branch is local; push and open a pull request when Aidan says so.
-2. Aidan finishes the remaining run 1 and Part Properties checks below.
-3. Plan the next milestone once M2 is tested; M3 to M6 wait on Aidan's decisions listed below.
+1. Aidan finishes the remaining run 1 and Part Properties checks below.
+2. Plan the next milestone; M3 to M6 wait on Aidan's decisions listed below.
 
 ## Waiting on Aidan: checks in Inventor
 
@@ -16,11 +15,7 @@ Last updated: 2026-10-12
 
 **M2 fix run** (053 to 061) was checked on 2026-10-12: everything passed except occurrence names in a closed assembly, now task 065. Aidan also asked for four items, now fix run 2 (062 to 066).
 
-**M2 fix run 2** (full steps in each task's Verification section; everything compiled on Aidan's PC, nothing tested in Inventor)
-- [ ] 063 Create Print makes `.idw` from `ANSI (mm).idw` / `ANSI (in).idw`; existing `.dwg` prints still offered; `.idw` preferred when both exist (7 steps)
-- [ ] 064 Ribbon panels Create, Properties, Drawing, (Developer,) AWB on every ribbon; small buttons stacked; no old panel left (6 steps)
-- [ ] 065 Rename with the assembly closed, open, and loaded only through its parent: browser shows the new occurrence names, `LEFT` untouched, no `AWBRENAME-` left; case-only rename (5 steps)
-- [ ] 066 Startup tab: no file (ends on AWB Addin), started by double-clicking a part (tab untouched, and still untouched after closing the part), loaded from the Add-in Manager, a tab clicked in the first seconds, a part opened within 5 s (5 steps)
+**M2 fix run 2** (062 to 066) was checked on 2026-10-12: every check passed.
 
 **M2 run 1** (full steps in each task's Verification section). Aidan's run 1 checks found three things, now tasks 049 to 051; tick the rest here when confirmed
 - [ ] Task 037, Settings: units dropdown and register folder, Browse, validation, access keys, an unknown units value in `settings.json`; is "Units for new files" cut off?
