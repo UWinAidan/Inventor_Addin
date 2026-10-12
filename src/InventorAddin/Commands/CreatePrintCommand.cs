@@ -9,13 +9,12 @@ using InventorAddin.Extraction;
 using Forms = System.Windows.Forms;
 using IODirectory = System.IO.Directory;
 using IOFile = System.IO.File;
-using IOPath = System.IO.Path;
 
 namespace InventorAddin.Commands
 {
     /// <summary>
-    /// Create Print (spec 02, "Commands: Create Print"): makes a drawing of the active part or assembly from Inventor's
-    /// drawing template, with one front base view centred on the first sheet at a standard scale that fits, saves it
+    /// Create Print (spec 02, "Commands: Create Print"): makes an <c>.idw</c> drawing of the active part or assembly from
+    /// Inventor's <c>.idw</c> drawing template, with one front base view centred on the first sheet at a standard scale that fits, saves it
     /// under the model's name in the <c>Prints</c> subfolder of the model's folder (created when missing), and leaves it
     /// open. The file name, the scale and the messages are decided
     /// in <see cref="PrintPlan"/> (Core); this class reads Inventor and applies the result, by the calls spike 032
@@ -59,11 +58,10 @@ namespace InventorAddin.Commands
 
             UnitsSystem units = AddinServices.Settings.DefaultUnits;
             string? template = Templates.DrawingFor(units);
-            string preferredExtension = template != null ? IOPath.GetExtension(template) : PrintPlan.DrawingExtensions[0];
 
             // An existing print, with either drawing extension, in Prints or (made before 2026-10-11) beside the model,
-            // is offered instead of making a new one.
-            string? existing = PrintPlan.FindExistingPrint(modelPath, preferredExtension, IOFile.Exists);
+            // is offered instead of making a new one; an .idw is preferred when both exist.
+            string? existing = PrintPlan.FindExistingPrint(modelPath, PrintPlan.NewPrintExtension, IOFile.Exists);
             if (existing != null)
             {
                 OfferToOpen(existing);
@@ -87,7 +85,7 @@ namespace InventorAddin.Commands
             }
 
             string printsFolder = PrintPlan.PrintsFolder(modelPath);
-            string drawingPath = PrintPlan.DrawingFileName(modelPath, IOPath.GetExtension(template));
+            string drawingPath = PrintPlan.DrawingFileName(modelPath, PrintPlan.NewPrintExtension);
             string? partNumber = ModelPartNumber(model);
 
             Forms.Cursor previousCursor = Forms.Cursor.Current;

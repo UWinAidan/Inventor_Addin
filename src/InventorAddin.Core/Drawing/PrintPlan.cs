@@ -14,6 +14,12 @@ public static class PrintPlan
     /// <summary>The drawing file extensions Inventor makes. Spike 032: the drawing template decides which one is used.</summary>
     public static IReadOnlyList<string> DrawingExtensions { get; } = new[] { ".dwg", ".idw" };
 
+    /// <summary>
+    /// The extension of a print Create Print makes (Aidan, 2026-10-12). Existing prints with either of
+    /// <see cref="DrawingExtensions"/> are still found; this one is preferred when both exist.
+    /// </summary>
+    public const string NewPrintExtension = ".idw";
+
     /// <summary>The standard view scales, largest first (Default): 10:1 down to 1:50.</summary>
     public static IReadOnlyList<double> StandardScales { get; } = new[]
     {
@@ -130,11 +136,52 @@ public static class PrintPlan
     }
 
     /// <summary>
-    /// Names the units, for example
-    /// <c>Inventor has no default drawing template for metric units. No print was created.</c>
+    /// The <see cref="NewPrintExtension"/> drawing template to make a print from, given the template paths Inventor's
+    /// lookups return, in order (spike 032: they return <c>.dwg</c> templates, and the <c>.idw</c> ones sit beside them).
+    /// For each path, blank ones skipped: the path itself when it already ends <c>.idw</c> (ignoring case), otherwise the
+    /// same path with its extension changed to <c>.idw</c>; the first of those that <paramref name="exists"/>, or null.
+    /// Never a <c>.dwg</c> template (Default, task 063). Works on Windows paths on any platform, so it does not use
+    /// <see cref="Path"/>.
+    /// </summary>
+    /// <param name="lookedUp">The paths Inventor's template lookups returned, most wanted first. Read lazily, so a
+    /// later lookup can run only when the earlier paths have no <c>.idw</c> template.</param>
+    /// <param name="exists">Whether a file exists.</param>
+    public static string? IdwTemplate(IEnumerable<string?> lookedUp, Func<string, bool> exists)
+    {
+        ArgumentNullException.ThrowIfNull(lookedUp);
+        ArgumentNullException.ThrowIfNull(exists);
+
+        foreach (string? path in lookedUp)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                continue;
+
+            string candidate = WithExtension(path.Trim(), NewPrintExtension);
+            if (exists(candidate))
+                return candidate;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// The file name of Inventor's default <c>.idw</c> template in <paramref name="units"/>:
+    /// <c>ANSI (mm).idw</c> or <c>ANSI (in).idw</c> (spike 032).
+    /// </summary>
+    public static string IdwTemplateName(UnitsSystem units) => units switch
+    {
+        UnitsSystem.Metric => "ANSI (mm)" + NewPrintExtension,
+        UnitsSystem.Imperial => "ANSI (in)" + NewPrintExtension,
+        _ => throw new ArgumentOutOfRangeException(nameof(units), units, "Unknown units."),
+    };
+
+    /// <summary>
+    /// Names the template kind and the units, for example
+    /// <c>Inventor has no .idw drawing template for metric units (ANSI (mm).idw). No print was created.</c>
     /// </summary>
     public static string MissingTemplateMessage(UnitsSystem units) =>
-        $"Inventor has no default drawing template for {UnitsName(units)} units. No print was created.";
+        $"Inventor has no {NewPrintExtension} drawing template for {UnitsName(units)} units ({IdwTemplateName(units)}). " +
+        "No print was created.";
 
     /// <summary>
     /// Says which step failed and why, and what became of the drawing, for example
@@ -186,6 +233,21 @@ public static class PrintPlan
     {
         /// <summary>The model's name, without an extension, in its <see cref="PrintsFolderName"/> folder.</summary>
         public string InPrintsFolder() => Folder + PrintsFolderName + Separator + NameWithoutExtension;
+    }
+
+    /// <summary>
+    /// <paramref name="path"/> with the extension of its file name replaced by <paramref name="extension"/>, or added
+    /// when it has none; returned as it is when it already ends in <paramref name="extension"/> (ignoring case). Dots in
+    /// the folder are left alone.
+    /// </summary>
+    private static string WithExtension(string path, string extension)
+    {
+        if (path.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
+            return path;
+
+        int nameStart = path.LastIndexOfAny(new[] { '\\', '/' }) + 1;
+        int dot = path.LastIndexOf('.');
+        return (dot >= nameStart ? path[..dot] : path) + extension;
     }
 
     private static string NormaliseExtension(string extension)
