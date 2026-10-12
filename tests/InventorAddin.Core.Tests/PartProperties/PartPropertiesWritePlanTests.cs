@@ -14,6 +14,7 @@ public sealed class PartPropertiesWritePlanTests
         Description = "Bracket",
         PartType = "M",
         Designer = "A. Person",
+        Author = "A. Person",
         Detailer = "B. Person",
         Cost = 12.5m,
         Material = "Test Steel",
@@ -82,7 +83,96 @@ public sealed class PartPropertiesWritePlanTests
     {
         var writes = Build(Original, Unchanged with { Designer = "  C. Person " });
 
-        Assert.Equal(new[] { PropertyWrite.SetText(PartPropertyStorage.Designer, "C. Person") }, writes);
+        Assert.Equal(
+            new[]
+            {
+                PropertyWrite.SetText(PartPropertyStorage.Designer, "C. Person"),
+                PropertyWrite.SetText(PartPropertyStorage.Author, "C. Person"),
+            },
+            writes);
+    }
+
+    // ---- Author follows Designer ----
+
+    [Fact]
+    public void UnchangedDesigner_AuthorIsTheWindowsUserName_SetsAuthorAlone()
+    {
+        var writes = Build(Original with { Author = "testuser" }, Unchanged);
+
+        Assert.Equal(new[] { PropertyWrite.SetText(PartPropertyStorage.Author, "A. Person") }, writes);
+    }
+
+    [Fact]
+    public void AuthorBlankInFile_SetsAuthorToDesigner()
+    {
+        var writes = Build(Original with { Author = null }, Unchanged);
+
+        Assert.Equal(new[] { PropertyWrite.SetText(PartPropertyStorage.Author, "A. Person") }, writes);
+    }
+
+    [Fact]
+    public void AuthorDiffersOnlyInSurroundingSpaces_GivesNoWrite()
+    {
+        Assert.Empty(Build(Original with { Author = "  A. Person\t" }, Unchanged with { Designer = " A. Person " }));
+    }
+
+    [Fact]
+    public void AuthorDiffersOnlyInCase_SetsAuthor()
+    {
+        var writes = Build(Original with { Author = "a. person" }, Unchanged);
+
+        Assert.Equal(new[] { PropertyWrite.SetText(PartPropertyStorage.Author, "A. Person") }, writes);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void BlankDesigner_LeavesAuthorAsItIs(string? designer)
+    {
+        var original = Original with { Designer = null, Author = "testuser" };
+
+        Assert.Empty(Build(original, Unchanged with { Designer = designer }));
+    }
+
+    [Theory]
+    [InlineData("testuser")]
+    [InlineData(" TestUser ")]
+    [InlineData("T.User")]
+    public void DesignerThatMeansMe_IsNeverCopiedIntoAuthor(string designer)
+    {
+        var names = PersonNames.NamesThatMeanMe("testuser", "T.User");
+        var original = Original with { Designer = designer, Author = "Jane Real" };
+
+        Assert.Empty(PartPropertiesWritePlan.Build(original, Unchanged with { Designer = designer }, names));
+    }
+
+    [Fact]
+    public void DesignerThatMeansMe_ChangedTo_StillLeavesAuthor()
+    {
+        var names = PersonNames.NamesThatMeanMe("testuser", null);
+
+        var writes = PartPropertiesWritePlan.Build(Original, Unchanged with { Designer = "testuser" }, names);
+
+        Assert.Equal(new[] { PropertyWrite.SetText(PartPropertyStorage.Designer, "testuser") }, writes);
+    }
+
+    [Fact]
+    public void DesignerNotInTheNames_IsStillCopiedIntoAuthor()
+    {
+        var names = PersonNames.NamesThatMeanMe("testuser", "T.User");
+
+        var writes = PartPropertiesWritePlan.Build(Original with { Author = "testuser" }, Unchanged, names);
+
+        Assert.Equal(new[] { PropertyWrite.SetText(PartPropertyStorage.Author, "A. Person") }, writes);
+    }
+
+    [Fact]
+    public void ClearingDesigner_ClearsDesignerButNotAuthor()
+    {
+        var writes = Build(Original, Unchanged with { Designer = "" });
+
+        Assert.Equal(new[] { PropertyWrite.SetText(PartPropertyStorage.Designer, "") }, writes);
     }
 
     [Fact]
@@ -240,6 +330,7 @@ public sealed class PartPropertiesWritePlanTests
                 PropertyWrite.SetText(PartPropertyStorage.Description, "Bracket"),
                 PropertyWrite.SetText(PartPropertyStorage.PartType, "PM"),
                 PropertyWrite.SetText(PartPropertyStorage.Designer, "C. Person"),
+                PropertyWrite.SetText(PartPropertyStorage.Author, "C. Person"),
                 PropertyWrite.Remove(PartPropertyStorage.Detailer),
                 PropertyWrite.SetCurrency(PartPropertyStorage.Cost, 99m),
             },

@@ -6,8 +6,8 @@ namespace InventorAddin.Core.Tests.Numbering;
 
 public sealed class PartRenamerTests : IDisposable
 {
-    private const string OldPath = @"C:\Cad\AWB-10001,plate.ipt";
-    private const string NewPath = @"C:\Cad\AWB-10001,base_plate.ipt";
+    private const string OldPath = @"C:\Cad\plate,AWB-10001.ipt";
+    private const string NewPath = @"C:\Cad\base_plate,AWB-10001.ipt";
 
     private static readonly RenameRequest Request = new(OldPath, NewPath, "base plate");
 
@@ -29,7 +29,7 @@ public sealed class PartRenamerTests : IDisposable
     {
         _target.Referencing.Add(@"C:\Cad\asm.iam");
         _target.Referencing.Add(@"C:\Cad\plate.idw");
-        _target.Repointed.Add(new RenameFileResult(@"C:\Cad\open.iam"));
+        _target.Open.Add(new FakeDoc(@"C:\Cad\open.iam", OldPath));
 
         var result = Renamer().Run(Request, [@"C:\Cad\asm.iam", @"C:\Cad\other.iam", @"C:\Cad\plate.idw"]);
 
@@ -48,6 +48,7 @@ public sealed class PartRenamerTests : IDisposable
             @"Update C:\Cad\plate.idw",
             $"SaveRepointed {NewPath}",
             "Description base plate",
+            $"CheckOpen {OldPath}",
             $"Delete {OldPath}",
         ], _target.Calls);
     }
@@ -55,10 +56,10 @@ public sealed class PartRenamerTests : IDisposable
     [Fact]
     public void Run_SkipsTheRenamedFileItself_AsOldOrNewPath()
     {
-        var oldAsm = @"C:\Cad\AWB-10002,frame.iam";
-        var newAsm = @"C:\Cad\AWB-10002,main_frame.iam";
+        var oldAsm = @"C:\Cad\frame,AWB-10002.iam";
+        var newAsm = @"C:\Cad\main_frame,AWB-10002.iam";
 
-        Renamer().Run(new RenameRequest(oldAsm, newAsm, "main frame"), [@"c:\cad\awb-10002,FRAME.iam", newAsm, @"C:\Cad\top.iam"]);
+        Renamer().Run(new RenameRequest(oldAsm, newAsm, "main frame"), [@"c:\cad\FRAME,awb-10002.iam", newAsm, @"C:\Cad\top.iam"]);
 
         Assert.Equal([@"Update C:\Cad\top.iam"], _target.Calls.Where(c => c.StartsWith("Update", StringComparison.Ordinal)));
     }
@@ -76,12 +77,14 @@ public sealed class PartRenamerTests : IDisposable
     [Fact]
     public void Run_AnOpenFileAlreadyUpdatedIsListedOnce()
     {
-        _target.Referencing.Add(@"C:\Cad\asm.iam");
-        _target.Repointed.Add(new RenameFileResult(@"c:\cad\ASM.iam"));
+        var open = new FakeDoc(@"c:\cad\ASM.iam", OldPath);
+        _target.Open.Add(open);
 
         var result = Renamer().Run(Request, [@"C:\Cad\asm.iam"]);
 
         Assert.Single(result.Files);
+        Assert.Equal(1, open.Saves);
+        Assert.Equal(NewPath, open.OnDisk);
     }
 
     // Failures
@@ -124,7 +127,7 @@ public sealed class PartRenamerTests : IDisposable
     [Fact]
     public void Run_AnOpenFileThatCannotBeSaved_KeepsTheOldFile()
     {
-        _target.Repointed.Add(new RenameFileResult(@"C:\Cad\open.iam", "it is locked"));
+        _target.Open.Add(new FakeDoc(@"C:\Cad\open.iam", OldPath) { FailSave = "it is locked" });
 
         var result = Renamer().Run(Request, []);
 
@@ -196,16 +199,363 @@ public sealed class PartRenamerTests : IDisposable
         Assert.True(result.OldFileDeleted);
     }
 
+    // Never breaking a reference (task 058, spike 052)
+
+    [Fact]
+    public void Run_AnOpenDocumentRepointedButNotDirty_OutsideTheSearch_IsSavedWithTheNewReference()
+    {
+        var drawing = new FakeDoc(@"D:\Elsewhere\plate.dwg", OldPath);
+        _target.Open.Add(drawing);
+
+        var result = Renamer().Run(Request, []);
+
+        Assert.Equal(NewPath, drawing.OnDisk);
+        Assert.False(drawing.Dirty);
+        Assert.Equal(@"D:\Elsewhere\plate.dwg", Assert.Single(result.Files).FullFileName);
+        Assert.True(result.OldFileDeleted);
+    }
+
+    [Fact]
+    public void Run_AnOpenDocumentInTheSearch_RepointedButNotDirty_IsUpdatedAndSaved()
+    {
+        var drawing = new FakeDoc(@"C:\Cad\Prints\plate.dwg", OldPath);
+        _target.Open.Add(drawing);
+
+        var result = Renamer().Run(Request, [@"C:\Cad\Prints\plate.dwg"]);
+
+        Assert.Equal(NewPath, drawing.OnDisk);
+        Assert.Equal(1, drawing.Saves);
+        Assert.Single(result.Files);
+        Assert.True(result.OldFileDeleted);
+    }
+
+    [Fact]
+    public void Run_AClosedFileWithTheOldReference_IsUpdated()
+    {
+        _target.Referencing.Add(@"C:\Cad\frame.iam");
+
+        var result = Renamer().Run(Request, [@"C:\Cad\frame.iam"]);
+
+        Assert.Equal(NewPath, _target.ClosedOnDisk[@"C:\Cad\frame.iam"]);
+        Assert.Equal(1, result.UpdatedCount);
+        Assert.True(result.OldFileDeleted);
+    }
+
+    [Fact]
+    public void Run_AFileThatDoesNotUseIt_IsNotListed()
+    {
+        _target.Open.Add(new FakeDoc(@"C:\Cad\unrelated.iam", @"C:\Cad\other.ipt"));
+
+        var result = Renamer().Run(Request, [@"C:\Cad\unrelated.iam", @"C:\Cad\closed.iam"]);
+
+        Assert.Empty(result.Files);
+        Assert.Equal(0, _target.Open[0].Saves);
+    }
+
+    [Fact]
+    public void Run_AnOpenDocumentStillReferencingTheOldFile_KeepsTheOldFile_AndNamesIt()
+    {
+        _target.StillUsingOld.Add(@"C:\Cad\broken.idw");
+
+        var result = Renamer().Run(Request, []);
+
+        Assert.False(result.OldFileDeleted);
+        Assert.True(result.HasProblems);
+        var note = Assert.Single(result.Notes);
+        Assert.Equal(PartRenamer.OldFileStillUsedMessage(OldPath, [@"C:\Cad\broken.idw"]), note.Text);
+        Assert.Contains("broken.idw", note.Text, StringComparison.Ordinal);
+        Assert.True(note.IsProblem);
+        Assert.DoesNotContain(_target.Calls, c => c.StartsWith("Delete", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Run_TheOpenFilesCannotBeChecked_KeepsTheOldFile()
+    {
+        _target.FailOpenCheck = "Inventor is busy";
+
+        var result = Renamer().Run(Request, []);
+
+        Assert.False(result.OldFileDeleted);
+        Assert.Contains(result.Notes, n => n.Text == PartRenamer.OldFileCheckFailedMessage(OldPath, "Inventor is busy") && n.IsProblem);
+        Assert.DoesNotContain(_target.Calls, c => c.StartsWith("Delete", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Run_AFileFailed_DoesNotAskAboutOpenFiles_TheOldFileIsKeptAnyway()
+    {
+        _target.Failing[@"C:\Cad\b.iam"] = "read-only";
+
+        Renamer().Run(Request, [@"C:\Cad\b.iam"]);
+
+        Assert.DoesNotContain(_target.Calls, c => c.StartsWith("CheckOpen", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Run_PassesEverySearchedFileAsHandled_SoAnOpenOneIsNotSavedTwice()
+    {
+        var open = new FakeDoc(@"C:\Cad\asm.iam", OldPath);
+        _target.Open.Add(open);
+        var outside = new FakeDoc(@"D:\Other\top.iam", OldPath);
+        _target.Open.Add(outside);
+
+        var result = Renamer().Run(Request, [@"C:\Cad\asm.iam"]);
+
+        Assert.Equal(1, open.Saves);
+        Assert.Equal(1, outside.Saves);
+        Assert.Equal([@"C:\Cad\asm.iam", @"D:\Other\top.iam"], result.Files.Select(f => f.FullFileName));
+    }
+
+    // Occurrences
+
+    [Fact]
+    public void Run_CountsTheOccurrencesRenamed_InSearchedAndOpenFiles()
+    {
+        _target.Referencing.Add(@"C:\Cad\asm.iam");
+        _target.Occurrences[@"C:\Cad\asm.iam"] = new RenameFileUpdate(2);
+        _target.Open.Add(new FakeDoc(@"D:\Other\top.iam", OldPath));
+        _target.Occurrences[@"D:\Other\top.iam"] = new RenameFileUpdate(1);
+
+        var result = Renamer().Run(Request, [@"C:\Cad\asm.iam"]);
+
+        Assert.Equal(3, result.OccurrencesRenamed);
+        Assert.Equal(2, result.Files.Single(f => f.FullFileName == @"C:\Cad\asm.iam").OccurrencesRenamed);
+        Assert.False(result.HasProblems);
+    }
+
+    [Fact]
+    public void Run_AnOccurrenceThatCannotBeRenamed_IsANote_AndTheRenameGoesOn()
+    {
+        _target.Referencing.Add(@"C:\Cad\asm.iam");
+        var problem = new OccurrenceProblem("plate,AWB-10001:3", "the name is taken");
+        _target.Occurrences[@"C:\Cad\asm.iam"] = new RenameFileUpdate(1, [problem]);
+
+        var result = Renamer().Run(Request, [@"C:\Cad\asm.iam"]);
+
+        Assert.True(result.OldFileDeleted);
+        Assert.Equal(1, result.UpdatedCount);
+        Assert.Equal(1, result.OccurrencesRenamed);
+        var note = Assert.Single(result.Notes);
+        Assert.Equal(PartRenamer.OccurrenceNotRenamedMessage(@"C:\Cad\asm.iam", problem), note.Text);
+        Assert.Contains("plate,AWB-10001:3", note.Text, StringComparison.Ordinal);
+        Assert.True(note.IsProblem);
+    }
+
+    // Drawings of the model (task 059)
+
+    private const string OldPrint = @"C:\Cad\Prints\plate,AWB-10001.dwg";
+    private const string NewPrint = @"C:\Cad\Prints\base_plate,AWB-10001.dwg";
+
+    [Fact]
+    public void Run_AClosedDrawingOfTheModel_IsUpdatedAndRenamed_AfterTheModelsSaveAs()
+    {
+        _target.Referencing.Add(OldPrint);
+        _target.Referencing.Add(@"C:\Cad\asm.iam");
+
+        var result = Renamer().Run(Request, [@"C:\Cad\asm.iam", OldPrint]);
+
+        Assert.Equal(
+        [
+            $"SaveAs {NewPath}",
+            @"Update C:\Cad\asm.iam",
+            $"Exists {NewPrint}",
+            $"RenameDrawing {OldPrint} -> {NewPrint}",
+            $"SaveRepointed {NewPath}",
+            "Description base plate",
+            $"CheckOpen {OldPath}",
+            $"Delete {OldPath}",
+        ], _target.Calls);
+        Assert.Equal(NewPath, _target.DrawingsOnDisk[NewPrint]);
+        Assert.False(_target.DrawingsOnDisk.ContainsKey(OldPrint));
+        var drawing = result.Files.Single(f => f.FullFileName == OldPrint);
+        Assert.True(drawing.Updated);
+        Assert.Equal(NewPrint, drawing.RenamedTo);
+        Assert.Equal(1, result.DrawingsRenamed);
+        Assert.True(result.OldFileDeleted);
+        Assert.False(result.HasProblems);
+    }
+
+    [Fact]
+    public void Run_AnOpenDrawingBesideTheModel_IsRenamedWhereItIs_ReopenedAndListedOnce()
+    {
+        const string oldIdw = @"C:\Cad\PLATE,awb-10001.idw";
+        const string newIdw = @"C:\Cad\base_plate,AWB-10001.idw";
+        var drawing = new FakeDoc(oldIdw, OldPath);
+        _target.Open.Add(drawing);
+
+        var result = Renamer().Run(Request, [oldIdw]);
+
+        Assert.Equal(newIdw, drawing.Path);
+        Assert.True(drawing.Reopened);
+        Assert.Equal(NewPath, drawing.OnDisk);
+        Assert.Equal(1, drawing.Saves);
+        var file = Assert.Single(result.Files);
+        Assert.Equal(newIdw, file.RenamedTo);
+        Assert.True(result.OldFileDeleted);
+        Assert.False(result.HasProblems);
+    }
+
+    [Fact]
+    public void Run_ADrawingWhoseNewNameIsTaken_IsOnlyUpdated_KeepsItsName_AndSaysSo()
+    {
+        _target.Referencing.Add(OldPrint);
+        _target.Existing.Add(NewPrint);
+
+        var result = Renamer().Run(Request, [OldPrint]);
+
+        Assert.DoesNotContain(_target.Calls, c => c.StartsWith("RenameDrawing", StringComparison.Ordinal));
+        Assert.Contains($"Update {OldPrint}", _target.Calls);
+        Assert.Equal(NewPath, _target.ClosedOnDisk[OldPrint]);
+        var file = Assert.Single(result.Files);
+        Assert.True(file.Updated);
+        Assert.Null(file.RenamedTo);
+        var note = Assert.Single(result.Notes);
+        Assert.Equal(PartRenamer.DrawingNameTakenMessage(OldPrint, NewPrint), note.Text);
+        Assert.True(note.IsProblem);
+        Assert.True(result.OldFileDeleted);
+    }
+
+    [Fact]
+    public void Run_ADrawingWithTheModelsNameInAnotherFolder_IsOnlyUpdated()
+    {
+        const string elsewhere = @"C:\Cad\Other\plate,AWB-10001.dwg";
+        _target.Referencing.Add(elsewhere);
+
+        var result = Renamer().Run(Request, [elsewhere]);
+
+        Assert.Equal([$"Update {elsewhere}"], _target.Calls.Where(c => c.Contains(elsewhere, StringComparison.Ordinal)));
+        Assert.Null(Assert.Single(result.Files).RenamedTo);
+        Assert.Empty(result.Notes);
+    }
+
+    [Fact]
+    public void Run_ADrawingOfTheModelThatDoesNotUseIt_IsLeftAlone()
+    {
+        var result = Renamer().Run(Request, [OldPrint]);
+
+        Assert.Contains($"RenameDrawing {OldPrint} -> {NewPrint}", _target.Calls);
+        Assert.Empty(result.Files);
+        Assert.Empty(result.Notes);
+        Assert.True(result.OldFileDeleted);
+    }
+
+    [Fact]
+    public void Run_ADrawingThatCannotBeUpdated_IsNotUpdated_AndTheOldFileIsKept()
+    {
+        _target.Failing[OldPrint] = "it is read-only";
+
+        var result = Renamer().Run(Request, [OldPrint]);
+
+        Assert.Equal(new RenameFileResult(OldPrint, "it is read-only"), Assert.Single(result.Files));
+        Assert.False(result.OldFileDeleted);
+        Assert.Contains(result.Notes, n => n.Text == PartRenamer.OldFileKeptMessage(OldPath));
+    }
+
+    [Fact]
+    public void Run_ADrawingRenameThatFailsAfterItsReferenceWasSaved_IsAProblem_ButTheOldFileFollowsTask058sRules()
+    {
+        _target.Referencing.Add(OldPrint);
+        _target.DrawingOutcomes[OldPrint] = new DrawingRenameUpdate(NotRenamedReason: "the disk is full");
+
+        var result = Renamer().Run(Request, [OldPrint]);
+
+        var file = Assert.Single(result.Files);
+        Assert.True(file.Updated);
+        Assert.Null(file.RenamedTo);
+        Assert.Equal(NewPath, _target.DrawingsOnDisk[OldPrint]);
+        var note = Assert.Single(result.Notes);
+        Assert.Equal(PartRenamer.DrawingNotRenamedMessage(OldPrint, NewPrint, "the disk is full"), note.Text);
+        Assert.True(note.IsProblem);
+        Assert.True(result.OldFileDeleted);
+    }
+
+    [Fact]
+    public void Run_ARenamedDrawingWhoseOldFileStaysOrThatCannotBeReopened_IsRenamed_WithANoteForEach()
+    {
+        var drawing = new FakeDoc(OldPrint, OldPath);
+        _target.Open.Add(drawing);
+        _target.DrawingOutcomes[OldPrint] = new DrawingRenameUpdate(null, "it is locked", "Inventor refused");
+
+        var result = Renamer().Run(Request, [OldPrint]);
+
+        Assert.Equal(NewPrint, Assert.Single(result.Files).RenamedTo);
+        Assert.Equal(
+            [
+                PartRenamer.DrawingOldFileNotDeletedMessage(OldPrint, NewPrint, "it is locked"),
+                PartRenamer.DrawingNotReopenedMessage(NewPrint, "Inventor refused"),
+            ],
+            result.Notes.Select(n => n.Text));
+        Assert.All(result.Notes, n => Assert.True(n.IsProblem));
+        Assert.True(result.OldFileDeleted);
+    }
+
+    [Fact]
+    public void Run_TheNewDrawingNameCannotBeChecked_TheDrawingIsOnlyUpdated_WithANote()
+    {
+        _target.Referencing.Add(OldPrint);
+        _target.FailExists = "the folder did not answer";
+
+        var result = Renamer().Run(Request, [OldPrint]);
+
+        Assert.DoesNotContain(_target.Calls, c => c.StartsWith("RenameDrawing", StringComparison.Ordinal));
+        Assert.Null(Assert.Single(result.Files).RenamedTo);
+        Assert.Equal(
+            PartRenamer.DrawingNotRenamedMessage(OldPrint, NewPrint, "the folder did not answer"),
+            Assert.Single(result.Notes).Text);
+    }
+
+    [Fact]
+    public void Run_BothDrawingExtensions_InPrintsAndBeside_AreEachRenamed()
+    {
+        string[] drawings = [@"C:\Cad\plate,AWB-10001.dwg", @"C:\Cad\prints\plate,AWB-10001.idw", OldPrint];
+        foreach (var d in drawings)
+            _target.Referencing.Add(d);
+
+        var result = Renamer().Run(Request, drawings);
+
+        Assert.Equal(
+            [@"C:\Cad\base_plate,AWB-10001.dwg", @"C:\Cad\prints\base_plate,AWB-10001.idw", NewPrint],
+            result.Files.Select(f => f.RenamedTo));
+        Assert.Equal(3, result.DrawingsRenamed);
+    }
+
+    // The log
+
+    [Fact]
+    public void Run_TheLastLogLine_SaysFilesUpdatedOccurrencesRenamedAndWhetherTheOldFileWasDeleted()
+    {
+        _target.Referencing.Add(@"C:\Cad\asm.iam");
+        _target.Occurrences[@"C:\Cad\asm.iam"] = new RenameFileUpdate(2);
+        var log = new ListLog();
+
+        new PartRenamer(_target, null, log).Run(Request, [@"C:\Cad\asm.iam"]);
+
+        var last = log.Lines[^1];
+        Assert.Contains("1 updated", last, StringComparison.Ordinal);
+        Assert.Contains("2 occurrences renamed", last, StringComparison.Ordinal);
+        Assert.Contains("old file deleted", last, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Run_TheLastLogLine_SaysHowManyDrawingsWereRenamed()
+    {
+        _target.Referencing.Add(OldPrint);
+        var log = new ListLog();
+
+        new PartRenamer(_target, null, log).Run(Request, [OldPrint]);
+
+        Assert.Contains("1 drawings renamed", log.Lines[^1], StringComparison.Ordinal);
+    }
+
     // The register
 
-    private RegisterStore Store(bool reachable, out string shared, out string local)
+    private RegisterStore Store(bool reachable, out string shared, out string local, string filePath = OldPath)
     {
         shared = Path.Combine(_root, "nas");
         local = Path.Combine(_root, "local");
         Directory.CreateDirectory(shared);
         Directory.CreateDirectory(local);
         var entry = new RegisterEntry(
-            new PartNumber(10001), "plate", "P", DocumentKind.Part, OldPath,
+            new PartNumber(10001), "plate", "P", DocumentKind.Part, filePath,
             new DateTimeOffset(2026, 10, 1, 9, 0, 0, TimeSpan.Zero), "tester", "TESTPC");
         File.WriteAllText(Path.Combine(shared, RegisterStore.SharedFileName), RegisterCsv.Write([entry]));
         File.WriteAllText(Path.Combine(local, RegisterStore.LocalFileName), RegisterCsv.Write([entry]));
@@ -283,38 +633,514 @@ public sealed class PartRenamerTests : IDisposable
         Assert.Equal(before, File.ReadAllBytes(Path.Combine(shared, RegisterStore.SharedFileName)));
     }
 
+    // A change of case only (task 061)
+
+    private const string Hex = "0123456789abcdef0123456789abcdef";
+    private const string CaseOld = @"C:\Cad\mounting_bracket,AWB-10001.ipt";
+    private const string CaseNew = @"C:\Cad\MOUNTING_BRACKET,AWB-10001.ipt";
+    private const string CaseTemp = @"C:\Cad\~RENAME-" + Hex + ".ipt";
+    private const string CasePrint = @"C:\Cad\Prints\mounting_bracket,AWB-10001.dwg";
+    private const string CasePrintTemp = @"C:\Cad\Prints\~RENAME-" + Hex + ".dwg";
+    private const string CasePrintNew = @"C:\Cad\Prints\MOUNTING_BRACKET,AWB-10001.dwg";
+    private const string CaseIdw = @"C:\Cad\mounting_bracket,AWB-10001.idw";
+    private const string CaseIdwTemp = @"C:\Cad\~RENAME-" + Hex + ".idw";
+    private const string CaseIdwNew = @"C:\Cad\MOUNTING_BRACKET,AWB-10001.idw";
+    private const string CaseAsm = @"C:\Cad\asm.iam";
+    private const string CaseTop = @"D:\Other\top.iam";
+
+    private static readonly RenameRequest CaseRequest = new(CaseOld, CaseNew, "MOUNTING BRACKET");
+
+    private PartRenamer CaseRenamer(RegisterStore? store = null, ILog? log = null)
+    {
+        _target.ModelPath = CaseOld;
+        _target.StartModel = CaseOld;
+        return new PartRenamer(_target, store, log ?? NullLog.Instance, () => new Guid(Hex));
+    }
+
+    /// <summary>A closed assembly with two occurrences named after the file and one renamed by hand, a closed print, an open drawing beside the model and an open assembly outside the search.</summary>
+    private FakeDoc[] CaseFiles()
+    {
+        _target.Referencing.Add(CaseAsm);
+        _target.OccurrenceNames[CaseAsm] = ["mounting_bracket,AWB-10001:1", "MOUNTING_BRACKET,awb-10001:2", "LEFT"];
+        _target.Referencing.Add(CasePrint);
+        var idw = new FakeDoc(CaseIdw, CaseOld);
+        var top = new FakeDoc(CaseTop, CaseOld);
+        _target.Open.Add(idw);
+        _target.Open.Add(top);
+        return [idw, top];
+    }
+
+    private void AssertNothingHasTheTemporaryName()
+    {
+        Assert.False(RenamePlan.IsTemporaryFileName(_target.ModelPath));
+        Assert.All(_target.Open, d =>
+        {
+            Assert.False(RenamePlan.IsTemporaryFileName(d.Path), d.Path);
+            Assert.False(RenamePlan.IsTemporaryFileName(d.Reference), d.Path);
+            Assert.False(RenamePlan.IsTemporaryFileName(d.OnDisk), d.Path);
+        });
+        Assert.All(_target.Referencing, f =>
+        {
+            Assert.False(RenamePlan.IsTemporaryFileName(f), f);
+            Assert.False(RenamePlan.IsTemporaryFileName(_target.ReferenceOf(f)), f);
+        });
+        Assert.All(_target.DrawingsOnDisk, d =>
+        {
+            Assert.False(RenamePlan.IsTemporaryFileName(d.Key), d.Key);
+            Assert.False(RenamePlan.IsTemporaryFileName(d.Value), d.Key);
+        });
+    }
+
+    [Fact]
+    public void Run_CaseOnly_RenamesTwiceThroughATemporaryName_AndEverythingEndsOnTheFinalName()
+    {
+        var docs = CaseFiles();
+        var (idw, top) = (docs[0], docs[1]);
+
+        var result = CaseRenamer().Run(CaseRequest, [CaseAsm, CasePrint, CaseIdw]);
+
+        Assert.True(result.Renamed);
+        Assert.True(result.OldFileDeleted);
+        Assert.True(result.DescriptionWritten);
+        Assert.False(result.HasProblems);
+        Assert.Empty(result.Notes);
+        Assert.Null(result.TemporaryFullFileName);
+        Assert.Equal(CaseNew, result.FullFileNameNow);
+        Assert.Equal(CaseNew, _target.ModelPath);
+
+        // The model, its references, the drawings and the occurrences end on the final name, spelled as asked.
+        Assert.Equal(CaseNew, _target.ReferenceOf(CaseAsm));
+        Assert.Equal(["MOUNTING_BRACKET,AWB-10001:1", "MOUNTING_BRACKET,AWB-10001:2", "LEFT"], _target.OccurrenceNames[CaseAsm]);
+        Assert.Equal([CaseIdwNew, CasePrintNew], _target.DrawingsOnDisk.Keys.Order(StringComparer.Ordinal));
+        Assert.All(_target.DrawingsOnDisk.Values, v => Assert.Equal(CaseNew, v));
+        Assert.Contains(CasePrintNew, _target.Referencing);
+        Assert.Equal(CaseNew, _target.ReferenceOf(CasePrintNew));
+        Assert.Equal(CaseIdwNew, idw.Path);
+        Assert.Equal(CaseNew, idw.OnDisk);
+        Assert.True(idw.Reopened);
+        Assert.Equal(CaseNew, top.OnDisk);
+        Assert.Equal([CaseOld, CaseTemp], _target.Deleted);
+        AssertNothingHasTheTemporaryName();
+    }
+
+    [Fact]
+    public void Run_CaseOnly_TheStepsRunInOrder_UnderOneRun_WithDescriptionOnce()
+    {
+        CaseFiles();
+
+        CaseRenamer().Run(CaseRequest, [CaseAsm, CasePrint, CaseIdw]);
+
+        Assert.Equal(
+        [
+            $"Exists {CaseTemp}",
+            $"SaveAs {CaseTemp}",
+            $"CheckOpen {CaseOld}",
+            $"Delete {CaseOld}",
+            $"SaveAs {CaseNew}",
+            "Description MOUNTING BRACKET",
+            $"CheckOpen {CaseTemp}",
+            $"Delete {CaseTemp}",
+        ], _target.Calls.Where(c => !c.StartsWith("Update", StringComparison.Ordinal)
+                                     && !c.StartsWith("RenameDrawing", StringComparison.Ordinal)
+                                     && !c.StartsWith("SaveRepointed", StringComparison.Ordinal)
+                                     && !(c.StartsWith("Exists", StringComparison.Ordinal) && c != $"Exists {CaseTemp}")));
+    }
+
+    [Fact]
+    public void Run_CaseOnly_TheSecondStep_FindsTheDrawingsUnderTheirTemporaryNames()
+    {
+        CaseFiles();
+
+        CaseRenamer().Run(CaseRequest, [CaseAsm, CasePrint, CaseIdw]);
+
+        Assert.Equal(
+        [
+            $"RenameDrawing {CasePrint} -> {CasePrintTemp}",
+            $"RenameDrawing {CaseIdw} -> {CaseIdwTemp}",
+            $"RenameDrawing {CasePrintTemp} -> {CasePrintNew}",
+            $"RenameDrawing {CaseIdwTemp} -> {CaseIdwNew}",
+        ], _target.Calls.Where(c => c.StartsWith("RenameDrawing", StringComparison.Ordinal)));
+        Assert.Equal(2, _target.Calls.Count(c => c == $"Update {CaseAsm}"));
+    }
+
+    [Fact]
+    public void Run_CaseOnly_EachFileIsListedOnce_UnderTheNameItWasFoundBy()
+    {
+        CaseFiles();
+
+        var result = CaseRenamer().Run(CaseRequest, [CaseAsm, CasePrint, CaseIdw]);
+
+        Assert.Equal([CaseAsm, CasePrint, CaseIdw, CaseTop], result.Files.Select(f => f.FullFileName));
+        Assert.All(result.Files, f => Assert.True(f.Updated));
+        Assert.Equal(CasePrintNew, result.Files[1].RenamedTo);
+        Assert.Equal(CaseIdwNew, result.Files[2].RenamedTo);
+        Assert.Equal(2, result.OccurrencesRenamed);
+        Assert.Equal(2, result.DrawingsRenamed);
+        Assert.Equal(4, result.UpdatedCount);
+    }
+
+    [Fact]
+    public void Run_CaseOnly_TheLastLogLine_IsFromTheOldToTheFinalName()
+    {
+        CaseFiles();
+        var log = new ListLog();
+
+        CaseRenamer(log: log).Run(CaseRequest, [CaseAsm, CasePrint, CaseIdw]);
+
+        Assert.Equal(
+            $"Rename: finished '{CaseOld}' -> '{CaseNew}': 4 updated, 0 not updated, 2 occurrences renamed, 2 drawings renamed, old file deleted.",
+            log.Lines[^1]);
+    }
+
+    [Fact]
+    public void Run_CaseOnly_TheFirstSaveAsFails_NothingIsChanged()
+    {
+        CaseFiles();
+        _target.FailSaveAs = "it is locked";
+
+        var result = CaseRenamer().Run(CaseRequest, [CaseAsm, CasePrint, CaseIdw]);
+
+        Assert.False(result.Renamed);
+        Assert.Equal([$"Exists {CaseTemp}", $"SaveAs {CaseTemp}"], _target.Calls);
+        Assert.Equal(PartRenamer.RenameFailedMessage("it is locked"), Assert.Single(result.Notes).Text);
+        Assert.Empty(result.Files);
+        Assert.Equal(CaseOld, _target.ModelPath);
+    }
+
+    [Fact]
+    public void Run_CaseOnly_NoTemporaryNameCanBeChecked_NothingIsChanged()
+    {
+        _target.FailExists = "the folder is gone";
+
+        var result = CaseRenamer().Run(CaseRequest, []);
+
+        Assert.False(result.Renamed);
+        Assert.DoesNotContain(_target.Calls, c => c.StartsWith("SaveAs", StringComparison.Ordinal));
+        Assert.Equal(PartRenamer.RenameFailedMessage("the folder is gone"), Assert.Single(result.Notes).Text);
+    }
+
+    [Fact]
+    public void Run_CaseOnly_ATakenTemporaryName_IsSkipped()
+    {
+        var guids = new Queue<Guid>([new Guid(Hex), new Guid("fedcba9876543210fedcba9876543210")]);
+        _target.ModelPath = CaseOld;
+        _target.StartModel = CaseOld;
+        _target.Existing.Add(CaseTemp);
+
+        var result = new PartRenamer(_target, null, NullLog.Instance, guids.Dequeue).Run(CaseRequest, []);
+
+        Assert.Contains(@"SaveAs C:\Cad\~RENAME-fedcba9876543210fedcba9876543210.ipt", _target.Calls);
+        Assert.Equal(CaseNew, _target.ModelPath);
+        Assert.True(result.OldFileDeleted);
+    }
+
+    [Fact]
+    public void Run_CaseOnly_TheFirstStepKeepsTheOldFile_StopsUnderTheTemporaryName_AndSaysSo()
+    {
+        CaseFiles();
+        _target.Failing[CaseAsm] = "it is read-only";
+
+        var result = CaseRenamer().Run(CaseRequest, [CaseAsm, CasePrint, CaseIdw]);
+
+        Assert.True(result.Renamed);
+        Assert.False(result.OldFileDeleted);
+        Assert.Equal(CaseTemp, result.TemporaryFullFileName);
+        Assert.Equal(CaseTemp, result.FullFileNameNow);
+        Assert.Equal(CaseTemp, _target.ModelPath);
+        Assert.DoesNotContain($"SaveAs {CaseNew}", _target.Calls);
+        Assert.Empty(_target.Deleted);
+        Assert.True(result.DescriptionWritten);
+        Assert.Single(_target.Calls, c => c.StartsWith("Description", StringComparison.Ordinal));
+        Assert.Contains(result.Notes, n => n.Text == PartRenamer.OldFileKeptMessage(CaseOld) && n.IsProblem);
+        var stopped = PartRenamer.StoppedAtTemporaryNameOldFileKeptMessage(CaseOld, CaseTemp, CaseNew);
+        Assert.Contains(result.Notes, n => n.Text == stopped && n.IsProblem);
+        Assert.True(result.HasProblems);
+
+        // Every file that was updated uses the temporary name, so nothing is broken.
+        Assert.Equal(CaseTemp, _target.ReferenceOf(CasePrintTemp));
+        Assert.Equal(CaseTemp, _target.Open.Single(d => d.Path == CaseTop).OnDisk);
+    }
+
+    [Fact]
+    public void Run_CaseOnly_TheSecondSaveAsFails_TheFileKeepsTheTemporaryName_AndTheResultSaysWhich()
+    {
+        CaseFiles();
+        _target.FailSaveAs = "the disk is full";
+        _target.FailSaveAsTo = CaseNew;
+
+        var result = CaseRenamer().Run(CaseRequest, [CaseAsm, CasePrint, CaseIdw]);
+
+        Assert.True(result.Renamed);
+        Assert.Equal(CaseTemp, result.TemporaryFullFileName);
+        Assert.Equal(CaseTemp, _target.ModelPath);
+        Assert.True(result.OldFileDeleted);
+        Assert.Equal([CaseOld], _target.Deleted);
+        Assert.True(result.DescriptionWritten);
+        var note = Assert.Single(result.Notes);
+        Assert.Equal(PartRenamer.StoppedAtTemporaryNameMessage(CaseTemp, CaseNew, "the disk is full"), note.Text);
+        Assert.True(note.IsProblem);
+        Assert.Equal(CaseTemp, _target.ReferenceOf(CaseAsm));
+        Assert.Equal(CaseTemp, _target.ReferenceOf(CasePrintTemp));
+        Assert.Equal(new[] { CaseAsm, CasePrint, CaseIdw, CaseTop }, result.Files.Select(f => f.FullFileName));
+    }
+
+    [Fact]
+    public void Run_CaseOnly_TheTemporaryFileCannotBeDeleted_TheFileHasItsFinalName_AndTheTemporaryOneIsKept()
+    {
+        CaseFiles();
+        _target.FailDelete = "it is locked";
+        _target.FailDeleteOf = CaseTemp;
+
+        var result = CaseRenamer().Run(CaseRequest, [CaseAsm, CasePrint, CaseIdw]);
+
+        Assert.Null(result.TemporaryFullFileName);
+        Assert.Equal(CaseNew, _target.ModelPath);
+        Assert.False(result.OldFileDeleted);
+        Assert.Contains(result.Notes, n => n.Text == PartRenamer.OldFileNotDeletedMessage(CaseTemp, "it is locked"));
+        Assert.Equal(CaseNew, _target.ReferenceOf(CaseAsm));
+    }
+
+    [Fact]
+    public void Run_CaseOnly_UpdatesTheRegisterEntryOnce_FromTheOldToTheFinalPath()
+    {
+        var store = Store(reachable: true, out var shared, out _, CaseOld);
+
+        var result = CaseRenamer(store).Run(CaseRequest, [], new PartNumber(10001));
+
+        var entry = Assert.Single(RegisterCsv.Read(File.ReadAllText(Path.Combine(shared, RegisterStore.SharedFileName))).Entries);
+        Assert.Equal(CaseNew, entry.FilePath);
+        Assert.Equal("MOUNTING BRACKET", entry.Name);
+        Assert.Equal("Register entry AWB-10001 updated.", Assert.Single(result.Notes).Text);
+    }
+
+    [Fact]
+    public void Run_CaseOnly_StoppedUnderTheTemporaryName_TheRegisterNamesIt()
+    {
+        var store = Store(reachable: true, out var shared, out _, CaseOld);
+        _target.FailSaveAs = "the disk is full";
+        _target.FailSaveAsTo = CaseNew;
+
+        CaseRenamer(store).Run(CaseRequest, [], new PartNumber(10001));
+
+        var entry = Assert.Single(RegisterCsv.Read(File.ReadAllText(Path.Combine(shared, RegisterStore.SharedFileName))).Entries);
+        Assert.Equal(CaseTemp, entry.FilePath);
+    }
+
+    [Fact]
+    public void StoppedAtTemporaryNameMessages_NameTheTemporaryFile_AndSayRenameCanBeRunAgain()
+    {
+        var kept = PartRenamer.StoppedAtTemporaryNameOldFileKeptMessage(CaseOld, CaseTemp, CaseNew);
+        var failed = PartRenamer.StoppedAtTemporaryNameMessage(CaseTemp, CaseNew, "the disk is full");
+
+        foreach (var text in new[] { kept, failed })
+        {
+            Assert.Contains("~RENAME-" + Hex + ".ipt", text, StringComparison.Ordinal);
+            Assert.Contains("MOUNTING_BRACKET,AWB-10001.ipt", text, StringComparison.Ordinal);
+            Assert.Contains("run Rename again", text, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("mounting_bracket,AWB-10001.ipt", kept, StringComparison.Ordinal);
+        Assert.Contains("the disk is full", failed, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Run_NotACaseOnlyChange_DoesNotUseATemporaryName()
+    {
+        Renamer().Run(Request, []);
+
+        Assert.DoesNotContain(_target.Calls, c => c.Contains("~RENAME-", StringComparison.Ordinal));
+        Assert.Single(_target.Calls, c => c.StartsWith("SaveAs", StringComparison.Ordinal));
+    }
+
+    /// <summary>A document open in the fake Inventor: its direct reference in memory and what its file holds on disk.</summary>
+    private sealed class FakeDoc(string path, string reference)
+    {
+        public string Path { get; set; } = path;
+
+        /// <summary>True once the fake has closed it and opened it again (an open drawing renamed).</summary>
+        public bool Reopened { get; set; }
+        public string Reference { get; set; } = reference;
+        public string OnDisk { get; set; } = reference;
+        public bool Dirty { get; set; }
+        public int Saves { get; set; }
+        public string? FailSave { get; init; }
+
+        /// <summary>Inventor's Save (spike 052): writes nothing for a document that is not dirty.</summary>
+        public void Save()
+        {
+            if (FailSave is not null)
+                throw new IOException(FailSave);
+            Saves++;
+            if (Dirty)
+            {
+                OnDisk = Reference;
+                Dirty = false;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Inventor as spike 052 found it: <see cref="SaveAs"/> repoints each open document that used the old file in
+    /// memory and leaves it not dirty; each update marks the document dirty before it saves.
+    /// </summary>
     private sealed class FakeTarget : IRenameTarget
     {
         public List<string> Calls { get; } = [];
+
+        /// <summary>Closed files that reference the old file on disk.</summary>
         public HashSet<string> Referencing { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>The reference each closed file holds on disk after it was updated.</summary>
+        public Dictionary<string, string> ClosedOnDisk { get; } = new(StringComparer.OrdinalIgnoreCase);
+
         public Dictionary<string, string> Failing { get; } = new(StringComparer.OrdinalIgnoreCase);
-        public List<RenameFileResult> Repointed { get; } = [];
+        public List<FakeDoc> Open { get; } = [];
+
+        /// <summary>What renaming occurrences gives in each file; none renamed when a file is not listed.</summary>
+        public Dictionary<string, RenameFileUpdate> Occurrences { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>Open documents that still reference the old file whatever Rename does (for example a broken one).</summary>
+        public List<string> StillUsingOld { get; } = [];
+
         public string? FailSaveAs { get; set; }
         public string? FailSaveRepointed { get; set; }
+        public string? FailOpenCheck { get; set; }
         public string? FailDescription { get; set; }
         public string? FailDelete { get; set; }
+        public string? FailExists { get; set; }
+
+        /// <summary>Paths taken on disk or in Inventor, for <see cref="FileExists"/>.</summary>
+        public HashSet<string> Existing { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>What renaming a drawing gives after its reference was saved; renamed cleanly when not listed.</summary>
+        public Dictionary<string, DrawingRenameUpdate> DrawingOutcomes { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>Drawing files on disk after the rename: path and the model they reference.</summary>
+        public Dictionary<string, string> DrawingsOnDisk { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        public bool FileExists(string fullFileName)
+        {
+            Calls.Add($"Exists {fullFileName}");
+            if (FailExists is not null)
+                throw new InvalidOperationException(FailExists);
+            return Existing.Contains(fullFileName);
+        }
+
+        public DrawingRenameUpdate? UpdateAndRenameDrawing(
+            string drawingFullFileName,
+            string newDrawingFullFileName,
+            string oldFullFileName,
+            string newFullFileName)
+        {
+            Calls.Add($"RenameDrawing {drawingFullFileName} -> {newDrawingFullFileName}");
+            if (Failing.TryGetValue(drawingFullFileName, out var reason))
+                throw new IOException(reason);
+
+            // First updated and saved under its old name, as any file.
+            var open = Open.FirstOrDefault(d => Same(d.Path, drawingFullFileName));
+            if (open is not null)
+            {
+                if (Update(open, oldFullFileName, newFullFileName) is null)
+                    return null;
+            }
+            else if (ClosedUses(drawingFullFileName, oldFullFileName, newFullFileName))
+            {
+                ClosedOnDisk[drawingFullFileName] = newFullFileName;
+            }
+            else
+            {
+                return null;
+            }
+
+            DrawingsOnDisk[drawingFullFileName] = newFullFileName;
+            if (DrawingOutcomes.TryGetValue(drawingFullFileName, out var outcome) && !outcome.Renamed)
+                return outcome;
+
+            // Saved under the new name, closed, the old file deleted, an open one opened again.
+            DrawingsOnDisk[newDrawingFullFileName] = newFullFileName;
+            if (open is null)
+            {
+                Referencing.Add(newDrawingFullFileName);
+                ClosedOnDisk[newDrawingFullFileName] = newFullFileName;
+            }
+
+            if (outcome?.OldFileNotDeletedReason is null)
+            {
+                DrawingsOnDisk.Remove(drawingFullFileName);
+                Referencing.Remove(drawingFullFileName);
+            }
+            if (open is not null)
+            {
+                open.Path = newDrawingFullFileName;
+                open.Reopened = outcome?.NotReopenedReason is null;
+                if (!open.Reopened)
+                    Open.Remove(open);
+            }
+
+            return outcome ?? new DrawingRenameUpdate();
+        }
 
         public void SaveAs(string newFullFileName)
         {
             Calls.Add($"SaveAs {newFullFileName}");
-            if (FailSaveAs is not null)
+            if (FailSaveAs is not null && (FailSaveAsTo is null || string.Equals(FailSaveAsTo, newFullFileName, StringComparison.Ordinal)))
                 throw new InvalidOperationException(FailSaveAs);
+
+            foreach (var doc in Open.Where(d => Same(d.Reference, ModelPath)))
+                doc.Reference = newFullFileName;
+            ModelPath = newFullFileName;
         }
 
-        public bool UpdateReferences(string fullFileName, string oldFullFileName, string newFullFileName)
+        public RenameFileUpdate? UpdateReferences(string fullFileName, string oldFullFileName, string newFullFileName)
         {
             Calls.Add($"Update {fullFileName}");
             if (Failing.TryGetValue(fullFileName, out var reason))
                 throw new IOException(reason);
-            return Referencing.Contains(fullFileName);
+
+            var open = Open.FirstOrDefault(d => Same(d.Path, fullFileName));
+            if (open is not null)
+                return Update(open, oldFullFileName, newFullFileName);
+
+            if (!ClosedUses(fullFileName, oldFullFileName, newFullFileName))
+                return null;
+
+            ClosedOnDisk[fullFileName] = newFullFileName;
+            return OccurrencesOf(fullFileName, oldFullFileName, newFullFileName);
         }
 
-        public IReadOnlyList<RenameFileResult> SaveRepointedDocuments(string newFullFileName)
+        public IReadOnlyList<RenameFileResult> SaveRepointedDocuments(
+            string oldFullFileName,
+            string newFullFileName,
+            IReadOnlyCollection<string> alreadyHandled)
         {
             Calls.Add($"SaveRepointed {newFullFileName}");
             if (FailSaveRepointed is not null)
                 throw new InvalidOperationException(FailSaveRepointed);
-            return Repointed;
+
+            var results = new List<RenameFileResult>();
+            foreach (var doc in Open.Where(d => !alreadyHandled.Contains(d.Path, StringComparer.OrdinalIgnoreCase)))
+            {
+                try
+                {
+                    if (Update(doc, oldFullFileName, newFullFileName) is { } u)
+                        results.Add(new RenameFileResult(doc.Path, null, u.OccurrencesRenamed, u.OccurrenceProblems));
+                }
+                catch (IOException ex)
+                {
+                    results.Add(new RenameFileResult(doc.Path, ex.Message));
+                }
+            }
+
+            return results;
+        }
+
+        public IReadOnlyList<string> OpenDocumentsReferencing(string oldFullFileName)
+        {
+            Calls.Add($"CheckOpen {oldFullFileName}");
+            if (FailOpenCheck is not null)
+                throw new InvalidOperationException(FailOpenCheck);
+
+            return Open.Where(d => Same(d.Reference, oldFullFileName)).Select(d => d.Path).Concat(StillUsingOld).ToList();
         }
 
         public void WriteDescription(string partName)
@@ -327,9 +1153,73 @@ public sealed class PartRenamerTests : IDisposable
         public void DeleteFile(string fullFileName)
         {
             Calls.Add($"Delete {fullFileName}");
-            if (FailDelete is not null)
+            if (FailDelete is not null && (FailDeleteOf is null || Same(FailDeleteOf, fullFileName)))
                 throw new IOException(FailDelete);
+            Deleted.Add(fullFileName);
         }
+
+        /// <summary>The model's path now: it follows each <see cref="SaveAs"/>.</summary>
+        public string ModelPath { get; set; } = OldPath;
+
+        /// <summary>The model every closed file in <see cref="Referencing"/> references before Rename touches it.</summary>
+        public string StartModel { get; set; } = OldPath;
+
+        /// <summary>When set, only a delete of this path fails with <see cref="FailDelete"/>.</summary>
+        public string? FailDeleteOf { get; set; }
+
+        /// <summary>When set, only a SaveAs to this path fails with <see cref="FailSaveAs"/>.</summary>
+        public string? FailSaveAsTo { get; set; }
+
+        public List<string> Deleted { get; } = [];
+
+        /// <summary>The model a closed file references on disk now.</summary>
+        public string ReferenceOf(string file) => ClosedOnDisk.TryGetValue(file, out var r) ? r : StartModel;
+
+        private bool ClosedUses(string file, string oldFullFileName, string newFullFileName) =>
+            Referencing.Contains(file)
+            && (Same(ReferenceOf(file), oldFullFileName) || Same(ReferenceOf(file), newFullFileName));
+
+        private RenameFileUpdate? Update(FakeDoc doc, string oldFullFileName, string newFullFileName)
+        {
+            if (!Same(doc.Reference, oldFullFileName) && !Same(doc.Reference, newFullFileName))
+                return null;
+
+            doc.Reference = newFullFileName;
+            doc.Dirty = true;
+            doc.Save();
+            return OccurrencesOf(doc.Path, oldFullFileName, newFullFileName);
+        }
+
+        /// <summary>The occurrence names of each assembly, renamed by <see cref="RenamePlan.RenamedOccurrence"/> as it is updated.</summary>
+        public Dictionary<string, List<string>> OccurrenceNames { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        private RenameFileUpdate OccurrencesOf(string file, string oldFullFileName, string newFullFileName)
+        {
+            if (!OccurrenceNames.TryGetValue(file, out var names))
+                return Occurrences.TryGetValue(file, out var update) ? update : new RenameFileUpdate();
+
+            var renamed = 0;
+            for (var i = 0; i < names.Count; i++)
+            {
+                if (RenamePlan.RenamedOccurrence(names[i], oldFullFileName, newFullFileName) is { } newName)
+                {
+                    names[i] = newName;
+                    renamed++;
+                }
+            }
+
+            return new RenameFileUpdate(renamed);
+        }
+
+        private static bool Same(string? a, string? b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private sealed class ListLog : ILog
+    {
+        public List<string> Lines { get; } = [];
+        public void Info(string message) => Lines.Add(message);
+        public void Warn(string message) => Lines.Add(message);
+        public void Error(string message, Exception? ex = null) => Lines.Add(message);
     }
 
     private sealed class FakeEnvironment(bool reachable) : IRegisterEnvironment

@@ -26,9 +26,9 @@ public sealed class SaveAsReplacerTests : IDisposable
         _cad = Path.Combine(_root, "cad");
         Directory.CreateDirectory(_shared);
         Directory.CreateDirectory(_cad);
-        _component = Path.Combine(_cad, "AWB-10001,test_bracket.ipt");
+        _component = Path.Combine(_cad, "test_bracket,AWB-10001.ipt");
         File.WriteAllText(_component, "original");
-        _subAssembly = Path.Combine(_cad, "AWB-10002,test_frame.iam");
+        _subAssembly = Path.Combine(_cad, "test_frame,AWB-10002.iam");
     }
 
     public void Dispose()
@@ -39,7 +39,7 @@ public sealed class SaveAsReplacerTests : IDisposable
 
     private string SharedPath => Path.Combine(_shared, RegisterStore.SharedFileName);
 
-    private string CopyPath => Path.Combine(_cad, "AWB-10001,test_bracket_copy.ipt");
+    private string CopyPath => Path.Combine(_cad, "TEST_BRACKET_COPY,AWB-10001.ipt");
 
     private RegisterStore Store() => new(_shared, _local, new FakeEnvironment(), _log, TimeSpan.FromMilliseconds(200));
 
@@ -56,7 +56,7 @@ public sealed class SaveAsReplacerTests : IDisposable
     private SaveAsReplacer Replacer(ReplaceSelection selection) =>
         new(Store(), _target, selection, "Test Designer", _log);
 
-    private SaveAsCopyRequest Request() => new(_component, DocumentKind.Part, "test bracket copy", "M");
+    private SaveAsCopyRequest Request() => new(_component, DocumentKind.Part, "TEST BRACKET COPY", "M");
 
     private static List<RegisterEntry> Read(string path) => RegisterCsv.Read(File.ReadAllText(path)).Entries.ToList();
 
@@ -128,7 +128,7 @@ public sealed class SaveAsReplacerTests : IDisposable
     public void Check_ReadOnlySubAssembly_StopsNamingIt()
     {
         Assert.Equal(
-            SaveAsReplacer.ReadOnlySubAssemblyMessage("AWB-10002,test_frame.iam (Frame:1)"),
+            SaveAsReplacer.ReadOnlySubAssemblyMessage("test_frame,AWB-10002.iam (Frame:1)"),
             SaveAsReplacer.Check(Nested(EditBlock.ReadOnlyFile)));
     }
 
@@ -136,7 +136,7 @@ public sealed class SaveAsReplacerTests : IDisposable
     public void Check_NotModifiableSubAssembly_StopsNamingIt()
     {
         Assert.Equal(
-            SaveAsReplacer.NotModifiableSubAssemblyMessage("AWB-10002,test_frame.iam (Frame:1)"),
+            SaveAsReplacer.NotModifiableSubAssemblyMessage("test_frame,AWB-10002.iam (Frame:1)"),
             SaveAsReplacer.Check(Nested(EditBlock.NotModifiable)));
     }
 
@@ -159,7 +159,7 @@ public sealed class SaveAsReplacerTests : IDisposable
     // Naming and the warning
 
     [Theory]
-    [InlineData(@"C:\Work\AWB-10002,frame.iam", "Frame:1", "AWB-10002,frame.iam (Frame:1)")]
+    [InlineData(@"C:\Work\frame,AWB-10002.iam", "Frame:1", "frame,AWB-10002.iam (Frame:1)")]
     [InlineData("/home/user/cad/frame.iam", null, "frame.iam")]
     [InlineData("/home/user/cad/frame.iam", "  ", "frame.iam")]
     [InlineData("", "Frame:1", "Frame:1")]
@@ -186,7 +186,7 @@ public sealed class SaveAsReplacerTests : IDisposable
 
         Assert.True(Nested().InSubAssembly);
         Assert.NotNull(warning);
-        Assert.Contains("AWB-10002,test_frame.iam (Frame:1)", warning, StringComparison.Ordinal);
+        Assert.Contains("test_frame,AWB-10002.iam (Frame:1)", warning, StringComparison.Ordinal);
         Assert.Contains("is saved", warning, StringComparison.Ordinal);
         Assert.Contains("every assembly that uses", warning, StringComparison.Ordinal);
         Assert.Contains("Undo cannot put it back", warning, StringComparison.Ordinal);
@@ -202,7 +202,7 @@ public sealed class SaveAsReplacerTests : IDisposable
         Assert.Equal("AWB-10001", result.PartNumber);
         Assert.Equal(CopyPath, result.FullPath);
         Assert.Equal(
-            [$"copy {CopyPath}", $"open {CopyPath}", "write", "save", "close", $"replace {CopyPath}"],
+            [$"copy {CopyPath}", $"open {CopyPath}", "write", "save", "read", "close", $"replace {CopyPath}"],
             _target.Calls);
         Assert.Equal([10001], Read(SharedPath).Select(e => e.Number.Value));
         Assert.Equal("original", File.ReadAllText(_component));
@@ -251,6 +251,50 @@ public sealed class SaveAsReplacerTests : IDisposable
         Assert.DoesNotContain(_target.Calls, c => c.StartsWith("replace", StringComparison.Ordinal));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Replace_CopyDidNotKeepItsNumber_FailsAsSaveAsCopy_AndNothingIsReplacedOrSaved(bool nested)
+    {
+        // The component's own number, as if the write had not stuck.
+        _target.ReadBack = "AWB-10000";
+
+        var ex = Assert.Throws<NewPartException>(
+            () => Replacer(nested ? Nested() : TopLevel()).Replace(Request()));
+
+        Assert.Equal(
+            SaveAsCopyCreator.FailedAfterAssignMessage(
+                "AWB-10001", SaveAsCopyCreator.NumberNotKeptReason("AWB-10001", "AWB-10000")),
+            ex.Message);
+        Assert.Equal("AWB-10001", ex.AssignedNumber);
+        Assert.Equal([10001], Read(SharedPath).Select(e => e.Number.Value));
+        Assert.Equal(
+            [$"copy {CopyPath}", $"open {CopyPath}", "write", "save", "read", "close without saving"],
+            _target.Calls);
+        Assert.False(File.Exists(CopyPath));
+        Assert.Equal("original", File.ReadAllText(_component));
+    }
+
+    // The log line for a selection that is not one component (task 060)
+
+    [Fact]
+    public void SelectionNotOneComponentLog_GivesTheCountAndEachType()
+    {
+        Assert.Equal(
+            "Save As and Replace: the selection holds 0 items.",
+            SaveAsReplacer.SelectionNotOneComponentLog(0, []));
+        Assert.Equal(
+            "Save As and Replace: the selection holds 1 item: FaceProxy.",
+            SaveAsReplacer.SelectionNotOneComponentLog(1, ["FaceProxy"]));
+        Assert.Equal(
+            "Save As and Replace: the selection holds 2 items: ComponentOccurrenceProxy, (unknown).",
+            SaveAsReplacer.SelectionNotOneComponentLog(2, ["ComponentOccurrenceProxy", null]));
+        Assert.Equal(
+            "Save As and Replace: the selection could not be read.",
+            SaveAsReplacer.SelectionNotOneComponentLog(-1, []));
+        Assert.Throws<ArgumentNullException>(() => SaveAsReplacer.SelectionNotOneComponentLog(0, null!));
+    }
+
     [Fact]
     public void Replace_SelectionThatFailsCheck_StopsBeforeAnything()
     {
@@ -272,7 +316,7 @@ public sealed class SaveAsReplacerTests : IDisposable
 
         Assert.Equal("AWB-10001", result.PartNumber);
         Assert.Equal(
-            [$"copy {CopyPath}", $"open {CopyPath}", "write", "save", "close", $"replace {CopyPath}", "save sub-assembly"],
+            [$"copy {CopyPath}", $"open {CopyPath}", "write", "save", "read", "close", $"replace {CopyPath}", "save sub-assembly"],
             _target.Calls);
     }
 
@@ -281,7 +325,7 @@ public sealed class SaveAsReplacerTests : IDisposable
     {
         var ex = Assert.Throws<NewPartException>(() => Replacer(Nested(EditBlock.ReadOnlyFile)).Replace(Request()));
 
-        Assert.Equal(SaveAsReplacer.ReadOnlySubAssemblyMessage("AWB-10002,test_frame.iam (Frame:1)"), ex.Message);
+        Assert.Equal(SaveAsReplacer.ReadOnlySubAssemblyMessage("test_frame,AWB-10002.iam (Frame:1)"), ex.Message);
         Assert.Empty(_target.Calls);
         Assert.False(File.Exists(CopyPath));
     }
@@ -295,7 +339,7 @@ public sealed class SaveAsReplacerTests : IDisposable
         var ex = Assert.Throws<NewPartException>(() => Replacer(Nested()).Replace(Request()));
 
         Assert.Equal(
-            SaveAsReplacer.SubAssemblySaveFailedMessage("AWB-10001", "AWB-10002,test_frame.iam (Frame:1)", "Disk full."),
+            SaveAsReplacer.SubAssemblySaveFailedMessage("AWB-10001", "test_frame,AWB-10002.iam (Frame:1)", "Disk full."),
             ex.Message);
         Assert.Equal("AWB-10001", ex.AssignedNumber);
         Assert.Same(failure, ex.InnerException);
@@ -330,6 +374,9 @@ public sealed class SaveAsReplacerTests : IDisposable
         public Exception? CloseCopyFailure { get; set; }
         public Exception? ReplaceFailure { get; set; }
         public Exception? SaveSubAssemblyFailure { get; set; }
+
+        /// <summary>What the copy's Part Number reads after saving; null reads back what was written.</summary>
+        public string? ReadBack { get; set; }
 
         public void SaveCopyAs(string fullPath)
         {
@@ -371,14 +418,27 @@ public sealed class SaveAsReplacerTests : IDisposable
 
         public FakeCopy(FakeTarget owner) => _owner = owner;
 
+        private IReadOnlyList<PropertyWrite>? _writes;
+
         public void WriteProperties(IReadOnlyList<PropertyWrite> writes)
         {
             _owner.Calls.Add("write");
             if (_owner.FailAt == "write")
                 throw _owner.Failure!;
+            _writes = writes;
         }
 
         public void Save() => _owner.Calls.Add("save");
+
+        public string? ReadPartNumber()
+        {
+            _owner.Calls.Add("read");
+            if (_owner.ReadBack is not null)
+                return _owner.ReadBack;
+
+            // By default the copy reads back the Part Number written on it.
+            return _writes?.Single(w => w.Location == PartPropertyStorage.PartNumber).TextValue;
+        }
 
         public void CloseWithoutSaving() => _owner.Calls.Add("close without saving");
     }

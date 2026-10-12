@@ -2,7 +2,7 @@
 
 Where each big item stands. One line per item, kept current by the parent session. For the order of work and the task lists see `docs/PLAN.md`; for what needs doing next see `TODO.md`.
 
-Last updated: 2026-10-10
+Last updated: 2026-10-11
 
 ## Big items
 
@@ -11,7 +11,7 @@ Last updated: 2026-10-10
 | Foundations (M0) | 01 | **Done, tested in Inventor** | Settings, log, ribbon, error reporting, Settings and About windows, editing-command base, "AWB Addin" branding |
 | Part properties window (M1) | 07 | **Built and merged, partly tested in Inventor** | Opens on parts and assemblies, pre-fills, writes and undoes correctly. A never-saved part shows New part, Not saved yet and Not assigned; the blank Part type entry can be clicked. Some checklist steps not yet reported; see `TODO.md` |
 | Window style and icons (M1b) | 08 | **Done, tested in Inventor** | Tasks 020 to 031. Shared look in light and dark, all three windows restyled, icons on ribbon and headers, XAML rules test. Every check passed on Windows. Two follow-ups on the build's deploy line are in `TODO.md` |
-| Part creation and numbering (M2) | 02 | **Built, run 2 not yet tested in Inventor** | Run 1 (033 to 042) built and checked on Windows; its three findings fixed in 049 to 051. Run 2 (049 to 051, 043 to 048) built: Settings folders and names, New Part, Create Print, Save As Copy, Save As and Replace, Rename, Mass Update. None of run 2's add-in code has been compiled |
+| Part creation and numbering (M2) | 02 | **Done, tested in Inventor** (a few run 1 checks still to report; see `TODO.md`) | Run 2 checked on Windows 2026-10-11; fix run 053 to 061 and fix run 2 (spike 062, tasks 063 to 066) checked 2026-10-12 and passed. Merged into main from `claude/m2-fix-run` |
 | Material and finish (M3) | 03 | Not started | Waiting on Aidan's finish list and a Windows spike |
 | Hole table wizard (M4) | 04 | Not started | Core half needs three answers; add-in half needs a Windows spike |
 | Drawing tools (M5) | 05 | Not started | Waiting on which commands Aidan wants. Will include a custom drawing template |
@@ -32,5 +32,5 @@ States used: Not started, Planned, In progress, Built (merged, not tested in Inv
 
 ## Numbers
 
-- Tasks finished: 51 (001 to 051)
-- Core tests: 1861 after task 048; they run in the cloud and on Windows with `dotnet test tests/InventorAddin.Core.Tests`
+- Tasks finished: 61 (001 to 061)
+- Core tests: 2187 after task 066; they run in the cloud and on Windows with `dotnet test tests/InventorAddin.Core.Tests`

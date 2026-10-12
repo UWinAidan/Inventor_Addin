@@ -10,8 +10,8 @@ public static class CreationProperties
 {
     /// <summary>
     /// The writes, in this order: Part Number; Description (the part name normalised by
-    /// <see cref="PartFileName.NormaliseName"/>, with spaces); Designer and Detailer, both
-    /// <paramref name="defaultDesigner"/> trimmed, both left out when it is blank; Part Type, left out when blank.
+    /// <see cref="PartFileName.NormaliseName"/>, with spaces); Designer, Author and Detailer, all
+    /// <paramref name="defaultDesigner"/> trimmed, all left out when it is blank; Part Type, left out when blank.
     /// A part type in <see cref="PartTypes.All"/> is written in the list's spelling; any other code is written trimmed.
     /// Each goes to its <see cref="PartPropertyStorage"/> location.
     /// </summary>
@@ -38,6 +38,7 @@ public static class CreationProperties
         if (designer.Length > 0)
         {
             writes.Add(PropertyWrite.SetText(PartPropertyStorage.Designer, designer));
+            writes.Add(PropertyWrite.SetText(PartPropertyStorage.Author, designer));
             writes.Add(PropertyWrite.SetText(PartPropertyStorage.Detailer, designer));
         }
 

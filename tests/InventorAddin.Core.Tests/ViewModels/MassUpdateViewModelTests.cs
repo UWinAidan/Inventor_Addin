@@ -16,7 +16,7 @@ public sealed class MassUpdateViewModelTests
     private static readonly PartRegister Register = new(
     [
         new RegisterEntry(
-            new PartNumber(10001), "test plate", "M", DocumentKind.Part, @"C:\Work\Project\AWB-10001,test_plate.ipt",
+            new PartNumber(10001), "test plate", "M", DocumentKind.Part, @"C:\Work\Project\test_plate,AWB-10001.ipt",
             new DateTimeOffset(2026, 10, 10, 9, 0, 0, TimeSpan.Zero), "someone", "TESTPC"),
     ]);
 
@@ -26,8 +26,9 @@ public sealed class MassUpdateViewModelTests
         string designer = "Alex Example",
         string detailer = "Alex Example",
         bool open = false,
-        string? error = null) =>
-        new($@"{Folder}\{name}", partNumber, designer, detailer, "M", DocumentKind.Part, open, error);
+        string? error = null,
+        string author = "Alex Example") =>
+        new($@"{Folder}\{name}", partNumber, designer, detailer, "M", DocumentKind.Part, open, error, author);
 
     private static MassUpdateViewModel Create(string defaultDesigner = Designer) => new(Folder, [User], defaultDesigner);
 
@@ -120,6 +121,34 @@ public sealed class MassUpdateViewModelTests
         var row = Scanned(Designer, File("a.ipt", "AWB-10001", designer, detailer)).Rows[0];
 
         Assert.Equal(expected, row.StateText);
+    }
+
+    [Theory]
+    [InlineData("Alex Example", "Alex Example", "Has a number; your name as Author")]
+    [InlineData(User, "Alex Example", "Has a number; your name as Designer and Author")]
+    [InlineData("Alex Example", User, "Has a number; your name as Author and Detailer")]
+    [InlineData(User, User, "Has a number; your name as Designer, Author and Detailer")]
+    public void RowNamesAnAuthorThatMeansMe(string designer, string detailer, string expected)
+    {
+        var row = Scanned(Designer, File("a.ipt", "AWB-10001", designer, detailer, author: User)).Rows[0];
+
+        Assert.Equal(expected, row.StateText);
+        Assert.True(row.CanReplaceNames);
+    }
+
+    [Fact]
+    public void AnAuthorThatMeansMeIsCounted_AndReplaced()
+    {
+        var vm = Scanned(
+            Designer,
+            File("a.ipt", "AWB-10001", author: User),
+            File("b.ipt", "AWB-10001"));
+
+        Assert.Equal("2 files, 0 to register, 0 to number, 1 with your name", vm.CountsText);
+
+        vm.Rows[0].ReplaceNames = true;
+        var write = Assert.Single(Assert.Single(vm.BuildPlan().Updates).Writes);
+        Assert.Equal((PartPropertyStorage.Author, Designer), (write.Location, write.TextValue));
     }
 
     [Fact]
@@ -468,9 +497,9 @@ public sealed class MassUpdateViewModelTests
     [Fact]
     public void DuplicateTextNamesTheFirstFileOnly()
     {
-        var duplicate = new MassUpdateDuplicate(new PartNumber(10001), @"C:\A\AWB-10001,plate.ipt", @"C:\B\copy.ipt");
+        var duplicate = new MassUpdateDuplicate(new PartNumber(10001), @"C:\A\plate,AWB-10001.ipt", @"C:\B\copy.ipt");
 
-        Assert.Equal("Not registered: AWB-10001 is also on AWB-10001,plate.ipt", MassUpdateViewModel.DuplicateText(duplicate));
+        Assert.Equal("Not registered: AWB-10001 is also on plate,AWB-10001.ipt", MassUpdateViewModel.DuplicateText(duplicate));
     }
 
     [Fact]

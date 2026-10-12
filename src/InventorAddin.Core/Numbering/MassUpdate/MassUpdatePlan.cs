@@ -73,8 +73,9 @@ public sealed record MassUpdatePlan(IReadOnlyList<FileUpdate> Updates, IReadOnly
 {
     /// <summary>
     /// The plan for <paramref name="files"/>, each with the actions ticked on it. An action that does not apply to
-    /// the file (see <see cref="ScannedFileState.For"/>) is ignored. Replace names sets Designer, and Detailer, to
-    /// <paramref name="defaultDesigner"/>, each only where it meant the user (the Windows user name or one of the Other names); with a blank
+    /// the file (see <see cref="ScannedFileState.For"/>) is ignored. Replace names sets Designer, Author and Detailer
+    /// to <paramref name="defaultDesigner"/>, each only where it meant the user (the Windows user name or one of the
+    /// Other names); with a blank
     /// <paramref name="defaultDesigner"/> it is not offered and is ignored. A number carried, unregistered, by an
     /// earlier file in <paramref name="files"/> (ticked or not) is not registered for a later one; the later file is
     /// reported in <see cref="Duplicates"/> instead. A file gets a <see cref="FileUpdate"/> only when it has at least
@@ -118,6 +119,11 @@ public sealed record MassUpdatePlan(IReadOnlyList<FileUpdate> Updates, IReadOnly
                 if (state.DesignerIsMe)
                 {
                     writes.Add(PropertyWrite.SetText(PartPropertyStorage.Designer, designer));
+                }
+
+                if (state.AuthorIsMe)
+                {
+                    writes.Add(PropertyWrite.SetText(PartPropertyStorage.Author, designer));
                 }
 
                 if (state.DetailerIsMe)

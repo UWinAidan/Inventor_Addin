@@ -1,5 +1,6 @@
 using System.Globalization;
 using InventorAddin.Core.Logging;
+using InventorAddin.Core.Models;
 using InventorAddin.Core.Numbering;
 using InventorAddin.Core.PartProperties;
 
@@ -37,6 +38,7 @@ public sealed class RenameViewModel : ObservableObject
     public const string HeaderTitleText = "Rename";
     public const string UpdatedPrefix = "Updated: ";
     public const string NotUpdatedPrefix = "Not updated: ";
+    public const string RenamedToPrefix = ", renamed to ";
     public const string NothingElseText = "No other file in the CAD folders uses it.";
     public const string RunErrorPrefix = "Rename failed: ";
     public const string StartingText = "Looking for files that use it...";
@@ -48,6 +50,7 @@ public sealed class RenameViewModel : ObservableObject
     private readonly Func<RenameRequest, Action<string>, RenameResult?> _run;
     private readonly ILog _log;
     private readonly PartNumber? _registeredNumber;
+    private readonly DocumentKind _kind;
 
     private string _newName;
     private string? _validationMessage;
@@ -60,7 +63,8 @@ public sealed class RenameViewModel : ObservableObject
     /// <param name="fullFileName">The open file's full path; it has been saved.</param>
     /// <param name="targetExists">
     /// True when a file already exists at the given full path (or is open in Inventor under it). Called as the name is
-    /// typed, for a valid name only.
+    /// typed, for a valid name only, and not for a change of case only (<see cref="RenamePlan.IsCaseOnlyChange"/>), whose
+    /// new name is the file itself.
     /// </param>
     /// <param name="run">
     /// Confirms and renames, reporting progress through the action it is given. Returns null when the user did not
@@ -71,12 +75,17 @@ public sealed class RenameViewModel : ObservableObject
     /// The file's Part Number when the register holds it (<c>RegisterStore.HasNumber</c>), otherwise null. The new file
     /// name keeps it (<see cref="RenamePlan.NumberToKeep"/>).
     /// </param>
+    /// <param name="kind">
+    /// The open file's kind. An assembly's or weldment's new name gets <see cref="PartFileName.AssemblyPrefix"/>
+    /// (<see cref="PartFileName.ForKind"/>).
+    /// </param>
     public RenameViewModel(
         string fullFileName,
         Func<string, bool> targetExists,
         Func<RenameRequest, Action<string>, RenameResult?> run,
         ILog? log = null,
-        PartNumber? registeredNumber = null)
+        PartNumber? registeredNumber = null,
+        DocumentKind kind = DocumentKind.Part)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(fullFileName);
         ArgumentNullException.ThrowIfNull(targetExists);
@@ -90,6 +99,7 @@ public sealed class RenameViewModel : ObservableObject
         CurrentName = PartName.FromFileName(_fullFileName);
         _newName = CurrentName;
         _registeredNumber = registeredNumber;
+        _kind = kind;
         NumberKept = RenamePlan.NumberToKeep(_fullFileName, registeredNumber);
 
         RenameCommand = new RelayCommand(Rename, () => CanRename);
@@ -110,7 +120,7 @@ public sealed class RenameViewModel : ObservableObject
     /// <summary>The current part name (<see cref="PartName.FromFileName"/>).</summary>
     public string CurrentName { get; }
 
-    /// <summary>The part number the new file name starts with (<see cref="RenamePlan.NumberToKeep"/>), or null for none.</summary>
+    /// <summary>The part number the new file name ends with (<see cref="RenamePlan.NumberToKeep"/>), or null for none.</summary>
     public PartNumber? NumberKept { get; }
 
     /// <summary>The new part name as typed; pre-filled with <see cref="CurrentName"/>.</summary>
@@ -165,7 +175,7 @@ public sealed class RenameViewModel : ObservableObject
 
     /// <summary>What the Part Properties window takes back: null unless the file was renamed.</summary>
     public PartRenameOutcome? Outcome => _result is { Renamed: true } r
-        ? new PartRenameOutcome(r.Request.NewFullFileName, r.Request.NewName, r.DescriptionWritten)
+        ? new PartRenameOutcome(r.FullFileNameNow, r.Request.NewName, r.DescriptionWritten)
         : null;
 
     /// <summary>The footer line: the validation message, the progress, or the summary of the result.</summary>
@@ -193,8 +203,8 @@ public sealed class RenameViewModel : ObservableObject
     public string ResultText => _result is null ? string.Empty : ResultLines(_result);
 
     /// <summary>
-    /// The summary of a result: renamed or not, how many files were updated and how many were not, and whether the
-    /// old file was kept.
+    /// The summary of a result: renamed or not, how many files were updated and how many were not, how many occurrences
+    /// were renamed and drawings renamed (when any), and whether the old file was kept.
     /// </summary>
     public static string Summary(RenameResult result)
     {
@@ -205,9 +215,23 @@ public sealed class RenameViewModel : ObservableObject
 
         var text = string.Create(
             CultureInfo.InvariantCulture,
-            $"Renamed to {RenamePlan.FileNameOnly(result.Request.NewFullFileName)}. {Files(result.UpdatedCount)} updated");
+            $"Renamed to {RenamePlan.FileNameOnly(result.FullFileNameNow)}. {Files(result.UpdatedCount)} updated");
         if (result.FailedCount > 0)
             text += string.Create(CultureInfo.InvariantCulture, $", {result.FailedCount} not updated");
+        if (result.OccurrencesRenamed > 0)
+        {
+            text += result.OccurrencesRenamed == 1
+                ? ", 1 occurrence renamed"
+                : string.Create(CultureInfo.InvariantCulture, $", {result.OccurrencesRenamed} occurrences renamed");
+        }
+
+        if (result.DrawingsRenamed > 0)
+        {
+            text += result.DrawingsRenamed == 1
+                ? ", 1 drawing renamed"
+                : string.Create(CultureInfo.InvariantCulture, $", {result.DrawingsRenamed} drawings renamed");
+        }
+
         text += ".";
         if (!result.OldFileDeleted)
             text += " The old file was kept.";
@@ -215,7 +239,8 @@ public sealed class RenameViewModel : ObservableObject
     }
 
     /// <summary>
-    /// The result list: <see cref="UpdatedPrefix"/> and each updated file, <see cref="NotUpdatedPrefix"/> and each file
+    /// The result list: <see cref="UpdatedPrefix"/> and each updated file (with <see cref="RenamedToPrefix"/> and the new
+    /// name for a drawing renamed with the model), <see cref="NotUpdatedPrefix"/> and each file
     /// that was not with the reason, then each note. <see cref="NothingElseText"/> when the file was renamed and no other
     /// file was changed.
     /// </summary>
@@ -227,7 +252,9 @@ public sealed class RenameViewModel : ObservableObject
         if (result.Renamed && result.Files.Count == 0)
             lines.Add(NothingElseText);
 
-        lines.AddRange(result.Files.Where(f => f.Updated).Select(f => UpdatedPrefix + f.FullFileName));
+        lines.AddRange(result.Files.Where(f => f.Updated).Select(f =>
+            UpdatedPrefix + f.FullFileName +
+            (f.RenamedTo is { } renamedTo ? RenamedToPrefix + RenamePlan.FileNameOnly(renamedTo) : string.Empty)));
         lines.AddRange(result.Files.Where(f => !f.Updated).Select(f => $"{NotUpdatedPrefix}{f.FullFileName}: {f.Problem}"));
         lines.AddRange(result.Notes.Select(n => n.Text));
         return string.Join(Environment.NewLine, lines);
@@ -241,11 +268,12 @@ public sealed class RenameViewModel : ObservableObject
     private void Validate()
     {
         _newFullFileName = string.Empty;
-        _validationMessage = RenamePlan.ValidateNewName(_fullFileName, _newName, _registeredNumber);
+        _validationMessage = RenamePlan.ValidateNewName(_fullFileName, _newName, _registeredNumber, _kind);
         if (_validationMessage is null)
         {
-            _newFullFileName = RenamePlan.NewFileName(_fullFileName, _newName, _registeredNumber);
-            if (_targetExists(_newFullFileName))
+            _newFullFileName = RenamePlan.NewFileName(_fullFileName, _newName, _registeredNumber, _kind);
+            // A change of case only names the file itself, which is not a file in the way (task 061).
+            if (!RenamePlan.IsCaseOnlyChange(_fullFileName, _newFullFileName) && _targetExists(_newFullFileName))
                 _validationMessage = RenamePlan.TargetExistsMessage(RenamePlan.FileNameOnly(_newFullFileName));
         }
 
@@ -260,7 +288,7 @@ public sealed class RenameViewModel : ObservableObject
         if (!CanRename)
             return;
 
-        var request = new RenameRequest(_fullFileName, _newFullFileName, PartFileName.NormaliseName(_newName));
+        var request = new RenameRequest(_fullFileName, _newFullFileName, PartFileName.ForKind(_newName, _kind));
 
         _isRunning = true;
         _progressText = StartingText;

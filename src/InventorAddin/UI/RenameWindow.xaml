@@ -35,6 +35,7 @@
             </controls:FieldRow>
             <controls:FieldRow Label="_New name" Target="{Binding ElementName=NewNameBox}">
                 <TextBox x:Name="NewNameBox"
+                         CharacterCasing="Upper"
                          IsEnabled="{Binding IsEditing, Mode=OneWay}"
                          Text="{Binding NewName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
             </controls:FieldRow>

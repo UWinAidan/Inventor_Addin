@@ -41,7 +41,7 @@ namespace InventorAddin.Commands
         public override string InternalName => CommandNames.MassUpdate;
         public override string DisplayName => "Mass Update";
         public override string Description =>
-            "Register numbers, assign new ones and replace your name in Designer and Detailer across a folder of files.";
+            "Register numbers, assign new ones and replace your name in Designer, Author and Detailer across a folder of files.";
 
         protected override CommandTypesEnum CommandType => CommandTypesEnum.kFileOperationsCmdType;
 

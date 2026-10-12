@@ -1,3 +1,4 @@
+using InventorAddin.Core.Models;
 using InventorAddin.Core.Numbering;
 using InventorAddin.Core.ViewModels;
 
@@ -10,8 +11,35 @@ public sealed class NewFileNameCheckTests
     {
         var check = NewFileNameCheck.For("  mounting  bracket ", ".ipt", @" C:\Work ");
 
-        Assert.Equal("AWB-?????,mounting_bracket.ipt", check.FileName);
+        Assert.Equal("MOUNTING_BRACKET,AWB-?????.ipt", check.FileName);
         Assert.Null(check.Problem);
+    }
+
+    [Theory]
+    [InlineData("MOUNTING BRACKET", ".ipt", "MOUNTING_BRACKET,AWB-?????.ipt")]
+    [InlineData("FRAME", ".iam", "FRAME,AWB-?????.iam")]
+    [InlineData("A,B", ".ipt", "A,B,AWB-?????.ipt")]
+    public void Preview_IsNameThenPlaceholderNumber(string name, string extension, string expected)
+    {
+        Assert.Equal(expected, NewFileNameCheck.For(name, extension, @"C:\Work").FileName);
+    }
+
+    [Theory]
+    [InlineData(DocumentKind.Assembly, "ASSY_GEARBOX,AWB-?????.iam")]
+    [InlineData(DocumentKind.WeldmentAssembly, "ASSY_GEARBOX,AWB-?????.iam")]
+    [InlineData(DocumentKind.Part, "GEARBOX,AWB-?????.iam")]
+    public void Preview_ForAnAssembly_HasThePrefix(DocumentKind kind, string expected)
+    {
+        Assert.Equal(expected, NewFileNameCheck.For("gearbox", ".iam", @"C:\Work", kind).FileName);
+    }
+
+    [Fact]
+    public void OnlyThePrefix_ForAnAssembly_IsRefused()
+    {
+        var check = NewFileNameCheck.For("ASSY_", ".iam", @"C:\Work", DocumentKind.Assembly);
+
+        Assert.Equal(string.Empty, check.FileName);
+        Assert.Equal(PartFileName.AssemblyNameMissingMessage, check.Problem);
     }
 
     [Fact]
@@ -31,7 +59,7 @@ public sealed class NewFileNameCheckTests
     {
         var check = NewFileNameCheck.For("plate", ".ipt", folder);
 
-        Assert.Equal("AWB-?????,plate.ipt", check.FileName);
+        Assert.Equal("PLATE,AWB-?????.ipt", check.FileName);
         Assert.Equal(NewFileNameCheck.ChooseFolderMessage, check.Problem);
     }
 

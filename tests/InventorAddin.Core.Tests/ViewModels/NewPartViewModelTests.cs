@@ -175,10 +175,10 @@ public sealed class NewPartViewModelTests
     }
 
     [Theory]
-    [InlineData(NewFileKind.Part, "  mounting   bracket ", "AWB-?????,mounting_bracket.ipt")]
-    [InlineData(NewFileKind.SheetMetalPart, "Cover_Plate", "AWB-?????,Cover_Plate.ipt")]
-    [InlineData(NewFileKind.Assembly, "gearbox", "AWB-?????,gearbox.iam")]
-    [InlineData(NewFileKind.Part, "plate, 10mm", "AWB-?????,plate,_10mm.ipt")]
+    [InlineData(NewFileKind.Part, "  mounting   bracket ", "MOUNTING_BRACKET,AWB-?????.ipt")]
+    [InlineData(NewFileKind.SheetMetalPart, "Cover_Plate", "COVER_PLATE,AWB-?????.ipt")]
+    [InlineData(NewFileKind.Assembly, "gearbox", "ASSY_GEARBOX,AWB-?????.iam")]
+    [InlineData(NewFileKind.Part, "plate, 10mm", "PLATE,_10MM,AWB-?????.ipt")]
     public void FileNamePreview_ShowsPlaceholderNameAndExtension(NewFileKind kind, string name, string expected)
     {
         var vm = Create();
@@ -209,7 +209,7 @@ public sealed class NewPartViewModelTests
 
         vm.PartName = "plate";
 
-        Assert.Equal("AWB-?????,plate.ipt", vm.FileNamePreview);
+        Assert.Equal("PLATE,AWB-?????.ipt", vm.FileNamePreview);
         Assert.Equal(NewPartViewModel.ChooseFolderMessage, vm.ValidationMessage);
     }
 
@@ -254,7 +254,7 @@ public sealed class NewPartViewModelTests
     {
         var vm = Create();
         vm.PartName = "plate";
-        var fileName = "AWB-?????,plate.ipt";
+        var fileName = "plate,AWB-?????.ipt";
 
         // Folder + separator + file name: exactly at the limit is accepted, one more is not.
         vm.Folder = new string('f', PartFileName.MaxPathLength - fileName.Length - 1);
@@ -271,7 +271,7 @@ public sealed class NewPartViewModelTests
     {
         var vm = Create();
         vm.PartName = "plate";
-        var folder = new string('f', PartFileName.MaxPathLength - "AWB-?????,plate.ipt".Length - 1);
+        var folder = new string('f', PartFileName.MaxPathLength - "plate,AWB-?????.ipt".Length - 1);
 
         vm.Folder = "  " + folder + "  ";
 
@@ -282,13 +282,86 @@ public sealed class NewPartViewModelTests
     public void Validation_AssemblyExtensionCountsInThePath()
     {
         var vm = Create();
-        vm.PartName = "gearbox";
-        vm.Folder = new string('f', PartFileName.MaxPathLength - "AWB-?????,gearbox.ipt".Length - 1);
+        vm.PartName = "assy gearbox";
+        vm.Folder = new string('f', PartFileName.MaxPathLength - "ASSY_GEARBOX,AWB-?????.ipt".Length - 1);
         Assert.Null(vm.ValidationMessage);
 
-        // Same length: .iam and .ipt. Still valid.
+        // Same length: .iam and .ipt, and the name already has the prefix. Still valid.
         vm.Kind = NewFileKind.Assembly;
         Assert.Null(vm.ValidationMessage);
+    }
+
+    [Fact]
+    public void Validation_AssemblyPrefixCountsInThePath()
+    {
+        var vm = Create();
+        vm.PartName = "gearbox";
+        vm.Folder = new string('f', PartFileName.MaxPathLength - "GEARBOX,AWB-?????.ipt".Length - 1);
+        Assert.Null(vm.ValidationMessage);
+
+        vm.Kind = NewFileKind.Assembly;
+        Assert.Equal(PartFileName.ValidatePath(vm.Folder, vm.FileNamePreview), vm.ValidationMessage);
+        Assert.NotNull(vm.ValidationMessage);
+    }
+
+    // The assembly prefix
+
+    [Fact]
+    public void Kind_SwitchingToAssemblyAndBack_AddsThenRemovesThePrefix_AndLeavesTheNameBoxAlone()
+    {
+        var vm = Create();
+        vm.PartName = "gearbox";
+        Assert.Equal("GEARBOX,AWB-?????.ipt", vm.FileNamePreview);
+
+        var names = Track(vm);
+        vm.Kind = NewFileKind.Assembly;
+        Assert.Equal("ASSY_GEARBOX,AWB-?????.iam", vm.FileNamePreview);
+        Assert.Contains(nameof(NewPartViewModel.FileNamePreview), names);
+        Assert.Equal("gearbox", vm.PartName);
+
+        vm.Kind = NewFileKind.Part;
+        Assert.Equal("GEARBOX,AWB-?????.ipt", vm.FileNamePreview);
+        Assert.Equal("gearbox", vm.PartName);
+    }
+
+    [Theory]
+    [InlineData("GEARBOX")]
+    [InlineData("ASSY_GEARBOX")]
+    [InlineData("assy gearbox")]
+    public void Assembly_PrefixIsAddedOnce(string typed)
+    {
+        var vm = Create();
+        vm.Kind = NewFileKind.Assembly;
+        vm.PartName = typed;
+
+        Assert.Equal("ASSY_GEARBOX,AWB-?????.iam", vm.FileNamePreview);
+        vm.CreateCommand.Execute(null);
+        Assert.Equal("ASSY GEARBOX", vm.Request!.PartName);
+    }
+
+    [Fact]
+    public void Assembly_OnlyThePrefix_IsRefused()
+    {
+        var vm = Create();
+        vm.Kind = NewFileKind.Assembly;
+        vm.PartName = "ASSY_";
+
+        Assert.Equal(PartFileName.AssemblyNameMissingMessage, vm.ValidationMessage);
+        Assert.False(vm.CanCreate);
+
+        vm.Kind = NewFileKind.Part;
+        Assert.Null(vm.ValidationMessage);
+    }
+
+    [Fact]
+    public void Part_RequestIsUpperCase_WithoutThePrefix()
+    {
+        var vm = Create();
+        vm.PartName = "pièce, été";
+
+        vm.CreateCommand.Execute(null);
+
+        Assert.Equal("PIÈCE, ÉTÉ", vm.Request!.PartName);
     }
 
     [Fact]
@@ -335,7 +408,7 @@ public sealed class NewPartViewModelTests
         vm.CreateCommand.Execute(null);
 
         Assert.Equal(
-            new NewPartRequest(NewFileKind.Assembly, "main frame", "A", UnitsSystem.Imperial, @"C:\Work\Parts"),
+            new NewPartRequest(NewFileKind.Assembly, "ASSY MAIN FRAME", "A", UnitsSystem.Imperial, @"C:\Work\Parts"),
             vm.Request);
         Assert.Equal(1, closed);
     }

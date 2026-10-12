@@ -11,6 +11,9 @@ public static class Branding
     /// <summary>Text on the ribbon tab.</summary>
     public const string TabName = "AWB Addin";
 
+    /// <summary>Short brand name: the name of the add-in's own ribbon panel (Settings, About).</summary>
+    public const string ShortName = "AWB";
+
     /// <summary>Product name: About title, window titles, log lines, error text.</summary>
     public const string ProductName = "AWB Addin";
 

@@ -13,8 +13,8 @@
 
         Spec 02, "Commands: Mass Update" (task 048). The folder (the Work folder at open) with Browse and Scan; after a
         scan, the counts, a tick-all line and the list of files, which scrolls (ListScroller). Each file shows its name
-        and Part Number, its state (number state, your name as Designer or Detailer, or why it offers nothing), the tick
-        boxes that apply to it, and after Apply, Done or the error. The footer shows progress ("Reading 3 of 12"), the
+        and Part Number, its state (number state, your name as Designer, Author or Detailer, or why it offers nothing),
+        the tick boxes that apply to it, and after Apply, Done or the error. The footer shows progress ("Reading 3 of 12"), the
         result or a problem; Stop is shown while a scan runs. Everything else is disabled while busy.
 
         Apply is the primary button but not the default: Enter in the folder box scans, and nothing is saved without the

@@ -76,6 +76,7 @@ public sealed class PartPropertiesViewModelTests
         Description = "Bracket",
         PartType = "M",
         Designer = "Alex Example",
+        Author = "Alex Example",
         Detailer = "Sam Sample",
         Cost = 12.5m,
         Material = "Test Steel",
@@ -219,8 +220,8 @@ public sealed class PartPropertiesViewModelTests
     // Part number display (spec 02, "Display in Part Properties")
 
     [Theory]
-    [InlineData(@"C:\Work\AWB-10001,bracket.ipt", "AWB-10001", "AWB-10001", true, true, null)]
-    [InlineData(@"C:\Work\AWB-10001,bracket.ipt", "  awb-10001 ", "AWB-10001", true, true, null)]
+    [InlineData(@"C:\Work\bracket,AWB-10001.ipt", "AWB-10001", "AWB-10001", true, true, null)]
+    [InlineData(@"C:\Work\bracket,AWB-10001.ipt", "  awb-10001 ", "AWB-10001", true, true, null)]
     [InlineData(@"C:\Work\bracket.ipt", "AWB-10500", "AWB-10500", true, false, "Not in the register")]
     [InlineData(@"C:\Work\bracket.ipt", "bracket", "Not assigned", false, false, null)]
     [InlineData(@"C:\Work\bracket.ipt", "PN-0001", "Not assigned", false, false, null)]
@@ -243,11 +244,11 @@ public sealed class PartPropertiesViewModelTests
 
     /// <summary>
     /// Inventor reports the file name as the Part Number when none is set. In the new file-name format that is
-    /// <c>AWB-10001,test_plate</c>, which is not a part number, even when the number before the comma is registered.
+    /// <c>test_plate,AWB-10001</c>, which is not a part number, even when the number after the comma is registered.
     /// </summary>
     [Theory]
-    [InlineData(@"C:\Work\AWB-10001,test_plate.ipt", "AWB-10001,test_plate")]
-    [InlineData(@"C:\Work\AWB-10001,a,b.ipt", "AWB-10001,a,b")]
+    [InlineData(@"C:\Work\test_plate,AWB-10001.ipt", "test_plate,AWB-10001")]
+    [InlineData(@"C:\Work\a,b,AWB-10001.ipt", "a,b,AWB-10001")]
     [InlineData(@"C:\Work\old_bracket.ipt", "old_bracket")]
     public void PartNumberDisplay_FileNameFallbackIsNotAssigned(string fullFileName, string partNumber)
     {
@@ -665,6 +666,7 @@ public sealed class PartPropertiesViewModelTests
             w => Assert.Equal((PartPropertyStorage.Description, "Bracket"), (w.Location, w.TextValue)),
             w => Assert.Equal((PartPropertyStorage.PartType, "A"), (w.Location, w.TextValue)),
             w => Assert.Equal((PartPropertyStorage.Designer, DefaultDesigner), (w.Location, w.TextValue)),
+            w => Assert.Equal((PartPropertyStorage.Author, DefaultDesigner), (w.Location, w.TextValue)),
             w => Assert.Equal((PartPropertyStorage.Detailer, DefaultDesigner), (w.Location, w.TextValue)));
     }
 
@@ -696,6 +698,7 @@ public sealed class PartPropertiesViewModelTests
         Assert.Collection(
             Assert.Single(target.Calls),
             w => Assert.Equal((PartPropertyStorage.Designer, Person), (w.Location, w.TextValue)),
+            w => Assert.Equal((PartPropertyStorage.Author, Person), (w.Location, w.TextValue)),
             w => Assert.Equal((PartPropertyStorage.Detailer, Person), (w.Location, w.TextValue)));
     }
 
@@ -731,6 +734,98 @@ public sealed class PartPropertiesViewModelTests
         Assert.True(vm.HasChanges);
     }
 
+    // Author follows Designer (spec 02, 2026-10-11)
+
+    [Fact]
+    public void WindowsUserAsAuthorOnly_IsAChange_AndApplyWritesOnlyAuthor()
+    {
+        var target = new FakeTarget();
+        var vm = Create(
+            Complete() with { Author = WindowsUser },
+            target,
+            defaultDesigner: Person,
+            windowsUserName: WindowsUser);
+
+        Assert.Equal("Alex Example", vm.Designer);
+        Assert.True(vm.HasChanges);
+        Assert.True(vm.ApplyCommand.CanExecute(null));
+
+        vm.ApplyCommand.Execute(null);
+
+        var write = Assert.Single(Assert.Single(target.Calls));
+        Assert.Equal((PartPropertyStorage.Author, "Alex Example"), (write.Location, write.TextValue));
+        Assert.False(vm.HasChanges);
+    }
+
+    [Fact]
+    public void AuthorOnlyToFix_OkWritesIt()
+    {
+        var target = new FakeTarget();
+        var vm = Create(Complete() with { Author = "Someone Else" }, target);
+
+        vm.OkCommand.Execute(null);
+
+        var write = Assert.Single(Assert.Single(target.Calls));
+        Assert.Equal((PartPropertyStorage.Author, "Alex Example"), (write.Location, write.TextValue));
+    }
+
+    [Fact]
+    public void BlankDesigner_WithNoDefaultDesigner_LeavesAuthorAlone()
+    {
+        var vm = Create(
+            Complete() with { Designer = null, Author = WindowsUser },
+            defaultDesigner: null,
+            windowsUserName: WindowsUser);
+
+        Assert.Equal(string.Empty, vm.Designer);
+        Assert.False(vm.HasChanges);
+    }
+
+    [Fact]
+    public void WindowsUserAsDesigner_WithNoDefaultDesigner_IsNotCopiedOverARealAuthor()
+    {
+        var target = new FakeTarget();
+        var vm = Create(
+            Complete() with { Designer = WindowsUser, Author = "Jane Real", Detailer = WindowsUser },
+            target,
+            defaultDesigner: null,
+            windowsUserName: WindowsUser);
+
+        Assert.Equal(WindowsUser, vm.Designer);
+        Assert.False(vm.HasChanges);
+        Assert.False(vm.ApplyCommand.CanExecute(null));
+
+        vm.OkCommand.Execute(null);
+        Assert.Empty(target.Calls);
+    }
+
+    [Fact]
+    public void OtherNameAsDesigner_WithNoDefaultDesigner_IsNotCopiedOverARealAuthor()
+    {
+        var vm = Create(
+            Complete() with { Designer = OtherName, Author = "Jane Real", Detailer = OtherName },
+            defaultDesigner: null,
+            namesThatMeanMe: MyNames);
+
+        Assert.Equal(OtherName, vm.Designer);
+        Assert.False(vm.HasChanges);
+    }
+
+    [Fact]
+    public void EditedDesigner_IsWrittenToAuthorToo()
+    {
+        var target = new FakeTarget();
+        var vm = Create(Complete(), target);
+
+        vm.Designer = "  Jo Other ";
+        vm.ApplyCommand.Execute(null);
+
+        Assert.Collection(
+            Assert.Single(target.Calls),
+            w => Assert.Equal((PartPropertyStorage.Designer, "Jo Other"), (w.Location, w.TextValue)),
+            w => Assert.Equal((PartPropertyStorage.Author, "Jo Other"), (w.Location, w.TextValue)));
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -738,7 +833,7 @@ public sealed class PartPropertiesViewModelTests
     public void WindowsUser_WithNoDefaultDesigner_IsShownUnchanged(string? defaultDesigner)
     {
         var vm = Create(
-            Complete() with { Designer = WindowsUser, Detailer = WindowsUser },
+            Complete() with { Designer = WindowsUser, Author = WindowsUser, Detailer = WindowsUser },
             defaultDesigner: defaultDesigner,
             windowsUserName: WindowsUser);
 
@@ -772,7 +867,7 @@ public sealed class PartPropertiesViewModelTests
     public void DesignerOtherThanTheWindowsUser_IsKept(string? defaultDesigner)
     {
         var vm = Create(
-            Complete() with { Designer = "testuser2", Detailer = "Sam Sample" },
+            Complete() with { Designer = "testuser2", Author = "testuser2", Detailer = "Sam Sample" },
             defaultDesigner: defaultDesigner,
             windowsUserName: WindowsUser);
 
@@ -787,7 +882,7 @@ public sealed class PartPropertiesViewModelTests
     public void NoWindowsUserName_BehavesAsBefore(string? windowsUserName)
     {
         var vm = Create(
-            Complete() with { Designer = WindowsUser, Detailer = WindowsUser },
+            Complete() with { Designer = WindowsUser, Author = WindowsUser, Detailer = WindowsUser },
             defaultDesigner: Person,
             windowsUserName: windowsUserName);
 
@@ -853,6 +948,7 @@ public sealed class PartPropertiesViewModelTests
         Assert.Collection(
             Assert.Single(target.Calls),
             w => Assert.Equal((PartPropertyStorage.Designer, Person), (w.Location, w.TextValue)),
+            w => Assert.Equal((PartPropertyStorage.Author, Person), (w.Location, w.TextValue)),
             w => Assert.Equal((PartPropertyStorage.Detailer, Person), (w.Location, w.TextValue)));
     }
 
@@ -860,7 +956,7 @@ public sealed class PartPropertiesViewModelTests
     public void OtherName_WithNoDefaultDesigner_IsShownUnchanged()
     {
         var vm = Create(
-            Complete() with { Designer = OtherName, Detailer = OtherName },
+            Complete() with { Designer = OtherName, Author = OtherName, Detailer = OtherName },
             defaultDesigner: null,
             namesThatMeanMe: MyNames);
 
@@ -873,7 +969,7 @@ public sealed class PartPropertiesViewModelTests
     public void NameNotInTheList_IsKept()
     {
         var vm = Create(
-            Complete() with { Designer = "T.User2", Detailer = "Sam Sample" },
+            Complete() with { Designer = "T.User2", Author = "T.User2", Detailer = "Sam Sample" },
             defaultDesigner: Person,
             namesThatMeanMe: MyNames);
 
@@ -1045,6 +1141,7 @@ public sealed class PartPropertiesViewModelTests
             writes,
             w => Assert.Equal((PropertyWriteAction.Remove, PartPropertyStorage.PartType), (w.Action, w.Location)),
             w => Assert.Equal((PartPropertyStorage.Designer, "Other Person"), (w.Location, w.TextValue)),
+            w => Assert.Equal((PartPropertyStorage.Author, "Other Person"), (w.Location, w.TextValue)),
             w => Assert.Equal((PropertyWriteAction.Remove, PartPropertyStorage.Detailer), (w.Action, w.Location)),
             w => Assert.Equal((PartPropertyStorage.Cost, (decimal?)7.5m), (w.Location, w.CurrencyValue)));
 
@@ -1065,8 +1162,11 @@ public sealed class PartPropertiesViewModelTests
         Assert.True(vm.HasChanges);
         vm.ApplyCommand.Execute(null);
         Assert.Equal(2, target.Calls.Count);
-        var write = Assert.Single(target.Calls[1]);
-        Assert.Equal("Alex Example", write.TextValue);
+        // Author was rebased to the first apply's Designer, so it follows again.
+        Assert.Collection(
+            target.Calls[1],
+            w => Assert.Equal((PartPropertyStorage.Designer, "Alex Example"), (w.Location, w.TextValue)),
+            w => Assert.Equal((PartPropertyStorage.Author, "Alex Example"), (w.Location, w.TextValue)));
     }
 
     [Fact]
@@ -1108,7 +1208,7 @@ public sealed class PartPropertiesViewModelTests
         Assert.Equal("Other Person", vm.Detailer);
         vm.ApplyCommand.Execute(null);
         Assert.Equal(
-            new[] { PartPropertyStorage.Designer, PartPropertyStorage.Detailer },
+            new[] { PartPropertyStorage.Designer, PartPropertyStorage.Author, PartPropertyStorage.Detailer },
             target.Calls[1].Select(w => w.Location));
     }
 
@@ -1124,8 +1224,9 @@ public sealed class PartPropertiesViewModelTests
         vm.ApplyCommand.Execute(null);
 
         var line = Assert.Single(log.Infos);
-        Assert.Contains("3", line);
+        Assert.Contains("4", line);
         Assert.Contains("Designer", line);
+        Assert.Contains("Author", line);
         Assert.Contains("Detailer", line);
         Assert.Contains("Cost", line);
         Assert.DoesNotContain("Secret Person", line);
@@ -1527,7 +1628,7 @@ public sealed class PartPropertiesViewModelTests
 
     private static PartPropertiesSnapshot Numbered() => Complete() with
     {
-        FullFileName = @"C:\Work\AWB-10001,mounting_bracket.ipt",
+        FullFileName = @"C:\Work\mounting_bracket,AWB-10001.ipt",
         Description = "mounting bracket",
     };
 
@@ -1556,7 +1657,7 @@ public sealed class PartPropertiesViewModelTests
     {
         var renamer = new FakeRenamer
         {
-            Result = new PartRenameOutcome(@"C:\Work\AWB-10001,base_plate.ipt", "base plate", DescriptionWritten: true),
+            Result = new PartRenameOutcome(@"C:\Work\base_plate,AWB-10001.ipt", "base plate", DescriptionWritten: true),
         };
         var vm = Create(Numbered(), renamer: renamer);
         var changes = RecordPropertyChanges(vm);
@@ -1566,8 +1667,8 @@ public sealed class PartPropertiesViewModelTests
         Assert.Equal(1, renamer.Calls);
         Assert.Equal("base plate", vm.HeaderTitle);
         Assert.Equal("base plate", vm.PartNameDisplay);
-        Assert.Equal("Part" + PartPropertiesViewModel.HeaderSeparator + "AWB-10001,base_plate.ipt", vm.HeaderSubline);
-        Assert.Equal("Renamed to AWB-10001,base_plate.ipt.", vm.StatusText);
+        Assert.Equal("Part" + PartPropertiesViewModel.HeaderSeparator + "base_plate,AWB-10001.ipt", vm.HeaderSubline);
+        Assert.Equal("Renamed to base_plate,AWB-10001.ipt.", vm.StatusText);
         Assert.False(vm.HasError);
         Assert.Contains(nameof(vm.HeaderTitle), changes);
         Assert.Contains(nameof(vm.HeaderSubline), changes);
@@ -1582,7 +1683,7 @@ public sealed class PartPropertiesViewModelTests
         var target = new FakeTarget();
         var renamer = new FakeRenamer
         {
-            Result = new PartRenameOutcome(@"C:\Work\AWB-10001,base_plate.ipt", "base plate", DescriptionWritten: false),
+            Result = new PartRenameOutcome(@"C:\Work\base_plate,AWB-10001.ipt", "base plate", DescriptionWritten: false),
         };
         var vm = Create(Numbered(), target, renamer: renamer);
 
@@ -1629,7 +1730,7 @@ public sealed class PartPropertiesViewModelTests
         var target = new FakeTarget();
         var renamer = new FakeRenamer
         {
-            Result = new PartRenameOutcome(@"C:\Work\AWB-10001,base_plate.ipt", "base plate", DescriptionWritten: true),
+            Result = new PartRenameOutcome(@"C:\Work\base_plate,AWB-10001.ipt", "base plate", DescriptionWritten: true),
         };
         var vm = Create(Numbered(), target, renamer: renamer);
         vm.Designer = "New Designer";
@@ -1638,7 +1739,7 @@ public sealed class PartPropertiesViewModelTests
         vm.ApplyCommand.Execute(null);
 
         var writes = Assert.Single(target.Calls);
-        Assert.Equal([PartPropertyStorage.Designer], writes.Select(w => w.Location));
+        Assert.Equal([PartPropertyStorage.Designer, PartPropertyStorage.Author], writes.Select(w => w.Location));
     }
 
     [Fact]
@@ -1648,7 +1749,7 @@ public sealed class PartPropertiesViewModelTests
         var target = new FakeTarget();
         var renamer = new FakeRenamer
         {
-            Result = new PartRenameOutcome(@"C:\Work\AWB-10001,base_plate.ipt", "base plate", DescriptionWritten: true),
+            Result = new PartRenameOutcome(@"C:\Work\base_plate,AWB-10001.ipt", "base plate", DescriptionWritten: true),
         };
         var vm = Create(Numbered() with { Description = "something else" }, target, renamer: renamer);
         Assert.True(vm.HasChanges);
@@ -1667,7 +1768,7 @@ public sealed class PartPropertiesViewModelTests
         var target = new FakeTarget();
         var renamer = new FakeRenamer
         {
-            Result = new PartRenameOutcome(@"C:\Work\AWB-10001,base_plate.ipt", "base plate", DescriptionWritten: false),
+            Result = new PartRenameOutcome(@"C:\Work\base_plate,AWB-10001.ipt", "base plate", DescriptionWritten: false),
         };
         var vm = Create(Numbered() with { Description = "something else" }, target, renamer: renamer);
 

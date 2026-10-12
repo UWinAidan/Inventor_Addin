@@ -284,13 +284,13 @@ public sealed class RegisterStoreTests : IDisposable
         var result = Store().Assign(number =>
         {
             seen.Add(number);
-            return new RegisterRequest("test plate", "P", DocumentKind.Part, $@"C:\Work\{number},test_plate.ipt");
+            return new RegisterRequest("test plate", "P", DocumentKind.Part, $@"C:\Work\test_plate,{number}.ipt");
         });
 
         Assert.Equal(10002, result.PartNumber.Value);
         Assert.Equal([new PartNumber(10002)], seen);
         var written = RegisterCsv.Read(File.ReadAllText(reachable ? SharedPath : PendingPath)).Entries.Last();
-        Assert.Equal(@"C:\Work\AWB-10002,test_plate.ipt", written.FilePath);
+        Assert.Equal(@"C:\Work\test_plate,AWB-10002.ipt", written.FilePath);
         AssertOnlyRegisterFilesLeft();
     }
 
@@ -731,7 +731,7 @@ public sealed class RegisterStoreTests : IDisposable
     {
         WriteShared(10001, 10002, 10003);
 
-        var result = Store().UpdateEntry(new PartNumber(10002), @"C:\Work\AWB-10002,base_plate.iam", "base plate");
+        var result = Store().UpdateEntry(new PartNumber(10002), @"C:\Work\base_plate,AWB-10002.iam", "base plate");
 
         Assert.True(result.Found);
         Assert.False(result.Offline);
@@ -743,7 +743,7 @@ public sealed class RegisterStoreTests : IDisposable
             Assert.Equal(Entry(10001), entries[0]);
             Assert.Equal(Entry(10003), entries[2]);
             Assert.Equal(
-                Entry(10002) with { FilePath = @"C:\Work\AWB-10002,base_plate.iam", Name = "base plate" },
+                Entry(10002) with { FilePath = @"C:\Work\base_plate,AWB-10002.iam", Name = "base plate" },
                 entries[1]);
         }
 
@@ -788,11 +788,11 @@ public sealed class RegisterStoreTests : IDisposable
         store.Assign(Request("offline plate"));
 
         _environment.Reachable = true;
-        var result = store.UpdateEntry(new PartNumber(10002), @"C:\Work\AWB-10002,renamed.ipt", "renamed");
+        var result = store.UpdateEntry(new PartNumber(10002), @"C:\Work\renamed,AWB-10002.ipt", "renamed");
 
         Assert.True(result.Found);
         Assert.Equal([10001, 10002], Numbers(SharedPath));
-        Assert.Equal(@"C:\Work\AWB-10002,renamed.ipt", Entries(SharedPath)[1].FilePath);
+        Assert.Equal(@"C:\Work\renamed,AWB-10002.ipt", Entries(SharedPath)[1].FilePath);
         Assert.False(File.Exists(PendingPath));
     }
 
@@ -805,13 +805,13 @@ public sealed class RegisterStoreTests : IDisposable
         _environment.Reachable = false;
         var store = Store();
 
-        var result = store.UpdateEntry(new PartNumber(10002), @"C:\Work\AWB-10002,renamed.iam", "renamed", Entry(10002).FilePath);
+        var result = store.UpdateEntry(new PartNumber(10002), @"C:\Work\renamed,AWB-10002.iam", "renamed", Entry(10002).FilePath);
 
         Assert.True(result.Found);
         Assert.True(result.Offline);
         Assert.True(File.Exists(PendingUpdatesPath));
         Assert.Equal(sharedBefore, File.ReadAllBytes(SharedPath));
-        Assert.Equal(@"C:\Work\AWB-10002,renamed.iam", store.ReadLocal().Entries[1].FilePath);
+        Assert.Equal(@"C:\Work\renamed,AWB-10002.iam", store.ReadLocal().Entries[1].FilePath);
         Assert.Equal("renamed", store.ReadLocal().Entries[1].Name);
 
         _environment.Reachable = true;
@@ -820,7 +820,7 @@ public sealed class RegisterStoreTests : IDisposable
         Assert.True(sync.Reached);
         var shared = Entries(SharedPath);
         Assert.Equal([10001, 10002], shared.Select(e => e.Number.Value));
-        Assert.Equal(Entry(10002) with { FilePath = @"C:\Work\AWB-10002,renamed.iam", Name = "renamed" }, shared[1]);
+        Assert.Equal(Entry(10002) with { FilePath = @"C:\Work\renamed,AWB-10002.iam", Name = "renamed" }, shared[1]);
         Assert.Equal(shared, Entries(LocalPath));
         Assert.False(File.Exists(PendingUpdatesPath));
         AssertOnlyRegisterFilesLeft();
@@ -852,7 +852,7 @@ public sealed class RegisterStoreTests : IDisposable
         _environment.Reachable = false;
         var store = Store();
         store.Assign(Request("offline plate"));
-        store.UpdateEntry(new PartNumber(10002), @"C:\Work\AWB-10002,renamed.ipt", "renamed");
+        store.UpdateEntry(new PartNumber(10002), @"C:\Work\renamed,AWB-10002.ipt", "renamed");
 
         _environment.Reachable = true;
         var assignment = store.Assign(Request("next plate"));
@@ -860,7 +860,7 @@ public sealed class RegisterStoreTests : IDisposable
         Assert.Equal(10003, assignment.PartNumber.Value);
         var shared = Entries(SharedPath);
         Assert.Equal([10001, 10002, 10003], shared.Select(e => e.Number.Value));
-        Assert.Equal(@"C:\Work\AWB-10002,renamed.ipt", shared[1].FilePath);
+        Assert.Equal(@"C:\Work\renamed,AWB-10002.ipt", shared[1].FilePath);
         Assert.False(File.Exists(PendingUpdatesPath));
     }
 
@@ -906,19 +906,19 @@ public sealed class RegisterStoreTests : IDisposable
         File.SetLastWriteTimeUtc(LockPath, Now.UtcDateTime);
         var store = Store(TimeSpan.FromMilliseconds(150));
 
-        var result = store.UpdateEntry(new PartNumber(10002), @"C:\Work\AWB-10002,renamed.ipt", "renamed", Entry(10002).FilePath);
+        var result = store.UpdateEntry(new PartNumber(10002), @"C:\Work\renamed,AWB-10002.ipt", "renamed", Entry(10002).FilePath);
 
         Assert.True(result.Found);
         Assert.True(result.Offline);
         Assert.NotNull(result.QueuedReason);
         Assert.Equal(before, File.ReadAllBytes(SharedPath));
         Assert.True(File.Exists(PendingUpdatesPath));
-        Assert.Equal(@"C:\Work\AWB-10002,renamed.ipt", store.ReadLocal().Entries[1].FilePath);
+        Assert.Equal(@"C:\Work\renamed,AWB-10002.ipt", store.ReadLocal().Entries[1].FilePath);
 
         File.Delete(LockPath);
         store.Sync();
 
-        Assert.Equal(Entry(10002) with { FilePath = @"C:\Work\AWB-10002,renamed.ipt", Name = "renamed" }, Entries(SharedPath)[1]);
+        Assert.Equal(Entry(10002) with { FilePath = @"C:\Work\renamed,AWB-10002.ipt", Name = "renamed" }, Entries(SharedPath)[1]);
         Assert.False(File.Exists(PendingUpdatesPath));
         AssertOnlyRegisterFilesLeft();
     }

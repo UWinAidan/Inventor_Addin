@@ -84,7 +84,7 @@ public sealed class PartRegisterTests
     [InlineData(" awb-10001 ", true)]
     [InlineData("AWB-10002", false)]
     [InlineData("AWB-1", false)]
-    [InlineData("AWB-10001,test_plate", false)]
+    [InlineData("test_plate,AWB-10001", false)]
     [InlineData("", false)]
     [InlineData(null, false)]
     public void HasNumberNeedsTheFormatAndTheRegister(string? partNumber, bool expected)
@@ -153,9 +153,9 @@ public sealed class PartRegisterTests
     [Fact]
     public void MergeKeepsBothRowsOfADuplicateAndReportsIt()
     {
-        var existing = Entry(10002, @"C:\Work\AWB-10002,from_other_pc.ipt", computer: "OTHERPC");
+        var existing = Entry(10002, @"C:\Work\from_other_pc,AWB-10002.ipt", computer: "OTHERPC");
         var shared = new PartRegister([Entry(10001), existing]);
-        var offline = Entry(10002, @"C:\Work\AWB-10002,made_offline.ipt", At.AddMinutes(5));
+        var offline = Entry(10002, @"C:\Work\made_offline,AWB-10002.ipt", At.AddMinutes(5));
 
         var result = PartRegister.Merge(shared, [offline]);
 
@@ -169,8 +169,8 @@ public sealed class PartRegisterTests
     [Fact]
     public void MergeReportsAPendingEntryThatRepeatsAnEarlierPendingNumber()
     {
-        var first = Entry(10005, @"C:\Work\AWB-10005,first.ipt");
-        var second = Entry(10005, @"C:\Work\AWB-10005,second.ipt", At.AddMinutes(1));
+        var first = Entry(10005, @"C:\Work\first,AWB-10005.ipt");
+        var second = Entry(10005, @"C:\Work\second,AWB-10005.ipt", At.AddMinutes(1));
 
         var result = PartRegister.Merge(new PartRegister([Entry(10001)]), [first, second]);
 
@@ -220,9 +220,9 @@ public sealed class PartRegisterTests
     [Fact]
     public void MergeComparesThePathIgnoringCase()
     {
-        var shared = new PartRegister([Entry(10002, @"C:\Work\AWB-10002,Plate.ipt")]);
+        var shared = new PartRegister([Entry(10002, @"C:\Work\Plate,AWB-10002.ipt")]);
 
-        var result = PartRegister.Merge(shared, [Entry(10002, @"c:\work\awb-10002,plate.IPT")]);
+        var result = PartRegister.Merge(shared, [Entry(10002, @"c:\work\plate,awb-10002.IPT")]);
 
         Assert.Single(result.Register.Entries);
         Assert.Empty(result.Duplicates);
@@ -264,11 +264,11 @@ public sealed class PartRegisterTests
     {
         var register = new PartRegister([Entry(10001), Entry(10002), Entry(10003)]);
 
-        Assert.True(register.TryUpdate(new PartNumber(10002), @"C:\Work\AWB-10002,base_plate.ipt", "base plate", null, out var updated));
+        Assert.True(register.TryUpdate(new PartNumber(10002), @"C:\Work\base_plate,AWB-10002.ipt", "base plate", null, out var updated));
 
         Assert.Equal([10001, 10002, 10003], updated.Entries.Select(e => e.Number.Value));
         Assert.Equal(Entry(10001), updated.Entries[0]);
-        Assert.Equal(Entry(10002) with { FilePath = @"C:\Work\AWB-10002,base_plate.ipt", Name = "base plate" }, updated.Entries[1]);
+        Assert.Equal(Entry(10002) with { FilePath = @"C:\Work\base_plate,AWB-10002.ipt", Name = "base plate" }, updated.Entries[1]);
         Assert.Equal(Entry(10003), updated.Entries[2]);
         Assert.Equal(Entry(10002), register.Entries[1]);
     }

@@ -14,7 +14,7 @@ public sealed class ScannedFileStateTests
     private static readonly PartRegister Register = new(
     [
         new RegisterEntry(
-            new PartNumber(10001), "test plate", "M", DocumentKind.Part, @"C:\Work\AWB-10001,test_plate.ipt",
+            new PartNumber(10001), "test plate", "M", DocumentKind.Part, @"C:\Work\test_plate,AWB-10001.ipt",
             new DateTimeOffset(2026, 10, 10, 9, 0, 0, TimeSpan.Zero), "someone", "TESTPC"),
     ]);
 
@@ -23,8 +23,9 @@ public sealed class ScannedFileStateTests
         string designer = "Alex Example",
         string detailer = "Alex Example",
         bool open = false,
-        string? error = null) =>
-        new(@"C:\Work\test_bracket.ipt", partNumber, designer, detailer, "M", DocumentKind.Part, open, error);
+        string? error = null,
+        string author = "Alex Example") =>
+        new(@"C:\Work\test_bracket.ipt", partNumber, designer, detailer, "M", DocumentKind.Part, open, error, author);
 
     [Fact]
     public void RegisteredNumberOffersNoNumberAction()
@@ -82,6 +83,44 @@ public sealed class ScannedFileStateTests
         Assert.False(state.DesignerIsMe);
         Assert.True(state.DetailerIsMe);
         Assert.Equal(MassUpdateActions.ReplaceNames, state.Actions);
+    }
+
+    [Fact]
+    public void AuthorEqualToWindowsUserOffersReplaceNames()
+    {
+        var state = ScannedFileState.For(File("AWB-10001", author: " TestLogin "), Register, Me);
+
+        Assert.False(state.DesignerIsMe);
+        Assert.False(state.DetailerIsMe);
+        Assert.True(state.AuthorIsMe);
+        Assert.Equal(MassUpdateActions.ReplaceNames, state.Actions);
+    }
+
+    [Fact]
+    public void AuthorEqualToAnOtherNameOffersReplaceNames()
+    {
+        var state = ScannedFileState.For(File("AWB-10001", author: "t.login"), Register, [User, OtherName]);
+
+        Assert.True(state.AuthorIsMe);
+        Assert.Equal(MassUpdateActions.ReplaceNames, state.Actions);
+    }
+
+    [Fact]
+    public void AuthorNotInTheListIsNotMe()
+    {
+        var state = ScannedFileState.For(File("AWB-10001", author: "Sam Sample"), Register, Me);
+
+        Assert.False(state.AuthorIsMe);
+        Assert.Equal(MassUpdateActions.None, state.Actions);
+    }
+
+    [Fact]
+    public void AuthorInAFileOpenInInventorOffersNothing()
+    {
+        var state = ScannedFileState.For(File("AWB-10001", open: true, author: User), Register, Me);
+
+        Assert.True(state.AuthorIsMe);
+        Assert.Equal(MassUpdateActions.None, state.Actions);
     }
 
     [Fact]
@@ -176,13 +215,14 @@ public sealed class ScannedFileStateTests
     [Fact]
     public void NullTextFieldsBecomeEmpty()
     {
-        var file = new ScannedFile(null!, null!, null!, null!, null!, DocumentKind.Part);
+        var file = new ScannedFile(null!, null!, null!, null!, null!, DocumentKind.Part, Author: null!);
 
         Assert.Equal("", file.FullPath);
         Assert.Equal("", file.PartNumber);
         Assert.Equal("", file.Designer);
         Assert.Equal("", file.Detailer);
         Assert.Equal("", file.PartType);
+        Assert.Equal("", file.Author);
         Assert.False(file.OpenInInventor);
         Assert.Null(file.ReadError);
     }

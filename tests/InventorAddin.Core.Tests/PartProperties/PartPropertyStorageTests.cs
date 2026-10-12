@@ -19,6 +19,7 @@ public sealed class PartPropertyStorageTests
         { nameof(PartPropertyStorage.Description), PropertySetNames.DesignTracking, "Description", PropertyValueKind.Text, false },
         { nameof(PartPropertyStorage.PartType), PropertySetNames.UserDefined, "Part Type", PropertyValueKind.Text, true },
         { nameof(PartPropertyStorage.Designer), PropertySetNames.DesignTracking, "Designer", PropertyValueKind.Text, false },
+        { nameof(PartPropertyStorage.Author), PropertySetNames.Summary, "Author", PropertyValueKind.Text, false },
         { nameof(PartPropertyStorage.Detailer), PropertySetNames.UserDefined, "Detailer", PropertyValueKind.Text, true },
         { nameof(PartPropertyStorage.Cost), PropertySetNames.DesignTracking, "Cost", PropertyValueKind.Currency, false },
         { nameof(PartPropertyStorage.Finish), PropertySetNames.UserDefined, "Finish", PropertyValueKind.Text, true },

@@ -10,15 +10,26 @@ public sealed record PartEditedValues(string? PartType, string? Designer, string
 public static class PartPropertiesWritePlan
 {
     /// <summary>
-    /// The writes, in the spec's field order: Description, Part Type, Designer, Detailer, Cost.
+    /// The writes, in the spec's field order: Description, Part Type, Designer, Author, Detailer, Cost.
     /// Text is compared after <see cref="PropertyValues.NormaliseText"/> (null and blank are the same).
     /// A changed standard property is Set, to <c>""</c> when cleared. A changed custom property is Set when
     /// not blank, and Removed when cleared. Cost is compared and written as <see cref="PropertyValues.CostToStore"/>.
-    /// Description is Set to the part name when the file has a name and it differs. Part Number, Material,
+    /// Description is Set to the part name when the file has a name and it differs. Author is Set to the edited
+    /// Designer when that is not blank and Author differs from it, whether or not Designer changed. Author is left
+    /// as it is when the Designer is blank or means the user (<see cref="PersonNames.MeansMe"/> against
+    /// <paramref name="namesThatMeanMe"/>), so the Windows user name is never written into it. Part Number, Material,
     /// Finish and weight are never written.
     /// </summary>
+    /// <param name="original">What the file holds.</param>
+    /// <param name="edited">The values being applied.</param>
+    /// <param name="namesThatMeanMe">
+    /// The Windows user name and the Other names (<see cref="PersonNames.NamesThatMeanMe"/>); null is none.
+    /// </param>
     /// <exception cref="ArgumentException"><paramref name="original"/> cannot be edited.</exception>
-    public static IReadOnlyList<PropertyWrite> Build(PartPropertiesSnapshot original, PartEditedValues edited)
+    public static IReadOnlyList<PropertyWrite> Build(
+        PartPropertiesSnapshot original,
+        PartEditedValues edited,
+        IReadOnlyCollection<string>? namesThatMeanMe = null)
     {
         ArgumentNullException.ThrowIfNull(original);
         ArgumentNullException.ThrowIfNull(edited);
@@ -39,6 +50,17 @@ public static class PartPropertiesWritePlan
 
         AddText(writes, PartPropertyStorage.PartType, original.PartType, edited.PartType);
         AddText(writes, PartPropertyStorage.Designer, original.Designer, edited.Designer);
+
+        // Author follows the Designer being applied, changed or not (spec 02). A blank Designer never clears it, and a
+        // Designer that means the user (kept because the Default designer is blank) is never copied into it.
+        var designer = PropertyValues.NormaliseText(edited.Designer);
+        if (designer.Length > 0
+            && designer != PropertyValues.NormaliseText(original.Author)
+            && !PersonNames.MeansMe(designer, namesThatMeanMe ?? []))
+        {
+            writes.Add(PropertyWrite.SetText(PartPropertyStorage.Author, designer));
+        }
+
         AddText(writes, PartPropertyStorage.Detailer, original.Detailer, edited.Detailer);
 
         var originalCost = PropertyValues.CostToStore(original.Cost);

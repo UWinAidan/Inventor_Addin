@@ -20,8 +20,9 @@ public sealed class CreationPropertiesTests
             new (PropertyLocation, string?)[]
             {
                 (PartPropertyStorage.PartNumber, "AWB-10042"),
-                (PartPropertyStorage.Description, "mounting bracket"),
+                (PartPropertyStorage.Description, "MOUNTING BRACKET"),
                 (PartPropertyStorage.Designer, "Test Designer"),
+                (PartPropertyStorage.Author, "Test Designer"),
                 (PartPropertyStorage.Detailer, "Test Designer"),
                 (PartPropertyStorage.PartType, "M"),
             },
@@ -34,8 +35,9 @@ public sealed class CreationPropertiesTests
     {
         var writes = CreationProperties.Build(Number, "  Mounting   Bracket ", "M", "  Test Designer  ");
 
-        Assert.Equal("Mounting Bracket", writes.Single(w => w.Location == PartPropertyStorage.Description).TextValue);
+        Assert.Equal("MOUNTING BRACKET", writes.Single(w => w.Location == PartPropertyStorage.Description).TextValue);
         Assert.Equal("Test Designer", writes.Single(w => w.Location == PartPropertyStorage.Designer).TextValue);
+        Assert.Equal("Test Designer", writes.Single(w => w.Location == PartPropertyStorage.Author).TextValue);
         Assert.Equal("Test Designer", writes.Single(w => w.Location == PartPropertyStorage.Detailer).TextValue);
     }
 
@@ -43,7 +45,7 @@ public sealed class CreationPropertiesTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Build_BlankDesigner_LeavesOutDesignerAndDetailer(string? designer)
+    public void Build_BlankDesigner_LeavesOutDesignerAuthorAndDetailer(string? designer)
     {
         var writes = CreationProperties.Build(Number, "plate", "M", designer);
 
@@ -61,7 +63,7 @@ public sealed class CreationPropertiesTests
         var writes = CreationProperties.Build(Number, "plate", partType, "Test Designer");
 
         Assert.DoesNotContain(writes, w => w.Location == PartPropertyStorage.PartType);
-        Assert.Equal(4, writes.Count);
+        Assert.Equal(5, writes.Count);
     }
 
     [Theory]
@@ -87,7 +89,17 @@ public sealed class CreationPropertiesTests
     {
         var writes = CreationProperties.Build(Number, "plate, 10mm", null, null);
 
-        Assert.Equal("plate, 10mm", writes.Single(w => w.Location == PartPropertyStorage.Description).TextValue);
+        Assert.Equal("PLATE, 10MM", writes.Single(w => w.Location == PartPropertyStorage.Description).TextValue);
+    }
+
+    [Fact]
+    public void Build_DescriptionOfAnAssembly_IsItsPrefixedName_InCapitals()
+    {
+        var name = PartFileName.ForKind("gearbox été", DocumentKind.Assembly);
+
+        var writes = CreationProperties.Build(Number, name, "A", null);
+
+        Assert.Equal("ASSY GEARBOX ÉTÉ", writes.Single(w => w.Location == PartPropertyStorage.Description).TextValue);
     }
 
     [Theory]

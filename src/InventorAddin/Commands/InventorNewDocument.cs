@@ -57,6 +57,11 @@ namespace InventorAddin.Commands
 
         public void Save() => _doc.Save();
 
+        // The same read as Part Properties (PropertyReader.ReadCommon): Design Tracking's "Part Number".
+        public string? ReadPartNumber() =>
+            PropertyReader.GetString(
+                _doc, PartPropertyStorage.PartNumber.SetName, PartPropertyStorage.PartNumber.PropertyName);
+
         // Close(true) skips saving (spike 032).
         public void CloseWithoutSaving() => _doc.Close(true);
     }

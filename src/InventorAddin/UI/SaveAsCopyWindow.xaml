@@ -36,6 +36,7 @@
         <controls:FormSection Heading="Identity">
             <controls:FieldRow Label="Part _name" Target="{Binding ElementName=PartNameBox}">
                 <TextBox x:Name="PartNameBox"
+                         CharacterCasing="Upper"
                          Text="{Binding PartName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
             </controls:FieldRow>
             <controls:FieldRow Label="Part _type" Target="{Binding ElementName=PartTypeBox}">
@@ -72,7 +73,7 @@
             <controls:FieldRow Label="Folder">
                 <TextBox Style="{DynamicResource SelectableText}" Text="{Binding Folder, Mode=OneTime}" />
             </controls:FieldRow>
-            <!-- The file name with AWB-????? for the number; empty while the part name is not valid. -->
+            <!-- The file name, name first and AWB-????? for the number (NAME,AWB-?????.ipt); empty while the part name is not valid. -->
             <controls:FieldRow Label="File name">
                 <TextBlock Style="{DynamicResource IdentifierText}" Text="{Binding FileNamePreview, Mode=OneWay}" />
             </controls:FieldRow>

@@ -49,8 +49,13 @@ public sealed class MassUpdateRunnerTests : IDisposable
 
     private List<RegisterEntry> Shared() => RegisterCsv.Read(System.IO.File.ReadAllText(SharedPath)).Entries.ToList();
 
-    private static ScannedFile File(string name, string partNumber = "", string designer = "Alex Example", string detailer = "Alex Example") =>
-        new($@"C:\Work\{name}", partNumber, designer, detailer, "M", DocumentKind.Part);
+    private static ScannedFile File(
+        string name,
+        string partNumber = "",
+        string designer = "Alex Example",
+        string detailer = "Alex Example",
+        string author = "Alex Example") =>
+        new($@"C:\Work\{name}", partNumber, designer, detailer, "M", DocumentKind.Part, Author: author);
 
     private MassUpdatePlan Plan(params (ScannedFile File, MassUpdateActions Ticked)[] files)
     {
@@ -96,10 +101,10 @@ public sealed class MassUpdateRunnerTests : IDisposable
     }
 
     [Fact]
-    public void ReplaceNames_WritesDesignerAndDetailer_AndAddsNoRow()
+    public void ReplaceNames_WritesDesignerAuthorAndDetailer_AndAddsNoRow()
     {
         WriteShared(10001);
-        var plan = Plan((File("a.ipt", "AWB-10001", User, User), MassUpdateActions.ReplaceNames));
+        var plan = Plan((File("a.ipt", "AWB-10001", User, User, User), MassUpdateActions.ReplaceNames));
 
         var result = Runner().Apply(plan);
 
@@ -107,6 +112,7 @@ public sealed class MassUpdateRunnerTests : IDisposable
         Assert.Equal(
             [
                 PropertyWrite.SetText(PartPropertyStorage.Designer, Designer),
+                PropertyWrite.SetText(PartPropertyStorage.Author, Designer),
                 PropertyWrite.SetText(PartPropertyStorage.Detailer, Designer),
             ],
             _files.Documents.Single().Writes);

@@ -119,7 +119,7 @@ Left out until Aidan agrees: the reviewer styling checklist and the PowerShell b
 
 ### M2: Part creation and numbering (spec 02)
 
-Part numbers `AWB-10001` from a register on the NAS with a local copy on each PC, file names `AWB-10001,name.ipt`, and the commands that create, copy, rename, print and bulk-update files. Aidan answered the spec's numbering questions on 2026-10-10; the rest have defaults.
+Part numbers `AWB-10001` from a register on the NAS with a local copy on each PC, file names `NAME,AWB-10001.ipt` (name first since 2026-10-11), and the commands that create, copy, rename, print and bulk-update files. Aidan answered the spec's numbering questions on 2026-10-10; the rest have defaults.
 
 Planned 2026-10-10. Run in number order; each task depends only on lower numbers.
 
@@ -176,6 +176,50 @@ Folded in from `TODO.md` follow-ups: delete `PropertyReader.Set` and the unbound
 
 **Added 2026-10-10 before run 2** from Aidan's run 1 checks and his answers to spec 02 questions 23 to 25: 049 (Settings: "New file units", Work folder and Other CAD folders, Other names that mean me), 050 (AssignedBy) and 051 (names that mean me). They run before 043, which is why the order is not the number order. Spike 032's findings are written into 043 to 048's notes. Folded in from `TODO.md`: the Settings Browse freeze (049), the unit label (049), Mass Update's shared name check (051), and its duplicate row and register-only files (048).
 
+**Fix run, planned 2026-10-11** from Aidan's run 2 checks: six bugs and six changes he decided. Run in a local session on Aidan's PC, so every task builds the whole solution before it is committed. Spike 052 was run first, in the same session, to find the causes from Inventor itself (with Aidan for the browser steps). Run in number order, one at a time.
+
+| Task | Needs | Depends on | Parallel-safe with |
+|---|---|---|---|
+| 052 | **windows** (spike, local session with Aidan) | none | every task |
+| 053 | windows build | none | none |
+| 054 | windows build | 053 | none |
+| 055 | windows build | 054 | none |
+| 056 | windows build | none | none |
+| 057 | windows build | 053 | none |
+| 058 | windows build | 052, 053 | none |
+| 059 | windows build | 052, 057, 058 | none |
+| 060 | windows build | 052, 055 | none |
+| 061 | windows build | 058, 059 | none |
+
+- [x] 052 Spike: rename references, copies and the selection in a sub-assembly (Windows)
+- [x] 053 File names put the name first and the number last (item 7)
+- [x] 054 Names in capitals, and assemblies start with ASSY_ (items 8, 10)
+- [x] 055 Author is written with the same name as Designer (item 11)
+- [x] 056 Ribbon button sizes by importance (item 12)
+- [x] 057 Create Print saves in a Prints subfolder (item 9)
+- [x] 058 Rename never breaks a reference, and renames occurrences (bugs 1, 3)
+- [x] 059 Rename renames the part's drawings (bugs 2, 5)
+- [x] 060 Save As and Replace finds the selection in a sub-assembly; copies check their number (bugs 4, 6)
+- [x] 061 Rename allows a change of case only (Aidan, 2026-10-11)
+
+Folded in from `TODO.md`: spec 08's ribbon icon list (056), and Save As and Replace's "which document holds the selection while a sub-assembly is edited in place" (052, 060). Bug 6 did not reproduce: every copy from the checks has its own number on disk (spike 052); 060 adds a read-back check.
+
+**Fix run 2, planned 2026-10-12** on the same branch, from Aidan's checks of the first fix run (everything else passed): four items. Local session on Aidan's PC. Spike 062 was run first, with Aidan starting Inventor for the startup tab. Run in number order, one at a time.
+
+| Task | Needs | Depends on | Parallel-safe with |
+|---|---|---|---|
+| 062 | **windows** (spike, local session with Aidan) | none | every task |
+| 063 | windows build | none | none |
+| 064 | windows build | none | none |
+| 065 | windows build | 062 | none |
+| 066 | windows build | 062 | none |
+
+- [x] 062 Spike: occurrence names in a closed assembly; the startup tab (Windows)
+- [x] 063 Create Print makes .idw drawings (item 1)
+- [x] 064 Ribbon panels: Create, Properties, Drawing, AWB (item 2)
+- [x] 065 Rename renames occurrences in closed assemblies (item 3)
+- [x] 066 The AWB Addin tab is active when Inventor starts with no document (item 4)
+
 Not in M2: browser folders (Aidan: no), a templates folder setting (later, with Aidan's own templates), the custom drawing template (M5), and distribution (parked; see below). The two deploy-line follow-ups from task 025 stay in `TODO.md`.
 
 ### M3: Material and finish (spec 03)
@@ -188,7 +232,7 @@ The largest feature. Its Core half (classification, grouping, tagging, descripti
 
 ### M5: Drawing tools (spec 05)
 
-Blocked on question 1 of the spec, which decides which commands exist at all. Includes a custom drawing template whose title block reads every property from the model (Aidan, 2026-10-10). Create Drawing moved to M2 as Create Print.
+Blocked on question 1 of the spec, which decides which commands exist at all. Includes a custom drawing template whose title block reads every property from the model (Aidan, 2026-10-10): custom print templates with several sheet sizes, sheet colours, and a title block designed with Aidan (Aidan, 2026-10-11). Create Drawing moved to M2 as Create Print.
 
 ### M6: iLogic injection (spec 06)
 

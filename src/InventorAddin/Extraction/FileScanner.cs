@@ -121,7 +121,8 @@ namespace InventorAddin.Extraction
                 ReadText(doc, PartPropertyStorage.Detailer),
                 ReadText(doc, PartPropertyStorage.PartType),
                 ComSafe.Get(() => DocumentKinds.Of(doc)),
-                openInInventor);
+                openInInventor,
+                Author: ReadText(doc, PartPropertyStorage.Author));
 
         private static string ReadText(Document doc, PropertyLocation location) =>
             PropertyReader.GetString(doc, location.SetName, location.PropertyName) ?? string.Empty;

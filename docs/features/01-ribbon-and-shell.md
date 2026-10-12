@@ -13,7 +13,21 @@ Reference screenshots (local only): `addin tab.png`, `print tab and features.png
 
 ## Target
 
-The tab shows different panels depending on the environment. Layout seen in the reference tool, with our own names:
+The tab shows different panels depending on the environment.
+
+**Panels today** (Aidan, 2026-10-12). In this order on every ribbon where their buttons appear: Create, Properties, Drawing, Developer (only when developer tools are on), AWB, so AWB is always far right. Small buttons next to each other are stacked.
+
+| Panel | Buttons | Ribbons |
+|---|---|---|
+| Create | New Part (large); Save As Copy, Save As and Replace (small) | New Part: ZeroDoc, Part, Assembly. Save As Copy: Part, Assembly. Save As and Replace: Assembly |
+| Properties | Part Properties (large); Mass Update (small) | Part Properties: Part, Assembly. Mass Update: ZeroDoc, Part, Assembly |
+| Drawing | Create Print (large) | Part, Assembly |
+| Developer | Export Model Data, Export Libraries (small) | as before; only when developer tools are on |
+| AWB | Settings, About (small) | Part, Assembly, Drawing |
+
+**At startup** (Aidan, 2026-10-12): when Inventor starts with no document open, the AWB Addin tab is made the active tab. Opening files later does not change the tab. Inventor switches back to its own tab about a second after it is ready, so the add-in watches for 5 s and makes the tab active once more the first time that happens, then stops (Default, spike 062).
+
+The rest of this section is the reference tool's layout, kept for the buttons still to come; new buttons go into the panels above.
 
 **Part and Assembly**
 

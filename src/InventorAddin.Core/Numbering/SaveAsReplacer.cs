@@ -65,7 +65,8 @@ public interface ISaveAsReplaceTarget : ISaveAsCopySource
 /// sub-assembly, save the sub-assembly (Aidan, question 25).
 /// </summary>
 /// <remarks>
-/// A failure while making the copy is <see cref="SaveAsCopyCreator"/>'s, with its messages and clean-up. Once the copy
+/// A failure while making the copy is <see cref="SaveAsCopyCreator"/>'s, with its messages and clean-up, including
+/// the check that the copy kept its new Part Number. Once the copy
 /// is saved it is a finished, numbered file, so a failure to replace or to save the sub-assembly leaves the copy on disk
 /// and its number in the register (Default), and the message says what to do.
 /// </remarks>
@@ -110,7 +111,7 @@ public sealed class SaveAsReplacer
     /// <param name="store">The session's register.</param>
     /// <param name="target">The selected occurrence and its component in Inventor.</param>
     /// <param name="selection">What was read from the selection; it has passed <see cref="Check"/>.</param>
-    /// <param name="defaultDesigner">Designer and Detailer for the copy, from Settings; blank writes neither.</param>
+    /// <param name="defaultDesigner">Designer, Author and Detailer for the copy, from Settings; blank writes none.</param>
     /// <param name="log">Where failures are recorded.</param>
     /// <param name="folderExists">Passed to <see cref="SaveAsCopyCreator"/>.</param>
     /// <param name="deleteFile">Passed to <see cref="SaveAsCopyCreator"/>.</param>
@@ -201,7 +202,7 @@ public sealed class SaveAsReplacer
 
     /// <summary>
     /// The sub-assembly as the messages name it: its file name, with its occurrence name when known, for example
-    /// <c>AWB-10005,frame.iam (Sub:1)</c>. Empty for a top-level occurrence.
+    /// <c>FRAME,AWB-10005.iam (Sub:1)</c>. Empty for a top-level occurrence.
     /// </summary>
     public static string SubAssemblyName(ReplaceSelection selection)
     {
@@ -217,6 +218,27 @@ public sealed class SaveAsReplacer
             return occurrence.Length == 0 ? "(unnamed)" : occurrence;
 
         return occurrence.Length == 0 ? file : $"{file} ({occurrence})";
+    }
+
+    /// <summary>
+    /// The log line written when the selection is not one component (task 060), so a report can be diagnosed from the
+    /// log: how many items were selected and the type of each, in order.
+    /// </summary>
+    /// <param name="count">The selection's count; negative when it could not be read.</param>
+    /// <param name="itemTypes">Each selected item's type name, in order; null or blank entries read as <c>(unknown)</c>.</param>
+    public static string SelectionNotOneComponentLog(int count, IReadOnlyList<string?> itemTypes)
+    {
+        ArgumentNullException.ThrowIfNull(itemTypes);
+
+        if (count < 0)
+            return "Save As and Replace: the selection could not be read.";
+
+        var prefix = $"Save As and Replace: the selection holds {count} item{(count == 1 ? "" : "s")}";
+        if (itemTypes.Count == 0)
+            return prefix + ".";
+
+        var types = itemTypes.Select(t => string.IsNullOrWhiteSpace(t) ? "(unknown)" : t.Trim());
+        return $"{prefix}: {string.Join(", ", types)}.";
     }
 
     public static string UnsavedSubAssemblyMessage(string name) =>

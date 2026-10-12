@@ -82,7 +82,7 @@ public sealed class PartNumberTests
     [InlineData("AWB-1²001")] // superscript two
     [InlineData("10001")]
     [InlineData("AWB-")]
-    [InlineData("AWB-10001,mounting_bracket")]
+    [InlineData("mounting_bracket,AWB-10001")]
     public void TryParseRejects(string? text)
     {
         Assert.False(PartNumber.TryParse(text, out var number));

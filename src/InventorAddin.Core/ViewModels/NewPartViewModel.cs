@@ -5,8 +5,9 @@ using InventorAddin.Core.Settings;
 namespace InventorAddin.Core.ViewModels;
 
 /// <summary>
-/// What the New Part dialog asks the command to create. <see cref="PartName"/> is normalised
-/// (<see cref="PartFileName.NormaliseName"/>), <see cref="PartType"/> is the code in the list's spelling or
+/// What the New Part dialog asks the command to create. <see cref="PartName"/> is normalised and upper case, with
+/// <see cref="PartFileName.AssemblyPrefix"/> in front for an assembly (<see cref="PartFileName.ForKind"/>),
+/// <see cref="PartType"/> is the code in the list's spelling or
 /// <c>""</c>, and <see cref="Folder"/> is trimmed.
 /// </summary>
 public sealed record NewPartRequest(NewFileKind Kind, string PartName, string PartType, UnitsSystem Units, string Folder);
@@ -21,8 +22,8 @@ public sealed record NewFileKindOption(NewFileKind Kind, string DisplayText);
 /// raises <see cref="CloseRequested"/>; the command assigns the number and creates the file.
 /// </summary>
 /// <remarks>
-/// Designer and Detailer are not fields: they come from <c>DefaultDesigner</c> in Settings (Default). Whether the
-/// target file already exists is checked by the command, which knows the real number.
+/// Designer, Author and Detailer are not fields: they come from <c>DefaultDesigner</c> in Settings (Default). Whether
+/// the target file already exists is checked by the command, which knows the real number.
 /// </remarks>
 public sealed class NewPartViewModel : ObservableObject
 {
@@ -72,7 +73,9 @@ public sealed class NewPartViewModel : ObservableObject
 
     public string HeaderSubline => Branding.ProductName;
 
-    /// <summary>The Designer and Detailer the new file will get (<c>DefaultDesigner</c>, trimmed); may be blank.</summary>
+    /// <summary>
+    /// The Designer, Author and Detailer the new file will get (<c>DefaultDesigner</c>, trimmed); may be blank.
+    /// </summary>
     public string Designer { get; }
 
     /// <summary>Part, Sheet metal part, Assembly.</summary>
@@ -168,7 +171,7 @@ public sealed class NewPartViewModel : ObservableObject
 
     /// <summary>
     /// The file name the part will get, with <see cref="NumberPlaceholder"/> for the number, for example
-    /// <c>AWB-?????,mounting_bracket.ipt</c>; empty while the name is invalid.
+    /// <c>MOUNTING_BRACKET,AWB-?????.ipt</c>; empty while the name is invalid.
     /// </summary>
     public string FileNamePreview => _fileNamePreview;
 
@@ -201,7 +204,7 @@ public sealed class NewPartViewModel : ObservableObject
 
     private void Recalculate()
     {
-        var preview = NewFileNameCheck.For(_partName, _kind.Extension(), _folder);
+        var preview = NewFileNameCheck.For(_partName, _kind.Extension(), _folder, _kind.DocumentKindOf());
         _fileNamePreview = preview.FileName;
         _validationMessage = preview.Problem;
     }
@@ -211,7 +214,7 @@ public sealed class NewPartViewModel : ObservableObject
         if (!CanCreate)
             return;
 
-        Request = new NewPartRequest(_kind, PartFileName.NormaliseName(_partName), _partType, _units, _folder.Trim());
+        Request = new NewPartRequest(_kind, PartFileName.ForKind(_partName, _kind.DocumentKindOf()), _partType, _units, _folder.Trim());
         OnPropertyChanged(nameof(Request));
         CloseRequested?.Invoke(this, EventArgs.Empty);
     }

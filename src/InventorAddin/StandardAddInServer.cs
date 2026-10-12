@@ -16,6 +16,7 @@ namespace InventorAddin
         public const string ClientId = "{" + AddInGuid + "}";
 
         private RibbonSetup? _ribbon;
+        private StartupTab? _startupTab;
 
         public void Activate(ApplicationAddInSite addInSiteObject, bool firstTime)
         {
@@ -31,10 +32,16 @@ namespace InventorAddin
 
             _ribbon = new RibbonSetup(InventorHost.App, ClientId, AddinServices.Settings, AddinServices.Log);
             _ribbon.Create();
+
+            _startupTab = new StartupTab(InventorHost.App, AddinServices.Log);
+            _startupTab.Start();
         }
 
         public void Deactivate()
         {
+            _startupTab?.Dispose();
+            _startupTab = null;
+
             _ribbon?.Dispose();
             _ribbon = null;
 

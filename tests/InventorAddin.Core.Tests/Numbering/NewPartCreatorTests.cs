@@ -45,7 +45,7 @@ public sealed class NewPartCreatorTests : IDisposable
 
     private NewPartRequest Request(
         NewFileKind kind = NewFileKind.Part,
-        string name = "test bracket",
+        string name = "TEST BRACKET",
         string partType = "M",
         UnitsSystem units = UnitsSystem.Metric,
         string? folder = null) =>
@@ -61,8 +61,8 @@ public sealed class NewPartCreatorTests : IDisposable
     // The folder the dialog starts in
 
     [Theory]
-    [InlineData(@"C:\Work\Parts\AWB-10001,plate.ipt", @"D:\Cad", @"C:\Work\Parts")]
-    [InlineData(@"C:\AWB-10001,plate.ipt", @"D:\Cad", @"C:\")]
+    [InlineData(@"C:\Work\Parts\plate,AWB-10001.ipt", @"D:\Cad", @"C:\Work\Parts")]
+    [InlineData(@"C:\plate,AWB-10001.ipt", @"D:\Cad", @"C:\")]
     [InlineData("/home/user/cad/plate.ipt", @"D:\Cad", "/home/user/cad")]
     [InlineData("", @" D:\Cad ", @"D:\Cad")]
     [InlineData(null, @"D:\Cad", @"D:\Cad")]
@@ -99,7 +99,7 @@ public sealed class NewPartCreatorTests : IDisposable
 
         var result = Creator().Create(Request());
 
-        var expectedPath = Path.Combine(_cad, "AWB-10002,test_bracket.ipt");
+        var expectedPath = Path.Combine(_cad, "TEST_BRACKET,AWB-10002.ipt");
         Assert.Equal("AWB-10002", result.PartNumber);
         Assert.Equal(expectedPath, result.FullPath);
         Assert.False(result.Offline);
@@ -110,20 +110,20 @@ public sealed class NewPartCreatorTests : IDisposable
             _documents.Calls);
 
         var document = Assert.Single(_documents.Created);
-        Assert.Equal(CreationProperties.Build(new PartNumber(10002), "test bracket", "M", "Test Designer"), document.Writes);
+        Assert.Equal(CreationProperties.Build(new PartNumber(10002), "TEST BRACKET", "M", "Test Designer"), document.Writes);
         Assert.False(document.Closed);
 
         var entry = Read(SharedPath).Last();
         Assert.Equal(10002, entry.Number.Value);
-        Assert.Equal("test bracket", entry.Name);
+        Assert.Equal("TEST BRACKET", entry.Name);
         Assert.Equal("M", entry.PartType);
         Assert.Equal(DocumentKind.Part, entry.Kind);
         Assert.Equal(expectedPath, entry.FilePath);
     }
 
     [Theory]
-    [InlineData(NewFileKind.SheetMetalPart, UnitsSystem.Imperial, "AWB-10001,test_bracket.ipt", DocumentKind.SheetMetalPart)]
-    [InlineData(NewFileKind.Assembly, UnitsSystem.Metric, "AWB-10001,test_bracket.iam", DocumentKind.Assembly)]
+    [InlineData(NewFileKind.SheetMetalPart, UnitsSystem.Imperial, "TEST_BRACKET,AWB-10001.ipt", DocumentKind.SheetMetalPart)]
+    [InlineData(NewFileKind.Assembly, UnitsSystem.Metric, "TEST_BRACKET,AWB-10001.iam", DocumentKind.Assembly)]
     public void Create_PassesKindAndUnits_AndUsesTheKindsExtension(
         NewFileKind kind, UnitsSystem units, string fileName, DocumentKind registered)
     {
@@ -156,7 +156,7 @@ public sealed class NewPartCreatorTests : IDisposable
         WriteShared(10001);
         Directory.CreateDirectory(_local);
         File.WriteAllText(PendingPath, RegisterCsv.Write([new RegisterEntry(
-            new PartNumber(10001), "mine", "", DocumentKind.Part, @"C:\Mine\AWB-10001,mine.ipt", Now, "testuser", "TESTPC")]));
+            new PartNumber(10001), "mine", "", DocumentKind.Part, @"C:\Mine\mine,AWB-10001.ipt", Now, "testuser", "TESTPC")]));
 
         var result = Creator().Create(Request());
 
@@ -249,7 +249,7 @@ public sealed class NewPartCreatorTests : IDisposable
         Directory.CreateDirectory(_local);
         File.WriteAllText(Path.Combine(_local, RegisterStore.LocalFileName), File.ReadAllText(SharedPath));
         _environment.Reachable = reachable;
-        var existing = Path.Combine(_cad, "AWB-10002,test_bracket.ipt");
+        var existing = Path.Combine(_cad, "TEST_BRACKET,AWB-10002.ipt");
         File.WriteAllText(existing, "not a part");
 
         var ex = Assert.Throws<NewPartException>(() => Creator().Create(Request()));
@@ -300,7 +300,7 @@ public sealed class NewPartCreatorTests : IDisposable
     [Fact]
     public void FileAppearsAfterAssigning_StopsNamingTheNumber_AndTheRowStays()
     {
-        var path = Path.Combine(_cad, "AWB-10001,test_bracket.ipt");
+        var path = Path.Combine(_cad, "TEST_BRACKET,AWB-10001.ipt");
 
         // The store logs the assignment once the row is written; the file appears then, after the name was checked.
         _log.OnInfo = message =>

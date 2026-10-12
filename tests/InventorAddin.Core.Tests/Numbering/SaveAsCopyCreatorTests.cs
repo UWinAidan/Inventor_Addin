@@ -26,7 +26,7 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
         _cad = Path.Combine(_root, "cad");
         Directory.CreateDirectory(_shared);
         Directory.CreateDirectory(_cad);
-        _original = Path.Combine(_cad, "AWB-10001,test_bracket.ipt");
+        _original = Path.Combine(_cad, "test_bracket,AWB-10001.ipt");
         File.WriteAllText(_original, "original");
     }
 
@@ -50,7 +50,7 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
     private SaveAsCopyRequest Request(
         string? original = null,
         DocumentKind kind = DocumentKind.Part,
-        string name = "test bracket copy",
+        string name = "TEST BRACKET COPY",
         string partType = "M") =>
         new(original ?? _original, kind, name, partType);
 
@@ -64,7 +64,7 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
     // Helpers
 
     [Theory]
-    [InlineData(@"C:\Work\AWB-10001,plate.ipt", ".ipt")]
+    [InlineData(@"C:\Work\plate,AWB-10001.ipt", ".ipt")]
     [InlineData("/home/user/cad/Assembly.IAM", ".IAM")]
     [InlineData(@"C:\Work.v2\plate", "")]
     [InlineData(@"C:\Work\plate.", "")]
@@ -105,31 +105,32 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
 
         var result = Creator().Copy(Request());
 
-        var expectedPath = Path.Combine(_cad, "AWB-10002,test_bracket_copy.ipt");
+        var expectedPath = Path.Combine(_cad, "TEST_BRACKET_COPY,AWB-10002.ipt");
         Assert.Equal("AWB-10002", result.PartNumber);
         Assert.Equal(expectedPath, result.FullPath);
         Assert.False(result.Offline);
         Assert.Empty(result.DuplicateMessages);
 
-        Assert.Equal([$"copy {expectedPath}", $"open {expectedPath}", "write", "save"], _source.Calls);
+        Assert.Equal([$"copy {expectedPath}", $"open {expectedPath}", "write", "save", "read"], _source.Calls);
+        Assert.Contains(_log.Infos, m => m.Contains("reads back as AWB-10002", StringComparison.Ordinal));
 
         var copy = Assert.Single(_source.Opened);
-        Assert.Equal(CreationProperties.Build(new PartNumber(10002), "test bracket copy", "M", "Test Designer"), copy.Writes);
+        Assert.Equal(CreationProperties.Build(new PartNumber(10002), "TEST BRACKET COPY", "M", "Test Designer"), copy.Writes);
         Assert.False(copy.Closed);
         Assert.Equal("original", File.ReadAllText(_original));
 
         var entry = Read(SharedPath).Last();
         Assert.Equal(10002, entry.Number.Value);
-        Assert.Equal("test bracket copy", entry.Name);
+        Assert.Equal("TEST BRACKET COPY", entry.Name);
         Assert.Equal("M", entry.PartType);
         Assert.Equal(DocumentKind.Part, entry.Kind);
         Assert.Equal(expectedPath, entry.FilePath);
     }
 
     [Theory]
-    [InlineData(DocumentKind.Assembly, "Plate.iam", "AWB-10001,new_plate.iam")]
-    [InlineData(DocumentKind.WeldmentAssembly, "Frame.iam", "AWB-10001,new_plate.iam")]
-    [InlineData(DocumentKind.SheetMetalPart, "old_plate.ipt", "AWB-10001,new_plate.ipt")]
+    [InlineData(DocumentKind.Assembly, "Plate.iam", "NEW_PLATE,AWB-10001.iam")]
+    [InlineData(DocumentKind.WeldmentAssembly, "Frame.iam", "NEW_PLATE,AWB-10001.iam")]
+    [InlineData(DocumentKind.SheetMetalPart, "old_plate.ipt", "NEW_PLATE,AWB-10001.ipt")]
     public void Copy_KeepsTheOriginalsExtension_AndRegistersItsKind(DocumentKind kind, string originalName, string copyName)
     {
         var original = Path.Combine(_cad, originalName);
@@ -146,10 +147,10 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
     {
         var result = Creator().Copy(Request(name: "  left_bracket, long  "));
 
-        Assert.Equal(Path.Combine(_cad, "AWB-10001,left_bracket,_long.ipt"), result.FullPath);
-        Assert.Equal("left bracket, long", Read(SharedPath).Single().Name);
+        Assert.Equal(Path.Combine(_cad, "LEFT_BRACKET,_LONG,AWB-10001.ipt"), result.FullPath);
+        Assert.Equal("LEFT BRACKET, LONG", Read(SharedPath).Single().Name);
         Assert.Equal(
-            CreationProperties.Build(new PartNumber(10001), "left bracket, long", "M", "Test Designer"),
+            CreationProperties.Build(new PartNumber(10001), "LEFT BRACKET, LONG", "M", "Test Designer"),
             Assert.Single(_source.Opened).Writes);
     }
 
@@ -159,7 +160,7 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
         Creator(designer: " ").Copy(Request(partType: ""));
 
         var writes = Assert.Single(_source.Opened).Writes!;
-        Assert.Equal(CreationProperties.Build(new PartNumber(10001), "test bracket copy", "", null), writes);
+        Assert.Equal(CreationProperties.Build(new PartNumber(10001), "TEST BRACKET COPY", "", null), writes);
         Assert.Equal(2, writes.Count);
     }
 
@@ -183,7 +184,7 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
         WriteShared(10001);
         Directory.CreateDirectory(_local);
         File.WriteAllText(PendingPath, RegisterCsv.Write([new RegisterEntry(
-            new PartNumber(10001), "mine", "", DocumentKind.Part, @"C:\Mine\AWB-10001,mine.ipt", Now, "testuser", "TESTPC")]));
+            new PartNumber(10001), "mine", "", DocumentKind.Part, @"C:\Mine\mine,AWB-10001.ipt", Now, "testuser", "TESTPC")]));
 
         var result = Creator().Copy(Request());
 
@@ -239,7 +240,7 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
     [Fact]
     public void OriginalNotAFullPath_StopsBeforeAssigning()
     {
-        var ex = Assert.Throws<NewPartException>(() => Creator().Copy(Request(original: "relative/AWB-10001,plate.ipt")));
+        var ex = Assert.Throws<NewPartException>(() => Creator().Copy(Request(original: "relative/plate,AWB-10001.ipt")));
 
         Assert.Equal(NewPartCreator.NotFullPathMessage, ex.Message);
         AssertNothingAssignedOrCopied();
@@ -249,7 +250,7 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
     public void FileWithTheNextNumberAlreadyThere_StopsWithoutTakingTheNumber()
     {
         WriteShared(10001);
-        var existing = Path.Combine(_cad, "AWB-10002,test_bracket_copy.ipt");
+        var existing = Path.Combine(_cad, "TEST_BRACKET_COPY,AWB-10002.ipt");
         File.WriteAllText(existing, "not a part");
 
         var ex = Assert.Throws<NewPartException>(() => Creator().Copy(Request()));
@@ -287,7 +288,7 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
     [Fact]
     public void FileAppearsAfterAssigning_StopsNamingTheNumber_AndLeavesThatFileAlone()
     {
-        var path = Path.Combine(_cad, "AWB-10001,test_bracket_copy.ipt");
+        var path = Path.Combine(_cad, "TEST_BRACKET_COPY,AWB-10001.ipt");
         _log.OnInfo = message =>
         {
             if (message.StartsWith("Part number AWB-10001 assigned", StringComparison.Ordinal))
@@ -307,12 +308,13 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
     [InlineData("open", false)]
     [InlineData("write", true)]
     [InlineData("save", true)]
+    [InlineData("read", true)]
     public void FailureAfterAssigning_SaysWhichNumber_ClosesAndRemovesTheCopy_AndTheRowStays(string failingStep, bool opened)
     {
         var failure = new InvalidOperationException("Inventor said no.");
         _source.FailAt = failingStep;
         _source.Failure = failure;
-        var path = Path.Combine(_cad, "AWB-10001,test_bracket_copy.ipt");
+        var path = Path.Combine(_cad, "TEST_BRACKET_COPY,AWB-10001.ipt");
 
         var ex = Assert.Throws<NewPartException>(() => Creator().Copy(Request()));
 
@@ -336,7 +338,7 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
         _source.FailAt = "write";
         _source.Failure = new InvalidOperationException("Inventor said no.");
         _source.CloseFailure = new InvalidOperationException("Cannot close.");
-        var path = Path.Combine(_cad, "AWB-10001,test_bracket_copy.ipt");
+        var path = Path.Combine(_cad, "TEST_BRACKET_COPY,AWB-10001.ipt");
 
         var ex = Assert.Throws<NewPartException>(
             () => Creator(deleteFile: _ => throw new IOException("In use.")).Copy(Request()));
@@ -348,6 +350,62 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
         Assert.True(File.Exists(path));
         Assert.Contains(_log.Errors, e => e.Ex is InvalidOperationException { Message: "Cannot close." });
         Assert.Contains(_log.Errors, e => e.Ex is IOException { Message: "In use." });
+    }
+
+    // The copy must keep its new number (task 060)
+
+    [Theory]
+    [InlineData("AWB-10002", true)]
+    [InlineData("  AWB-10002 ", true)]
+    [InlineData("AWB-10001", false)]
+    [InlineData("awb-10002", false)]
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    public void KeptNumber(string? readBack, bool expected)
+    {
+        Assert.Equal(expected, SaveAsCopyCreator.KeptNumber("AWB-10002", readBack));
+    }
+
+    [Fact]
+    public void NumberNotKeptReason_NamesBothNumbers_OrSaysBlank()
+    {
+        Assert.Equal(
+            "The copy did not keep its new number AWB-10002: its Part Number reads 'AWB-10001' after saving.",
+            SaveAsCopyCreator.NumberNotKeptReason("AWB-10002", " AWB-10001 "));
+        Assert.Equal(
+            "The copy did not keep its new number AWB-10002: its Part Number is blank after saving.",
+            SaveAsCopyCreator.NumberNotKeptReason("AWB-10002", null));
+        Assert.Equal(
+            "The copy did not keep its new number AWB-10002: its Part Number is blank after saving.",
+            SaveAsCopyCreator.NumberNotKeptReason("AWB-10002", "  "));
+    }
+
+    [Theory]
+    [InlineData("AWB-10001")]
+    [InlineData("")]
+    [InlineData(null)]
+    public void CopyDidNotKeepItsNumber_Fails_ClosesAndRemovesTheCopy_AndTheRowStays(string? readBack)
+    {
+        // For example the original's number, as if the write had not stuck.
+        _source.ReadBack = _ => readBack;
+        WriteShared(10001);
+        var path = Path.Combine(_cad, "TEST_BRACKET_COPY,AWB-10002.ipt");
+
+        var ex = Assert.Throws<NewPartException>(() => Creator().Copy(Request()));
+
+        Assert.Equal(
+            SaveAsCopyCreator.FailedAfterAssignMessage(
+                "AWB-10002", SaveAsCopyCreator.NumberNotKeptReason("AWB-10002", readBack)),
+            ex.Message);
+        Assert.Contains("did not keep its new number", ex.Message, StringComparison.Ordinal);
+        Assert.Equal("AWB-10002", ex.AssignedNumber);
+        Assert.Equal([10001, 10002], Read(SharedPath).Select(e => e.Number.Value));
+        Assert.Equal([$"copy {path}", $"open {path}", "write", "save", "read"], _source.Calls);
+        Assert.True(Assert.Single(_source.Opened).Closed);
+        Assert.False(File.Exists(path));
+        Assert.Equal("original", File.ReadAllText(_original));
+        Assert.Contains(_log.Errors, e => e.Message.Contains("AWB-10002", StringComparison.Ordinal));
+        Assert.DoesNotContain(_log.Infos, m => m.StartsWith("Save As Copy:", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -372,6 +430,9 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
         public string? FailAt { get; set; }
         public Exception? Failure { get; set; }
         public Exception? CloseFailure { get; set; }
+
+        /// <summary>What the copy's Part Number reads after saving, given the writes; null reads back what was written.</summary>
+        public Func<IReadOnlyList<PropertyWrite>?, string?>? ReadBack { get; set; }
 
         public void SaveCopyAs(string fullPath)
         {
@@ -416,6 +477,18 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
                 throw _owner.Failure!;
         }
 
+        public string? ReadPartNumber()
+        {
+            _owner.Calls.Add("read");
+            if (_owner.FailAt == "read")
+                throw _owner.Failure!;
+            if (_owner.ReadBack is not null)
+                return _owner.ReadBack(Writes);
+
+            // By default the copy reads back the Part Number written on it.
+            return Writes?.Single(w => w.Location == PartPropertyStorage.PartNumber).TextValue;
+        }
+
         public void CloseWithoutSaving()
         {
             Closed = true;
@@ -436,8 +509,15 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
     private sealed class RecordingLog : ILog
     {
         public List<(string Message, Exception? Ex)> Errors { get; } = [];
+        public List<string> Infos { get; } = [];
         public Action<string>? OnInfo { get; set; }
-        public void Info(string message) => OnInfo?.Invoke(message);
+
+        public void Info(string message)
+        {
+            Infos.Add(message);
+            OnInfo?.Invoke(message);
+        }
+
         public void Warn(string message) { }
         public void Error(string message, Exception? ex = null) => Errors.Add((message, ex));
     }
