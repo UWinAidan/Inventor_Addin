@@ -60,17 +60,21 @@ public static class RibbonIds
     public const string TabId = "id_Tab_" + Branding.IdPrefix;
     public const string TabName = Branding.TabName;
 
-    public const string CadAutomationPanelId = PanelIdPrefix + "CadAutomation";
-    public const string CadAutomationPanelName = "CAD Automation";
+    public const string CreatePanelId = PanelIdPrefix + "Create";
+    public const string CreatePanelName = "Create";
 
-    public const string DrawingToolsPanelId = PanelIdPrefix + "DrawingTools";
-    public const string DrawingToolsPanelName = "Drawing Tools";
+    public const string PropertiesPanelId = PanelIdPrefix + "Properties";
+    public const string PropertiesPanelName = "Properties";
 
-    public const string ModellingPanelId = PanelIdPrefix + "Modelling";
-    public const string ModellingPanelName = "Modelling";
+    public const string DrawingPanelId = PanelIdPrefix + "Drawing";
+    public const string DrawingPanelName = "Drawing";
 
     public const string DeveloperPanelId = PanelIdPrefix + "Dev";
     public const string DeveloperPanelName = "Developer";
+
+    /// <summary>The add-in's own panel (Settings, About), always far right.</summary>
+    public const string AwbPanelId = PanelIdPrefix + "Awb";
+    public const string AwbPanelName = Branding.ShortName;
 
     private const string PanelIdPrefix = "id_Panel_" + Branding.IdPrefix + "_";
 }

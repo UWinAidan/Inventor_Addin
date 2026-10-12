@@ -18,6 +18,7 @@ Last updated: 2026-10-12
 
 **M2 fix run 2** (full steps in each task's Verification section; everything compiled on Aidan's PC, nothing tested in Inventor)
 - [ ] 063 Create Print makes `.idw` from `ANSI (mm).idw` / `ANSI (in).idw`; existing `.dwg` prints still offered; `.idw` preferred when both exist (7 steps)
+- [ ] 064 Ribbon panels Create, Properties, Drawing, (Developer,) AWB on every ribbon; small buttons stacked; no old panel left (6 steps)
 
 **M2 run 1** (full steps in each task's Verification section). Aidan's run 1 checks found three things, now tasks 049 to 051; tick the rest here when confirmed
 - [ ] Task 037, Settings: units dropdown and register folder, Browse, validation, access keys, an unknown units value in `settings.json`; is "Units for new files" cut off?

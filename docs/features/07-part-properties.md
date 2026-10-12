@@ -74,7 +74,7 @@ The layout and look are defined in spec 08 (window style): a header with the par
 
 ## Where it appears
 
-- A **Part Properties** button on the CAD Automation panel of the Part and Assembly ribbons. Not on the Drawing ribbon and not with no document open.
+- A **Part Properties** button on the Properties panel of the Part and Assembly ribbons. Not on the Drawing ribbon and not with no document open.
 - It acts on the document being edited, so editing a part in place inside an assembly opens that part's properties.
 
 ## Core logic (testable without Inventor)

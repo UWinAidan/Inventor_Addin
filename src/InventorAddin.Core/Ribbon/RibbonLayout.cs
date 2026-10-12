@@ -6,7 +6,7 @@ namespace InventorAddin.Core.Ribbon;
 /// </summary>
 /// <remarks>
 /// A button is listed only once its command exists (spec 01). Feature tasks add their own entries to
-/// <see cref="Definitions"/>. Panel order follows the spec: CAD Automation, Drawing Tools, Modelling, Developer last.
+/// <see cref="Definitions"/>. Panel order follows the spec: Create, Properties, Drawing, Developer, AWB last.
 /// </remarks>
 public static class RibbonLayout
 {
@@ -45,35 +45,42 @@ public static class RibbonLayout
 
     // Button sizes (Aidan, 2026-10-11, spec 02): New Part, Part Properties and Create Print are large; every other
     // button is small.
+    //
+    // Panels and their order (Aidan, 2026-10-12, spec 01 "Target"): Create, Properties, Drawing, Developer, AWB, so
+    // AWB is always far right. Inventor stacks consecutive small buttons by itself, so the small buttons of a panel
+    // are kept next to each other.
     private static readonly PanelDefinition[] Definitions =
     {
-        new(RibbonIds.CadAutomationPanelId, RibbonIds.CadAutomationPanelName, DeveloperOnly: false, new ButtonDefinition[]
+        new(RibbonIds.CreatePanelId, RibbonIds.CreatePanelName, DeveloperOnly: false, new ButtonDefinition[]
         {
             new(CommandNames.NewPart, ButtonSize.Large, IconNames.NewPart, NewFileEnvironments),
             // Spec 02, "Commands: Save As Copy": a copy of the active part or assembly.
             new(CommandNames.SaveAsCopy, ButtonSize.Small, IconNames.SaveAsCopy, ModelEnvironments),
             // Spec 02, "Commands: Save As and Replace": the selected component in the active assembly.
             new(CommandNames.SaveAsReplace, ButtonSize.Small, IconNames.SaveAsReplace, AssemblyEnvironments),
+        }),
+        new(RibbonIds.PropertiesPanelId, RibbonIds.PropertiesPanelName, DeveloperOnly: false, new ButtonDefinition[]
+        {
             // Spec 07: parts and assemblies only, not drawings and not with no document open.
             new(CommandNames.PartProperties, ButtonSize.Large, IconNames.PartProperties, ModelEnvironments),
-            // ZeroDoc gets no Settings or About button until spec 01 open question 4 is answered.
-            new(CommandNames.Settings, ButtonSize.Small, IconNames.Settings, DocumentEnvironments),
-            new(CommandNames.About, ButtonSize.Small, IconNames.About, DocumentEnvironments),
+            // Spec 02, "Commands: Mass Update": a folder of files, so also with no document open.
+            new(CommandNames.MassUpdate, ButtonSize.Small, IconNames.MassUpdate, NewFileEnvironments),
         }),
-        new(RibbonIds.DrawingToolsPanelId, RibbonIds.DrawingToolsPanelName, DeveloperOnly: false, new ButtonDefinition[]
+        new(RibbonIds.DrawingPanelId, RibbonIds.DrawingPanelName, DeveloperOnly: false, new ButtonDefinition[]
         {
             // Spec 02, "Commands: Create Print": a drawing of the active part or assembly.
             new(CommandNames.CreatePrint, ButtonSize.Large, IconNames.CreatePrint, ModelEnvironments),
-        }),
-        new(RibbonIds.ModellingPanelId, RibbonIds.ModellingPanelName, DeveloperOnly: false, new ButtonDefinition[]
-        {
-            // Spec 02, "Commands: Mass Update": a folder of files, so also with no document open.
-            new(CommandNames.MassUpdate, ButtonSize.Small, IconNames.MassUpdate, NewFileEnvironments),
         }),
         new(RibbonIds.DeveloperPanelId, RibbonIds.DeveloperPanelName, DeveloperOnly: true, new ButtonDefinition[]
         {
             new(CommandNames.ExportModelData, ButtonSize.Small, IconNames.ExportModelData, DocumentEnvironments),
             new(CommandNames.ExportLibraries, ButtonSize.Small, IconNames.ExportLibraries, AllEnvironments),
+        }),
+        new(RibbonIds.AwbPanelId, RibbonIds.AwbPanelName, DeveloperOnly: false, new ButtonDefinition[]
+        {
+            // ZeroDoc gets no Settings or About button until spec 01 open question 4 is answered.
+            new(CommandNames.Settings, ButtonSize.Small, IconNames.Settings, DocumentEnvironments),
+            new(CommandNames.About, ButtonSize.Small, IconNames.About, DocumentEnvironments),
         }),
     };
 

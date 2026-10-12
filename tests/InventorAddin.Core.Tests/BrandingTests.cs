@@ -12,6 +12,7 @@ public sealed class BrandingTests
     {
         Assert.Equal("AWB Addin", Branding.TabName);
         Assert.Equal("AWB Addin", Branding.ProductName);
+        Assert.Equal("AWB", Branding.ShortName);
         Assert.Equal("Awb", Branding.IdPrefix);
         Assert.Equal("AwbAddin", Branding.DataFolderName);
         Assert.Equal("awbaddin", Branding.LogFileBaseName);
@@ -22,9 +23,11 @@ public sealed class BrandingTests
     public void IdsSeenByInventor()
     {
         Assert.Equal("id_Tab_Awb", RibbonIds.TabId);
-        Assert.Equal("id_Panel_Awb_CadAutomation", RibbonIds.CadAutomationPanelId);
-        Assert.Equal("id_Panel_Awb_DrawingTools", RibbonIds.DrawingToolsPanelId);
+        Assert.Equal("id_Panel_Awb_Create", RibbonIds.CreatePanelId);
+        Assert.Equal("id_Panel_Awb_Properties", RibbonIds.PropertiesPanelId);
+        Assert.Equal("id_Panel_Awb_Drawing", RibbonIds.DrawingPanelId);
         Assert.Equal("id_Panel_Awb_Dev", RibbonIds.DeveloperPanelId);
+        Assert.Equal("id_Panel_Awb_Awb", RibbonIds.AwbPanelId);
         Assert.Equal("Awb_ExportModelData", CommandNames.ExportModelData);
         Assert.Equal("Awb_ExportLibraries", CommandNames.ExportLibraries);
         Assert.Equal("Awb_Settings", CommandNames.Settings);
@@ -35,6 +38,7 @@ public sealed class BrandingTests
     public void UsersOfTheBrand()
     {
         Assert.Equal(Branding.TabName, RibbonIds.TabName);
+        Assert.Equal(Branding.ShortName, RibbonIds.AwbPanelName);
         Assert.Equal(Branding.ProductName, AboutViewModel.TitleText);
         Assert.Equal(Branding.LogFileName, FileLog.FileName);
     }
