@@ -20,3 +20,4 @@ ADDIN_PICS/
 
 # Material libraries are supplied by the user and never committed
 *.adsklib
+!libraries/StarterMaterials.adsklib

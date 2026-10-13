@@ -1,0 +1,23 @@
+Name,Category,BaseMaterial,Density_kg_m3,Appearance
+"Steel, 1018 cold drawn",Steel,"Steel, Mild",7870,Steel
+"Steel, 1045 cold drawn",Steel,"Steel, Carbon",7850,Steel
+"Steel, A36 hot rolled",Steel,"Steel, Mild",7850,Honed - Dark Gray
+"Steel, 4140 annealed",Steel,"Steel, Alloy",7850,Machined 02
+"Steel, 4140 flame hardened 55-58 HRC",Steel,"Steel, Alloy",7850,Steel - Polished
+"Tool Steel, O1 hardened",Steel,"Steel, Alloy",7810,Machined 03
+"Tool Steel, D2 hardened",Steel,"Steel, Alloy",7700,Machined 03
+"Stainless Steel, 303 annealed",Steel,"Stainless Steel, Austenitic",8000,Stainless - Satin
+"Stainless Steel, 304 annealed",Steel,"Stainless Steel, Austenitic",8000,Stainless - Satin
+"Stainless Steel, 316 annealed",Steel,"Stainless Steel, Austenitic",8000,Stainless - Brushed
+"Aluminum, 6061-T6",Aluminum,Aluminum 6061,2700,Aluminum - Flat
+"Aluminum, 7075-T6",Aluminum,Aluminum 6061,2810,Aluminum - Polished
+"Aluminum, 5052-H32",Aluminum,Aluminum 6061,2680,Machined - Aluminum
+"Brass, C360 half hard",Brass,"Brass, Soft Yellow",8500,Brass - Satin
+"Bronze, C932 as cast",Bronze,"Bronze, Cast",8930,Bronze - Satin
+"Copper, C110 half hard",Copper,Copper,8890,Copper - Satin
+"Cast Iron, gray A48 class 30",Iron,"Iron, Gray",7150,Iron - Cast
+"Cast Iron, ductile 65-45-12",Iron,"Iron, Ductile",7100,Iron Gray
+"Acetal, homopolymer natural",Plastic,"Acetal Resin, White",1420,Smooth - White
+"Nylon, 6/6 natural",Plastic,Nylon 6/6,1140,Nylon 6
+"UHMW-PE, natural",Plastic,"UHMW, White",930,Smooth - Off-White
+"PTFE, virgin",Plastic,Thermoplastic Resin,2170,PTFE
