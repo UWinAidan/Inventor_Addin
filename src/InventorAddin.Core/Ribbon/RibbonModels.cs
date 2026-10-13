@@ -118,4 +118,7 @@ public static class IconNames
     public const string SaveAsReplace = "SaveAsReplace";
     public const string CreatePrint = "CreatePrint";
     public const string MassUpdate = "MassUpdate";
+
+    // M3 (task 073). Material and Finish: its command's own task adds the layout entry.
+    public const string MaterialFinish = "MaterialFinish";
 }

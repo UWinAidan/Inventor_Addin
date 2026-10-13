@@ -247,7 +247,7 @@ Spike 067 ran first and was walked through with Aidan. The rest was planned on 2
 - [x] 070 Library settings, preferred materials, and the shipped starter files
 - [x] 071 Starter material library: data file and generator
 - [x] 072 Material and Finish window view-model (Core)
-- [ ] 073 Ribbon and window icon for Material and Finish
+- [x] 073 Ribbon and window icon for Material and Finish
 - [x] 074 Read the library and apply material and finish in Inventor
 - [ ] 075 Material and Finish command, window and ribbon button
 - [ ] 076 Part Properties: Change material and finish, and the not-from-the-library warning
