@@ -12,7 +12,7 @@ Last updated: 2026-10-12
 | Part properties window (M1) | 07 | **Built and merged, partly tested in Inventor** | Opens on parts and assemblies, pre-fills, writes and undoes correctly. A never-saved part shows New part, Not saved yet and Not assigned; the blank Part type entry can be clicked. Some checklist steps not yet reported; see `TODO.md` |
 | Window style and icons (M1b) | 08 | **Done, tested in Inventor** | Tasks 020 to 031. Shared look in light and dark, all three windows restyled, icons on ribbon and headers, XAML rules test. Every check passed on Windows. Two follow-ups on the build's deploy line are in `TODO.md` |
 | Part creation and numbering (M2) | 02 | **Done, tested in Inventor** (a few run 1 checks still to report; see `TODO.md`) | Run 2 checked on Windows 2026-10-11; fix run 053 to 061 and fix run 2 (spike 062, tasks 063 to 066) checked 2026-10-12 and passed. Merged into main from `claude/m2-fix-run` |
-| Material and finish (M3) | 03 | **Planned** | Aidan answered the spec on 2026-10-12. Spike 067 done; tasks 068 to 076 planned. 073 (icon) needs Python |
+| Material and finish (M3) | 03 | **Built** (not tested in Inventor) | Tasks 067 to 076 done on `claude/m3-material-finish` and deployed on Aidan's PC 2026-10-12: starter library and finish list, Settings rows, Material and Finish window and button, Part Properties Change button and warning. Waiting on Aidan's checks; see `TODO.md` |
 | Hole generator and hole table wizard (M4) | 04 | Not started | Starts with a hole generator for part files (details to discuss with Aidan). Wizard: Core half needs three answers; add-in half needs a Windows spike |
 | Drawing tools (M5) | 05 | Not started | Waiting on which commands Aidan wants. Will include a custom drawing template |
 | iLogic injection (M6) | 06 | Not started | Waiting on which rules |
@@ -32,5 +32,5 @@ States used: Not started, Planned, In progress, Built (merged, not tested in Inv
 
 ## Numbers
 
-- Tasks finished: 67 (001 to 067)
-- Core tests: 2187 after task 066; they run in the cloud and on Windows with `dotnet test tests/InventorAddin.Core.Tests`
+- Tasks finished: 76 (001 to 076)
+- Core tests: 2598 after task 076; they run in the cloud and on Windows with `dotnet test tests/InventorAddin.Core.Tests`

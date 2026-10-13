@@ -6,7 +6,7 @@ Last updated: 2026-10-12
 
 ## Next up
 
-1. Run M3 (tasks 068 to 076) in a local session. Task 073 (the icon) needs Python 3 with Pillow: install it on Aidan's PC (`winget install Python.Python.3.12`, then `pip install pillow`) or run 073 in a cloud session.
+1. Aidan checks M3 in Inventor (below); then push `claude/m3-material-finish`, open the pull request and merge.
 2. Aidan finishes the remaining run 1 and Part Properties checks below.
 3. M4: discuss the hole generator's details with Aidan (spec 04).
 
@@ -17,6 +17,13 @@ Last updated: 2026-10-12
 **M2 fix run** (053 to 061) was checked on 2026-10-12: everything passed except occurrence names in a closed assembly, now task 065. Aidan also asked for four items, now fix run 2 (062 to 066).
 
 **M2 fix run 2** (062 to 066) was checked on 2026-10-12: every check passed.
+
+**M3** (068 to 076, built and deployed 2026-10-12 on `claude/m3-material-finish`; full steps in each task's Verification section)
+- [ ] Task 070, Settings: Material library and Finish list rows, Browse, a missing file refused on Save (6 steps)
+- [ ] Task 071: open `libraries\StarterMaterials.adsklib` in the Material Browser; the materials show under their categories with sensible appearances
+- [ ] Task 073: the Material and Finish icon reads on the ribbon in light and dark
+- [ ] Task 075, Material and Finish: the button, filters, stars, apply and one Undo (material, appearance and the four Finish iProperties), assemblies with selected parts, your NAS library, a bad or missing finish list, keyboard and themes, editing in place (23 steps)
+- [ ] Task 076, Part Properties: Change opens the window over it and refreshes, the "Not from the material library" warning, pending edits kept, Undo order (14 steps)
 
 **M2 run 1** (full steps in each task's Verification section). Aidan's run 1 checks found three things, now tasks 049 to 051; tick the rest here when confirmed
 - [ ] Task 037, Settings: units dropdown and register folder, Browse, validation, access keys, an unknown units value in `settings.json`; is "Units for new files" cut off?
