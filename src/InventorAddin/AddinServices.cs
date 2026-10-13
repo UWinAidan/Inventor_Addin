@@ -26,6 +26,23 @@ namespace InventorAddin
 
         public static AddinSettings Settings { get; private set; } = new AddinSettings();
 
+        /// <summary>
+        /// The folder <c>InventorAddin.dll</c> runs from, which holds the starter library files
+        /// (<see cref="InventorAddin.Core.Materials.LibraryPaths"/>).
+        /// </summary>
+        /// <exception cref="InvalidOperationException">The add-in's location could not be determined.</exception>
+        public static string AddinFolder
+        {
+            get
+            {
+                string location = typeof(StandardAddInServer).Assembly.Location;
+                string? folder = string.IsNullOrEmpty(location) ? null : IOPath.GetDirectoryName(location);
+                if (string.IsNullOrEmpty(folder))
+                    throw new InvalidOperationException("The add-in's folder could not be determined.");
+                return folder!;
+            }
+        }
+
         /// <summary>This PC's register files go in this folder under the data folder (spec 02, "The register").</summary>
         private const string LocalRegisterFolderName = "register";
 
