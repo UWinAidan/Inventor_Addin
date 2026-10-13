@@ -242,7 +242,7 @@ Spike 067 ran first and was walked through with Aidan. The rest was planned on 2
 | 076 | windows build | 074, 075 | none |
 
 - [x] 067 Spike: material libraries, materials and appearances (Windows)
-- [ ] 068 Finish list: model, CSV file and validation (Core)
+- [x] 068 Finish list: model, CSV file and validation (Core)
 - [ ] 069 Material list, filters, finish matching and appearance lookup (Core)
 - [ ] 070 Library settings, preferred materials, and the shipped starter files
 - [ ] 071 Starter material library: data file and generator

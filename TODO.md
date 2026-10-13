@@ -82,6 +82,10 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 Small things noticed while building. None is urgent. The parent turns these into tasks when planning a milestone that touches the same code.
 
+**Material and finish**
+- `CsvTable` (task 068) repeats the CSV splitting loop in `RegisterCsv`; `RegisterCsv.Read` could use `CsvTable.Parse`. (task 068)
+- A finish list saved by Excel as plain "CSV" (not "CSV UTF-8") is in the Windows code page, so a non-ASCII character in a print note would read as a replacement character. Whoever reads the file (task 075) could fall back to the ANSI code page when the bytes are not valid UTF-8. (task 068)
+
 **Create Print**
 - If `ANSI (mm).idw` is missing beside the `.dwg` template but `standard.idw` exists, Create Print uses `standard.idw` without saying so; its units may not match. Only the log records it. Also, the template lookup runs before the existing-print check, so the log can warn about a missing template when a print exists. (task 063)
 
