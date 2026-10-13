@@ -1,100 +1,113 @@
 # 03: Material and finish
 
-One dialog to pick a material from Aidan's material library and a compatible finish, and apply both to the model.
+One window to pick a material from the material library and a finish that suits it, and apply both to the part, or to the selected parts of an assembly.
 
 Reference screenshot (local only): `matterial and finish custom library.png`.
 
 ## Terms
 
-- **Material**: what the part is made of. Materials come from an Inventor material library file (`.adsklib`).
-- **Finish**: a process applied to the part after it is made. Plating (chrome, nickel, zinc), coatings (anodize, black oxide, paint, powder coat) and heat treatment (through hardening, case hardening, nitriding) are all finishes. A finish is not an Inventor appearance, although applying one may change the appearance.
+- **Material**: what the part is made of, including any hardening. Materials come from an Inventor material library file (`.adsklib`). A hardened steel is its own material, for example a 4140 flame hardened to 55-58 HRC.
+- **Finish**: a process applied to the surface after the part is made: plating (chrome, nickel, zinc), conversion coatings (black oxide, passivate), anodize, surface treatments such as nitriding, and paint or powder coat. A part has at most one finish. Hardening is not a finish, so a hardened material can still take a finish such as black oxide or chrome.
 
 ## What exists today
 
 - `LibraryExtractor` lists every material and appearance in the asset libraries Inventor has loaded (`LibraryData` in Core).
-- `PartExtractor` reads a part's current material and appearance; `FinishReader` reads Inventor finish features.
+- `PartExtractor` reads a part's current material and appearance; `FinishReader` reads Inventor finish features (not used by this feature).
+- Part Properties (spec 07) shows Material and the `Finish` custom property, read-only.
 - Nothing applies a material or finish yet.
 
 ## Decided
 
-- **Materials come from a custom `.adsklib` library that Aidan supplies.** The add-in does not ship a library and the file is never committed to this repository (`*.adsklib` is gitignored). Its location is a setting.
-- **Finishes are processes**, as defined above. They are not stored in the material library, so the add-in needs its own finish list.
-- **This window is the way to set material and finish.** It lists only the materials in Aidan's library, in place of choosing from Inventor's own material list. The part properties window (spec 07) shows both values read-only and opens this window through a Change button.
-- **Aidan will create the finish list himself, later.** Until it exists the Finishes side of the window has nothing to offer, so this milestone should not be planned before the list is ready or its format is agreed.
+Aidan, 2026-10-06:
 
-## What the library looks like
+- **This window is the way to set material and finish.** It lists only the materials in the library set in Settings, in place of Inventor's own material list. Part Properties shows both read-only and opens this window through a Change button.
+- **Finishes are processes**, not appearances, and are not stored in the material library, so the add-in has its own finish list.
 
-Read from the file Aidan supplied, described here without its contents:
+Aidan, 2026-10-12 (answers questions 1 to 8 of the earlier list):
 
-- About 140 materials. Each has a name, a category and a linked appearance.
-- Categories include Steel, Aluminum, Copper, Brass, Bronze, Iron, Polymer, Plastic, Ceramic and Misc. The dialog's Category dropdown should list whatever categories the loaded library has.
-- Names follow a family, grade, condition pattern, such as `Aluminum, 6061-T6`.
-- Some entries are not raw stock: there are entries for purchased components and for reference-only parts with zero density.
-- **Some materials have heat treatment built into the name**, a tool steel at a given hardness for example. That overlaps with hardening as a finish. See open question 1.
-- There is no "preferred" flag in the library. One material has "(preferred)" typed into its name. See open question 5.
-- The file has the same name as Inventor's stock material library, so it may be meant to replace the stock file rather than load beside it. The Windows spike below should check.
+- **Material library.** Aidan's own working library is private and is never committed (`*.adsklib` stays gitignored). It lives on the NAS at `B:\aidan\AWB_Design_Data`, and Settings points at it. The repo instead ships a small generic **starter library** under `libraries/`, with common standard materials made from scratch: no names or entries come from Aidan's library. The add-in uses the starter library by default, so a plain download works. Only the starter library file is allowed past `.gitignore`.
+- **Hardening is part of the material**, not a finish (question 1).
+- **One finish per part.**
+- **The finish list is `libraries/finishes.csv`**, Aidan's starter, editable in Excel. A setting can point at another copy, for example on the NAS. Columns are below (question 2).
+- **A finish changes the part's appearance** (for example chrome to blue chrome), carries a thickness range, and carries a print note: the finishing rules for the drawing, such as breaking sharp edges before chrome or dimensions applying after finish (question 4).
+- **Stored on the part as iProperties** `Finish`, `Finish Code`, `Finish Thickness` and `Finish Note`, so title blocks and parts lists can use them (question 3).
+- **Material and finish are chosen together in one window**, laid out like the reference: a Materials list, and a Finishes list filtered by the chosen material.
+- **Preferred materials** are marked with a star in the window, and a *Preferred only* filter shows only them (question 5).
+- **In an assembly** the command applies to the selected components. With none selected it says to select some (question 6).
+- **No *Enable Filters* checkbox** (question 7).
+- **Part Properties warns** when a part's material is not from the library, for example in an imported file. Only a warning, never an error (question 8).
+- **Print notes reach the drawing in M5**, through the title block or a notes block. M3 only stores them on the part.
 
-## Target dialog: "Select Material and Finish"
+## Libraries
 
-Seen in the reference:
+**Starter library** (in the repo, `libraries/`): a small set of common standard materials, for example a few carbon, alloy and stainless steels (some hardened), aluminium alloys, brass, bronze, copper, cast iron and common plastics. Each has our own name in the family, grade, condition pattern (`Aluminum, 6061-T6`), a category, a density, and an appearance from Inventor's Autodesk Appearance Library. Spike 067 found that the add-in can create the library through the Inventor API, so it is generated from a data file in `libraries/` by a developer command, and both the data file and the generated `.adsklib` are committed.
 
-- **Header:** active model name, current material, current finish, and a "Code" value for the current finish.
-- **Filter row:** a Category dropdown (default "All") and three checkboxes: *Preferred Only*, *Enable Filters*, *Show Paints*. All three are ticked by default.
-- **Two lists side by side**, each with its own search box above it: Materials on the left, Finishes on the right. The Finishes list is empty until a material is selected, so finishes are filtered by the chosen material.
-- **Buttons:** Apply, OK, Cancel.
-- **Status line** along the bottom.
+**Aidan's library** (private, `B:\aidan\AWB_Design_Data\InventorMaterialLibrary.adsklib`): about 135 materials, described here without its contents:
+
+- Categories include Steel, Aluminum, Copper, Brass, Bronze, Iron, Polymer, Plastic, Ceramic and Misc. The window's Category dropdown lists whatever categories the loaded library has.
+- Names follow a family, grade, condition pattern; some have heat treatment in the name, which is now the intended way to say a material is hardened.
+- Some entries are not raw stock: purchased components, and reference-only parts with zero density.
+- One material has no category and one has an appearance Inventor cannot read; the add-in must cope with both.
+- It has the same file name as Inventor's stock library. Spike 067 found that both open side by side.
 
 ## The finish list
 
-A data file Aidan maintains, kept outside the code so it can change without a rebuild. Proposed fields for each finish:
+`libraries/finishes.csv`, one row per finish, with a header row. Kept outside the code so Aidan can change it in Excel without a rebuild.
 
-| Field | Purpose |
+| Column | Meaning |
 |---|---|
+| Code | short code for the drawing and parts list, for example `HC`. Unique |
 | Name | shown in the list, for example "Hard chrome" |
-| Code | short text for the drawing and parts list |
-| Kind | plating, coating, heat treatment or paint. *Show Paints* filters on this |
-| Applies to | the material categories, or specific materials, the finish is valid for |
-| Appearance | optional: an appearance to apply to the model with the finish |
-| Note | optional: text for the drawing, such as hardness range or thickness |
+| Kind | Plating, Conversion, Anodize, Heat treat or Paint. The *Show paints* filter hides Kind Paint |
+| AppliesTo | material categories (or material names) the finish suits, separated by `;`, for example `Steel;Iron` |
+| Appearance | the Inventor appearance the finish gives the part, by its display name; `(no change)` keeps the material's appearance |
+| ThicknessMin_mm, ThicknessMax_mm | the finish thickness range in mm; both 0 when it has none |
+| DimensionsAfterFinish | Yes or No: whether drawing dimensions apply after finishing |
+| PrintNote | the note for the drawing |
 
-Test data for this feature must be invented. Do not copy names from Aidan's library into tests or fixtures.
+Aidan's first list has 14 finishes. Spike 067 checked its appearance names: only `Zinc` exists as written; the closest real names are in the spike's results. Aidan picks the replacements (question 9).
+
+## Target window: "Select Material and Finish"
+
+- **Header:** the active part, or the number of selected parts in an assembly; the current material, finish and finish code.
+- **Filter row:** a Category dropdown (default "All"), *Preferred only*, and *Show paints*. No *Enable Filters*.
+- **Two lists side by side**, each with its own search box above it: Materials on the left, with a star on preferred materials; Finishes on the right. The Finishes list holds only the finishes that suit the selected material, plus "None". It is empty until a material is selected.
+- **Buttons:** Apply, OK, Cancel.
+- **Status line** along the bottom.
 
 ## Core logic (testable without Inventor)
 
-- The material list as read from a library: name, category, appearance name.
-- The finish list model, loading it from its file, and validating it.
-- Filtering materials: by category, preferred only, and search text, with *Enable Filters* switching the filters off as a group.
-- Which finishes are valid for the selected material, and the *Show Paints* filter.
+- The material list as read from a library: display name, category, appearance name.
+- The finish list model, loading it from its CSV file, and validating it (unique codes, known Kind, numbers, Yes or No).
+- Filtering materials by category, preferred only, and search text.
+- Which finishes suit the selected material, and the *Show paints* filter.
 - The dialog's view-model: current selection, filtered lists, whether Apply is enabled, the status text.
-- The result of a selection: the material to set, the appearance to set, and the iProperty values to write.
+- The result of a selection: the material to set, the appearance to set (or the material's own), and the four iProperty values to write.
+- Whether a material name is in the library, for Part Properties' warning.
 
 ## Add-in side
 
-- A setting for the library file location and one for the finish list location, with a clear message when either is missing.
-- Read the materials from that library.
-- Read the active document's current material and finish to fill the header.
-- Apply the material to the part and set the appearance.
-- Write the finish and its code where the title block and parts list can read them.
-- The WPF window, bound to the Core view-model.
+- Settings: the material library path and the finish list path, each blank by default, meaning the starter files shipped with the add-in. A clear message when either is missing or unreadable.
+- Open the library by path (`AssetLibraries.Open`) and read its materials.
+- Find appearances by display name in Inventor's loaded libraries.
+- Read the current material and finish of the part, or of each selected part, to fill the header.
+- Apply: in one transaction, set the material, then the finish's appearance, then write the four iProperties.
+- The WPF window, bound to the Core view-model, and its ribbon button.
+- Part Properties: the Change button beside Material and Finish, and the not-from-the-library warning.
 
-## Spike to run on Windows before planning the add-in side
+## Spike
 
-No code in the repo opens a library by file path or assigns a material, so these need a short experiment in Inventor:
-
-1. Open a `.adsklib` by path and list its materials, when the library is not part of the active project.
-2. Whether a library with the stock library's file name can be loaded while the stock one is loaded.
-3. Assign a material from the library to a part, including copying it into the document first if Inventor requires that.
-4. Override the part's appearance.
+Spike 067 (2026-10-12) settled the Inventor behaviour: opening a library by path, assigning a material and appearance, Undo, assemblies, finding appearances by name, and creating the starter library. See `docs/tasks/067-spike-material-library.md`.
 
 ## Open questions
 
-These block planning for this feature.
+Questions 1 to 8 of the earlier list were answered by Aidan on 2026-10-12 (see "Decided").
 
-1. **Hardening: finish or material?** The library already has hardened variants as separate materials. Either keep picking those as materials, or pick the base material and add hardening as a finish. Doing both gives two ways to say the same thing.
-2. **What finishes go in the first list?** Names, codes, and which materials each applies to. Aidan will write it; nothing in the library provides it.
-3. **How is the finish stored on the part?** Custom iProperties, an Inventor finish feature, or both.
-4. **Does a finish change the part's appearance**, for example anodize colours or paint?
-5. **What does "preferred" mean**, and where is it recorded: a list in settings, or a marker in the material name?
-6. **In an assembly**, does the command act on the selected components, on the assembly itself, or is it disabled? The reference shows the dialog open with an assembly active.
-7. Is *Enable Filters* wanted at all?
-8. **Inventor's own material list still exists.** The add-in cannot remove it. Is it enough that our window is the route Aidan uses, or should the add-in also warn when a part's material is not from his library?
+9. **Appearance names in the finish list.** Thirteen of the 14 do not exist as written (spike 067 lists the closest real names). Which appearance should each finish use? Until answered, a finish whose appearance is not found is still listed and applied, and the part keeps its material's appearance, with a line in the status and the log (Default).
+10. **Ambiguous appearance names.** Some display names belong to several different appearances (`Yellow`, `Gray`, `Black`, `Satin`). Default: the finish list check reports such a row and the finish keeps the material's appearance, until the row names a unique appearance.
+11. **Where preferred materials are recorded.** Default: clicking the star adds or removes the material in a list in Settings (per PC), saved straight away.
+12. **The *Show paints* checkbox** was in the reference; Aidan did not mention it. Default: kept, ticked by default (paints shown).
+13. **Finish Thickness text.** Default: `0.013-0.025 mm`, one value when min equals max, blank when both are 0. `Finish Note` holds the print note as written; `DimensionsAfterFinish` is not stored separately because the note already says it.
+14. **Which materials go in the starter library**, and their names. Default: about 20 common materials as listed under "Libraries", with categories matching the finish list's AppliesTo values; Aidan can edit the data file.
+15. **Selected components that are not parts** (sub-assemblies) in an assembly. Default: they are skipped and named in the status line; the command applies to the selected parts only.
+16. **Passivate** applies to stainless steel only, but its AppliesTo is `Steel`, which also lets carbon steels take it. Default: as written, until Aidan adds a stainless category or names the materials.

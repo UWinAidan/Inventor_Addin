@@ -6,8 +6,9 @@ Last updated: 2026-10-12
 
 ## Next up
 
-1. Aidan finishes the remaining run 1 and Part Properties checks below.
-2. Plan the next milestone; M3 to M6 wait on Aidan's decisions listed below.
+1. M3: Aidan looks through spike 067's results and picks the finish appearances (spec 03, question 9); then the rest of M3 is planned.
+2. Aidan finishes the remaining run 1 and Part Properties checks below.
+3. M4: discuss the hole generator's details with Aidan (spec 04).
 
 ## Waiting on Aidan: checks in Inventor
 
@@ -39,12 +40,16 @@ Confirmed so far: the window opens on an assembly, pre-fills Designer, Detailer 
 
 Each spec lists its own open questions in full. These are the ones that block planning.
 
-**Material and finish (spec 03), blocks M3**
-- The finish list: names, codes, which materials each applies to
-- Hardening: a finish, or separate hardened materials as the library has now
-- How a finish is stored on the part, and whether it changes the appearance
+**Material and finish (spec 03), blocks the rest of M3**
+- Which appearance each finish uses: 13 of the 14 names in `libraries/finishes.csv` do not exist in Inventor (spec 03, question 9; spike 067 lists the closest real names)
 
-**Hole table (spec 04), blocks M4**
+**Material and finish (spec 03), not blocking**
+- Questions 10 to 16 in spec 03: ambiguous appearance names, where preferred materials are recorded, Show paints, the Finish Thickness text, the starter library's materials, sub-assemblies in a selection, Passivate's AppliesTo. Each has a default
+
+**Hole generator (spec 04), blocks M4**
+- The hole types, their sizes and fits, how holes are placed, and how the fit colours are applied
+
+**Hole table (spec 04), blocks the wizard half of M4**
 - What makes a hole "precision"
 - How groups are ordered in the clearance table
 - Where the origin comes from

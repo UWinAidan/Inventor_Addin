@@ -224,11 +224,23 @@ Not in M2: browser folders (Aidan: no), a templates folder setting (later, with 
 
 ### M3: Material and finish (spec 03)
 
-Blocked on questions 1 to 3 of the spec. Needs the Windows spike described in the spec before its add-in side is planned.
+Aidan answered the spec's questions on 2026-10-12: a starter library in the repo and his own on the NAS, hardening as part of the material, his finish list `libraries/finishes.csv`, four finish iProperties, one window for both, preferred stars, selected components in assemblies, and a warning in Part Properties. Planned in a local session on Aidan's PC.
 
-### M4: Hole table wizard (spec 04)
+Spike 067 runs first and is walked through with Aidan before the rest is planned.
 
-The largest feature. Its Core half (classification, grouping, tagging, descriptions, fit limits, table model) can be planned once questions 1, 6 and 7 are answered. The add-in half waits on the Windows spike described in the spec.
+| Task | Needs | Depends on | Parallel-safe with |
+|---|---|---|---|
+| 067 | **windows** (spike, local session with Aidan) | none | none |
+
+- [x] 067 Spike: material libraries, materials and appearances (Windows)
+
+The rest of M3 is planned after Aidan has seen the spike's results and picked the finish appearances (spec 03, question 9).
+
+### M4: Hole generator and hole table wizard (spec 04)
+
+**First a hole generator for part files** (Aidan, 2026-10-12): every hole type Aidan has decided on, with precision and dowel holes coloured by fit (tight red, regular blue, loose green). Its details are to be discussed with Aidan before M4 is planned.
+
+Then the hole table wizard, the largest feature. Its Core half (classification, grouping, tagging, descriptions, fit limits, table model) can be planned once questions 1, 6 and 7 are answered. The add-in half waits on the Windows spike described in the spec.
 
 ### M5: Drawing tools (spec 05)
 

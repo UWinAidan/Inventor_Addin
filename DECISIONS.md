@@ -138,3 +138,18 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-10-12 | When Inventor starts with no document open, the AWB Addin tab is made the active tab; opening files does not change it | Aidan | spec 01, task 066 |
 | 2026-10-12 | The startup tab is set when Inventor is ready, and once more if Inventor switches away within 5 s; then the add-in leaves the tab alone. Not done when the add-in is loaded after startup | Default | spec 01, spike 062, task 066 |
 | 2026-10-12 | Fix run 2 runs on the same branch in a local session: spike 062 with Aidan first, then 063 to 066, each built on Windows before its commit | Default | `docs/PLAN.md` |
+| 2026-10-12 | Aidan's material library stays private and is never committed; it lives on the NAS at `B:\aidan\AWB_Design_Data` and Settings points at it. The repo ships a small generic starter library in `libraries/`, made from scratch, used by default; only that file is allowed past `.gitignore`. Replaces the 2026-10-06 decision that the add-in ships no library | Aidan | spec 03 |
+| 2026-10-12 | Hardening is part of the material (for example 4140 flame hardened 55-58 HRC), not a finish, so a finish can go on top. One finish per part | Aidan | spec 03, question 1 |
+| 2026-10-12 | The finish list is `libraries/finishes.csv` (Code, Name, Kind, AppliesTo, Appearance, ThicknessMin_mm, ThicknessMax_mm, DimensionsAfterFinish, PrintNote), editable in Excel; a setting can point at another copy. A finish changes the part's appearance and carries a thickness and a print note | Aidan | spec 03, questions 2, 4 |
+| 2026-10-12 | Material and finish are chosen together in one window, with the Finishes list filtered by the chosen material | Aidan | spec 03 |
+| 2026-10-12 | The finish is stored on the part as iProperties `Finish`, `Finish Code`, `Finish Thickness` and `Finish Note` | Aidan | spec 03, question 3 |
+| 2026-10-12 | Preferred materials get a star in the window and a Preferred only filter. No Enable Filters checkbox | Aidan | spec 03, questions 5, 7 |
+| 2026-10-12 | In an assembly the command applies to the selected components; with none selected it says to select some | Aidan | spec 03, question 6 |
+| 2026-10-12 | Part Properties warns, never errors, when a part's material is not from the library | Aidan | spec 03, question 8 |
+| 2026-10-12 | Print notes reach the drawing in M5 through the title block or a notes block; M3 only stores them on the part | Aidan | specs 03, 05 |
+| 2026-10-12 | M4 starts with a hole generator for part files: every hole type Aidan has decided on, precision and dowel holes coloured by fit (tight red, regular blue, loose green). Details to be discussed before M4 is planned | Aidan | spec 04, `docs/PLAN.md` |
+| 2026-10-12 | M3 is planned in a local session on Aidan's PC: spike 067 first, walked through with Aidan, then the rest | Default | `docs/PLAN.md` |
+| 2026-10-12 | Materials are assigned straight from the library (`ActiveMaterial`), then the finish's appearance, in one transaction; materials are compared by display name (spike 067) | Default | spec 03, spike 067 |
+| 2026-10-12 | The starter library is generated through the Inventor API from a data file in `libraries/`, and both files are committed (spike 067) | Default | spec 03, question 14 |
+| 2026-10-12 | Until Aidan picks them, a finish whose appearance is missing or ambiguous is still applied and the part keeps its material's appearance, with a status line | Default | spec 03, questions 9, 10 |
+| 2026-10-12 | Preferred materials are a list in Settings, toggled by the star; Show paints stays, ticked; Finish Thickness reads `0.013-0.025 mm`; sub-assemblies in a selection are skipped and named | Default | spec 03, questions 11 to 13, 15 |

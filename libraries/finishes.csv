@@ -1,0 +1,15 @@
+Code,Name,Kind,AppliesTo,Appearance,ThicknessMin_mm,ThicknessMax_mm,DimensionsAfterFinish,PrintNote
+BO,Black oxide,Conversion,Steel;Iron,Black oxide (check name),0,0.002,No,BLACK OXIDE PER MIL-DTL-13924 CLASS 1. NO DIMENSIONAL ALLOWANCE REQUIRED.
+HC,Hard chrome,Plating,Steel;Iron,Chrome - Polished (blue chrome),0.013,0.025,Yes,"HARD CHROME PLATE PER AMS 2460, 0.013-0.025 THK ON INDICATED SURFACES. DIMENSIONS APPLY AFTER PLATING. BREAK ALL SHARP EDGES 0.25 MIN BEFORE PLATING TO PREVENT EDGE BUILD-UP. MASK THREADS."
+FC,Flash chrome,Plating,Steel;Iron,Chrome - Polished (blue chrome),0.002,0.008,No,FLASH CHROME 0.002-0.008 THK. BREAK ALL SHARP EDGES BEFORE PLATING. MASK THREADS.
+ENP,Electroless nickel (mid phos),Plating,Steel;Iron;Aluminum;Copper;Brass;Bronze,Nickel - Satin (check name),0.013,0.025,Yes,"ELECTROLESS NICKEL PER AMS 2404, MID PHOSPHORUS, 0.013-0.025 THK. DIMENSIONS APPLY AFTER PLATING. MASK THREADS UNLESS NOTED."
+ZN,"Zinc plate, clear trivalent",Plating,Steel;Iron,Zinc (check name),0.005,0.008,No,"ZINC PLATE PER ASTM B633, SC 2, TYPE V (CLEAR TRIVALENT). THREADS TO GAUGE AFTER PLATING."
+AN2C,"Anodize Type II, clear",Anodize,Aluminum,Aluminum - Anodized (check name),0.005,0.018,Yes,ANODIZE PER MIL-A-8625 TYPE II CLASS 1 (CLEAR). DIMENSIONS APPLY AFTER ANODIZE.
+AN2B,"Anodize Type II, black",Anodize,Aluminum,Aluminum - Anodized Black (check name),0.005,0.018,Yes,"ANODIZE PER MIL-A-8625 TYPE II CLASS 2, BLACK. DIMENSIONS APPLY AFTER ANODIZE."
+AN3,Hard anodize Type III,Anodize,Aluminum,Aluminum - Anodized Dark Grey (check name),0.025,0.050,Yes,"HARD ANODIZE PER MIL-A-8625 TYPE III CLASS 1, 0.025-0.050 THK. DIMENSIONS APPLY AFTER ANODIZE. BREAK ALL SHARP EDGES 0.25 MIN."
+NIT,"Nitride (salt bath, QPQ)",Heat treat,Steel;Iron,Black oxide (check name),0,0.002,No,SALT BATH NITRIDE (QPQ). NO DIMENSIONAL ALLOWANCE REQUIRED.
+PASS,Passivate,Conversion,Steel,(no change),0,0,No,PASSIVATE PER ASTM A967. STAINLESS STEEL ONLY.
+PC-BLK,"Powder coat, black",Paint,Steel;Iron;Aluminum,Powder Coat - Black (check name),0.050,0.100,No,"POWDER COAT BLACK, 0.050-0.100 THK. MASK THREADED HOLES AND MATING SURFACES."
+PT-BLK,"Paint, black enamel",Paint,Steel;Iron;Aluminum,Paint - Enamel Glossy (Black) (check name),0.025,0.075,No,PAINT BLACK ENAMEL. MASK THREADED HOLES AND MATING SURFACES.
+PT-YEL,"Paint, safety yellow",Paint,Steel;Iron;Aluminum,Paint - Enamel Glossy (Yellow) (check name),0.025,0.075,No,PAINT SAFETY YELLOW. MASK THREADED HOLES AND MATING SURFACES.
+PT-GRY,"Paint, machine grey",Paint,Steel;Iron;Aluminum,Paint - Enamel Glossy (Grey) (check name),0.025,0.075,No,PAINT MACHINE GREY. MASK THREADED HOLES AND MATING SURFACES.
