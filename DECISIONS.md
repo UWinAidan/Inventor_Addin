@@ -160,3 +160,4 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-10-12 | M3 runs in this local session's order 068, 069, 070, 071, 072, 074, then 073 (needs Python), 075, 076 | Default | `docs/PLAN.md` |
 | 2026-10-12 | All nine finish list columns are required, so a misspelt header is reported rather than read as "suits every material"; a blank thickness cell is a row problem; blank finish property values are deleted | Default | spec 03, task 068 |
 | 2026-10-12 | Material categories and names are compared ignoring case and surrounding spaces; categories differing only in case are listed once; appearance asset names are compared ignoring case | Default | task 069 |
+| 2026-10-12 | Settings checks that the library and finish list files exist when Save is pressed, only for a path that changed, so an offline NAS does not stop other settings being saved. The rows sit in a "Material and finish" section | Default | spec 08, task 070 |

@@ -21,7 +21,9 @@
         folders row is labelled "Other folders" for that reason.
 
         Access keys: D default designer, N other names, U new file units, R register folder, B browse (register),
-        W work folder, E browse (work folder), O other folders, S show developer tools.
+        W work folder, E browse (work folder), O other folders, M material library, F finish list, S show developer
+        tools. The Browse buttons beside the material library and finish list have no access key: every letter of
+        "Browse" is taken.
     -->
     <StackPanel Style="{DynamicResource DialogContent}">
         <!-- The header icon is put in the window's resources by WindowHost (HeaderIcon), in the window's theme. -->
@@ -94,6 +96,36 @@
             </controls:FieldRow>
             <controls:FieldRow>
                 <TextBlock Style="{DynamicResource MutedText}" Text="{Binding OtherCadFoldersHelp, Mode=OneTime}" />
+            </controls:FieldRow>
+        </controls:FormSection>
+
+        <controls:FormSection Heading="Material and finish">
+            <controls:FieldRow Label="_Material library" Target="{Binding ElementName=MaterialLibraryBox}">
+                <DockPanel>
+                    <!-- Opens a file picker for an .adsklib and puts the chosen file in the box beside it (code-behind). -->
+                    <Button DockPanel.Dock="Right"
+                            Style="{DynamicResource SideButton}"
+                            Content="Browse..."
+                            Click="OnBrowseMaterialLibrary" />
+                    <TextBox x:Name="MaterialLibraryBox"
+                             Text="{Binding MaterialLibraryPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </DockPanel>
+            </controls:FieldRow>
+            <controls:FieldRow>
+                <TextBlock Style="{DynamicResource MutedText}" Text="{Binding MaterialLibraryHelp, Mode=OneTime}" />
+            </controls:FieldRow>
+            <controls:FieldRow Label="_Finish list" Target="{Binding ElementName=FinishListBox}">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right"
+                            Style="{DynamicResource SideButton}"
+                            Content="Browse..."
+                            Click="OnBrowseFinishList" />
+                    <TextBox x:Name="FinishListBox"
+                             Text="{Binding FinishListPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </DockPanel>
+            </controls:FieldRow>
+            <controls:FieldRow>
+                <TextBlock Style="{DynamicResource MutedText}" Text="{Binding FinishListHelp, Mode=OneTime}" />
             </controls:FieldRow>
         </controls:FormSection>
 

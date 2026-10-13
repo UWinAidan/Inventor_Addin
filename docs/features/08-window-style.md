@@ -111,7 +111,8 @@ Every window has the same three bands:
 - Section **General** also has Other names (text box, under Default designer; help text "Names in old files that mean you, separated by commas, for example Aidan.Brown, 4aida. Your Windows user name always counts.") and New file units (dropdown: Metric, Imperial; was "Units for new files", shortened to fit the label column, task 049).
 - Section **Part numbers**: Register folder (text box) with a Browse button beside it in the side button style, and its help text under it (tasks 037 and 049).
 - Section **Folders** (task 049): Work folder (text box, Browse beside it; help text "Where New Part and Mass Update start, and the first folder Rename searches."), and Other folders, the Other CAD folders setting (a four-line text box, one folder per line; help text "Other folders that hold your CAD. Rename searches these too."). The label is shortened so it fits the 100-wide label column.
-- Labels are kept short enough for the 100-wide label column; the help text carries the explanation. Access keys are unique across the window: D, N, U, R, B (Browse, register folder), W, E (Browse, work folder), O, S.
+- Section **Material and finish** (task 070): Material library and Finish list (text boxes, Browse beside each opening a file picker for `*.adsklib` or `*.csv`; help text says blank uses the starter file shipped with the add-in). Whether the file exists is checked on Save.
+- Labels are kept short enough for the 100-wide label column; the help text carries the explanation. Access keys are unique across the window: D, N, U, R, B (Browse, register folder), W, E (Browse, work folder), O, M, F, S. The two Browse buttons in Material and finish have none: every letter of "Browse" is taken.
 - Section **Developer**: Show developer tools (checkbox), with the note that it takes effect when Inventor next starts.
 - Footer: error text when a save fails; Save (primary), Cancel.
 
