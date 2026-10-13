@@ -32,6 +32,7 @@ The Inventor side of M3, without the window: open the material library by path, 
 
 - Read spike 067's Results and Recommendations first. Every Inventor member needed is in its confirmed list; anything else must be listed under "not confirmed".
 - `MaterialAsset` does not convert implicitly to `Asset`: cast through `object`.
+- A finish whose `AppearanceName` is null (`(no change)` in the file) keeps the material's appearance: check for null before `AppearanceLookup.Find`, which reports a null name as Missing (task 069).
 - Selection reading: follow `SaveAsReplaceCommand.ReadSelectedOccurrence` (spike 052 and task 060: in-place editing and proxies).
 - Transactions: follow `DocumentEditCommand.RunInTransaction` and task 017's per-edit transactions, as Part Properties does. Command type `kNonShapeEditCmdType` unless the existing code suggests otherwise.
 
