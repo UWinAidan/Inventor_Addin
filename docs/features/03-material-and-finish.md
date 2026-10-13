@@ -40,7 +40,7 @@ Aidan, 2026-10-12 (answers questions 1 to 8 of the earlier list):
 
 ## Libraries
 
-**Starter library** (in the repo, `libraries/`): a small set of common standard materials, for example a few carbon, alloy and stainless steels (some hardened), aluminium alloys, brass, bronze, copper, cast iron and common plastics. Each has our own name in the family, grade, condition pattern (`Aluminum, 6061-T6`), a category, a density, and an appearance from Inventor's Autodesk Appearance Library. Spike 067 found that the add-in can create the library through the Inventor API, so it is generated from a data file in `libraries/` by a developer command, and both the data file and the generated `.adsklib` are committed.
+**Starter library** (in the repo, `libraries/`): a small set of common standard materials, for example a few carbon, alloy and stainless steels (some hardened), aluminium alloys, brass, bronze, copper, cast iron and common plastics. Each has our own name in the family, grade, condition pattern (`Aluminum, 6061-T6`), a category, a density, and an appearance from Inventor's Autodesk Appearance Library. Spike 067 found that the add-in can create the library through the Inventor API, so it is generated from `libraries/starter-materials.csv` by a console tool in `tools/StarterLibraryBuilder`, and both the data file and the generated `libraries/StarterMaterials.adsklib` are committed (task 071).
 
 **Aidan's library** (private, `B:\aidan\AWB_Design_Data\InventorMaterialLibrary.adsklib`): about 135 materials, described here without its contents:
 
@@ -65,7 +65,9 @@ Aidan, 2026-10-12 (answers questions 1 to 8 of the earlier list):
 | DimensionsAfterFinish | Yes or No: whether drawing dimensions apply after finishing |
 | PrintNote | the note for the drawing |
 
-Aidan's first list has 14 finishes. Spike 067 checked its appearance names: only `Zinc` exists as written; the closest real names are in the spike's results. Aidan picks the replacements (question 9).
+Aidan's first list has 14 finishes. Spike 067 checked its appearance names: only `Zinc` existed as written. On 2026-10-12 the list was changed to the spike's suggested real names, and Aidan will edit the file later if he wants others (question 9).
+
+**Finding an appearance by name.** Inventor's Autodesk Appearance Library is searched first, then the other libraries Inventor loads, then the material library the add-in opened. The first library with a match decides; the same appearance listed in two libraries counts once. A name that belongs to two different appearances there is ambiguous (Default, question 10). This order matters: Aidan's library has its own `Zinc`, different from Inventor's.
 
 ## Target window: "Select Material and Finish"
 
@@ -103,7 +105,7 @@ Spike 067 (2026-10-12) settled the Inventor behaviour: opening a library by path
 
 Questions 1 to 8 of the earlier list were answered by Aidan on 2026-10-12 (see "Decided").
 
-9. **Appearance names in the finish list.** Thirteen of the 14 do not exist as written (spike 067 lists the closest real names). Which appearance should each finish use? Until answered, a finish whose appearance is not found is still listed and applied, and the part keeps its material's appearance, with a line in the status and the log (Default).
+9. **Appearance names in the finish list.** Answered 2026-10-12: the suggested names from spike 067 for now; Aidan edits `finishes.csv` later if he wants others. A finish whose appearance is not found is still listed and applied, and the part keeps its material's appearance, with a line in the status and the log (Default).
 10. **Ambiguous appearance names.** Some display names belong to several different appearances (`Yellow`, `Gray`, `Black`, `Satin`). Default: the finish list check reports such a row and the finish keeps the material's appearance, until the row names a unique appearance.
 11. **Where preferred materials are recorded.** Default: clicking the star adds or removes the material in a list in Settings (per PC), saved straight away.
 12. **The *Show paints* checkbox** was in the reference; Aidan did not mention it. Default: kept, ticked by default (paints shown).
@@ -111,3 +113,4 @@ Questions 1 to 8 of the earlier list were answered by Aidan on 2026-10-12 (see "
 14. **Which materials go in the starter library**, and their names. Default: about 20 common materials as listed under "Libraries", with categories matching the finish list's AppliesTo values; Aidan can edit the data file.
 15. **Selected components that are not parts** (sub-assemblies) in an assembly. Default: they are skipped and named in the status line; the command applies to the selected parts only.
 16. **Passivate** applies to stainless steel only, but its AppliesTo is `Steel`, which also lets carbon steels take it. Default: as written, until Aidan adds a stainless category or names the materials.
+17. **The ribbon button.** Default: "Material and Finish", small, in the Properties panel after Mass Update, on the Part and Assembly ribbons (task 075).

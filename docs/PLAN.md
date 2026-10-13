@@ -226,15 +226,35 @@ Not in M2: browser folders (Aidan: no), a templates folder setting (later, with 
 
 Aidan answered the spec's questions on 2026-10-12: a starter library in the repo and his own on the NAS, hardening as part of the material, his finish list `libraries/finishes.csv`, four finish iProperties, one window for both, preferred stars, selected components in assemblies, and a warning in Part Properties. Planned in a local session on Aidan's PC.
 
-Spike 067 runs first and is walked through with Aidan before the rest is planned.
+Spike 067 ran first and was walked through with Aidan. The rest was planned on 2026-10-12 after he accepted the suggested finish appearances for now. Run in a local session on Aidan's PC, in the order below (not number order: 073 needs Python, which this PC lacks).
 
 | Task | Needs | Depends on | Parallel-safe with |
 |---|---|---|---|
 | 067 | **windows** (spike, local session with Aidan) | none | none |
+| 068 | Core | none | 069, 070 |
+| 069 | Core | 068 | 070 |
+| 070 | windows build | none | 068, 069 |
+| 071 | **windows** (drives Inventor) | 068, 070 | none |
+| 072 | Core | 068, 069, 070 | 071, 073 |
+| 073 | **Python with Pillow** (cloud, or Python installed) | none | 068 to 072 |
+| 074 | windows build | 067 to 070, 072 | 071, 073 |
+| 075 | windows build | 072, 073, 074 | none |
+| 076 | windows build | 074, 075 | none |
 
 - [x] 067 Spike: material libraries, materials and appearances (Windows)
+- [ ] 068 Finish list: model, CSV file and validation (Core)
+- [ ] 069 Material list, filters, finish matching and appearance lookup (Core)
+- [ ] 070 Library settings, preferred materials, and the shipped starter files
+- [ ] 071 Starter material library: data file and generator
+- [ ] 072 Material and Finish window view-model (Core)
+- [ ] 073 Ribbon and window icon for Material and Finish
+- [ ] 074 Read the library and apply material and finish in Inventor
+- [ ] 075 Material and Finish command, window and ribbon button
+- [ ] 076 Part Properties: Change material and finish, and the not-from-the-library warning
 
-The rest of M3 is planned after Aidan has seen the spike's results and picked the finish appearances (spec 03, question 9).
+**Order.** 068, 069, 070, 071, 072, 074, then 073 once Python is available, then 075 and 076. If 073 cannot run, 075 stops before it; everything up to 074 does not need it.
+
+Not in M3: print notes on the drawing (M5), Inventor finish features (`FinishReader` stays as a developer export only).
 
 ### M4: Hole generator and hole table wizard (spec 04)
 
