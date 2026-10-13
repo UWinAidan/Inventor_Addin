@@ -28,16 +28,23 @@ namespace InventorAddin.UI
         /// <summary>
         /// Shows <paramref name="window"/> modally over Inventor and returns its dialog result.
         /// <paramref name="headerIconName"/> (one of <c>IconNames</c>) is the icon shown in the window's header tile,
-        /// in the theme the window opens in; with none, the tile stays empty.
+        /// in the theme the window opens in; with none, the tile stays empty. With <paramref name="owner"/>, an add-in
+        /// window that is open, the window is owned by it and opens over it (task 076: Material and Finish from Part
+        /// Properties); otherwise it is owned by Inventor's main window.
         /// </summary>
-        public static bool? ShowDialog(Window window, string? headerIconName = null)
+        public static bool? ShowDialog(Window window, string? headerIconName = null, Window? owner = null)
         {
             if (window == null)
                 throw new ArgumentNullException(nameof(window));
 
             // Read as long so the conversion works whether the interop declares the handle as int or long.
-            long? hwnd = ComSafe.Get(() => (long?)InventorHost.App.MainFrameHWND);
-            if (hwnd.HasValue && hwnd.Value != 0)
+            long? hwnd = owner == null ? ComSafe.Get(() => (long?)InventorHost.App.MainFrameHWND) : null;
+            if (owner != null)
+            {
+                window.Owner = owner;
+                window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            }
+            else if (hwnd.HasValue && hwnd.Value != 0)
             {
                 new WindowInteropHelper(window).Owner = new IntPtr(hwnd.Value);
                 window.WindowStartupLocation = WindowStartupLocation.CenterOwner;

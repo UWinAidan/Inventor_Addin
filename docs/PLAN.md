@@ -250,7 +250,7 @@ Spike 067 ran first and was walked through with Aidan. The rest was planned on 2
 - [x] 073 Ribbon and window icon for Material and Finish
 - [x] 074 Read the library and apply material and finish in Inventor
 - [x] 075 Material and Finish command, window and ribbon button
-- [ ] 076 Part Properties: Change material and finish, and the not-from-the-library warning
+- [x] 076 Part Properties: Change material and finish, and the not-from-the-library warning
 
 **Order.** 068, 069, 070, 071, 072, 074, then 073 once Python is available, then 075 and 076. If 073 cannot run, 075 stops before it; everything up to 074 does not need it.
 

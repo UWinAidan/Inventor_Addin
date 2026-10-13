@@ -83,6 +83,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 Small things noticed while building. None is urgent. The parent turns these into tasks when planning a milestone that touches the same code.
 
 **Material and finish**
+- Applies made through Part Properties' Change are named "Part Properties" in Inventor's Undo list; an optional transaction name on `DocumentEditCommand.RunInTransaction` would fix it. Part Properties keeps `kFilePropertyEditCmdType` though Change now also changes material and appearance; decide whether to switch to `kNonShapeEditCmdType`. Spec 08's Part Properties section should list the Change button and the warning line; a warning colour token and style would set the warning apart from help text. (task 076)
 - Material and Finish window: the list scroll bars stay light in the dark theme (as in Mass Update); the view-model's `CancelCommand` is unused (Cancel closes through `IsCancel`); a missing NAS drive gives the "cannot be read" wording rather than "missing" (add `DriveNotFoundException` to the missing filter); the lists scroll by pixel without virtualizing, fine unless a library is very large. (task 075)
 - The Material and Finish log line names part file names and the library path, while Part Properties keeps file names out of the log; pick one rule for both. (task 074)
 - `MaterialFinishViewModel` tests check that a hidden selection comes back but not that `PropertyChanged` fires for `MaterialListSelection`/`FinishListSelection`; add that if the window ever loses a selection. (task 072 review)

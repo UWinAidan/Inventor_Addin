@@ -12,6 +12,7 @@ using InventorAddin.UI;
 using Forms = System.Windows.Forms;
 using IOException = System.IO.IOException;
 using SysFile = System.IO.File;
+using WpfWindow = System.Windows.Window;
 
 namespace InventorAddin.Commands
 {
@@ -32,11 +33,15 @@ namespace InventorAddin.Commands
     /// <para>
     /// Material, appearance and properties are not geometry, so the command type is <c>kNonShapeEditCmdType</c>.
     /// </para>
+    /// <para>
+    /// Opening the files and showing the window is <see cref="MaterialFinishWindowLauncher"/>, which Part Properties'
+    /// Change button uses too (task 076).
+    /// </para>
     /// </remarks>
     public sealed class MaterialFinishCommand : DocumentEditCommand
     {
         public override string InternalName => CommandNames.MaterialFinish;
-        public override string DisplayName => "Material and Finish";
+        public override string DisplayName => MaterialFinishWindowLauncher.Title;
         public override string Description =>
             "Pick a material and a finish from the library and apply them to this part or the selected parts.";
 
@@ -54,32 +59,95 @@ namespace InventorAddin.Commands
         protected override void Execute(Document doc) =>
             throw new NotSupportedException("Material and Finish runs through Run.");
 
-        protected override void Run(Document doc)
+        protected override void Run(Document doc) =>
+            MaterialFinishWindowLauncher.Show(TargetDocument(doc), edit => RunInTransaction(doc, edit));
+
+        /// <summary>
+        /// The document whose parts are changed: the part being edited in place inside an assembly, otherwise the document
+        /// open in the window (Core decides, <see cref="MaterialFinishTargeting.TargetsEditedPart"/>).
+        /// </summary>
+        private static Document TargetDocument(Document open)
+        {
+            Document? edited = ComSafe.Get(() => InventorHost.ActiveEditDocument);
+            if (edited == null)
+                return open;
+
+            DocumentKind openKind = DocumentKinds.Of(open);
+            DocumentKind editedKind = ComSafe.Get(() => DocumentKinds.Of(edited));
+            return MaterialFinishTargeting.TargetsEditedPart(openKind, editedKind) ? edited : open;
+        }
+    }
+
+    /// <summary>
+    /// Opens the material library and the finish list and shows the Select Material and Finish window for a document's
+    /// parts. Used by <see cref="MaterialFinishCommand"/> and by Part Properties' Change button (task 076), which also
+    /// reads the library when it opens (<see cref="OpenLibrary"/>) for its not-from-the-library warning.
+    /// </summary>
+    internal static class MaterialFinishWindowLauncher
+    {
+        /// <summary>The command's name: the message box title and the window's command name.</summary>
+        public const string Title = "Material and Finish";
+
+        /// <summary>
+        /// Opens the material library set in Settings, or the starter library (<see cref="LibraryPaths.MaterialLibrary"/>).
+        /// Never throws and shows nothing: <paramref name="error"/> is the message to show when the library could not be
+        /// read, and the result is null when the add-in's folder is unknown. Every failure is logged once, here or by
+        /// <see cref="MaterialLibraryReader"/>. Opening a library on the NAS takes about a second (spike 067).
+        /// </summary>
+        public static MaterialLibrary? OpenLibrary(out string? error)
         {
             ILog log = AddinServices.Log;
-            Document target = TargetDocument(doc);
+            if (!TryAddinFolder(log, out string addinFolder, out error))
+                return null;
+
+            var warnings = new List<string>();
+            MaterialLibrary library = MaterialLibraryReader.Open(
+                InventorHost.App, LibraryPaths.MaterialLibrary(AddinServices.Settings, addinFolder), warnings);
+            LogWarnings(log, warnings);
+            error = library.Error;
+
+            // The reader logs a file it could not open; a library that opened but holds no material is logged here.
+            if (error != null && library.Library != null)
+                log.Warn(MaterialFinishTargeting.LogPrefix + error);
+            return library;
+        }
+
+        /// <summary>
+        /// Finds the parts in <paramref name="target"/> (<see cref="MaterialFinishTargets.Find"/>), opens the library and
+        /// the finish list, and shows the window until it closes. Each Apply runs through
+        /// <paramref name="runInTransaction"/>. Returns false, after telling the user why in a message box, when the window
+        /// could not be shown: no part to change, or a file that could not be read.
+        /// </summary>
+        /// <param name="target">The part, or the assembly whose selected parts are changed.</param>
+        /// <param name="runInTransaction">Runs one Apply inside one transaction on the document open in the window.</param>
+        /// <param name="openedLibrary">
+        /// The library already opened by <see cref="OpenLibrary"/> without an error, to save opening it again; null opens it.
+        /// </param>
+        /// <param name="owner">The add-in window to open over; null opens over Inventor.</param>
+        public static bool Show(
+            Document target, Action<Action> runInTransaction, MaterialLibrary? openedLibrary = null, WpfWindow? owner = null)
+        {
+            if (target == null)
+                throw new ArgumentNullException(nameof(target));
+            if (runInTransaction == null)
+                throw new ArgumentNullException(nameof(runInTransaction));
+
+            ILog log = AddinServices.Log;
 
             MaterialFinishTargetPlan<Document> plan = MaterialFinishTargets.Find(target);
             if (plan.StopMessage != null)
             {
-                Show(plan.StopMessage, Forms.MessageBoxIcon.Information);
-                return;
+                ShowMessage(plan.StopMessage, Forms.MessageBoxIcon.Information);
+                return false;
             }
 
-            string addinFolder;
-            try
+            if (!TryAddinFolder(log, out string addinFolder, out string? folderError))
             {
-                addinFolder = AddinServices.AddinFolder;
-            }
-            catch (InvalidOperationException ex)
-            {
-                log.Error(MaterialFinishTargeting.LogPrefix + "the add-in's folder could not be found.", ex);
-                Show(MaterialLibraryMessages.AddinFolderUnknown(ex.Message), Forms.MessageBoxIcon.Error);
-                return;
+                ShowMessage(folderError!, Forms.MessageBoxIcon.Error);
+                return false;
             }
 
             AddinSettings settings = AddinServices.Settings;
-            LibraryPath libraryPath = LibraryPaths.MaterialLibrary(settings, addinFolder);
             LibraryPath finishListPath = LibraryPaths.FinishList(settings, addinFolder);
 
             var warnings = new List<string>();
@@ -87,20 +155,21 @@ namespace InventorAddin.Commands
             AppearanceFinder appearances;
             FinishListReadResult finishList;
 
-            // Opening a library on the NAS takes about a second (spike 067).
             Forms.Cursor? previousCursor = Forms.Cursor.Current;
             Forms.Cursor.Current = Forms.Cursors.WaitCursor;
             try
             {
                 // The library first: its Error stops the command, and the appearance finder needs it opened so the
                 // library gets the last rank (spec 03, "Finding an appearance by name").
-                library = MaterialLibraryReader.Open(InventorHost.App, libraryPath, warnings);
+                library = openedLibrary != null && openedLibrary.Error == null
+                    ? openedLibrary
+                    : MaterialLibraryReader.Open(InventorHost.App, LibraryPaths.MaterialLibrary(settings, addinFolder), warnings);
                 if (library.Error != null)
                 {
                     LogWarnings(log, warnings);
                     Forms.Cursor.Current = previousCursor;
-                    Show(library.Error, Forms.MessageBoxIcon.Warning);
-                    return;
+                    ShowMessage(library.Error, Forms.MessageBoxIcon.Warning);
+                    return false;
                 }
 
                 string? finishListError = ReadFinishList(finishListPath, log, out finishList);
@@ -108,8 +177,8 @@ namespace InventorAddin.Commands
                 {
                     LogWarnings(log, warnings);
                     Forms.Cursor.Current = previousCursor;
-                    Show(finishListError, Forms.MessageBoxIcon.Warning);
-                    return;
+                    ShowMessage(finishListError, Forms.MessageBoxIcon.Warning);
+                    return false;
                 }
 
                 appearances = AppearanceFinder.Read(InventorHost.App, library.Library, warnings);
@@ -126,7 +195,7 @@ namespace InventorAddin.Commands
                 log.Warn(MaterialLibraryMessages.FinishListProblemLogLine(finishListPath, problem));
 
             MaterialFinishCurrent current = MaterialFinishTargets.ReadCurrent(target, plan);
-            var targets = new MaterialFinishTargets(plan, library, appearances, edit => RunInTransaction(doc, edit), log);
+            var targets = new MaterialFinishTargets(plan, library, appearances, runInTransaction, log);
 
             var viewModel = new MaterialFinishViewModel(
                 current,
@@ -138,22 +207,25 @@ namespace InventorAddin.Commands
                 targets,
                 log);
 
-            WindowHost.ShowDialog(new MaterialFinishWindow(viewModel), IconNames.MaterialFinish);
+            WindowHost.ShowDialog(new MaterialFinishWindow(viewModel), IconNames.MaterialFinish, owner);
+            return true;
         }
 
-        /// <summary>
-        /// The document whose parts are changed: the part being edited in place inside an assembly, otherwise the document
-        /// open in the window (Core decides, <see cref="MaterialFinishTargeting.TargetsEditedPart"/>).
-        /// </summary>
-        private static Document TargetDocument(Document open)
+        private static bool TryAddinFolder(ILog log, out string addinFolder, out string? error)
         {
-            Document? edited = ComSafe.Get(() => InventorHost.ActiveEditDocument);
-            if (edited == null)
-                return open;
-
-            DocumentKind openKind = DocumentKinds.Of(open);
-            DocumentKind editedKind = ComSafe.Get(() => DocumentKinds.Of(edited));
-            return MaterialFinishTargeting.TargetsEditedPart(openKind, editedKind) ? edited : open;
+            try
+            {
+                addinFolder = AddinServices.AddinFolder;
+                error = null;
+                return true;
+            }
+            catch (InvalidOperationException ex)
+            {
+                log.Error(MaterialFinishTargeting.LogPrefix + "the add-in's folder could not be found.", ex);
+                addinFolder = string.Empty;
+                error = MaterialLibraryMessages.AddinFolderUnknown(ex.Message);
+                return false;
+            }
         }
 
         /// <summary>
@@ -209,7 +281,7 @@ namespace InventorAddin.Commands
             warnings.Clear();
         }
 
-        private void Show(string text, Forms.MessageBoxIcon icon) =>
-            Forms.MessageBox.Show(text, DisplayName, Forms.MessageBoxButtons.OK, icon);
+        private static void ShowMessage(string text, Forms.MessageBoxIcon icon) =>
+            Forms.MessageBox.Show(text, Title, Forms.MessageBoxButtons.OK, icon);
     }
 }
