@@ -1,4 +1,5 @@
 using InventorAddin.Core.Materials;
+using InventorAddin.Core.Models;
 
 namespace InventorAddin.Core.Tests.Materials;
 
@@ -9,6 +10,23 @@ public sealed class MaterialFinishTargetingTests
 
     private static Finish F(string code, string? appearance) =>
         new(code, "Test finish " + code, FinishKind.Plating, Array.Empty<string>(), appearance, "0", "0", false, "");
+
+    // TargetsEditedPart (task 075)
+
+    [Theory]
+    [InlineData(DocumentKind.Assembly, DocumentKind.Part, true)]
+    [InlineData(DocumentKind.Assembly, DocumentKind.SheetMetalPart, true)]
+    [InlineData(DocumentKind.WeldmentAssembly, DocumentKind.Part, true)]
+    [InlineData(DocumentKind.Assembly, DocumentKind.Assembly, false)]
+    [InlineData(DocumentKind.Assembly, DocumentKind.WeldmentAssembly, false)]
+    [InlineData(DocumentKind.Part, DocumentKind.Part, false)]
+    [InlineData(DocumentKind.SheetMetalPart, DocumentKind.SheetMetalPart, false)]
+    [InlineData(DocumentKind.Assembly, DocumentKind.Unknown, false)]
+    [InlineData(DocumentKind.Drawing, DocumentKind.Part, false)]
+    public void TargetsEditedPart_OnlyForAPartEditedInPlaceInAnAssembly(DocumentKind open, DocumentKind edited, bool expected)
+    {
+        Assert.Equal(expected, MaterialFinishTargeting.TargetsEditedPart(open, edited));
+    }
 
     // ForPart
 

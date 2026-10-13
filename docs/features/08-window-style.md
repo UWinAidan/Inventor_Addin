@@ -122,6 +122,16 @@ Every window has the same three bands:
 - One section, no heading: Built, Inventor version, Log folder, as label and text rows. The log folder is in the identifier font.
 - Footer: Close (primary).
 
+**Select Material and Finish** (spec 03, "Target window"; task 075)
+
+- Header: the `MaterialFinish` icon; the part's file name, or "N parts selected" in an assembly, as the title. Under it, the current material and finish with its code, for example "Steel, 1018 · Hard chrome (HC)", or "No material", "No finish", "Varies".
+- Section **Filter**: Category (dropdown, "All" first), then *Preferred only* and *Show paints* as a line of checkboxes.
+- Two columns side by side, 12 apart. Left, section **Materials**: Find material (search box), then the materials list, each entry a star (filled when preferred; click it, or press Space on the entry, to change it) and the name. Right, section **Finishes**: Find finish, then the finishes list, each entry the name with its code on the right in the identifier font. The lists are pick lists: 260 wide and 280 tall, so the window keeps its size while filters change, and they scroll.
+- Row **Selected**, always shown: the selected material and finish, "No material selected" in placeholder colour when there is none, and a muted note when a filter or search hides the selection from its list.
+- Footer: status line (its tooltip lists every note behind it); Apply, OK (primary), Cancel.
+- Keyboard: Enter in a search box moves to its list. Double-clicking a material moves to Finishes; double-clicking a finish does OK. Access keys: C, P, S, M, F, A.
+- Shared pieces added for it in `Styles.xaml`: `PickList` and `PickListItem` (a list to pick one entry from: input fill and border, Divider fill and semibold on the selected entry, an Accent outline on the entry with keyboard focus), `StarButton`, and `LeftColumn` (12 to the right). `DialogFooter` gained `StatusToolTip`, a tooltip on the status line only.
+
 ## Part number display
 
 Decided by Aidan on 2026-10-06: a file that has not been given a part number must not show its name as if it were one.
@@ -142,7 +152,7 @@ Replaced in M2 (task 039) by spec 02, "Part number": a Part Number in the `AWB-1
 
 - Every ribbon button gets an icon in 16 px and 32 px. The ribbon shows the 32 px icon on a large button and the 16 px icon on a small one. The buttons on the ribbon today, by panel, with their size (sizes: Aidan, 2026-10-11, spec 02; panels: Aidan, 2026-10-12, spec 01):
   - Create: New Part (large), Save As Copy (small), Save As and Replace (small)
-  - Properties: Part Properties (large), Mass Update (small)
+  - Properties: Part Properties (large), Mass Update (small), Material and Finish (small, icon `MaterialFinish`, task 073; button task 075)
   - Drawing: Create Print (large)
   - Developer: Export Model Data (small), Export Libraries (small)
   - AWB: Settings (small), About (small)

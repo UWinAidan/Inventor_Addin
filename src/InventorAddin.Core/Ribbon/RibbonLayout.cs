@@ -65,6 +65,8 @@ public static class RibbonLayout
             new(CommandNames.PartProperties, ButtonSize.Large, IconNames.PartProperties, ModelEnvironments),
             // Spec 02, "Commands: Mass Update": a folder of files, so also with no document open.
             new(CommandNames.MassUpdate, ButtonSize.Small, IconNames.MassUpdate, NewFileEnvironments),
+            // Spec 03, question 17 (Default; task 075): the active part, or the selected parts of an assembly.
+            new(CommandNames.MaterialFinish, ButtonSize.Small, IconNames.MaterialFinish, ModelEnvironments),
         }),
         new(RibbonIds.DrawingPanelId, RibbonIds.DrawingPanelName, DeveloperOnly: false, new ButtonDefinition[]
         {

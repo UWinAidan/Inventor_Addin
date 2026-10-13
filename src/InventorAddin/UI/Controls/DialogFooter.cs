@@ -19,6 +19,9 @@ namespace InventorAddin.UI.Controls
         public static readonly DependencyProperty IsErrorProperty = DependencyProperty.Register(
             nameof(IsError), typeof(bool), typeof(DialogFooter), new FrameworkPropertyMetadata(false));
 
+        public static readonly DependencyProperty StatusToolTipProperty = DependencyProperty.Register(
+            nameof(StatusToolTip), typeof(object), typeof(DialogFooter), new FrameworkPropertyMetadata(null));
+
         static DialogFooter()
         {
             FocusableProperty.OverrideMetadata(typeof(DialogFooter), new FrameworkPropertyMetadata(false));
@@ -37,6 +40,16 @@ namespace InventorAddin.UI.Controls
         {
             get => (bool)GetValue(IsErrorProperty);
             set => SetValue(IsErrorProperty, value);
+        }
+
+        /// <summary>
+        /// The tooltip of the status line only (not of the buttons), for example every note behind a short status
+        /// (Material and Finish, task 075). Null shows none.
+        /// </summary>
+        public object? StatusToolTip
+        {
+            get => GetValue(StatusToolTipProperty);
+            set => SetValue(StatusToolTipProperty, value);
         }
 
         // Always wrap, so ItemContainerStyle (the gap between buttons) applies even to a button with its own Style.

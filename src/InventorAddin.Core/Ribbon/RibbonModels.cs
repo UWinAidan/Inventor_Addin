@@ -95,6 +95,7 @@ public static class CommandNames
     public const string SaveAsReplace = Prefix + "SaveAsReplace";
     public const string CreatePrint = Prefix + "CreatePrint";
     public const string MassUpdate = Prefix + "MassUpdate";
+    public const string MaterialFinish = Prefix + "MaterialFinish";
 
     private const string Prefix = Branding.IdPrefix + "_";
 }
@@ -119,6 +120,6 @@ public static class IconNames
     public const string CreatePrint = "CreatePrint";
     public const string MassUpdate = "MassUpdate";
 
-    // M3 (task 073). Material and Finish: its command's own task adds the layout entry.
+    // M3 (task 073). Material and Finish; task 075 added its layout entry.
     public const string MaterialFinish = "MaterialFinish";
 }

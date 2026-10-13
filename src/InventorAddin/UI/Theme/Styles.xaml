@@ -8,6 +8,7 @@
 -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime"
                     xmlns:controls="clr-namespace:InventorAddin.UI.Controls">
 
     <!-- ===== Window ===== -->
@@ -603,6 +604,172 @@
         <Setter Property="Margin" Value="8,0,0,0" />
     </Style>
 
+    <!-- ===== Pick lists (Material and Finish, task 075) ===== -->
+
+    <!--
+        Keyboard focus on an entry in a pick list: the 2 px Accent outline drawn on the entry itself, not outside it,
+        so the list's edge does not cut it off.
+    -->
+    <Style x:Key="PickListItemFocusOutline">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Border BorderThickness="2"
+                            CornerRadius="2"
+                            BorderBrush="{DynamicResource AccentBrush}"
+                            SnapsToDevicePixels="True" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        An entry in a pick list. The selected entry gets the Divider fill and is semibold, as in a dropdown; the entry
+        under the mouse gets the thin TextPrimary veil of the buttons. The window's item template lays out the entry.
+    -->
+    <Style x:Key="PickListItem" TargetType="{x:Type ListBoxItem}">
+        <Setter Property="FocusVisualStyle" Value="{StaticResource PickListItemFocusOutline}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextStrongBrush}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Padding" Value="6,4,6,4" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ListBoxItem}">
+                    <Grid>
+                        <Border x:Name="Highlight" Background="{TemplateBinding Background}" CornerRadius="2" />
+                        <Border x:Name="Veil"
+                                Background="{DynamicResource TextPrimaryBrush}"
+                                CornerRadius="2"
+                                Opacity="0"
+                                IsHitTestVisible="False" />
+                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Veil" Property="Opacity" Value="0.06" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Highlight" Property="Background" Value="{DynamicResource DividerBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="FontWeight" Value="SemiBold" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!--
+        A list to pick one entry from: the fill and border of a text box, 260 wide and 280 tall, so two fit side by side
+        in the widest window and the window keeps its size while filters change the entries. It scrolls up and down;
+        long entries are cut short by the window's item template, never scrolled sideways.
+    -->
+    <Style x:Key="PickList" TargetType="{x:Type ListBox}">
+        <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextStrongBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="2" />
+        <Setter Property="Width" Value="260" />
+        <Setter Property="Height" Value="280" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <!-- 9 below, as after a row, so the section ends 18 before what follows. -->
+        <Setter Property="Margin" Value="0,0,0,9" />
+        <Setter Property="SelectionMode" Value="Single" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="ItemContainerStyle" Value="{StaticResource PickListItem}" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ListBox}">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="4"
+                            SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+                        <ScrollViewer Padding="{TemplateBinding Padding}"
+                                      Focusable="False"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      VerticalScrollBarVisibility="Auto">
+                            <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                        </ScrollViewer>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="BorderBrush" Value="{DynamicResource DisabledBorderBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource DisabledTextBrush}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!--
+        The left of two columns side by side (the Materials and Finishes lists): 12 to the right column, the gap
+        between a label and its value.
+    -->
+    <Style x:Key="LeftColumn" TargetType="{x:Type FrameworkElement}">
+        <Setter Property="Margin" Value="0,0,12,0" />
+    </Style>
+
+    <!--
+        The star before a material in a pick list: a glyph with no border or fill, muted, 6 before the name. Tag true
+        (the material is preferred) draws it in TextStrong. Hover lays the button veil. The window sets the glyph.
+    -->
+    <Style x:Key="StarButton" TargetType="{x:Type Button}">
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusOutline}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+        <Setter Property="Padding" Value="2,0,2,0" />
+        <Setter Property="Margin" Value="0,0,6,0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Grid>
+                        <Border Background="{TemplateBinding Background}" CornerRadius="2" />
+                        <Border x:Name="Veil"
+                                Background="{DynamicResource TextPrimaryBrush}"
+                                CornerRadius="2"
+                                Opacity="0"
+                                IsHitTestVisible="False" />
+                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Veil" Property="Opacity" Value="0.08" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Veil" Property="Opacity" Value="0.16" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="Tag">
+                <Trigger.Value>
+                    <sys:Boolean>True</sys:Boolean>
+                </Trigger.Value>
+                <Setter Property="Foreground" Value="{DynamicResource TextStrongBrush}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
     <!-- ===== Shared pieces (UI/Controls) ===== -->
 
     <!-- Header band: icon tile, title, subline; 18 above the first section. -->
@@ -730,12 +897,14 @@
                         <TextBlock x:Name="StatusLine"
                                    Grid.Column="0"
                                    Style="{DynamicResource StatusText}"
-                                   Text="{TemplateBinding Status}" />
+                                   Text="{TemplateBinding Status}"
+                                   ToolTip="{TemplateBinding StatusToolTip}" />
                         <TextBlock x:Name="ErrorLine"
                                    Grid.Column="0"
                                    Visibility="Collapsed"
                                    Style="{DynamicResource ErrorStatusText}"
-                                   Text="{TemplateBinding Status}" />
+                                   Text="{TemplateBinding Status}"
+                                   ToolTip="{TemplateBinding StatusToolTip}" />
                         <ItemsPresenter Grid.Column="1" VerticalAlignment="Center" />
                     </Grid>
                     <ControlTemplate.Triggers>

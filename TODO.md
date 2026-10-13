@@ -83,6 +83,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 Small things noticed while building. None is urgent. The parent turns these into tasks when planning a milestone that touches the same code.
 
 **Material and finish**
+- Material and Finish window: the list scroll bars stay light in the dark theme (as in Mass Update); the view-model's `CancelCommand` is unused (Cancel closes through `IsCancel`); a missing NAS drive gives the "cannot be read" wording rather than "missing" (add `DriveNotFoundException` to the missing filter); the lists scroll by pixel without virtualizing, fine unless a library is very large. (task 075)
 - The Material and Finish log line names part file names and the library path, while Part Properties keeps file names out of the log; pick one rule for both. (task 074)
 - `MaterialFinishViewModel` tests check that a hidden selection comes back but not that `PropertyChanged` fires for `MaterialListSelection`/`FinishListSelection`; add that if the window ever loses a selection. (task 072 review)
 - The starter library (`libraries/StarterMaterials.adsklib`, about 1 MB) changes completely on every regeneration; regenerate and commit it only when `starter-materials.csv` changes. Properties other than density come from the stock template; per-grade strength would need more CSV columns. (task 071)

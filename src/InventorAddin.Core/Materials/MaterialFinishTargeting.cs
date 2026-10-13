@@ -1,3 +1,5 @@
+using InventorAddin.Core.Models;
+
 namespace InventorAddin.Core.Materials;
 
 /// <summary>Why a document or a selected component is not given the material and finish.</summary>
@@ -70,6 +72,19 @@ public static class MaterialFinishTargeting
 
     /// <summary>Prefix of every log line the targets write.</summary>
     public const string LogPrefix = "Material and Finish: ";
+
+    /// <summary>
+    /// True when the command should work on the part being edited rather than on the document open in the window:
+    /// the window holds an assembly and a part inside it is edited in place (Default, task 075, as Part Properties
+    /// does). Then the part is the target, whatever is selected. Otherwise the open document is used: a part
+    /// document, or the assembly's selection (also while a sub-assembly is edited in place, since the selection is
+    /// held by the top-level assembly, spike 052).
+    /// </summary>
+    /// <param name="open">The kind of the document open in the window (<c>ActiveDocument</c>).</param>
+    /// <param name="edited">The kind of the document being edited (<c>ActiveEditDocument</c>).</param>
+    public static bool TargetsEditedPart(DocumentKind open, DocumentKind edited) =>
+        open is DocumentKind.Assembly or DocumentKind.WeldmentAssembly
+        && edited is DocumentKind.Part or DocumentKind.SheetMetalPart;
 
     /// <summary>
     /// The plan for a part document: the part itself, or a stop message when it cannot be changed.

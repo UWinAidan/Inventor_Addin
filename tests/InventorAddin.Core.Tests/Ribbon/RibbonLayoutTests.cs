@@ -61,6 +61,7 @@ public sealed class RibbonLayoutTests
         Assert.Equal($"{Branding.IdPrefix}_SaveAsReplace", CommandNames.SaveAsReplace);
         Assert.Equal($"{Branding.IdPrefix}_CreatePrint", CommandNames.CreatePrint);
         Assert.Equal($"{Branding.IdPrefix}_MassUpdate", CommandNames.MassUpdate);
+        Assert.Equal($"{Branding.IdPrefix}_MaterialFinish", CommandNames.MaterialFinish);
     }
 
     public static TheoryData<RibbonEnvironment, bool> DocumentEnvironmentsAndSetting()
@@ -115,14 +116,14 @@ public sealed class RibbonLayoutTests
             (RibbonEnvironment.Part, false) => new[]
             {
                 Create(Large("NewPart"), Small("SaveAsCopy")),
-                Properties(Large("PartProperties"), Small("MassUpdate")),
+                Properties(Large("PartProperties"), Small("MassUpdate"), Small("MaterialFinish")),
                 DrawingPanel(Large("CreatePrint")),
                 Awb(),
             },
             (RibbonEnvironment.Part, true) => new[]
             {
                 Create(Large("NewPart"), Small("SaveAsCopy")),
-                Properties(Large("PartProperties"), Small("MassUpdate")),
+                Properties(Large("PartProperties"), Small("MassUpdate"), Small("MaterialFinish")),
                 DrawingPanel(Large("CreatePrint")),
                 Developer(Small("ExportModelData"), Small("ExportLibraries")),
                 Awb(),
@@ -130,14 +131,14 @@ public sealed class RibbonLayoutTests
             (RibbonEnvironment.Assembly, false) => new[]
             {
                 Create(Large("NewPart"), Small("SaveAsCopy"), Small("SaveAsReplace")),
-                Properties(Large("PartProperties"), Small("MassUpdate")),
+                Properties(Large("PartProperties"), Small("MassUpdate"), Small("MaterialFinish")),
                 DrawingPanel(Large("CreatePrint")),
                 Awb(),
             },
             (RibbonEnvironment.Assembly, true) => new[]
             {
                 Create(Large("NewPart"), Small("SaveAsCopy"), Small("SaveAsReplace")),
-                Properties(Large("PartProperties"), Small("MassUpdate")),
+                Properties(Large("PartProperties"), Small("MassUpdate"), Small("MaterialFinish")),
                 DrawingPanel(Large("CreatePrint")),
                 Developer(Small("ExportModelData"), Small("ExportLibraries")),
                 Awb(),
@@ -279,6 +280,7 @@ public sealed class RibbonLayoutTests
     [InlineData(CommandNames.SaveAsCopy, IconNames.SaveAsCopy)]
     [InlineData(CommandNames.SaveAsReplace, IconNames.SaveAsReplace)]
     [InlineData(CommandNames.MassUpdate, IconNames.MassUpdate)]
+    [InlineData(CommandNames.MaterialFinish, IconNames.MaterialFinish)]
     public void EachCommand_UsesItsIconName_InEveryEnvironment(string command, string iconName)
     {
         var buttons = RibbonEnvironments.All
@@ -302,6 +304,7 @@ public sealed class RibbonLayoutTests
     [InlineData(CommandNames.Settings, ButtonSize.Small)]
     [InlineData(CommandNames.About, ButtonSize.Small)]
     [InlineData(CommandNames.MassUpdate, ButtonSize.Small)]
+    [InlineData(CommandNames.MaterialFinish, ButtonSize.Small)]
     [InlineData(CommandNames.ExportModelData, ButtonSize.Small)]
     [InlineData(CommandNames.ExportLibraries, ButtonSize.Small)]
     public void EachCommand_HasItsSize_InEveryEnvironment(string command, ButtonSize size)
@@ -331,7 +334,7 @@ public sealed class RibbonLayoutTests
             new[]
             {
                 CommandNames.About, CommandNames.CreatePrint, CommandNames.ExportLibraries, CommandNames.ExportModelData,
-                CommandNames.MassUpdate, CommandNames.NewPart, CommandNames.PartProperties, CommandNames.SaveAsCopy,
+                CommandNames.MassUpdate, CommandNames.MaterialFinish, CommandNames.NewPart, CommandNames.PartProperties, CommandNames.SaveAsCopy,
                 CommandNames.SaveAsReplace, CommandNames.Settings,
             }.OrderBy(n => n, StringComparer.Ordinal),
             commands);
@@ -351,6 +354,7 @@ public sealed class RibbonLayoutTests
         Assert.Equal(CommandNames.SaveAsCopy, prefix + IconNames.SaveAsCopy);
         Assert.Equal(CommandNames.SaveAsReplace, prefix + IconNames.SaveAsReplace);
         Assert.Equal(CommandNames.MassUpdate, prefix + IconNames.MassUpdate);
+        Assert.Equal(CommandNames.MaterialFinish, prefix + IconNames.MaterialFinish);
     }
 
     [Fact]
@@ -363,7 +367,7 @@ public sealed class RibbonLayoutTests
             .Select(g => g.First().IconName)
             .ToList();
 
-        Assert.Equal(10, iconNames.Count);
+        Assert.Equal(11, iconNames.Count);
         Assert.Equal(iconNames.Count, iconNames.Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
 

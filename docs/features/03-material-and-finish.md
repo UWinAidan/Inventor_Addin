@@ -114,3 +114,4 @@ Questions 1 to 8 of the earlier list were answered by Aidan on 2026-10-12 (see "
 15. **Selected components that are not parts** (sub-assemblies) in an assembly. Default: they are skipped and named in the status line; the command applies to the selected parts only.
 16. **Passivate** applies to stainless steel only, but its AppliesTo is `Steel`, which also lets carbon steels take it. Default: as written, until Aidan adds a stainless category or names the materials.
 17. **The ribbon button.** Default: "Material and Finish", small, in the Properties panel after Mass Update, on the Part and Assembly ribbons (task 075).
+18. **A part edited in place inside an assembly.** Default (task 075): the part being edited is the target, as Part Properties does, whatever is selected; the transaction is still started on the assembly open in the window, so one Undo reverts it. While a sub-assembly is edited in place, the selection of the top-level assembly is used.
