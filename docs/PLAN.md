@@ -246,7 +246,7 @@ Spike 067 ran first and was walked through with Aidan. The rest was planned on 2
 - [x] 069 Material list, filters, finish matching and appearance lookup (Core)
 - [x] 070 Library settings, preferred materials, and the shipped starter files
 - [x] 071 Starter material library: data file and generator
-- [ ] 072 Material and Finish window view-model (Core)
+- [x] 072 Material and Finish window view-model (Core)
 - [ ] 073 Ribbon and window icon for Material and Finish
 - [ ] 074 Read the library and apply material and finish in Inventor
 - [ ] 075 Material and Finish command, window and ribbon button

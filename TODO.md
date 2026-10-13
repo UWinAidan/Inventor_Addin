@@ -83,6 +83,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 Small things noticed while building. None is urgent. The parent turns these into tasks when planning a milestone that touches the same code.
 
 **Material and finish**
+- `MaterialFinishViewModel` tests check that a hidden selection comes back but not that `PropertyChanged` fires for `MaterialListSelection`/`FinishListSelection`; add that if the window ever loses a selection. (task 072 review)
 - The starter library (`libraries/StarterMaterials.adsklib`, about 1 MB) changes completely on every regeneration; regenerate and commit it only when `starter-materials.csv` changes. Properties other than density come from the stock template; per-grade strength would need more CSV columns. (task 071)
 - The Browse buttons beside Material library and Finish list have no access key (every letter of "Browse" is taken); relabel or leave. (task 070)
 - `CsvTable` (task 068) repeats the CSV splitting loop in `RegisterCsv`; `RegisterCsv.Read` could use `CsvTable.Parse`. (task 068)

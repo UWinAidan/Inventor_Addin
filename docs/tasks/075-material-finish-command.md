@@ -33,6 +33,8 @@ Aidan can pick a material and finish for a part, or for the selected parts of an
 
 - Follow `PartPropertiesCommand` and `MassUpdateCommand` for opening a window from a command, and their windows for list and status styling.
 - The command's `CanRunOn`: parts and assemblies.
+- Binding the lists (task 072): bind each list box's `SelectedItem` to `MaterialListSelection` and `FinishListSelection`, never to `SelectedMaterial` or `SelectedFinish`, so a selection hidden by a filter is kept. Do not set `IsSynchronizedWithCurrentItem`. Show `SelectionText` at all times (for example under the lists), since Ctrl+click can leave a list box showing nothing while the selection is kept. Bind the status tooltip to `StatusDetails` and the error style to `StatusIsError`.
+- Read the finish list file through `File.ReadAllText`; reading fails with a message naming the file. Log each `FinishListProblem` once (the view-model does not log them).
 
 ## Verification
 
@@ -50,6 +52,7 @@ Filled in by the implementer.
   6. Pick an aluminium and Anodize Type II, black: black anodized look. Then pick None: the four properties are gone and the part shows its material's appearance.
   7. Star two materials, tick Preferred only: only they show. Close and rerun: still starred and Preferred only is ticked.
   8. Search "6061" in Materials and "anod" in Finishes: the lists filter.
+  9a. Pick a steel and a paint finish, untick Show paints, Apply: the paint is applied. Change Category so the selected material is hidden, then back: the row is selected again.
   9. Assembly with two parts and a sub-assembly: run with nothing selected: the message says to select parts. Select both parts and the sub-assembly, run: header "2 parts selected", Apply changes both parts; the status notes the skipped sub-assembly. One Undo reverts both.
   10. Select two occurrences of the same part: header "1 part selected".
   11. In Settings, point Material library at `B:\aidan\AWB_Design_Data\InventorMaterialLibrary.adsklib`: rerun: your own materials and categories are listed (opening takes about a second).
