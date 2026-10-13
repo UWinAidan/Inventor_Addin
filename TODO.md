@@ -22,7 +22,7 @@ Last updated: 2026-10-12
 - [ ] Task 070, Settings: Material library and Finish list rows, Browse, a missing file refused on Save (6 steps)
 - [ ] Task 071: open `libraries\StarterMaterials.adsklib` in the Material Browser; the materials show under their categories with sensible appearances
 - [ ] Task 073: the Material and Finish icon reads on the ribbon in light and dark
-- [ ] Task 075, Material and Finish: the button, filters, stars, apply and one Undo (material, appearance and the four Finish iProperties), assemblies with selected parts, your NAS library, a bad or missing finish list, keyboard and themes, editing in place (23 steps)
+- [ ] Task 075, Material and Finish: the button, filters, stars, apply and one Undo (material, appearance and the four Finish iProperties), assemblies with selected parts, your NAS library, a bad or missing finish list, keyboard and themes, editing in place (24 steps)
 - [ ] Task 076, Part Properties: Change opens the window over it and refreshes, the "Not from the material library" warning, pending edits kept, Undo order (14 steps)
 
 **M2 run 1** (full steps in each task's Verification section). Aidan's run 1 checks found three things, now tasks 049 to 051; tick the rest here when confirmed
