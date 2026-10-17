@@ -91,3 +91,4 @@ New rows, in a new collapsible section "Holes" (Default):
 3. ~~**Dowel and precision as a type.**~~ Answered 2026-10-17 (Aidan): no separate Type; a dowel is the Clearance type with Standard AWB Dowel.
 4. ~~**Several holes at once.**~~ Answered 2026-10-17 (Aidan, spike 081): yes, one feature with all the picked centres.
 5. ~~**Edit AWB Hole on a hole made by Inventor's command.**~~ Answered 2026-10-17 (Aidan): it opens in AWB Hole and becomes an AWB hole on OK.
+6. **Seat sizes for a tapped hole.** "Types and seats" lets a tapped hole have a counterbore or countersink, but the Tapped tab has no seat sizes, and the Counterbore and Countersink tabs are keyed by clearance size and screw (`M6`, `#10`, `SHCS`), not by thread (`M6`, `#10-32 UNF`). Where should a tapped hole's seat diameter, depth and angle come from? Until this is answered, Core refuses a seat on a tapped hole with a message (task 084).

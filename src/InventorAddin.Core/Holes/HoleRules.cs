@@ -1,0 +1,513 @@
+using System.Globalization;
+
+namespace InventorAddin.Core.Holes;
+
+/// <summary>The window field a <see cref="HoleCheck"/> is about, so the window can show the message beside it.</summary>
+public enum HoleField
+{
+    Centres,
+    Size,
+    Fastener,
+    Seat,
+    Tolerance,
+    Depth,
+    ThreadDepth,
+    DrillDepth,
+    DrillPoint,
+}
+
+/// <summary>One reason a hole cannot be built, with the message the window shows.</summary>
+public sealed record HoleCheck(HoleField Field, string Message)
+{
+    public override string ToString() => Message;
+}
+
+/// <summary>
+/// What <see cref="HoleRules.Build"/> found. <see cref="Geometry"/> is null when there are problems; nothing reaches
+/// Inventor then. <see cref="Resolved"/> is the spec normalised, with every default the rules took filled in (the
+/// fastener, tolerance, drill point and tapped depths), which is what the add-in stores on the hole.
+/// </summary>
+public sealed record HoleBuildResult(HoleGeometry? Geometry, HoleSpec Resolved, IReadOnlyList<HoleCheck> Problems)
+{
+    public bool Succeeded => Geometry is not null;
+}
+
+/// <summary>
+/// Turns a <see cref="HoleSpec"/> and the hole workbook into the <see cref="HoleGeometry"/> Inventor needs, and checks
+/// it first (spec 09, "Types and seats"; spike 081 round 6: Inventor refuses some values, such as a hole larger than
+/// its counterbore, and the window must not send them).
+/// Rows are found by units and size, ignoring case and surrounding spaces; rows hidden with <c>Show = N</c> are still
+/// found, so a hole made before its size was hidden can be opened and kept.
+/// </summary>
+public static class HoleRules
+{
+    /// <summary>
+    /// Nominal sizes are rounded to this many decimals of a millimetre before ISO 286 limits are worked out, so a
+    /// size such as 18.000000000000004 stays in its step (task 083).
+    /// </summary>
+    public const int IsoNominalDecimalsMm = 6;
+
+    /// <summary>
+    /// Works out the geometry of a hole with <paramref name="centreCount"/> picked hole centres, or the problems that
+    /// stop it being built.
+    /// </summary>
+    public static HoleBuildResult Build(HoleSpec spec, HoleWorkbook workbook, int centreCount)
+    {
+        ArgumentNullException.ThrowIfNull(spec);
+        ArgumentNullException.ThrowIfNull(workbook);
+
+        var builder = new Builder(spec.Normalised(), workbook);
+        if (centreCount < 1)
+        {
+            builder.Problem(HoleField.Centres, "Pick at least one hole centre.");
+        }
+
+        return builder.Build();
+    }
+
+    /// <summary>
+    /// The Precision Tol row for the units, fit and name; a null or blank name takes the row marked Default, else the
+    /// first. Null when there is none.
+    /// </summary>
+    public static PrecisionToleranceRow? FindTolerance(
+        HoleWorkbook workbook, HoleUnits units, PrecisionFit fit, string? name)
+    {
+        ArgumentNullException.ThrowIfNull(workbook);
+
+        var rows = workbook.PrecisionTolerances.Where(r => r.Units == units && r.Fit == fit).ToList();
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            return rows.FirstOrDefault(r => Same(r.Name, name));
+        }
+
+        return rows.FirstOrDefault(r => r.IsDefault) ?? rows.FirstOrDefault();
+    }
+
+    /// <summary>
+    /// The Drill Point row by name; a null or blank name takes the shown row marked Default, else the first shown row.
+    /// Null when there is none.
+    /// </summary>
+    public static DrillPointRow? FindDrillPoint(HoleWorkbook workbook, string? name)
+    {
+        ArgumentNullException.ThrowIfNull(workbook);
+
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            return workbook.DrillPoints.FirstOrDefault(r => Same(r.Name, name));
+        }
+
+        var shown = workbook.DrillPoints.Where(r => !r.Hidden).ToList();
+        return shown.FirstOrDefault(r => r.IsDefault) ?? shown.FirstOrDefault();
+    }
+
+    /// <summary>A length in a row's units, in centimetres: millimetres divided by 10, inches times 2.54.</summary>
+    public static double ToCm(decimal value, HoleUnits units) =>
+        (double)(units == HoleUnits.Metric ? value / 10m : value * 2.54m);
+
+    /// <summary>A nominal size in millimetres, rounded for <see cref="Iso286.HoleLimits"/>.</summary>
+    public static double IsoNominalMm(decimal nominal, HoleUnits units) =>
+        Math.Round((double)(units == HoleUnits.Metric ? nominal : nominal * 25.4m), IsoNominalDecimalsMm);
+
+    private static bool Same(string a, string? b) =>
+        string.Equals(a.Trim(), b?.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    private static string UnitsName(HoleUnits units) => units == HoleUnits.Metric ? "Metric" : "Imperial";
+
+    private static string Length(decimal value, HoleUnits units) =>
+        value.ToString("0.####", CultureInfo.InvariantCulture) + (units == HoleUnits.Metric ? " mm" : " in");
+
+    private sealed class Builder
+    {
+        private readonly HoleSpec spec;
+        private readonly HoleWorkbook workbook;
+        private readonly List<HoleCheck> _problems = [];
+        private HoleSpec _resolved;
+
+        // Everything below is in the spec's units until the geometry is made.
+        private decimal? _holeDiameter;
+        private decimal? _depth;
+        private decimal? _cboreDiameter;
+        private decimal? _cboreDepth;
+        private decimal? _csinkDiameter;
+        private decimal? _csinkAngleDeg;
+        private HoleDrillPoint? _drillPoint;
+        private HoleThread? _thread;
+        private HoleTolerance? _tolerance;
+        private HoleColour? _colour;
+
+        public Builder(HoleSpec spec, HoleWorkbook workbook)
+        {
+            this.spec = spec;
+            this.workbook = workbook;
+            _resolved = spec;
+        }
+
+        private HoleUnits Units => spec.Units;
+
+        private string UnitsText => UnitsName(Units);
+
+        public void Problem(HoleField field, string message) => _problems.Add(new HoleCheck(field, message));
+
+        public HoleBuildResult Build()
+        {
+            if (string.IsNullOrWhiteSpace(spec.Size))
+            {
+                Problem(HoleField.Size, "Pick a size.");
+            }
+            else
+            {
+                switch (spec.Kind)
+                {
+                    case HoleKind.Clearance when spec.Seat == HoleSeat.None:
+                        BuildClearance();
+                        break;
+                    case HoleKind.Clearance when spec.Seat == HoleSeat.Counterbore:
+                        BuildCounterbore();
+                        break;
+                    case HoleKind.Clearance:
+                        BuildCountersink();
+                        break;
+                    case HoleKind.Tapped:
+                        BuildTapped();
+                        break;
+                    case HoleKind.Dowel:
+                        BuildDowel();
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(spec), spec.Kind, null);
+                }
+            }
+
+            if (spec.IsBlind)
+            {
+                ResolveDepthAndDrillPoint();
+            }
+
+            CheckSizes();
+
+            if (_problems.Count > 0 || _holeDiameter is not { } diameter)
+            {
+                return new HoleBuildResult(null, _resolved, _problems.AsReadOnly());
+            }
+
+            var geometry = new HoleGeometry(
+                spec.Kind,
+                spec.Seat,
+                spec.Termination,
+                spec.Flip,
+                ToCm(diameter, Units),
+                Cm(_depth),
+                Cm(_cboreDiameter),
+                Cm(_cboreDepth),
+                Cm(_csinkDiameter),
+                (double?)_csinkAngleDeg,
+                _drillPoint,
+                _thread,
+                _tolerance,
+                _colour);
+
+            return new HoleBuildResult(geometry, _resolved, _problems.AsReadOnly());
+        }
+
+        private double? Cm(decimal? value) => value is { } v ? ToCm(v, Units) : null;
+
+        private T? FindRow<T>(IEnumerable<T> rows, Func<T, HoleUnits> units, Func<T, string> size, string key)
+            where T : class =>
+            rows.FirstOrDefault(r => units(r) == Units && Same(size(r), key));
+
+        private string NotInTab(string tab) => $"{spec.Size.Trim()} is not in the {tab} tab for {UnitsText} holes.";
+
+        private void BuildClearance()
+        {
+            var row = FindRow(workbook.Clearance, r => r.Units, r => r.Size, spec.Size);
+            if (row is null)
+            {
+                Problem(HoleField.Size, NotInTab(HoleWorkbookReader.ClearanceTab));
+                return;
+            }
+
+            _holeDiameter = row.Diameter(spec.ClearanceFit);
+        }
+
+        /// <summary>The through hole of a seated hole: the Clearance row of the seat's size, at the seat's Hole fit.</summary>
+        private void ThroughHole(string seatTab, string size, string screw, ClearanceFit fit)
+        {
+            var row = FindRow(workbook.Clearance, r => r.Units, r => r.Size, size);
+            if (row is null)
+            {
+                Problem(
+                    HoleField.Size,
+                    $"The {seatTab} row for {size} {screw} takes its through hole from the Clearance tab, which has " +
+                    $"no {size} row for {UnitsText} holes.");
+                return;
+            }
+
+            _holeDiameter = row.Diameter(fit);
+        }
+
+        /// <summary>The seat row of the size and fastener; with no fastener, the first row of the size.</summary>
+        private T? FindSeatRow<T>(IReadOnlyList<T> rows, Func<T, HoleUnits> units, Func<T, string> size,
+            Func<T, string> screw, string tab)
+            where T : class
+        {
+            var ofSize = rows.Where(r => units(r) == Units && Same(size(r), spec.Size)).ToList();
+            if (ofSize.Count == 0)
+            {
+                Problem(HoleField.Size, NotInTab(tab));
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(spec.Fastener))
+            {
+                return ofSize[0];
+            }
+
+            var row = ofSize.FirstOrDefault(r => Same(screw(r), spec.Fastener));
+            if (row is null)
+            {
+                Problem(
+                    HoleField.Fastener,
+                    $"The {tab} tab has no {spec.Size.Trim()} row for {spec.Fastener.Trim()} for {UnitsText} holes.");
+            }
+
+            return row;
+        }
+
+        private void BuildCounterbore()
+        {
+            const string tab = HoleWorkbookReader.CounterboreTab;
+            var row = FindSeatRow(workbook.Counterbore, r => r.Units, r => r.Size, r => r.Screw, tab);
+            if (row is null)
+            {
+                return;
+            }
+
+            _resolved = _resolved with { Fastener = row.Screw };
+            _cboreDiameter = row.CboreDiameter;
+            _cboreDepth = row.CboreDepth;
+            ThroughHole(tab, row.Size, row.Screw, row.HoleFit);
+        }
+
+        private void BuildCountersink()
+        {
+            const string tab = HoleWorkbookReader.CountersinkTab;
+            var row = FindSeatRow(workbook.Countersink, r => r.Units, r => r.Size, r => r.Screw, tab);
+            if (row is null)
+            {
+                return;
+            }
+
+            _resolved = _resolved with { Fastener = row.Screw };
+            _csinkDiameter = row.CsinkDiameter;
+            _csinkAngleDeg = row.AngleDeg;
+            ThroughHole(tab, row.Size, row.Screw, row.HoleFit);
+        }
+
+        private void BuildTapped()
+        {
+            if (spec.Seat != HoleSeat.None)
+            {
+                // Spec 09 lets a tapped hole have a seat but does not say where its sizes come from (open question 6).
+                Problem(
+                    HoleField.Seat,
+                    "A counterbore or countersink on a tapped hole is not available yet. Set Seat to None.");
+            }
+
+            var row = FindRow(workbook.Tapped, r => r.Units, r => r.Thread, spec.Size);
+            if (row is null)
+            {
+                Problem(HoleField.Size, NotInTab(HoleWorkbookReader.TappedTab));
+                return;
+            }
+
+            var threadDepth = spec.ThreadDepth ?? row.ThreadDepth;
+            var drillDepth = spec.DrillDepth ?? row.DrillDepth;
+            _resolved = _resolved with { ThreadDepth = threadDepth, DrillDepth = drillDepth };
+            _holeDiameter = row.TapDrill;
+
+            if (spec.IsBlind)
+            {
+                if (threadDepth <= 0)
+                {
+                    Problem(HoleField.ThreadDepth, "Enter a thread depth greater than zero.");
+                }
+
+                if (threadDepth > drillDepth)
+                {
+                    Problem(
+                        HoleField.ThreadDepth,
+                        $"The thread depth ({Length(threadDepth, Units)}) is more than the drill depth " +
+                        $"({Length(drillDepth, Units)}).");
+                }
+            }
+
+            _thread = new HoleThread(
+                row.Designation,
+                row.ThreadType,
+                row.Class.Trim(),
+                (double)row.TapDrill,
+                row.Units,
+                FullDepth: !spec.IsBlind,
+                ToCm(threadDepth, Units));
+        }
+
+        private void BuildDowel()
+        {
+            var row = FindRow(workbook.Dowel, r => r.Units, r => r.Size, spec.Size);
+            if (row is null)
+            {
+                Problem(HoleField.Size, NotInTab(HoleWorkbookReader.DowelTab));
+            }
+            else
+            {
+                _holeDiameter = row.Nominal;
+            }
+
+            _colour = workbook.Settings.FitColour(spec.PrecisionFit);
+
+            var tolerance = FindTolerance(workbook, Units, spec.PrecisionFit, spec.Tolerance);
+            if (tolerance is null)
+            {
+                Problem(
+                    HoleField.Tolerance,
+                    string.IsNullOrWhiteSpace(spec.Tolerance)
+                        ? $"The Precision Tol tab has no {spec.PrecisionFit} rows for {UnitsText} holes."
+                        : $"The Precision Tol tab has no \"{spec.Tolerance.Trim()}\" row for {spec.PrecisionFit} fit " +
+                          $"and {UnitsText} holes.");
+                return;
+            }
+
+            _resolved = _resolved with { Tolerance = tolerance.Name };
+
+            if (tolerance.Kind == ToleranceKind.Limits)
+            {
+                if (tolerance.Upper is { } upper && tolerance.Lower is { } lower)
+                {
+                    _tolerance = new HoleTolerance(tolerance.Name, null, ToCm(upper, Units), ToCm(lower, Units));
+                }
+                else
+                {
+                    Problem(HoleField.Tolerance, $"The tolerance \"{tolerance.Name}\" has no Upper and Lower values.");
+                }
+
+                return;
+            }
+
+            if (row is null)
+            {
+                return;
+            }
+
+            var limits = Iso286.HoleLimits(IsoNominalMm(row.Nominal, Units), tolerance.IsoCode);
+            if (!limits.Succeeded)
+            {
+                Problem(HoleField.Tolerance, limits.Message);
+                return;
+            }
+
+            _tolerance = new HoleTolerance(tolerance.Name, limits.Code, limits.UpperMm / 10, limits.LowerMm / 10);
+        }
+
+        private void ResolveDepthAndDrillPoint()
+        {
+            _depth = spec.Kind == HoleKind.Tapped ? _resolved.DrillDepth : spec.Depth;
+            if (_depth is not > 0)
+            {
+                // A tapped hole whose thread was not found has no drill depth yet; its Size problem says why.
+                if (spec.Kind != HoleKind.Tapped || _thread is not null)
+                {
+                    Problem(
+                        spec.Kind == HoleKind.Tapped ? HoleField.DrillDepth : HoleField.Depth,
+                        spec.Kind == HoleKind.Tapped
+                            ? "Enter a drill depth greater than zero."
+                            : "Enter a depth greater than zero.");
+                }
+            }
+
+            var row = FindDrillPoint(workbook, spec.DrillPoint);
+            if (row is null)
+            {
+                Problem(
+                    HoleField.DrillPoint,
+                    string.IsNullOrWhiteSpace(spec.DrillPoint)
+                        ? "The Drill Point tab has no rows."
+                        : $"The Drill Point tab has no \"{spec.DrillPoint.Trim()}\" row.");
+                return;
+            }
+
+            _resolved = _resolved with { DrillPoint = row.Name };
+            _drillPoint = new HoleDrillPoint(row.Name, (double?)row.AngleDeg);
+        }
+
+        private void CheckSizes()
+        {
+            if (_holeDiameter is { } diameter && diameter <= 0)
+            {
+                Problem(HoleField.Size, $"The hole diameter for {spec.Size.Trim()} is not greater than zero.");
+                return;
+            }
+
+            if (_cboreDiameter is { } cboreDiameter && _holeDiameter is { } hole)
+            {
+                if (hole >= cboreDiameter)
+                {
+                    Problem(
+                        HoleField.Size,
+                        $"The hole ({Length(hole, Units)}) is not smaller than its counterbore " +
+                        $"({Length(cboreDiameter, Units)}).");
+                }
+            }
+
+            if (_cboreDepth is { } cboreDepth)
+            {
+                if (cboreDepth <= 0)
+                {
+                    Problem(HoleField.Size, "The counterbore depth is not greater than zero.");
+                }
+                else if (_depth is { } depth && depth > 0 && cboreDepth >= depth)
+                {
+                    Problem(
+                        HoleField.Depth,
+                        $"The counterbore depth ({Length(cboreDepth, Units)}) is not less than the hole depth " +
+                        $"({Length(depth, Units)}).");
+                }
+            }
+
+            if (_csinkDiameter is { } csinkDiameter && _holeDiameter is { } through && through >= csinkDiameter)
+            {
+                Problem(
+                    HoleField.Size,
+                    $"The hole ({Length(through, Units)}) is not smaller than its countersink " +
+                    $"({Length(csinkDiameter, Units)}).");
+            }
+
+            if (_csinkAngleDeg is { } angle && angle is <= 0 or >= 180)
+            {
+                Problem(HoleField.Size, $"The countersink angle ({angle} deg) is not between 0 and 180 degrees.");
+            }
+            else if (_csinkAngleDeg is { } csinkAngle
+                && _csinkDiameter is { } sinkDiameter
+                && _holeDiameter is { } sinkHole && sinkHole > 0 && sinkHole < sinkDiameter
+                && _depth is { } blindDepth && blindDepth > 0)
+            {
+                // The cone's depth from the countersink diameter down to the hole diameter.
+                var halfAngleRad = (double)csinkAngle / 2 * Math.PI / 180;
+                var csinkDepth = (double)(sinkDiameter - sinkHole) / 2 / Math.Tan(halfAngleRad);
+                if (csinkDepth >= (double)blindDepth)
+                {
+                    Problem(
+                        HoleField.Depth,
+                        $"The countersink depth ({Length(Math.Round((decimal)csinkDepth, 4), Units)}) is not less " +
+                        $"than the hole depth ({Length(blindDepth, Units)}).");
+                }
+            }
+
+            if (_drillPoint?.AngleDeg is { } pointAngle && pointAngle is <= 0 or >= 180)
+            {
+                Problem(
+                    HoleField.DrillPoint,
+                    $"The drill point angle ({pointAngle} deg) is not between 0 and 180 degrees.");
+            }
+        }
+    }
+}

@@ -42,7 +42,8 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Questions 10 to 17 in spec 03: ambiguous appearance names, where preferred materials are recorded, Show paints, the Finish Thickness text, the starter library's materials, sub-assemblies in a selection, Passivate's AppliesTo, the ribbon button. Each has a default
 - The finish appearances are spike 067's suggestions for now; Aidan edits `libraries/finishes.csv` if he wants others
 
-**AWB Hole (spec 09), not blocking the spike**
+**AWB Hole (spec 09), not blocking**
+- Question 6 in spec 09: where a tapped hole's counterbore or countersink sizes come from. Until answered, a seat on a tapped hole is refused with a message. One option: the Counterbore or Countersink row of the same nominal size
 
 **Hole table (spec 04), blocks the wizard half of M4**
 - What makes a hole "precision"

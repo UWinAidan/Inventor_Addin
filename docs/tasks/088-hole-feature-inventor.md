@@ -31,6 +31,8 @@ A thin add-in class that turns Core's `HoleGeometry` into a real `HoleFeature` a
 
 ## Notes for the implementer
 
+- From task 084 and its review: store `HoleBuildResult.Resolved` (an unresolved spec throws in `ToAttributes`) with the applied state. Angles in `HoleGeometry` are degrees: pass them as unit strings (`"118 deg"`, as the spike did) or convert to radians. `HoleTolerance.UpperCm`/`LowerCm` go to `SetToDeviation` as they are; the tap drill goes to `_CreateTapInfo` in table units. When reading a hole back for the comparison, read deviations in cm and the ISO code only when the tolerance is the fits type.
+
 - Resolve the workbook with `LibraryPaths.HoleWorkbook` and read it with `HoleWorkbookReader.Read(LibraryPath)`, so problems say which workbook it was. `MaterialLibraryMessages.AddinFolderUnknown` names only the material library and finish list; give the hole workbook its own wording if it is needed (task 086 follow-up).
 
 - Every member above is in spike 081's confirmed list; anything else must be checked against the interop (`Autodesk.Inventor.Interop.dll`) before use.

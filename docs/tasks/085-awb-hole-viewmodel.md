@@ -29,6 +29,8 @@ Everything the AWB Hole window decides, as a plain `INotifyPropertyChanged` view
 
 ## Notes for the implementer
 
+- From task 084: list rows without the hidden ones (`HoleRules` still finds hidden rows by size, so an older hole opens); preselect with `FindTolerance` and `FindDrillPoint`; show each `HoleRules` problem beside the field it names. A seat on a tapped hole is refused until spec 09 question 6 is answered.
+
 - The workbook reader (082) keeps duplicate rows and several Default = Y rows as they are; decide here which one wins (Default: the first in workbook order) and test it (task 082 follow-up).
 
 - Follow `MaterialFinishViewModel` for the shape (lists, selections, status, commands) and its tests.
