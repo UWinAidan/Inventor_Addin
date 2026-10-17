@@ -9,7 +9,7 @@ Decided by Aidan on 2026-10-17 unless marked Default. How each part is done in I
 - **AWB Hole** creates real Inventor hole features (`HoleFeature`), editable afterwards like any hole. The command works in part files.
 - **It replaces Inventor's Hole** on the 3D Model tab of the part environment: the AWB Hole button sits where Inventor's Hole button is (large, before `PartHoleCmd` in the Modify panel), Inventor's Hole button is hidden, and the **H** shortcut opens AWB Hole. The takeover survives a restart and is re-applied if the user resets shortcuts. The Sheet Metal and Flat Pattern tabs keep Inventor's Hole (Default).
 - **A Settings switch, "Use Inventor's Hole command", brings Inventor's Hole back**: its button and its H shortcut. **H always opens whichever Hole command is showing** (Aidan, spike round 2). The switch takes effect when Settings is saved (Default; the spike showed the change works while Inventor runs). AWB Hole also has a button on the AWB Addin tab, so it stays available either way (Default).
-- **Editing opens AWB Hole.** Inventor's own **Edit Feature** on a hole, from the browser's right-click menu and from the viewport's left-click mini toolbar, and **double-click** on a hole, open the AWB Hole window for that hole; there is no separate menu item (Aidan). Inventor's Edit Feature entry is replaced by ours with Inventor's icon. If Inventor's own hole edit starts by some other route, the add-in stops it and opens AWB Hole. A hole made by Inventor's command opens too and becomes an AWB hole on OK (Default, question 5).
+- **Editing opens AWB Hole.** Inventor's own **Edit Feature** on a hole, from the browser's right-click menu and from the viewport's left-click mini toolbar, and **double-click** on a hole, open the AWB Hole window for that hole; there is no separate menu item (Aidan). Inventor's Edit Feature entry is replaced by ours with Inventor's icon. If Inventor's own hole edit starts by some other route, the add-in stops it and opens AWB Hole. A hole made by Inventor's command opens too and becomes an AWB hole on OK (Aidan, question 5).
 - **The AWB settings are stored on the hole feature** (an `AWB_Hole` attribute set with a version number).
 - **A hole changed while Inventor's Hole was restored** (switch on): when its stored AWB data no longer matches the hole, the add-in offers to re-apply the AWB fit, tolerance and colour, when the hole is next opened in AWB Hole (Default). Inventor's own edit keeps the colour.
 
@@ -20,10 +20,10 @@ It follows Inventor's Hole panel, with a **Metric or Imperial** selector at the 
 | Field | Contents |
 |---|---|
 | Units | Metric or Imperial. Starts on the workbook's Settings "Default units" |
-| Type | As Inventor's: Simple, Clearance, Tapped (see "Types and seats") |
+| Type | Clearance or Tapped (Default: Inventor's Simple is not listed, since every size comes from the workbook; see "Types and seats") |
 | Seat | As Inventor's: None, Counterbore, Countersink |
-| Standard | Default: the workbook for the chosen units (open question 2) |
-| Fastener type | Default: the Screw column for a seated hole (SHCS, FHCS); not shown for other types (open question 2) |
+| Standard | AWB Clearance, AWB Tapped, AWB Dowel, for the units chosen at the top (Aidan, question 2). Clearance lists AWB Clearance and AWB Dowel; Tapped lists AWB Tapped |
+| Fastener type | The Screw values of the seat's tab (Counterbore or Countersink), for example SHCS, FHCS, in workbook order (Aidan, question 2); shown only for a seated hole |
 | Size | The rows of the matching tab for the units, in workbook order, `Show = N` rows left out |
 | Fit | Clearance: Close, Normal, Loose. Dowel and precision: Slip, Normal, Press |
 | Tolerance | Dowel and precision only: the Precision Tol rows for the units and fit; the row with Default = Y is preselected |
@@ -40,15 +40,15 @@ It follows Inventor's Hole panel, with a **Metric or Imperial** selector at the 
 
 ## Types and seats
 
-Hole types and seats stay as Inventor's. How the workbook's tabs map onto them (Default, open question 3):
+Hole types and seats stay as Inventor's. A dowel or precision hole is the Clearance type with Standard AWB Dowel; there is no separate Type entry (Aidan, question 3). How the workbook's tabs map onto them:
 
-| Type | Seat | Sizes from | Fit | Coloured |
+| Type, Standard | Seat | Sizes from | Fit | Coloured |
 |---|---|---|---|---|
-| Clearance | None | Clearance | Close, Normal, Loose (the column used) | no |
-| Clearance | Counterbore | Counterbore, through hole from Clearance at its "Hole fit" | from the row | no |
-| Clearance | Countersink | Countersink, through hole from Clearance at its "Hole fit" | from the row | no |
-| Tapped | None, Counterbore, Countersink | Tapped | none | no |
-| Simple (dowel and precision) | None | Dowel | Slip, Normal, Press, with a Tolerance | **yes** |
+| Clearance, AWB Clearance | None | Clearance | Close, Normal, Loose (the column used) | no |
+| Clearance, AWB Clearance | Counterbore | Counterbore, through hole from Clearance at its "Hole fit" | from the row | no |
+| Clearance, AWB Clearance | Countersink | Countersink, through hole from Clearance at its "Hole fit" | from the row | no |
+| Tapped, AWB Tapped | None, Counterbore, Countersink | Tapped | none | no |
+| Clearance, AWB Dowel (dowel and precision) | None | Dowel | Slip, Normal, Press, with a Tolerance | **yes** |
 
 ## The workbook: `libraries/AWB_Holes.xlsx`
 
@@ -87,7 +87,7 @@ New rows, in a new collapsible section "Holes" (Default):
 ## Open questions
 
 1. ~~**Placement.**~~ Answered 2026-10-17 (Aidan, spike 081): sketch points, picked as Inventor's Hole picks them (see "The window").
-2. **Standard and Fastener type.** What do they list? Default: Standard is the workbook for the chosen units ("AWB Metric" or "AWB Imperial"); Fastener type is the Screw column for seated holes.
-3. **Dowel and precision as a type.** Default: they are Inventor's Simple hole with the Dowel tab's sizes and the Slip, Normal, Press fit. Is a separate "Dowel" or "Precision" entry wanted in the Type list?
+2. ~~**Standard and Fastener type.**~~ Answered 2026-10-17 (Aidan): Standard lists AWB Clearance, AWB Tapped and AWB Dowel, for the units chosen at the top; Fastener type comes from the workbook's Screw column (SHCS, FHCS).
+3. ~~**Dowel and precision as a type.**~~ Answered 2026-10-17 (Aidan): no separate Type; a dowel is the Clearance type with Standard AWB Dowel.
 4. ~~**Several holes at once.**~~ Answered 2026-10-17 (Aidan, spike 081): yes, one feature with all the picked centres.
-5. **Edit AWB Hole on a hole made by Inventor's command.** Offer to convert it to an AWB hole, or refuse? Default: offer to convert.
+5. ~~**Edit AWB Hole on a hole made by Inventor's command.**~~ Answered 2026-10-17 (Aidan): it opens in AWB Hole and becomes an AWB hole on OK.

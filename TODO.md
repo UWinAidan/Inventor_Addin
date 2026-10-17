@@ -43,7 +43,6 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - The finish appearances are spike 067's suggestions for now; Aidan edits `libraries/finishes.csv` if he wants others
 
 **AWB Hole (spec 09), not blocking the spike**
-- Questions 2, 3 and 5 in spec 09: what Standard and Fastener type list, dowel and precision as Inventor's Simple type (or their own Type entry), and converting a hole made by Inventor's command on OK. Each has a default; questions 1 and 4 were answered by spike 081
 
 **Hole table (spec 04), blocks the wizard half of M4**
 - What makes a hole "precision"
