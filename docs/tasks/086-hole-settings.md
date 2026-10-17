@@ -28,6 +28,8 @@ Settings gets a collapsible "Holes" section with the hole workbook path and the 
 
 ## Notes for the implementer
 
+- The reader's missing or unreadable workbook messages (082) do not say whether the file is the starter one; word them as `MaterialLibraryMessages` does (task 082 follow-up).
+
 - Task 070 is the model (Material library and Finish list rows).
 - The switch only stores the choice here; task 091 acts on it.
 

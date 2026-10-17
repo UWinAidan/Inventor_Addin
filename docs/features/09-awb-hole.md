@@ -54,7 +54,7 @@ Hole types and seats stay as Inventor's. A dowel or precision hole is the Cleara
 
 - **Every option in the window comes from it.** A starter copy is committed in `libraries/` and shipped beside the DLL, like the finish list. A Settings path points at Aidan's own copy in `B:\aidan\AWB_Design_Data`; blank uses the starter (Default, as for the material library and finish list).
 - **Read it as it is.** Do not rename tabs or headers; the add-in finds data by tab name and header text. The values are starter values Aidan will edit.
-- Tabs: How to edit (text only, not read), **Settings**, **Clearance** (Close, Normal, Loose), **Counterbore**, **Countersink**, **Tapped**, **Dowel**, **Precision Tol**, **Drill Point**. Each data tab has a title in row 1, a note in row 2, headers in row 4 and one row per entry below. Metric rows are in mm, Imperial rows in inches. `Show = N` hides a row.
+- Tabs: How to edit (text only, not read), **Settings**, **Clearance** (Close, Normal, Loose), **Counterbore**, **Countersink**, **Tapped**, **Dowel**, **Precision Tol**, **Drill Point**. Each data tab has a title in row 1, a note in row 2, headers in row 4 and one row per entry below; the Settings tab has no note row, so its headers are in row 3. Metric rows are in mm, Imperial rows in inches. `Show = N` hides a row.
 - Read without Excel (Default): Core reads the `.xlsx` package directly, using the value each cell last showed in Excel, so formulas need no recalculation.
 - A missing tab, a missing header or a value that cannot be read is reported the way the finish list reports its problems, naming the tab, row and header. Rows with problems are left out; the rest are used.
 

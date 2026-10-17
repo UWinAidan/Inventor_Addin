@@ -29,6 +29,8 @@ Everything the AWB Hole window decides, as a plain `INotifyPropertyChanged` view
 
 ## Notes for the implementer
 
+- The workbook reader (082) keeps duplicate rows and several Default = Y rows as they are; decide here which one wins (Default: the first in workbook order) and test it (task 082 follow-up).
+
 - Follow `MaterialFinishViewModel` for the shape (lists, selections, status, commands) and its tests.
 - Fit colour text for the window: the fit name with its colour swatch value from the workbook.
 
