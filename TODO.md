@@ -6,9 +6,8 @@ Last updated: 2026-10-17
 
 ## Next up
 
-1. Aidan checks task 080, close button only and the themed scroll bar, in Inventor (below); then push `claude/m3-material-finish`, open the pull request and merge.
-2. Aidan finishes the remaining Part Properties checks below.
-3. M4: discuss the hole generator's details with Aidan (spec 04).
+1. Aidan finishes the remaining Part Properties checks below.
+2. M4: discuss the hole generator's details with Aidan (spec 04).
 
 ## Waiting on Aidan: checks in Inventor
 
@@ -18,11 +17,7 @@ Last updated: 2026-10-17
 
 **M2 fix run 2** (062 to 066) was checked on 2026-10-12: every check passed.
 
-**M3** (068 to 076) was checked on 2026-10-17: every check passed. Aidan found two things, now tasks 077 and 078.
-
-**M3 fixes** (077, 078) were checked on 2026-10-17: Settings and About on every ribbon passed; Aidan did not like the Settings tabs, now task 079.
-Task 079 (Settings as one scrolling page of collapsible sections) was checked on 2026-10-17: the layout is good; Aidan asked for two changes, now task 080.
-- [ ] Task 080 (built and deployed 2026-10-17 on `claude/m3-material-finish`): dialogs show only the close button and Settings still resizes by its edges and remembers its size; the themed scroll bar in light and dark with a 12 gap, content lined up with the header and footer, in Settings, Mass Update, the Material and Finish lists and the dropdowns (steps in the task file)
+**M3** (068 to 076) and its fixes (077 to 080) were checked on 2026-10-17: every check passed. Merged into main from `claude/m3-material-finish` on 2026-10-17.
 
 **M2 run 1** (037, 038, 039, 042): Aidan reported on 2026-10-17 that the remaining checks passed.
 
