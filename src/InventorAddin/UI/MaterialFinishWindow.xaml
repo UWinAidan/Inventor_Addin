@@ -73,7 +73,7 @@
                                Subline="{Binding HeaderSubline, Mode=OneWay}" />
 
         <ScrollViewer Grid.Row="1" Style="{DynamicResource DialogBody}">
-            <StackPanel>
+            <StackPanel Style="{DynamicResource DialogBodyContent}">
                 <controls:FormSection Heading="Filter">
                     <controls:FieldRow Label="_Category" Target="{Binding ElementName=CategoryBox}">
                         <ComboBox x:Name="CategoryBox"

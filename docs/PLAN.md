@@ -259,6 +259,7 @@ Spike 067 ran first and was walked through with Aidan. The rest was planned on 2
 - [x] 077 Settings in tabs, and no window taller than the screen
 - [x] 078 Settings and About on every ribbon, including no document open
 - [x] 079 Settings as one page of collapsible sections, resizable and remembered (replaces 077's tabs)
+- [x] 080 Dialogs with only a close button; a themed scroll bar for every scrolling area
 
 Not in M3: print notes on the drawing (M5), Inventor finish features (`FinishReader` stays as a developer export only).
 

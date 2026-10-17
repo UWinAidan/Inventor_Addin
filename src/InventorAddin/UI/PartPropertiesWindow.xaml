@@ -86,7 +86,7 @@
                                Subline="{Binding HeaderSubline, Mode=OneWay}" />
 
         <ScrollViewer Grid.Row="1" Style="{DynamicResource DialogBody}">
-            <StackPanel>
+            <StackPanel Style="{DynamicResource DialogBodyContent}">
                 <controls:FormSection Heading="Identity">
                     <!--
                         Spec 02, "Display in Part Properties": a number in the format is shown (with a muted note when the

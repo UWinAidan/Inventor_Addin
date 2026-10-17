@@ -18,9 +18,10 @@ namespace InventorAddin.UI
     /// in the colours of Inventor's active theme; no window applies the theme itself. Every window is also kept within
     /// the working area of the screen it opens on (Aidan, 2026-10-17): never taller, and moved up if it would run off
     /// the bottom. A window's body scrolls when its content is taller (the <c>DialogBody</c> style).
-    /// A window whose XAML sets <c>ResizeMode="CanResize"</c> gets the resizable look and a maximise button but no
-    /// minimise button (task 079). A window shown with a state key remembers, in <c>windows.json</c>, which of its named
-    /// <see cref="CollapsibleSection"/>s were collapsed and, if resizable, its size and position.
+    /// A window whose XAML sets <c>ResizeMode="CanResize"</c> gets the resizable look and can be resized by its edges,
+    /// but like every dialog it has only the close button: no minimise or maximise (Aidan, 2026-10-17). A window shown
+    /// with a state key remembers, in <c>windows.json</c>, which of its named <see cref="CollapsibleSection"/>s were
+    /// collapsed and, if resizable, its size and position.
     /// </summary>
     internal static class WindowHost
     {
@@ -29,6 +30,7 @@ namespace InventorAddin.UI
 
         private const int GwlStyle = -16;
         private const int WsMinimizeBox = 0x00020000;
+        private const int WsMaximizeBox = 0x00010000;
 
         private static bool _darkTitleBarFailureLogged;
         private static bool _screenFailureLogged;
@@ -83,7 +85,7 @@ namespace InventorAddin.UI
                 ? new WindowInteropHelper(owner).Handle
                 : new IntPtr(hwnd ?? 0);
             if (resizable)
-                RemoveMinimizeButton(window);
+                KeepToCloseButtonOnly(window);
 
             IReadOnlyList<ScreenArea>? screens = FitToScreen(window, screenHandle, resizable);
             if (stateKey != null)
@@ -126,8 +128,6 @@ namespace InventorAddin.UI
                     window.Top = placement.Top;
                     window.Width = placement.Width;
                     window.Height = placement.Height;
-                    if (placement.Maximized)
-                        window.WindowState = WindowState.Maximized;
                 }
             }
 
@@ -143,11 +143,10 @@ namespace InventorAddin.UI
 
                 if (resizable)
                 {
-                    // RestoreBounds is the normal size and position, also while maximised.
+                    // RestoreBounds is the normal size and position. Dialogs are never maximised, so that is all.
                     Rect bounds = window.RestoreBounds;
                     if (!bounds.IsEmpty)
-                        toSave.Placement = new WindowPlacement(bounds.Left, bounds.Top, bounds.Width, bounds.Height,
-                            window.WindowState == WindowState.Maximized);
+                        toSave.Placement = new WindowPlacement(bounds.Left, bounds.Top, bounds.Width, bounds.Height, Maximized: false);
                 }
 
                 try
@@ -185,30 +184,37 @@ namespace InventorAddin.UI
         }
 
         /// <summary>
-        /// A resizable window keeps the maximise button but loses the minimise button: it is owned by Inventor and not
-        /// on the taskbar, so a minimised dialog would be hard to find while Inventor waits for it. A failure leaves
-        /// the button and is not logged.
+        /// A resizable window keeps its resizing edges but shows only the close button, as every dialog does: WPF gives
+        /// a resizable window minimise and maximise buttons, which are taken off here. Windows can still maximise a
+        /// window by snapping it to the top of the screen or with Win+Up, so a maximised window is put straight back.
+        /// Failing to remove the buttons leaves them and is not logged.
         /// </summary>
-        private static void RemoveMinimizeButton(Window window)
+        private static void KeepToCloseButtonOnly(Window window)
         {
             try
             {
                 IntPtr handle = new WindowInteropHelper(window).EnsureHandle();
                 int style = GetWindowLong(handle, GwlStyle);
                 if (style != 0)
-                    SetWindowLong(handle, GwlStyle, style & ~WsMinimizeBox);
+                    SetWindowLong(handle, GwlStyle, style & ~(WsMinimizeBox | WsMaximizeBox));
             }
             catch (Exception)
             {
                 // Cosmetic only.
             }
+
+            window.StateChanged += (_, _) =>
+            {
+                if (window.WindowState != WindowState.Normal)
+                    window.WindowState = WindowState.Normal;
+            };
         }
 
         /// <summary>
         /// Keeps the window inside the working area of the screen that <paramref name="screenHandle"/> (the owner) is
         /// on, as it opens and whenever it changes size (windows size to their content). With no handle the primary
         /// screen is used. A fixed-size window's height is capped at the working area. A resizable window is not capped,
-        /// so it can be maximised and resized freely; instead, while it still sizes to its content, a height taller than
+        /// so it can be resized freely by its edges; instead, while it still sizes to its content, a height taller than
         /// the working area is cut to it (the body then scrolls). Returns every screen's working area, for restoring a
         /// remembered placement, or null when the screens could not be read; that failure is logged once per session.
         /// </summary>

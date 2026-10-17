@@ -38,7 +38,7 @@
                                Subline="{Binding HeaderSubline, Mode=OneTime}" />
 
         <ScrollViewer Grid.Row="1" Style="{DynamicResource DialogBody}">
-            <StackPanel>
+            <StackPanel Style="{DynamicResource DialogBodyContent}">
                 <controls:FormSection Heading="Name">
                     <controls:FieldRow Label="Current name">
                         <TextBlock Style="{DynamicResource ValueText}" Text="{Binding CurrentName, Mode=OneTime}" />

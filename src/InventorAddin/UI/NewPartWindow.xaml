@@ -32,7 +32,7 @@
                                Subline="{Binding HeaderSubline, Mode=OneTime}" />
 
         <ScrollViewer Grid.Row="1" Style="{DynamicResource DialogBody}">
-            <StackPanel>
+            <StackPanel Style="{DynamicResource DialogBodyContent}">
                 <controls:FormSection Heading="File">
                     <controls:FieldRow Label="_File type" Target="{Binding ElementName=KindBox}">
                         <ComboBox x:Name="KindBox"

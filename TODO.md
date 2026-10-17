@@ -6,7 +6,7 @@ Last updated: 2026-10-17
 
 ## Next up
 
-1. Aidan checks task 079, the new Settings layout, in Inventor (below); then push `claude/m3-material-finish`, open the pull request and merge.
+1. Aidan checks task 080, close button only and the themed scroll bar, in Inventor (below); then push `claude/m3-material-finish`, open the pull request and merge.
 2. Aidan finishes the remaining Part Properties checks below.
 3. M4: discuss the hole generator's details with Aidan (spec 04).
 
@@ -21,7 +21,8 @@ Last updated: 2026-10-17
 **M3** (068 to 076) was checked on 2026-10-17: every check passed. Aidan found two things, now tasks 077 and 078.
 
 **M3 fixes** (077, 078) were checked on 2026-10-17: Settings and About on every ribbon passed; Aidan did not like the Settings tabs, now task 079.
-- [ ] Task 079 (built 2026-10-17 on `claude/m3-material-finish`): Settings as one scrolling page of collapsible sections with summaries, remembered collapsed sections, resizable and maximisable, size and position remembered, never taller than the screen; other windows unchanged (steps in the task file)
+Task 079 (Settings as one scrolling page of collapsible sections) was checked on 2026-10-17: the layout is good; Aidan asked for two changes, now task 080.
+- [ ] Task 080 (built and deployed 2026-10-17 on `claude/m3-material-finish`): dialogs show only the close button and Settings still resizes by its edges and remembers its size; the themed scroll bar in light and dark with a 12 gap, content lined up with the header and footer, in Settings, Mass Update, the Material and Finish lists and the dropdowns (steps in the task file)
 
 **M2 run 1** (037, 038, 039, 042): Aidan reported on 2026-10-17 that the remaining checks passed.
 
@@ -84,7 +85,7 @@ Small things noticed while building. None is urgent. The parent turns these into
 
 **Material and finish**
 - Applies made through Part Properties' Change are named "Part Properties" in Inventor's Undo list; an optional transaction name on `DocumentEditCommand.RunInTransaction` would fix it. Part Properties keeps `kFilePropertyEditCmdType` though Change now also changes material and appearance; decide whether to switch to `kNonShapeEditCmdType`. Spec 08's Part Properties section should list the Change button and the warning line; a warning colour token and style would set the warning apart from help text. (task 076)
-- Material and Finish window: the list scroll bars stay light in the dark theme (as in Mass Update); the view-model's `CancelCommand` is unused (Cancel closes through `IsCancel`); a missing NAS drive gives the "cannot be read" wording rather than "missing" (add `DriveNotFoundException` to the missing filter); the lists scroll by pixel without virtualizing, fine unless a library is very large. (task 075)
+- Material and Finish window: the view-model's `CancelCommand` is unused (Cancel closes through `IsCancel`); a missing NAS drive gives the "cannot be read" wording rather than "missing" (add `DriveNotFoundException` to the missing filter); the lists scroll by pixel without virtualizing, fine unless a library is very large. (task 075)
 - The Material and Finish log line names part file names and the library path, while Part Properties keeps file names out of the log; pick one rule for both. (task 074)
 - `MaterialFinishViewModel` tests check that a hidden selection comes back but not that `PropertyChanged` fires for `MaterialListSelection`/`FinishListSelection`; add that if the window ever loses a selection. (task 072 review)
 - The starter library (`libraries/StarterMaterials.adsklib`, about 1 MB) changes completely on every regeneration; regenerate and commit it only when `starter-materials.csv` changes. Properties other than density come from the stock template; per-grade strength would need more CSV columns. (task 071)
@@ -118,7 +119,7 @@ Small things noticed while building. None is urgent. The parent turns these into
 - Task 030: embed only `UI/Icons/*.png`. The `.svg` sources sit in the same folder and must stay out of the build. (task 024)
 
 **Window style**
-- The scrolling body's scroll bar stays light in the dark theme, like the list scroll bars; spec 08 has no scroll bar style. The working area is read when a window opens, so dragging it to a smaller screen does not re-cap it. (task 077)
+- The working area is read when a window opens, so dragging it to a smaller screen does not re-cap it. (task 077)
 - Settings: an access key for a field in a collapsed section does nothing; it could expand the section. A save error for a setting in a collapsed section does not expand it; the message names the setting. (task 079)
 - Only Settings is resizable and remembers its state. Mass Update and Material and Finish, with their long lists, may want the same; any window can opt in with `ResizeMode="CanResize"` and a state key. (task 079)
 - The remark in `UiTheme.cs` still says the dark-theme rule waits for spike 020; name the confirmed `LightTheme` and `DarkTheme`. (task 026)
@@ -153,7 +154,7 @@ Small things noticed while building. None is urgent. The parent turns these into
 - Rename: when an occurrence's new name is already taken in the assembly, that occurrence keeps its name and a note says so; the add-in does not pick another number. Occurrences in sub-assemblies are renamed only through the sub-assembly's own update. Untested in Inventor: whether a closed assembly's occurrences read the old or new path after `ReplaceReference` (the code accepts either), and setting a name on a suppressed occurrence or with several model states. (task 058)
 - Create Print: an old print found beside the model is opened where it is, not moved into `Prints`; the "already exists" question does not say where the print was found. (task 057)
 - Names: only the view-models add the `ASSY_` prefix; `NewPartCreator` and `SaveAsCopyCreator` take the request as given, so a new caller must use `PartFileName.ForKind`. A name pre-filled from an old lower-case file shows in lower case in the box until edited (`CharacterCasing` only changes typing). Reserved names are checked on the typed name, so `CON` is refused for an assembly though the file would be `ASSY_CON`. If reading the kind fails, Rename adds no prefix. (task 054)
-- Mass Update: a file whose number was already registered but whose names were replaced is reported as an error, not a change; give `FileUpdateResult` a note field. A first-sync `IOException` says "a number may already have been taken" when none was; use that message only part way. Parts left loaded by an assembly closed earlier may show as "Open in Inventor" (try `Documents.CloseAll(true)` if so). The window does not redraw during the sync (about 8 s) or a slow folder listing. The list's scroll bar does not follow the dark theme; spec 08 has no list styles. (task 048)
+- Mass Update: a file whose number was already registered but whose names were replaced is reported as an error, not a change; give `FileUpdateResult` a note field. A first-sync `IOException` says "a number may already have been taken" when none was; use that message only part way. Parts left loaded by an assembly closed earlier may show as "Open in Inventor" (try `Documents.CloseAll(true)` if so). The window does not redraw during the sync (about 8 s) or a slow folder listing. (task 048)
 - Rename: Inventor freezes while CAD folders are listed (up to 3 s per unreachable folder, 60 s per slow one); move the wait off the UI thread with progress. The Rename window is owned by Inventor, not Part Properties (needs an owner overload in `WindowHost`). The result list uses the four-line text box with no visible scroll bar. Spec 08 should list the Part name row with Rename. (task 047)
 - Save As and Replace: `kReferencesChangeCmdType` may suit it better than `kShapeEditCmdType`. Saving the sub-assembly with `Save()` may save its other unsaved files or show a dialog; consider `SilentOperation` around it and say so in the warning. `((AssemblyComponentDefinition)x).Parent` returns the sub-assembly document directly and avoids the unconfirmed `.Document`. Spec 08 should name the button. (task 046 review)
 - Save As Copy: rename `NewPartException` and `NewPartResult` to neutral names now that copy commands share them; `NewPartCommand.cs` probably has an unused `using System;`. Spec 08 should list the Save As Copy icon and dialog. (task 045)

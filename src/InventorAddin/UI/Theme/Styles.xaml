@@ -42,16 +42,148 @@
         screen's working area (WindowHost caps it), and when the content is taller the body scrolls while the header
         and buttons stay in view. The root panel is a Grid whose body row is star-sized, so it takes what is left.
         No sideways scroll: the content wraps to the window's width.
+
+        Where the scroll bar goes (Aidan, 2026-10-17): in the window's right margin, outside the content column, so the
+        content's right edge lines up with the header and footer whether or not the bar shows, and there is a 12 gap
+        between the content and the bar. The scroll viewer reaches 4 past the content on the left, top and bottom and
+        20 on the right (a 16 column holding the 8-wide bar against its right edge); DialogBodyContent puts the 4 back
+        inside, so the content lands exactly where it would without a scroll viewer, and focus outlines (3 outside a
+        control) have room inside the clipped viewport. The bar ends 2 short of the window's edge (the margin is 22).
     -->
     <Style x:Key="DialogBody" TargetType="{x:Type ScrollViewer}">
         <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
         <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
         <Setter Property="Focusable" Value="False" />
+        <Setter Property="Margin" Value="-4,-4,-20,-4" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ScrollViewer}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="16" />
+                        </Grid.ColumnDefinitions>
+                        <ScrollContentPresenter Grid.Column="0" CanContentScroll="{TemplateBinding CanContentScroll}" />
+                        <ScrollBar x:Name="PART_VerticalScrollBar"
+                                   Grid.Column="1"
+                                   HorizontalAlignment="Right"
+                                   Orientation="Vertical"
+                                   Minimum="0"
+                                   Maximum="{TemplateBinding ScrollableHeight}"
+                                   ViewportSize="{TemplateBinding ViewportHeight}"
+                                   Value="{TemplateBinding VerticalOffset}"
+                                   Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- The panel inside DialogBody: 4 in from the scroll viewer's edges, so the content lines up with the header. -->
+    <Style x:Key="DialogBodyContent" TargetType="{x:Type FrameworkElement}">
+        <Setter Property="Margin" Value="4" />
     </Style>
 
     <!--
-        A resizable window (Settings; task 079): it can be resized and maximised (WindowHost removes the minimise
-        button, since the window is owned by Inventor), and WindowHost remembers its size and position. It opens 620
+        Scroll bars (Aidan, 2026-10-17): the implicit style, so every scroll bar in a window gets it: the window body,
+        the Mass Update list, the pick lists and the dropdown lists. 8 thick, no arrow buttons, a transparent track and a
+        rounded thumb in the input border colour that darkens (light) or lightens (dark) to the muted text colour on
+        hover and while dragged. Clicking the track pages. Colours come from the theme dictionaries only.
+    -->
+    <Style x:Key="ScrollBarPageButton" TargetType="{x:Type RepeatButton}">
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="OverridesDefaultStyle" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type RepeatButton}">
+                    <Border Background="Transparent" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="ScrollBarThumb" TargetType="{x:Type Thumb}">
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="OverridesDefaultStyle" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Thumb}">
+                    <Border x:Name="Grip" CornerRadius="4" Background="{DynamicResource InputBorderBrush}" />
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Grip" Property="Background" Value="{DynamicResource TextMutedBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsDragging" Value="True">
+                            <Setter TargetName="Grip" Property="Background" Value="{DynamicResource TextMutedBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="{x:Type ScrollBar}">
+        <Setter Property="OverridesDefaultStyle" Value="True" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Width" Value="8" />
+        <Setter Property="MinWidth" Value="8" />
+        <Setter Property="Height" Value="Auto" />
+        <Setter Property="MinHeight" Value="0" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ScrollBar}">
+                    <Border Background="{TemplateBinding Background}">
+                        <Track x:Name="PART_Track" IsDirectionReversed="True" Focusable="False">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Style="{StaticResource ScrollBarPageButton}" Command="ScrollBar.PageUpCommand" />
+                            </Track.DecreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb Style="{StaticResource ScrollBarThumb}" />
+                            </Track.Thumb>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Style="{StaticResource ScrollBarPageButton}" Command="ScrollBar.PageDownCommand" />
+                            </Track.IncreaseRepeatButton>
+                        </Track>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="Orientation" Value="Horizontal">
+                <Setter Property="Width" Value="Auto" />
+                <Setter Property="MinWidth" Value="0" />
+                <Setter Property="Height" Value="8" />
+                <Setter Property="MinHeight" Value="8" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type ScrollBar}">
+                            <Border Background="{TemplateBinding Background}">
+                                <Track x:Name="PART_Track" IsDirectionReversed="False" Focusable="False">
+                                    <Track.DecreaseRepeatButton>
+                                        <RepeatButton Style="{StaticResource ScrollBarPageButton}" Command="ScrollBar.PageLeftCommand" />
+                                    </Track.DecreaseRepeatButton>
+                                    <Track.Thumb>
+                                        <Thumb Style="{StaticResource ScrollBarThumb}" />
+                                    </Track.Thumb>
+                                    <Track.IncreaseRepeatButton>
+                                        <RepeatButton Style="{StaticResource ScrollBarPageButton}" Command="ScrollBar.PageRightCommand" />
+                                    </Track.IncreaseRepeatButton>
+                                </Track>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!--
+        A resizable window (Settings; task 079): it can be resized by dragging its edges, and WindowHost remembers its
+        size and position. Like every dialog it has only the close button: WindowHost removes the minimise and maximise
+        buttons and keeps it from being maximised (Aidan, 2026-10-17). It opens 620
         wide and as tall as its content, never taller than the screen's working area. The minimum size keeps the
         header, some of the body and the buttons in view.
     -->
@@ -610,7 +742,8 @@
 
     <!--
         A list of entries that scrolls once it is taller than 320, so the window stays on screen. No sideways scroll:
-        the entries wrap to the window's width. 9 below, as after a row.
+        the entries wrap to the window's width. 9 below, as after a row. The shared scroll bar sits in a 20 column on
+        the right that is always kept, so the entries keep a 12 gap from the bar and do not move when it appears.
     -->
     <Style x:Key="ListScroller" TargetType="{x:Type ScrollViewer}">
         <Setter Property="MaxHeight" Value="320" />
@@ -618,6 +751,28 @@
         <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
         <Setter Property="Focusable" Value="False" />
         <Setter Property="Margin" Value="0,0,0,9" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ScrollViewer}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="20" />
+                        </Grid.ColumnDefinitions>
+                        <ScrollContentPresenter Grid.Column="0" CanContentScroll="{TemplateBinding CanContentScroll}" />
+                        <ScrollBar x:Name="PART_VerticalScrollBar"
+                                   Grid.Column="1"
+                                   HorizontalAlignment="Right"
+                                   Orientation="Vertical"
+                                   Minimum="0"
+                                   Maximum="{TemplateBinding ScrollableHeight}"
+                                   ViewportSize="{TemplateBinding ViewportHeight}"
+                                   Value="{TemplateBinding VerticalOffset}"
+                                   Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!-- One entry in a list: 9 below it, as between form rows. -->

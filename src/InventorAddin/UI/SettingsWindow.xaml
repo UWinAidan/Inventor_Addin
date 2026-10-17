@@ -24,8 +24,8 @@
         Folders, Material and finish and Developer, each a CollapsibleSection. A collapsed section shows a one-line
         summary of its values beside its heading (SettingsViewModel's *Summary properties). Every section starts
         expanded; WindowHost remembers which ones were collapsed, by x:Name, and the window's size and position (state
-        key "Settings"). The window can be resized and maximised; it never opens taller than the screen, and the body
-        scrolls while the header and the Save and Cancel buttons stay in view.
+        key "Settings"). The window can be resized by its edges and has only the close button; it never opens taller
+        than the screen, and the body scrolls while the header and the Save and Cancel buttons stay in view.
 
         Access keys: D default designer, N other names, U new file units, R register folder, B browse (register),
         W work folder, E browse (work folder), O other folders, M material library, F finish list, S show developer
@@ -47,7 +47,7 @@
                                Subline="{Binding HeaderSubline, Mode=OneTime}" />
 
         <ScrollViewer Grid.Row="1" Style="{DynamicResource DialogBody}">
-            <StackPanel>
+            <StackPanel Style="{DynamicResource DialogBodyContent}">
                 <controls:CollapsibleSection x:Name="GeneralSection"
                                              Heading="General"
                                              Summary="{Binding GeneralSummary, Mode=OneWay}">

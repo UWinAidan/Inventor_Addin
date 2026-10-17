@@ -138,6 +138,12 @@ public sealed class WindowXamlRulesTests
                     failures.Add($"{file.RelativePath}{LineOf(body)}: the DialogBody ScrollViewer must be a child of the root Grid.");
                 if (!IsOnStarRow(root[0], body))
                     failures.Add($"{file.RelativePath}{LineOf(body)}: the DialogBody ScrollViewer must sit on a star-sized row.");
+
+                // The scroll bar sits outside the content column (Aidan, 2026-10-17): the panel inside puts back the
+                // room DialogBody takes, so it must use DialogBodyContent.
+                var content = body.Elements().Where(e => !e.Name.LocalName.Contains('.')).ToList();
+                if (content.Count != 1 || DynamicKeyOf(content[0].Attribute("Style")?.Value) != "DialogBodyContent")
+                    failures.Add($"{file.RelativePath}{LineOf(body)}: the DialogBody ScrollViewer must hold one panel in the DialogBodyContent style.");
             }
 
             foreach (var piece in doc.Descendants().Where(e => e.Name.LocalName is "DialogHeader" or "DialogFooter"))
