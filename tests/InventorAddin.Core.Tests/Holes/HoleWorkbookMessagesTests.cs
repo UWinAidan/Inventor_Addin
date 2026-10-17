@@ -42,6 +42,14 @@ public sealed class HoleWorkbookMessagesTests
             HoleWorkbookMessages.Unreadable(Starter, reason));
     }
 
+    [Theory]
+    [InlineData("No location.", "The add-in's folder could not be found (No location), so the starter hole workbook cannot be read. Set the hole data in Settings, or reinstall the add-in.")]
+    [InlineData(null, "The add-in's folder could not be found, so the starter hole workbook cannot be read. Set the hole data in Settings, or reinstall the add-in.")]
+    public void AddinFolderUnknown_NamesTheHoleWorkbook(string? reason, string expected)
+    {
+        Assert.Equal(expected, HoleWorkbookMessages.AddinFolderUnknown(reason));
+    }
+
     [Fact]
     public void Messages_RejectNull()
     {

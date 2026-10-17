@@ -22,6 +22,19 @@ public static class HoleWorkbookMessages
     }
 
     /// <summary>
+    /// The add-in's own folder, which holds the starter workbook, could not be found (as
+    /// <see cref="MaterialLibraryMessages.AddinFolderUnknown"/> words it for the material library and finish list).
+    /// </summary>
+    /// <param name="reason">The error that gave, or null.</param>
+    public static string AddinFolderUnknown(string? reason)
+    {
+        var why = (reason ?? "").Trim().TrimEnd('.');
+        var detail = why.Length == 0 ? "" : $" ({why})";
+        return $"The add-in's folder could not be found{detail}, so the starter hole workbook cannot be read. " +
+               "Set the hole data in Settings, or reinstall the add-in.";
+    }
+
+    /// <summary>
     /// The workbook exists but could not be read: Excel has it open, or it is not an <c>.xlsx</c> file.
     /// </summary>
     /// <param name="reason">The error the read gave, or null.</param>

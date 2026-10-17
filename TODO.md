@@ -45,6 +45,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 **AWB Hole (spec 09), not blocking**
 - Question 6 in spec 09: where a tapped hole's counterbore or countersink sizes come from. Until answered, a seat on a tapped hole is refused with a message. One option: the Counterbore or Countersink row of the same nominal size
 - Question 7 in spec 09: a default depth for a blind clearance or dowel hole (now blank until typed)
+- Question 8 in spec 09: removing a dowel's colour resets only faces with an AWB fit colour, or every face
 
 **Hole table (spec 04), blocks the wizard half of M4**
 - What makes a hole "precision"
