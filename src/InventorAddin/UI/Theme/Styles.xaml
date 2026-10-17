@@ -49,71 +49,23 @@
         <Setter Property="Focusable" Value="False" />
     </Style>
 
-    <!-- ===== Tabs ===== -->
-
     <!--
-        A strip of tabs over a body that the window lays out itself (Settings): the TabControl shows only its tab
-        headers, on a divider line, and the window shows the page for the selected tab. There is no content host,
-        so every page can stay in the layout and the window keeps one height whichever tab is open.
-        One Tab stop for the strip; the arrow keys move between tabs (a tab is selected when it gets focus).
+        A resizable window (Settings; task 079): it can be resized and maximised (WindowHost removes the minimise
+        button, since the window is owned by Inventor), and WindowHost remembers its size and position. It opens 620
+        wide and as tall as its content, never taller than the screen's working area. The minimum size keeps the
+        header, some of the body and the buttons in view.
     -->
-    <Style x:Key="TabStrip" TargetType="{x:Type TabControl}">
-        <Setter Property="Focusable" Value="False" />
-        <Setter Property="Margin" Value="0,0,0,14" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="{x:Type TabControl}">
-                    <Grid SnapsToDevicePixels="True">
-                        <Border Height="1"
-                                VerticalAlignment="Bottom"
-                                Background="{DynamicResource DividerBrush}" />
-                        <TabPanel IsItemsHost="True"
-                                  KeyboardNavigation.TabNavigation="Once"
-                                  KeyboardNavigation.DirectionalNavigation="Cycle" />
-                    </Grid>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
+    <Style x:Key="ResizableDialogWindow" TargetType="{x:Type Window}" BasedOn="{StaticResource DialogWindow}">
+        <Setter Property="ResizeMode" Value="CanResize" />
+        <Setter Property="SizeToContent" Value="Height" />
+        <Setter Property="Width" Value="620" />
+        <Setter Property="MinWidth" Value="460" />
+        <Setter Property="MinHeight" Value="320" />
     </Style>
 
-    <!--
-        A tab header: muted text, the primary text colour on hover, and strong text with a 2 px Accent line along the
-        bottom when selected. The weight does not change, so the tabs do not shift when one is picked.
-    -->
-    <Style TargetType="{x:Type TabItem}">
-        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusOutline}" />
-        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
-        <Setter Property="Padding" Value="2,6,2,8" />
-        <Setter Property="Margin" Value="0,0,18,0" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="{x:Type TabItem}">
-                    <Grid Background="Transparent" SnapsToDevicePixels="True">
-                        <ContentPresenter Margin="{TemplateBinding Padding}"
-                                          ContentSource="Header"
-                                          HorizontalAlignment="Center"
-                                          VerticalAlignment="Center"
-                                          RecognizesAccessKey="True" />
-                        <Border x:Name="Underline"
-                                Height="2"
-                                VerticalAlignment="Bottom"
-                                CornerRadius="1"
-                                Background="{DynamicResource AccentBrush}"
-                                Visibility="Hidden" />
-                    </Grid>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-                        </Trigger>
-                        <!-- After the hover trigger, so the selected tab keeps the strong colour under the mouse. -->
-                        <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="Underline" Property="Visibility" Value="Visible" />
-                            <Setter Property="Foreground" Value="{DynamicResource TextStrongBrush}" />
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
+    <!-- The root panel of a resizable window: as DialogContent, but it widens with the window. -->
+    <Style x:Key="ResizableDialogContent" TargetType="{x:Type FrameworkElement}" BasedOn="{StaticResource DialogContent}">
+        <Setter Property="MaxWidth" Value="Infinity" />
     </Style>
 
     <!-- ===== Keyboard focus ===== -->
@@ -914,6 +866,86 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="HasHeading" Value="False">
                             <Setter TargetName="HeadingPanel" Property="Visibility" Value="Collapsed" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        Collapsible section (task 079): laid out as a FormSection with a heading, but the heading is a button. A chevron
+        before the heading points down while expanded and right while collapsed; while collapsed the rows are hidden
+        and the summary shows on the heading's line in muted text, cut short with an ellipsis (its tooltip has it all).
+        The whole heading line is the button: click it, or press Space when it has focus.
+    -->
+    <Style x:Key="SectionSummaryText" TargetType="{x:Type TextBlock}">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+        <Setter Property="Margin" Value="12,0,0,0" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style TargetType="{x:Type controls:CollapsibleSection}">
+        <Setter Property="Margin" Value="0,0,0,9" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type controls:CollapsibleSection}">
+                    <StackPanel>
+                        <StackPanel Margin="0,0,0,9">
+                            <ToggleButton FocusVisualStyle="{DynamicResource FocusOutline}"
+                                          HorizontalContentAlignment="Stretch"
+                                          Cursor="Hand"
+                                          AutomationProperties.Name="{TemplateBinding Heading}"
+                                          IsChecked="{Binding IsExpanded, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="{x:Type ToggleButton}">
+                                        <Border Background="Transparent">
+                                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
+                                        </Border>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                                <DockPanel>
+                                    <Path x:Name="Chevron"
+                                          DockPanel.Dock="Left"
+                                          Width="8"
+                                          Height="8"
+                                          Margin="0,0,8,0"
+                                          VerticalAlignment="Center"
+                                          Data="M 0,2 L 4,6 L 8,2"
+                                          Stroke="{DynamicResource SectionHeadingBrush}"
+                                          StrokeThickness="1.5"
+                                          RenderTransformOrigin="0.5,0.5"
+                                          SnapsToDevicePixels="False">
+                                        <Path.RenderTransform>
+                                            <RotateTransform Angle="0" />
+                                        </Path.RenderTransform>
+                                    </Path>
+                                    <TextBlock DockPanel.Dock="Left"
+                                               Style="{DynamicResource SectionHeadingText}"
+                                               VerticalAlignment="Center"
+                                               Text="{TemplateBinding DisplayHeading}" />
+                                    <TextBlock x:Name="SummaryText"
+                                               Style="{DynamicResource SectionSummaryText}"
+                                               Text="{TemplateBinding Summary}"
+                                               ToolTip="{TemplateBinding Summary}"
+                                               Visibility="Collapsed" />
+                                </DockPanel>
+                            </ToggleButton>
+                            <Border Height="1" Margin="0,4,0,0" Background="{DynamicResource DividerBrush}" />
+                        </StackPanel>
+                        <ItemsPresenter x:Name="Rows" />
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsExpanded" Value="False">
+                            <Setter TargetName="Rows" Property="Visibility" Value="Collapsed" />
+                            <Setter TargetName="SummaryText" Property="Visibility" Value="Visible" />
+                            <Setter TargetName="Chevron" Property="RenderTransform">
+                                <Setter.Value>
+                                    <RotateTransform Angle="-90" />
+                                </Setter.Value>
+                            </Setter>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

@@ -2,8 +2,6 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Input;
 using InventorAddin.Core;
 using InventorAddin.Core.ViewModels;
 
@@ -12,68 +10,21 @@ namespace InventorAddin.UI
     /// <summary>
     /// Settings dialog. All behaviour is in <see cref="SettingsViewModel"/>; this only closes the window
     /// once the view-model reports a successful save, shows the folder pickers for the register and work folders, and
-    /// the file pickers for the material library and finish list, and shows the page for the selected tab.
+    /// the file pickers for the material library and finish list.
+    /// Collapsed sections and the window's size and position are remembered by <see cref="WindowHost"/>.
     /// </summary>
     public partial class SettingsWindow : Window
     {
         private readonly SettingsViewModel _viewModel;
 
-        // The body's pages, in the order of the tabs in the XAML.
-        private readonly FrameworkElement[] _pages;
-
         public SettingsWindow(SettingsViewModel viewModel)
         {
             _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
             InitializeComponent();
-            _pages = new FrameworkElement[] { GeneralPage, PartNumbersPage, FoldersPage, MaterialFinishPage, DeveloperPage };
-            if (Tabs.SelectedIndex < 0)
-                Tabs.SelectedIndex = 0;
-            ShowPage(Tabs.SelectedIndex);
-            PreviewKeyDown += OnPreviewKeyDown;
             Title = $"{Branding.ProductName} Settings";
             DataContext = _viewModel;
             _viewModel.Saved += OnSaved;
             Closed += OnClosed;
-        }
-
-        /// <summary>
-        /// The tab strip changed tab: show its page. The other pages are Hidden rather than Collapsed so they keep
-        /// their space and the window's height stays the same. Hidden controls cannot take focus.
-        /// </summary>
-        private void OnTabChanged(object sender, SelectionChangedEventArgs e)
-        {
-            // SelectionChanged bubbles, so ignore any from inside the tab strip that are not the strip's own.
-            if (!ReferenceEquals(e.OriginalSource, Tabs))
-                return;
-
-            ShowPage(Tabs.SelectedIndex);
-        }
-
-        private void ShowPage(int index)
-        {
-            // The tab strip selects its first tab while the XAML loads, before the pages are known.
-            if (_pages is null)
-                return;
-
-            for (int i = 0; i < _pages.Length; i++)
-                _pages[i].Visibility = i == index ? Visibility.Visible : Visibility.Hidden;
-        }
-
-        /// <summary>
-        /// Ctrl+Tab and Ctrl+Shift+Tab move to the next and previous tab from anywhere in the window. The tab strip
-        /// handles these keys itself only while it has focus, and the pages are outside it.
-        /// </summary>
-        private void OnPreviewKeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.Key != Key.Tab || (Keyboard.Modifiers & ModifierKeys.Control) == 0)
-                return;
-
-            int count = Tabs.Items.Count;
-            int step = (Keyboard.Modifiers & ModifierKeys.Shift) != 0 ? -1 : 1;
-            Tabs.SelectedIndex = (Tabs.SelectedIndex + step + count) % count;
-            // Focus may have been on a control of the page just hidden; put it on the new tab.
-            (Tabs.SelectedItem as TabItem)?.Focus();
-            e.Handled = true;
         }
 
         /// <summary>
@@ -207,7 +158,6 @@ namespace InventorAddin.UI
         private void OnClosed(object? sender, EventArgs e)
         {
             _viewModel.Saved -= OnSaved;
-            PreviewKeyDown -= OnPreviewKeyDown;
             Closed -= OnClosed;
         }
     }

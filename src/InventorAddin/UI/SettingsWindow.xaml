@@ -2,8 +2,8 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:InventorAddin.UI.Controls"
-        SizeToContent="WidthAndHeight"
-        ResizeMode="NoResize"
+        SizeToContent="Height"
+        ResizeMode="CanResize"
         ShowInTaskbar="False">
     <!--
         DataContext is a SettingsViewModel (InventorAddin.Core.ViewModels), set in the constructor.
@@ -20,21 +20,21 @@
         Labels stay short to fit the 100-wide label column; the help line under each box explains it. The other CAD
         folders row is labelled "Other folders" for that reason.
 
-        Five tabs (Aidan, 2026-10-17): General, Part numbers, Folders, Material and finish, Developer. The tab strip
-        shows headers only; every page sits in one cell of the body and the pages not shown are Hidden, not
-        Collapsed, so the window keeps the tallest page's height and does not jump when a tab is picked. Save and
-        Cancel are below the tabs and apply to every tab. Ctrl+Tab and Ctrl+Shift+Tab move between tabs from
-        anywhere in the window (code-behind). The body scrolls if the window is capped at the screen's height.
+        One page that scrolls (Aidan, 2026-10-17, replacing the tabs of task 077): the sections General, Part numbers,
+        Folders, Material and finish and Developer, each a CollapsibleSection. A collapsed section shows a one-line
+        summary of its values beside its heading (SettingsViewModel's *Summary properties). Every section starts
+        expanded; WindowHost remembers which ones were collapsed, by x:Name, and the window's size and position (state
+        key "Settings"). The window can be resized and maximised; it never opens taller than the screen, and the body
+        scrolls while the header and the Save and Cancel buttons stay in view.
 
         Access keys: D default designer, N other names, U new file units, R register folder, B browse (register),
         W work folder, E browse (work folder), O other folders, M material library, F finish list, S show developer
         tools. The Browse buttons beside the material library and finish list have no access key: every letter of
         "Browse" is taken.
     -->
-    <Grid Style="{DynamicResource DialogContent}">
-        <!-- Header, tab strip, body, footer. The body row is star-sized so it scrolls when the window is capped. -->
+    <Grid Style="{DynamicResource ResizableDialogContent}">
+        <!-- Header, body, footer. The body row is star-sized, so it scrolls when the window is shorter than the page. -->
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
@@ -46,23 +46,11 @@
                                Title="{Binding HeaderTitle, Mode=OneTime}"
                                Subline="{Binding HeaderSubline, Mode=OneTime}" />
 
-        <!-- Tab headers only; the pages are in the body below, in the same order (code-behind shows one). -->
-        <TabControl x:Name="Tabs"
-                    Grid.Row="1"
-                    Style="{DynamicResource TabStrip}"
-                    SelectionChanged="OnTabChanged">
-            <TabItem Header="General" />
-            <TabItem Header="Part numbers" />
-            <TabItem Header="Folders" />
-            <TabItem Header="Material and finish" />
-            <TabItem Header="Developer" />
-        </TabControl>
-
-        <ScrollViewer Grid.Row="2" Style="{DynamicResource DialogBody}">
-            <!-- Every page sits in the same cell; the pages not shown are Hidden, so the tallest sets the height. -->
-            <Grid>
-                <!-- General -->
-                <controls:FormSection x:Name="GeneralPage">
+        <ScrollViewer Grid.Row="1" Style="{DynamicResource DialogBody}">
+            <StackPanel>
+                <controls:CollapsibleSection x:Name="GeneralSection"
+                                             Heading="General"
+                                             Summary="{Binding GeneralSummary, Mode=OneWay}">
                     <controls:FieldRow Label="_Default designer" Target="{Binding ElementName=DefaultDesignerBox}">
                         <TextBox x:Name="DefaultDesignerBox"
                                  Text="{Binding DefaultDesigner, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
@@ -85,9 +73,10 @@
                                   SelectedValuePath="Units"
                                   SelectedValue="{Binding DefaultUnits, Mode=TwoWay}" />
                     </controls:FieldRow>
-                </controls:FormSection>
-                <!-- Part numbers -->
-                <controls:FormSection x:Name="PartNumbersPage">
+                </controls:CollapsibleSection>
+                <controls:CollapsibleSection x:Name="PartNumbersSection"
+                                             Heading="Part numbers"
+                                             Summary="{Binding PartNumbersSummary, Mode=OneWay}">
                     <controls:FieldRow Label="_Register folder" Target="{Binding ElementName=RegisterFolderBox}">
                         <DockPanel>
                             <!-- Opens a folder picker and puts the chosen folder in the box beside it (code-behind). -->
@@ -102,9 +91,10 @@
                     <controls:FieldRow>
                         <TextBlock Style="{DynamicResource MutedText}" Text="{Binding RegisterFolderHelp, Mode=OneTime}" />
                     </controls:FieldRow>
-                </controls:FormSection>
-                <!-- Folders -->
-                <controls:FormSection x:Name="FoldersPage">
+                </controls:CollapsibleSection>
+                <controls:CollapsibleSection x:Name="FoldersSection"
+                                             Heading="Folders"
+                                             Summary="{Binding FoldersSummary, Mode=OneWay}">
                     <controls:FieldRow Label="_Work folder" Target="{Binding ElementName=WorkFolderBox}">
                         <DockPanel>
                             <Button DockPanel.Dock="Right"
@@ -128,9 +118,10 @@
                     <controls:FieldRow>
                         <TextBlock Style="{DynamicResource MutedText}" Text="{Binding OtherCadFoldersHelp, Mode=OneTime}" />
                     </controls:FieldRow>
-                </controls:FormSection>
-                <!-- Material and finish -->
-                <controls:FormSection x:Name="MaterialFinishPage">
+                </controls:CollapsibleSection>
+                <controls:CollapsibleSection x:Name="MaterialFinishSection"
+                                             Heading="Material and finish"
+                                             Summary="{Binding MaterialFinishSummary, Mode=OneWay}">
                     <controls:FieldRow Label="_Material library" Target="{Binding ElementName=MaterialLibraryBox}">
                         <DockPanel>
                             <!-- Opens a file picker for an .adsklib and puts the chosen file in the box beside it (code-behind). -->
@@ -158,9 +149,10 @@
                     <controls:FieldRow>
                         <TextBlock Style="{DynamicResource MutedText}" Text="{Binding FinishListHelp, Mode=OneTime}" />
                     </controls:FieldRow>
-                </controls:FormSection>
-                <!-- Developer -->
-                <controls:FormSection x:Name="DeveloperPage">
+                </controls:CollapsibleSection>
+                <controls:CollapsibleSection x:Name="DeveloperSection"
+                                             Heading="Developer"
+                                             Summary="{Binding DeveloperSummary, Mode=OneWay}">
                     <controls:FieldRow>
                         <CheckBox Content="_Show developer tools"
                                   IsChecked="{Binding ShowDeveloperTools, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
@@ -168,12 +160,12 @@
                     <controls:FieldRow>
                         <TextBlock Style="{DynamicResource MutedText}" Text="{Binding RestartNotice, Mode=OneTime}" />
                     </controls:FieldRow>
-                </controls:FormSection>
-            </Grid>
+                </controls:CollapsibleSection>
+            </StackPanel>
         </ScrollViewer>
 
         <!-- ErrorText is null when there is no error, which collapses the status line. -->
-        <controls:DialogFooter Grid.Row="3" Status="{Binding ErrorText}" IsError="{Binding HasError}">
+        <controls:DialogFooter Grid.Row="2" Status="{Binding ErrorText}" IsError="{Binding HasError}">
             <Button Style="{DynamicResource PrimaryButton}" Content="Save" IsDefault="True" Command="{Binding SaveCommand}" />
             <!-- IsCancel closes a dialog shown with ShowDialog; nothing is saved. -->
             <Button Content="Cancel" IsCancel="True" />

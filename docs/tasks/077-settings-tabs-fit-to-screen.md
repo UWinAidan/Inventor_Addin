@@ -2,7 +2,7 @@
 
 - **Milestone:** M3 (fix from Aidan's M3 checks, 2026-10-17)
 - **Feature spec:** `docs/features/08-window-style.md` ("Window layout", "Settings")
-- **Status:** done
+- **Status:** done. The Settings tabs were replaced by task 079 after Aidan's check (2026-10-17); the screen-height rule stays
 - **Depends on:** 070
 - **Parallel-safe with:** 078
 

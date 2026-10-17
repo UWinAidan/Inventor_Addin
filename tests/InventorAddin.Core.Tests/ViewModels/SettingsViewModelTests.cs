@@ -28,10 +28,16 @@ public sealed class SettingsViewModelTests : IDisposable
     private SettingsViewModel Create(AddinSettings? settings = null, ILog? log = null) =>
         new(settings ?? new AddinSettings(), new SettingsStore(_folder), log);
 
+    // The section summaries (task 079) are refreshed on every edit and have their own tests below, so the tests that
+    // pin which properties an edit raises leave them out.
     private static List<string> RecordPropertyChanges(INotifyPropertyChanged source)
     {
         var names = new List<string>();
-        source.PropertyChanged += (_, e) => names.Add(e.PropertyName!);
+        source.PropertyChanged += (_, e) =>
+        {
+            if (!e.PropertyName!.EndsWith("Summary", StringComparison.Ordinal))
+                names.Add(e.PropertyName);
+        };
         return names;
     }
 
@@ -1716,5 +1722,46 @@ public sealed class SettingsViewModelTests : IDisposable
 
         Assert.Equal("Blank uses the starter material library shipped with the add-in.", vm.MaterialLibraryHelp);
         Assert.Equal("Blank uses the starter finish list shipped with the add-in.", vm.FinishListHelp);
+    }
+
+    // ---- Section summaries (task 079) ----
+
+    [Fact]
+    public void Summaries_DescribeTheValuesBeingEdited()
+    {
+        var vm = new SettingsViewModel(
+            new AddinSettings
+            {
+                DefaultDesigner = "Test Designer",
+                OtherNamesForMe = "tdesigner, t.designer",
+                RegisterFolder = @"Z:\Register",
+                WorkFolder = @"C:\CAD_TEST",
+                OtherCadFolders = new[] { @"D:\One", @"D:\Two" },
+                MaterialLibraryPath = "",
+                FinishListPath = @"D:\Libraries\shop-finishes.csv",
+                ShowDeveloperTools = true,
+            },
+            new SettingsStore(_folder));
+
+        Assert.Equal("Test Designer, 2 other names, Metric", vm.GeneralSummary);
+        Assert.Equal(@"Z:\Register", vm.PartNumbersSummary);
+        Assert.Equal(@"C:\CAD_TEST, 2 other folders", vm.FoldersSummary);
+        Assert.Equal("starter library, shop-finishes.csv", vm.MaterialFinishSummary);
+        Assert.Equal("Developer tools shown", vm.DeveloperSummary);
+    }
+
+    [Fact]
+    public void Summaries_FollowEdits_AndRaiseTheirChange()
+    {
+        var vm = Create();
+        var changed = new List<string>();
+        vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName!);
+
+        vm.WorkFolder = @"  C:\Elsewhere  ";
+        vm.OtherCadFolders = "D:\\One\r\n\r\nD:\\Two\r\nD:\\Three";
+
+        Assert.Equal(@"C:\Elsewhere, 3 other folders", vm.FoldersSummary);
+        Assert.Contains(nameof(SettingsViewModel.FoldersSummary), changed);
+        Assert.Contains(nameof(SettingsViewModel.GeneralSummary), changed);
     }
 }

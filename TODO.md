@@ -6,7 +6,7 @@ Last updated: 2026-10-17
 
 ## Next up
 
-1. Aidan checks the M3 fixes 077 and 078 in Inventor (below); then push `claude/m3-material-finish`, open the pull request and merge.
+1. Aidan checks task 079, the new Settings layout, in Inventor (below); then push `claude/m3-material-finish`, open the pull request and merge.
 2. Aidan finishes the remaining Part Properties checks below.
 3. M4: discuss the hole generator's details with Aidan (spec 04).
 
@@ -20,9 +20,8 @@ Last updated: 2026-10-17
 
 **M3** (068 to 076) was checked on 2026-10-17: every check passed. Aidan found two things, now tasks 077 and 078.
 
-**M3 fixes** (077, 078, built 2026-10-17 on `claude/m3-material-finish`; full steps in each task's Verification section)
-- [ ] Task 077: Settings in five tabs, Save and Cancel below them, no height change between tabs, Ctrl+Tab, access keys; every other window looks as before; at a high display scale a tall window fits the screen and its body scrolls (7 steps)
-- [ ] Task 078: Settings and About on the AWB Addin tab with no document open, and on part, assembly and drawing (4 steps)
+**M3 fixes** (077, 078) were checked on 2026-10-17: Settings and About on every ribbon passed; Aidan did not like the Settings tabs, now task 079.
+- [ ] Task 079 (built 2026-10-17 on `claude/m3-material-finish`): Settings as one scrolling page of collapsible sections with summaries, remembered collapsed sections, resizable and maximisable, size and position remembered, never taller than the screen; other windows unchanged (steps in the task file)
 
 **M2 run 1** (037, 038, 039, 042): Aidan reported on 2026-10-17 that the remaining checks passed.
 
@@ -120,7 +119,8 @@ Small things noticed while building. None is urgent. The parent turns these into
 
 **Window style**
 - The scrolling body's scroll bar stays light in the dark theme, like the list scroll bars; spec 08 has no scroll bar style. The working area is read when a window opens, so dragging it to a smaller screen does not re-cap it. (task 077)
-- Settings: a save error about a setting on another tab (a missing library file) shows below the tabs but does not switch to that tab; the message names the setting. (task 077)
+- Settings: an access key for a field in a collapsed section does nothing; it could expand the section. A save error for a setting in a collapsed section does not expand it; the message names the setting. (task 079)
+- Only Settings is resizable and remembers its state. Mass Update and Material and Finish, with their long lists, may want the same; any window can opt in with `ResizeMode="CanResize"` and a state key. (task 079)
 - The remark in `UiTheme.cs` still says the dark-theme rule waits for spike 020; name the confirmed `LightTheme` and `DarkTheme`. (task 026)
 - Settings: the gap between a control and its note is the full row gap (9). If it looks loose, add a shared `HelpText` style. (task 028)
 - Settings: the restart note lines up with the checkbox's box, not its label text. (task 028)

@@ -326,6 +326,21 @@ public sealed class SettingsViewModel : ObservableObject
 
     public string HeaderSubline => Branding.ProductName;
 
+    // One-line summaries shown beside a collapsed section's heading (SettingsSummaries), from the values being edited.
+
+    public string GeneralSummary => SettingsSummaries.General(
+        _edited.DefaultDesigner,
+        _edited.OtherNamesForMe,
+        AllUnitsOptions.FirstOrDefault(o => o.Units == _edited.DefaultUnits)?.DisplayText ?? _edited.DefaultUnits.ToString());
+
+    public string PartNumbersSummary => SettingsSummaries.PartNumbers(_edited.RegisterFolder);
+
+    public string FoldersSummary => SettingsSummaries.Folders(_edited.WorkFolder, _edited.OtherCadFolders);
+
+    public string MaterialFinishSummary => SettingsSummaries.MaterialFinish(_edited.MaterialLibraryPath, _edited.FinishListPath);
+
+    public string DeveloperSummary => SettingsSummaries.Developer(_edited.ShowDeveloperTools);
+
     public string DefaultDesignerHelp => DefaultDesignerHelpText;
 
     public string RegisterFolderHelp => RegisterFolderHelpText;
@@ -610,5 +625,12 @@ public sealed class SettingsViewModel : ObservableObject
         SetSaveError(null);
         OnPropertyChanged(nameof(IsDirty));
         SaveCommand.RaiseCanExecuteChanged();
+
+        // Cheap to rebuild, so every edit refreshes every summary rather than tracking which section changed.
+        OnPropertyChanged(nameof(GeneralSummary));
+        OnPropertyChanged(nameof(PartNumbersSummary));
+        OnPropertyChanged(nameof(FoldersSummary));
+        OnPropertyChanged(nameof(MaterialFinishSummary));
+        OnPropertyChanged(nameof(DeveloperSummary));
     }
 }

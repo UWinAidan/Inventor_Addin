@@ -16,6 +16,9 @@ namespace InventorAddin.UI
         /// <summary>Key of the window style in <c>Styles.xaml</c>.</summary>
         public const string DialogWindowStyleKey = "DialogWindow";
 
+        /// <summary>Key of the resizable window style in <c>Styles.xaml</c> (task 079).</summary>
+        public const string ResizableDialogWindowStyleKey = "ResizableDialogWindow";
+
         private const string ThemeFolder = "UI/Theme/";
         private const string StylesFile = "Styles.xaml";
 

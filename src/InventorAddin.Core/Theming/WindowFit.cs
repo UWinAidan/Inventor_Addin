@@ -1,4 +1,13 @@
+using InventorAddin.Core.Settings;
+
 namespace InventorAddin.Core.Theming;
+
+/// <summary>A screen's working area (the screen less the taskbar), in WPF device-independent units.</summary>
+public readonly record struct ScreenArea(double Left, double Top, double Width, double Height)
+{
+    public double Right => Left + Width;
+    public double Bottom => Top + Height;
+}
 
 /// <summary>
 /// Keeps an add-in window inside the screen's working area (spec 08, "Window layout": Aidan, 2026-10-17). A window is
@@ -33,5 +42,45 @@ public static class WindowFit
             clamped = workAreaTop;
 
         return clamped == top ? null : clamped;
+    }
+
+    /// <summary>
+    /// Where to put a resizable window whose last placement was <paramref name="saved"/>, given the screens there are
+    /// now (task 079). The window goes on the screen it overlaps most, made no bigger than that screen's working area
+    /// and no smaller than the minimum size, and moved so it lies wholly inside it. Null when the placement is not
+    /// usable or overlaps no screen (a screen that was unplugged), so the window opens at its usual size instead.
+    /// </summary>
+    public static WindowPlacement? Restore(WindowPlacement? saved, IReadOnlyList<ScreenArea> screens, double minWidth, double minHeight)
+    {
+        ArgumentNullException.ThrowIfNull(screens);
+        if (saved is null || !double.IsFinite(saved.Left) || !double.IsFinite(saved.Top)
+            || !double.IsFinite(saved.Width) || !double.IsFinite(saved.Height) || saved.Width <= 0 || saved.Height <= 0)
+            return null;
+
+        ScreenArea? best = null;
+        double bestOverlap = 0;
+        foreach (var screen in screens)
+        {
+            if (!double.IsFinite(screen.Width) || !double.IsFinite(screen.Height) || screen.Width <= 0 || screen.Height <= 0)
+                continue;
+
+            double overlapWidth = Math.Min(saved.Left + saved.Width, screen.Right) - Math.Max(saved.Left, screen.Left);
+            double overlapHeight = Math.Min(saved.Top + saved.Height, screen.Bottom) - Math.Max(saved.Top, screen.Top);
+            double overlap = overlapWidth > 0 && overlapHeight > 0 ? overlapWidth * overlapHeight : 0;
+            if (overlap > bestOverlap)
+            {
+                bestOverlap = overlap;
+                best = screen;
+            }
+        }
+
+        if (best is not { } area)
+            return null;
+
+        double width = Math.Min(Math.Max(saved.Width, Math.Max(minWidth, 0)), area.Width);
+        double height = Math.Min(Math.Max(saved.Height, Math.Max(minHeight, 0)), area.Height);
+        double left = Math.Min(Math.Max(saved.Left, area.Left), area.Right - width);
+        double top = Math.Min(Math.Max(saved.Top, area.Top), area.Bottom - height);
+        return new WindowPlacement(left, top, width, height, saved.Maximized);
     }
 }
