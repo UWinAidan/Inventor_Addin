@@ -26,6 +26,10 @@ On the 3D Model tab, AWB Hole sits where Inventor's Hole is, Inventor's Hole is 
 - [ ] Delete the spike branch `spike/081-in-inventor` (local) once this is committed.
 - [ ] `dotnet test tests/InventorAddin.Core.Tests` passes; `dotnet build InventorAddin.slnx` builds
 
+## Notes for the implementer
+
+- The note under the Settings checkbox (task 086) already says the switch takes effect when Settings is saved and names the Hole button on the 3D Model tab; check the wording still fits what this task does.
+
 ## Verification
 
 Filled in by the implementer.

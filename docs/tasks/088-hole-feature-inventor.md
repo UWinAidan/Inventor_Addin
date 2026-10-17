@@ -31,6 +31,8 @@ A thin add-in class that turns Core's `HoleGeometry` into a real `HoleFeature` a
 
 ## Notes for the implementer
 
+- Resolve the workbook with `LibraryPaths.HoleWorkbook` and read it with `HoleWorkbookReader.Read(LibraryPath)`, so problems say which workbook it was. `MaterialLibraryMessages.AddinFolderUnknown` names only the material library and finish list; give the hole workbook its own wording if it is needed (task 086 follow-up).
+
 - Every member above is in spike 081's confirmed list; anything else must be checked against the interop (`Autodesk.Inventor.Interop.dll`) before use.
 - Units: Core gives centimetres; the tap drill is in table units by design.
 

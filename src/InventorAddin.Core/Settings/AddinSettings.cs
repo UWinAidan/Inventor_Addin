@@ -128,6 +128,25 @@ public sealed record AddinSettings
     private string _finishListPath = string.Empty;
 
     /// <summary>
+    /// The hole workbook (<c>.xlsx</c>) AWB Hole reads (spec 09, "Settings"). <c>""</c> by default, which means the
+    /// starter workbook shipped with the add-in (<see cref="Materials.LibraryPaths.HoleWorkbook"/>). A null is stored
+    /// as <c>""</c>.
+    /// </summary>
+    public string HoleWorkbookPath
+    {
+        get => _holeWorkbookPath;
+        set => _holeWorkbookPath = value ?? string.Empty;
+    }
+
+    private string _holeWorkbookPath = string.Empty;
+
+    /// <summary>
+    /// "Use Inventor's Hole command" (spec 09, "Settings"): on gives Inventor's Hole button and H shortcut back; off,
+    /// the default, gives them to AWB Hole. Only stored here; task 091 acts on it.
+    /// </summary>
+    public bool UseInventorHoleCommand { get; set; }
+
+    /// <summary>
     /// Display names of the materials starred as preferred in the Material and Finish window (spec 03, question 11).
     /// Not shown in the Settings window. Empty by default; a null list is stored as empty and null entries are
     /// dropped. The list is copied when set. Changed through <see cref="Materials.LibraryPaths.TogglePreferred"/>.
@@ -156,6 +175,8 @@ public sealed record AddinSettings
         && OtherNamesForMe == other.OtherNamesForMe
         && MaterialLibraryPath == other.MaterialLibraryPath
         && FinishListPath == other.FinishListPath
+        && HoleWorkbookPath == other.HoleWorkbookPath
+        && UseInventorHoleCommand == other.UseInventorHoleCommand
         && PreferredMaterials.SequenceEqual(other.PreferredMaterials, StringComparer.Ordinal);
 
     public override int GetHashCode()
@@ -172,6 +193,8 @@ public sealed record AddinSettings
         hash.Add(OtherNamesForMe, StringComparer.Ordinal);
         hash.Add(MaterialLibraryPath, StringComparer.Ordinal);
         hash.Add(FinishListPath, StringComparer.Ordinal);
+        hash.Add(HoleWorkbookPath, StringComparer.Ordinal);
+        hash.Add(UseInventorHoleCommand);
         foreach (var material in PreferredMaterials)
             hash.Add(material, StringComparer.Ordinal);
         return hash.ToHashCode();

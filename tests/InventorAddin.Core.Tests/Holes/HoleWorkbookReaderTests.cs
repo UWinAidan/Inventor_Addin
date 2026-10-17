@@ -1,4 +1,5 @@
 using InventorAddin.Core.Holes;
+using InventorAddin.Core.Materials;
 
 namespace InventorAddin.Core.Tests.Holes;
 
@@ -490,6 +491,47 @@ public sealed class HoleWorkbookReaderTests
         {
             File.Delete(path);
         }
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void MissingFile_ByLibraryPath_SaysWhichWorkbook(bool isStarter)
+    {
+        var workbook = new LibraryPath(Path.Combine(Path.GetTempPath(), $"awb-missing-{Guid.NewGuid():N}.xlsx"), isStarter);
+        var result = HoleWorkbookReader.Read(workbook);
+
+        Assert.Same(HoleWorkbook.Empty, result.Workbook);
+        Assert.Equal([HoleWorkbookMessages.Missing(workbook)], result.Problems.Select(p => p.ToString()));
+    }
+
+    [Fact]
+    public void UnreadableFile_ByLibraryPath_SaysWhichWorkbook()
+    {
+        var workbook = new LibraryPath(Path.Combine(Path.GetTempPath(), $"awb-bad-{Guid.NewGuid():N}.xlsx"), IsStarter: false);
+        File.WriteAllText(workbook.Path, "this is not a zip");
+        try
+        {
+            var result = HoleWorkbookReader.Read(workbook);
+
+            Assert.Same(HoleWorkbook.Empty, result.Workbook);
+            var problem = Assert.Single(result.Problems).ToString();
+            Assert.StartsWith($"Could not read the hole workbook set in Settings at {workbook.Path} (", problem);
+            Assert.EndsWith("Close it in Excel, check that it is an .xlsx file, or check the hole data path in Settings.", problem);
+        }
+        finally
+        {
+            File.Delete(workbook.Path);
+        }
+    }
+
+    [Fact]
+    public void StarterWorkbook_ByLibraryPath_Reads()
+    {
+        var result = HoleWorkbookReader.Read(new LibraryPath(RepoWorkbookPath(), IsStarter: true));
+
+        Assert.False(result.HasProblems, Problems(result));
+        Assert.NotEmpty(result.Workbook.Clearance);
     }
 
     // ---- The committed starter workbook ----

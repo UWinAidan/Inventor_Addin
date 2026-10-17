@@ -17,6 +17,9 @@ public static class SettingsSummaries
     public const string NoWorkFolder = "No work folder";
     public const string StarterLibrary = "starter library";
     public const string StarterFinishList = "starter finish list";
+    public const string StarterHoleData = "starter hole data";
+    public const string AwbHoleCommand = "AWB Hole";
+    public const string InventorHoleCommand = "Inventor's Hole";
     public const string DeveloperToolsShown = "Developer tools shown";
     public const string DeveloperToolsHidden = "Developer tools hidden";
 
@@ -52,6 +55,13 @@ public static class SettingsSummaries
     /// </summary>
     public static string MaterialFinish(string? materialLibraryPath, string? finishListPath) =>
         string.Join(Separator, FileNameOr(materialLibraryPath, StarterLibrary), FileNameOr(finishListPath, StarterFinishList));
+
+    /// <summary>
+    /// Holes: the hole workbook's file name, or "starter hole data" when blank, then which Hole command is in use. For
+    /// example "starter hole data, AWB Hole" or "AWB_Holes.xlsx, Inventor's Hole".
+    /// </summary>
+    public static string Holes(string? holeWorkbookPath, bool useInventorHoleCommand) =>
+        string.Join(Separator, FileNameOr(holeWorkbookPath, StarterHoleData), useInventorHoleCommand ? InventorHoleCommand : AwbHoleCommand);
 
     /// <summary>Developer: whether developer tools are shown.</summary>
     public static string Developer(bool showDeveloperTools) =>

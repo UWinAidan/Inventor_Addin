@@ -370,6 +370,8 @@ public sealed class SettingsStoreTests : IDisposable
             s => s with { OtherNamesForMe = "x" },
             s => s with { MaterialLibraryPath = @"D:\Lib.adsklib" },
             s => s with { FinishListPath = @"D:\finishes.csv" },
+            s => s with { HoleWorkbookPath = @"D:\AWB_Holes.xlsx" },
+            s => s with { UseInventorHoleCommand = true },
             s => s with { PreferredMaterials = new[] { "Test Steel" } },
         };
         var settableProperties = typeof(AddinSettings).GetProperties().Count(p => p.CanWrite);
@@ -491,6 +493,64 @@ public sealed class SettingsStoreTests : IDisposable
         Assert.Equal(@"D:\Ünïcode\Lib.adsklib", json["materialLibraryPath"]!.GetValue<string>());
         Assert.Equal(@"\\server\share\finishes.csv", json["finishListPath"]!.GetValue<string>());
         Assert.Equal(new[] { "Test Steel", "Test \"Alloy\"" }, json["preferredMaterials"]!.AsArray().Select(m => m!.GetValue<string>()));
+
+        var result = store.Load();
+        Assert.Empty(result.Warnings);
+        Assert.Equal(original, result.Settings);
+    }
+
+    // ---- Hole settings (task 086) ----
+
+    [Fact]
+    public void HoleSettings_Defaults_AreBlankAndAwbHole()
+    {
+        var settings = new AddinSettings();
+
+        Assert.Equal("", settings.HoleWorkbookPath);
+        Assert.False(settings.UseInventorHoleCommand);
+    }
+
+    [Fact]
+    public void Load_FileWrittenBeforeHoleSettings_LoadsDefaults()
+    {
+        WriteSettingsFile("""
+            {
+              "schemaVersion": 1,
+              "materialLibraryPath": "D:\\Lib.adsklib",
+              "finishListPath": "D:\\finishes.csv"
+            }
+            """);
+
+        var result = new SettingsStore(_folder).Load();
+
+        Assert.Empty(result.Warnings);
+        Assert.Equal("", result.Settings.HoleWorkbookPath);
+        Assert.False(result.Settings.UseInventorHoleCommand);
+        Assert.Equal(@"D:\Lib.adsklib", result.Settings.MaterialLibraryPath);
+    }
+
+    [Fact]
+    public void Load_NullHoleWorkbookPath_LoadsAsBlank()
+    {
+        WriteSettingsFile("""{ "holeWorkbookPath": null }""");
+
+        var result = new SettingsStore(_folder).Load();
+
+        Assert.Empty(result.Warnings);
+        Assert.Equal(new AddinSettings(), result.Settings);
+    }
+
+    [Fact]
+    public void Save_WritesHoleSettingsInCamelCase_ThenRoundTrips()
+    {
+        var store = new SettingsStore(_folder);
+        var original = new AddinSettings { HoleWorkbookPath = @"\\server\share\AWB_Holes.xlsx", UseInventorHoleCommand = true };
+
+        store.Save(original);
+
+        var json = JsonNode.Parse(File.ReadAllText(SettingsPath))!.AsObject();
+        Assert.Equal(@"\\server\share\AWB_Holes.xlsx", json["holeWorkbookPath"]!.GetValue<string>());
+        Assert.True(json["useInventorHoleCommand"]!.GetValue<bool>());
 
         var result = store.Load();
         Assert.Empty(result.Warnings);

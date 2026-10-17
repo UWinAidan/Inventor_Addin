@@ -289,7 +289,7 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 - [x] 083 ISO 286 hole limits (Core)
 - [ ] 084 Hole spec, geometry, checks and stored data (Core)
 - [ ] 085 AWB Hole window view-model (Core)
-- [ ] 086 Settings: Holes section and the shipped hole workbook
+- [x] 086 Settings: Holes section and the shipped hole workbook
 - [x] 087 Ribbon and window icon for AWB Hole
 - [ ] 088 Hole feature in Inventor: create, change, tolerance, colour, stored data, read back
 - [ ] 089 Hole centre picking and the live preview session

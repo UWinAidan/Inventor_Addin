@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Xml;
+using InventorAddin.Core.Materials;
 
 namespace InventorAddin.Core.Holes;
 
@@ -102,9 +103,32 @@ public static class HoleWorkbookReader
     {
         ArgumentNullException.ThrowIfNull(path);
 
+        return ReadFile(
+            path,
+            () => $"The hole workbook was not found at {path}.",
+            reason => $"Could not read the hole workbook at {path}. Check that it is an .xlsx file. ({reason})");
+    }
+
+    /// <summary>
+    /// Reads the workbook <see cref="LibraryPaths.HoleWorkbook"/> resolved, as <see cref="Read(string)"/> does, with a
+    /// missing or unreadable file reported by <see cref="HoleWorkbookMessages"/>, which say whether it is the starter
+    /// workbook or the one set in Settings (task 086).
+    /// </summary>
+    public static HoleWorkbookReadResult Read(LibraryPath workbook)
+    {
+        ArgumentNullException.ThrowIfNull(workbook);
+
+        return ReadFile(
+            workbook.Path,
+            () => HoleWorkbookMessages.Missing(workbook),
+            reason => HoleWorkbookMessages.Unreadable(workbook, reason));
+    }
+
+    private static HoleWorkbookReadResult ReadFile(string path, Func<string> missing, Func<string, string> unreadable)
+    {
         if (!File.Exists(path))
         {
-            return Failed($"The hole workbook was not found at {path}.");
+            return Failed(missing());
         }
 
         try
@@ -114,7 +138,7 @@ public static class HoleWorkbookReader
         }
         catch (Exception ex) when (IsReadFailure(ex))
         {
-            return Failed($"Could not read the hole workbook at {path}. Check that it is an .xlsx file. ({ex.Message})");
+            return Failed(unreadable(ex.Message));
         }
     }
 
