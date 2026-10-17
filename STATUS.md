@@ -13,7 +13,7 @@ Last updated: 2026-10-17
 | Window style and icons (M1b) | 08 | **Done, tested in Inventor** | Tasks 020 to 031. Shared look in light and dark, all three windows restyled, icons on ribbon and headers, XAML rules test. Every check passed on Windows. Two follow-ups on the build's deploy line are in `TODO.md` |
 | Part creation and numbering (M2) | 02 | **Done, tested in Inventor** | Every check passed; the last run 1 checks were reported on 2026-10-17. Run 2 checked on Windows 2026-10-11; fix run 053 to 061 and fix run 2 (spike 062, tasks 063 to 066) checked 2026-10-12 and passed. Merged into main from `claude/m2-fix-run` |
 | Material and finish (M3) | 03 | **Done, tested in Inventor** | Tasks 067 to 080, merged into main from `claude/m3-material-finish` on 2026-10-17: starter library and finish list, Material and Finish window and button, Part Properties Change button and warning, Settings and About on every ribbon, windows that fit the screen, Settings as one resizable page of collapsible sections, dialogs with only a close button, and a themed scroll bar. Every check passed |
-| AWB Hole (M4 part 1) | 09 | **Planned: spike first** | Decided by Aidan 2026-10-17: our own hole command replacing Inventor's Hole, options from `libraries/AWB_Holes.xlsx`, fit tolerances and colours on dowel and precision holes. Spike 081 (Windows, with Aidan) comes first; the rest is planned after it |
+| AWB Hole (M4 part 1) | 09 | **Planned** | Decided by Aidan 2026-10-17. Spike 081 done in six rounds with Aidan (holes of every type, live preview, centre picking, takeover of Hole and H, tolerance, colour, stored data, Edit Feature and double-click). Tasks 082 to 092 planned on branch `claude/m4-hole-generator` |
 | Hole table wizard (M4 part 2) | 04 | Not started | Planned after AWB Hole. Core half needs three answers; add-in half needs a Windows spike |
 | Drawing tools (M5) | 05 | Not started | Waiting on which commands Aidan wants. Will include a custom drawing template |
 | iLogic injection (M6) | 06 | Not started | Waiting on which rules |
@@ -33,5 +33,5 @@ States used: Not started, Planned, In progress, Built (merged, not tested in Inv
 
 ## Numbers
 
-- Tasks finished: 80 (001 to 080)
+- Tasks finished: 81 (001 to 081)
 - Core tests: 2650 after task 080; they run in the cloud and on Windows with `dotnet test tests/InventorAddin.Core.Tests`

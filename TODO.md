@@ -6,7 +6,7 @@ Last updated: 2026-10-17
 
 ## Next up
 
-1. M4 part 1: run spike 081 on Aidan's PC and walk Aidan through the results, then plan tasks 082 onwards (spec 09). Branch `claude/m4-hole-generator`.
+1. M4 part 1: run tasks 082 to 092 (spec 09, `docs/PLAN.md`) in a local session on Aidan's PC, branch `claude/m4-hole-generator`. Before the first add-in build, Aidan closes Inventor and rebuilds from this branch, so the spike build (branch `spike/081-in-inventor`) is replaced.
 2. Ribbon icon colours: Aidan picks option A, B or C from `docs/ui-mockups/ribbon-icons-colour-options.png` on branch `claude/ribbon-icon-colour`; then build it.
 3. Aidan finishes the remaining Part Properties checks below.
 
@@ -43,7 +43,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - The finish appearances are spike 067's suggestions for now; Aidan edits `libraries/finishes.csv` if he wants others
 
 **AWB Hole (spec 09), not blocking the spike**
-- Questions 1 to 5 in spec 09: how hole centres are placed, what Standard and Fastener type list, dowel and precision as Inventor's Simple type, several centres per feature, Edit AWB Hole on an Inventor hole. Each has a default; spike 081 informs question 1
+- Questions 2, 3 and 5 in spec 09: what Standard and Fastener type list, dowel and precision as Inventor's Simple type (or their own Type entry), and converting a hole made by Inventor's command on OK. Each has a default; questions 1 and 4 were answered by spike 081
 
 **Hole table (spec 04), blocks the wizard half of M4**
 - What makes a hole "precision"

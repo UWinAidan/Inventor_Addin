@@ -267,13 +267,39 @@ Not in M3: print notes on the drawing (M5), Inventor finish features (`FinishRea
 
 **Part 1: AWB Hole** (spec 09; Aidan, 2026-10-17). Our own hole command for part files: real Inventor hole features, options from `libraries/AWB_Holes.xlsx`, fit tolerances and fit colours on dowel and precision holes, replacing Inventor's Hole on the 3D Model tab. Planned and run as a local session on Aidan's PC.
 
-Spike 081 comes first and is walked through with Aidan. The remaining tasks (082 onwards) are planned after it, on what it proves. Expected shape, to be confirmed by the spike: the workbook reader and its models (Core), ISO 286 limits (Core, shared with part 2), the AWB Hole view-model (Core), Settings rows, creating and editing the hole feature, the preview, the ribbon and shortcut takeover, the colour and tolerance, Edit AWB Hole.
+Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 are planned on its results. Run in a local session on Aidan's PC. The Core tasks (082 to 085) can also run in the cloud.
 
 | Task | Needs | Depends on | Parallel-safe with |
 |---|---|---|---|
 | 081 | **windows** (spike, local session with Aidan) | none | none |
+| 082 | Core | none | 083, 086, 087 |
+| 083 | Core | none | 082, 086, 087 |
+| 084 | Core | 082, 083 | 086, 087 |
+| 085 | Core | 084 | 086, 087, 088 |
+| 086 | windows build | none | 082 to 085, 087 |
+| 087 | **Python with Pillow** | none | 082 to 086 |
+| 088 | windows build | 084 | 085, 086, 087 |
+| 089 | windows build | 088 | 086, 087 |
+| 090 | windows build | 085, 087, 089 | 086 |
+| 091 | windows build | 086, 090 | 092 |
+| 092 | windows build | 090 | 091 |
 
-- [ ] 081 Spike: AWB Hole through the Inventor API (Windows)
+- [x] 081 Spike: AWB Hole through the Inventor API (Windows)
+- [ ] 082 Hole workbook: reader and models (Core)
+- [ ] 083 ISO 286 hole limits (Core)
+- [ ] 084 Hole spec, geometry, checks and stored data (Core)
+- [ ] 085 AWB Hole window view-model (Core)
+- [ ] 086 Settings: Holes section and the shipped hole workbook
+- [ ] 087 Ribbon and window icon for AWB Hole
+- [ ] 088 Hole feature in Inventor: create, change, tolerance, colour, stored data, read back
+- [ ] 089 Hole centre picking and the live preview session
+- [ ] 090 AWB Hole window and command
+- [ ] 091 AWB Hole replaces Inventor's Hole and its H shortcut
+- [ ] 092 Edit Feature and double-click open AWB Hole; re-apply offer
+
+**Order.** 082 and 083, 084, 085, 086 and 087 alongside, then 088, 089, 090, then 091 and 092. Aidan checks after 090 (making and editing holes) and again after 092.
+
+Not in part 1: AWB Hole on the Sheet Metal and Flat Pattern tabs (they keep Inventor's Hole), holes placed without a sketch, and Standard and Fastener type beyond spec 09's defaults (questions 2 and 3).
 
 **Part 2: the hole table wizard** (spec 04), planned after part 1. Its Core half (classification, grouping, tagging, descriptions, table model) can be planned once spec 04's questions 1, 6 and 7 are answered; the add-in half waits on the Windows spike described in the spec.
 

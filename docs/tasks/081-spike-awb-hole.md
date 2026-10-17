@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 1
 - **Feature spec:** `docs/features/09-awb-hole.md`
-- **Status:** in progress
+- **Status:** done
 - **Depends on:** none
 - **Needs:** windows (local session on Aidan's PC, walked through with Aidan)
 - **Parallel-safe with:** none
@@ -123,21 +123,45 @@ Run on Aidan's PC, 2026-10-17, Inventor 2026.2. Two tools: a throwaway console a
 - A right-click raises `OnLinearMarkingMenu` and `OnRadialMarkingMenu`; adding our own item there worked (round 1's "Edit AWB Hole", which Aidan does not want).
 - **Edits by Inventor's command:** `ModelingEvents.OnFeatureChange` fires before and after every change of a hole, from any source, with the feature; `OnActivateCommand` reports `PartNGxHoleEditCtxCmd`. Inventor's edit kept the colour, so a re-apply offer is needed only when the fit or tolerance no longer matches what is stored.
 
-### Round 2 (with Aidan)
+### Rounds 2 to 6 (with Aidan, in Inventor)
 
-- **Inventor-style centre selection** with `InteractionEvents` and `SelectEvents` (sketch point filter, single select) running while the window is open: all hole centres of the sketch picked when the window opens, a click toggles a point without Ctrl, a `HighlightSet` shows them blue, the preview follows; and whether points stay clickable once the preview hole consumes the sketch.
-- **Redirecting Edit Feature:** plan A, swap `PartNGxHoleEditCtxCmd` for our own "Edit Feature" in the right-click menus; plan B, `ControlDefinitionEvents.OnCommandInputs` on the built-in command.
-- The H fix, and colouring all hole faces.
+- **Inventor-style centre selection works** (round 2). When the window opens with nothing selected, the newest visible sketch with hole-centre points (`SketchPoint.HoleCenter`) is taken, or the sketch or points the user selected, and all its centres are picked. `CommandManager.CreateInteractionEvents` with `SelectEvents.AddSelectionFilter(kSketchPointFilter)`, `SingleSelectEnabled = true` and `OnSelect` runs while the modeless window is open; each click toggles a point without Ctrl (then `ResetSelections`), a `HighlightSet` (`SetColor(30, 120, 255)`) shows the centres in blue, and the preview follows. Creating the preview hole consumes and hides the sketch, so the window sets `PlanarSketch.Visible = true` while it is open and puts it back on close; the points stay clickable.
+- **Editing picks centres too** (round 4): the edit window reads the hole's `HoleCenterPoints`, shows their sketch while open, and lets points of that sketch be added or removed.
+- **The colour covers the bottom** (round 2): colouring `HoleFeature.Faces` includes the drill point cone and a flat bottom.
+- **Edit Feature opens AWB Hole, by every route** (rounds 2 to 4):
+  - Browser right-click: `OnLinearMarkingMenu` lists `PartNGxHoleEditCtxCmd`; `menu.AddButton(ourDef, false, true, "PartNGxHoleEditCtxCmd", true)` then `menu["PartNGxHoleEditCtxCmd"].Delete()` puts our "Edit Feature" in its place. The radial menu does not carry it.
+  - Viewport left-click mini toolbar: `OnContextualMiniToolbar` gives the commands as a `NameValueMap` (`PartNGxHoleEditCtxCmd | SketchEditSketchCtxCmd | ...`); `Insert(ourName, value, index, true)` and `Remove("PartNGxHoleEditCtxCmd")` swap ours in. **The mini toolbar shows icons only**, so our definition needs one; Inventor's own Edit Feature icon can be copied from `PartNGxHoleEditCtxCmd.StandardIcon` / `LargeIcon`.
+  - Double-click on a hole, in the browser or on a face: `OnDoubleClick` with `kEventHandled`.
+  - Backstop: if `PartNGxHoleEditCtxCmd` starts anyway (`OnActivateCommand`), `CommandManager.StopActiveCommand()` and open ours.
+- **The window must open after Inventor's event has returned** (round 3). Opened inside the right-click command or the double-click event, the window showed but took no input ("stuck"); opened through `Dispatcher.BeginInvoke` it works.
+- **Editing reads the hole first** (round 5). Aidan found that opening the edit window turned a counterbore into a plain hole and dropped the dowel: the spike previewed its default type before reading the hole. The edit window must load every setting from the hole and its stored AWB data before the first preview, and keep a seat unless the user changes the type.
+- **Unticking Dowel removes everything dowel** (round 5, Aidan): `Tolerance.SetToDefault()`, each face's `AppearanceSourceType = kPartAppearance` (the red goes; the face reads back `kFeatureAppearance`, "Default"), and the `AWB_Hole` attribute set deleted. One Undo brings the dowel back.
+- **A refused change must not break the session** (round 6). With a diameter larger than the counterbore Inventor refused the change (E_INVALIDARG), and from then on every change failed, even valid ones, until Undo. Running **each preview change in its own inner transaction** (nested inside the window's transaction) and aborting only that step on failure keeps the hole at its last good state; later changes, type changes, Cancel and OK all work. Aidan confirmed.
+- **H follows the restore** (round 2): with `PartHoleCmd.OverrideShortcut = DefaultShortcut` on restore and ours cleared, H opens Inventor's Hole while it is restored and ours while taken over.
+- The spike window's plain look is for the spike only; the real window uses the add-in's shared light and dark look (Aidan).
 
 ## Recommendations
 
-To be written after the results, then walked through with Aidan. They decide the approach for each of: hole creation, preview, the ribbon and shortcut takeover, tolerance, colour, stored data, and Edit AWB Hole.
+Walked through with Aidan on 2026-10-17; each is carried into spec 09.
+
+1. **Create holes** with `HoleFeatures` from sketch points, direction `kPositiveExtentDirection` into the material, the `...Extent2` methods for drill points and flat bottoms. Check `HealthStatus` and `Faces.Count` after every create or change.
+2. **Tapped holes** through `_CreateTapInfo` with `kThreadTapDrillDiameter` and the workbook's tap drill, in the thread table's units, so the model has our tap drill. Inventor's designations: `M6x1` (the add-in adds the pitch to the workbook's `M6`), `10-32 UNF` without `#`. Log a clear error if a later Inventor drops the hidden member.
+3. **Preview with the real feature**: one outer transaction per window session; each change in an inner transaction, aborted alone if Inventor refuses it. OK ends the outer transaction (one Undo); Cancel aborts it. Core validates values before they reach Inventor (for example hole smaller than its counterbore, counterbore depth less than the hole depth), so refusals are rare.
+4. **Selection**: as rounds 2 and 4, with the sketch shown while the window is open.
+5. **Takeover**: our large button before `PartHoleCmd` in `id_TabModel` / `id_PanelP_ModelModify`, `PartHoleCmd` hidden, H moved to ours; restored by giving `PartHoleCmd` its default shortcut back and clearing ours. Re-apply on `OnResetShortcuts`. Sheet Metal and Flat Pattern keep Inventor's Hole (Default).
+6. **Tolerance**: `SetToFits(kLimitsFitsStackedTolerance, code, "")` for ISO rows, `SetToDeviation(upper, lower)` for Limits rows, model at nominal. Core still computes ISO 286 limits to show them in the window and for the hole table.
+7. **Colour**: one appearance per fit in the part (`Assets.Add`, `generic_diffuse` from the workbook's RGB), set on `HoleFeature.Faces`; removed with `AppearanceSourceType = kPartAppearance`.
+8. **Stored data**: an `AWB_Hole` attribute set on the feature, with a version number; found with `AttributeManager.FindObjects`.
+9. **Edit**: Edit Feature (browser menu and mini toolbar, with Inventor's icon), double-click and the backstop all open AWB Hole, after Inventor's event has returned. The window loads the hole fully before previewing. A hole made by Inventor's command opens too and is converted on OK (spec 09 question 5). A hole changed while Inventor's Hole was restored is offered a re-apply of fit, tolerance and colour when its stored data no longer matches.
 
 ## Verification
 
-- **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):** none merged (spike code is thrown away)
-- **Inventor API members not confirmed:** list every member used, as spike 067 did
-- **Manual checklist for Inventor:** walked through with Aidan in the session
+- **Ran:** the console app (four runs, logged in its scratch folder) and six rounds of the spike command in Inventor 2026.2 on Aidan's PC, built and deployed with `dotnet build InventorAddin.slnx`, 0 errors. Aidan tried every round.
+- **Not compiled (changed under `src/InventorAddin`):** none merged. The spike code (`Spike081.cs` and a hook in `StandardAddInServer`) lives only on branch `spike/081-in-inventor` and is not merged.
+- **Inventor API members confirmed (compile and run):** `HoleFeatures` (`AddDrilledByThroughAllExtent`, `AddDrilledByDistanceExtent2`, `AddDrilledByToFaceExtent2`, `AddCBoreByThroughAllExtent`, `AddCBoreByDistanceExtent2`, `AddCSinkByThroughAllExtent`, `CreateSketchPlacementDefinition`, `CreatePointPlacementDefinition`, `CreateTapInfo`, `_CreateTapInfo`); `HoleFeature` (`HoleDiameter`, `Depth`, `ExtentType`, `HoleType`, `Tapped`, `TapInfo`, `HoleCenterPoints` get and set, `SetDistanceExtent2`, `SetThroughAllExtent`, `SetCBore`, `SetCSink`, `SetDrilled`, `Faces`, `SideFaces`, `Appearance`, `AttributeSets`, `HealthStatus`, `Delete`); `HoleTapInfo` (`ThreadDesignation`, `ThreadType`, `Class`, `TapDrillDiameter`, `ThreadDepth`, `_DiameterInModel`); `Parameter.Tolerance` (`SetToFits`, `SetToDeviation`, `SetToDefault`, `Upper`, `Lower`, `ToleranceType`), `Parameter.ModelValueType`; `Assets.Add`, `ColorAssetValue.Value`, `TransientObjects.CreateColor`, `Face.Appearance`, `Face.AppearanceSourceType`, `Face.CreatedByFeature`; `AttributeSets.Add`, `AttributeSet.Add`, `AttributeSet.Delete`, `AttributeSets.NameIsUsed`, `AttributeManager.FindObjects`; `TransactionManager.StartTransaction` (nested), `Transaction.End`/`Abort`/`HasParentTransaction`, `UndoTransaction`; `CommandControls.AddButton` with a target, `CommandControl.Visible`, `ControlDefinition.OverrideShortcut`/`DefaultShortcut`/`IsShortcutOverridden`/`StandardIcon`/`LargeIcon`, `CommandManager.StopActiveCommand`/`ActiveCommand`/`CreateInteractionEvents`, `InteractionEvents` (`SelectEvents`, `Start`, `Stop`, `StatusBarText`, `OnTerminate`), `SelectEvents` (`AddSelectionFilter`, `SingleSelectEnabled`, `OnSelect`, `ResetSelections`), `PartDocument.CreateHighlightSet`, `HighlightSet.SetColor`/`AddItem`/`Clear`/`Delete`, `SketchPoint.HoleCenter`/`Geometry3d`, `PlanarSketch.Visible`; events `ModelingEvents.OnFeatureChange`, `UserInputEvents.OnActivateCommand`/`OnLinearMarkingMenu`/`OnRadialMarkingMenu`/`OnContextualMiniToolbar`/`OnDoubleClick`, `UserInterfaceEvents.OnResetShortcuts`, `ControlDefinitionEvents.OnCommandInputs` (hooked; it did not fire for Edit Feature).
+- **Manual checklist for Inventor:** walked through with Aidan in six rounds (see Results).
 
 ## Follow-ups
+
+- Spike branch `spike/081-in-inventor` is deleted once the real takeover task replaces it; until then do not merge it.
+- The spike let OK through with no hole centres; the real window must not.
