@@ -80,9 +80,9 @@ public static class RibbonLayout
         }),
         new(RibbonIds.AwbPanelId, RibbonIds.AwbPanelName, DeveloperOnly: false, new ButtonDefinition[]
         {
-            // ZeroDoc gets no Settings or About button until spec 01 open question 4 is answered.
-            new(CommandNames.Settings, ButtonSize.Small, IconNames.Settings, DocumentEnvironments),
-            new(CommandNames.About, ButtonSize.Small, IconNames.About, DocumentEnvironments),
+            // Every ribbon, including no document open (Aidan, 2026-10-17, spec 01 question 4).
+            new(CommandNames.Settings, ButtonSize.Small, IconNames.Settings, AllEnvironments),
+            new(CommandNames.About, ButtonSize.Small, IconNames.About, AllEnvironments),
         }),
     };
 

@@ -101,17 +101,19 @@ public sealed class RibbonLayoutTests
     private static PanelLayout[] ExpectedLayout(RibbonEnvironment environment, bool showDeveloperTools) =>
         (environment, showDeveloperTools) switch
         {
-            // No Settings or About on ZeroDoc yet (spec 01 open question 4), so no AWB panel there.
+            // Settings and About on every ribbon (Aidan, 2026-10-17, spec 01 question 4), so ZeroDoc has the AWB panel.
             (RibbonEnvironment.ZeroDoc, false) => new[]
             {
                 Create(Large("NewPart")),
                 Properties(Small("MassUpdate")),
+                Awb(),
             },
             (RibbonEnvironment.ZeroDoc, true) => new[]
             {
                 Create(Large("NewPart")),
                 Properties(Small("MassUpdate")),
                 Developer(Small("ExportLibraries")),
+                Awb(),
             },
             (RibbonEnvironment.Part, false) => new[]
             {
@@ -195,16 +197,17 @@ public sealed class RibbonLayoutTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void ZeroDoc_HasNoSettingsOrAboutButton_ButHasTheTab(bool showDeveloperTools)
+    public void EveryEnvironment_HasSettingsAndAbout_InTheAwbPanelFarRight(bool showDeveloperTools)
     {
-        var names = RibbonLayout.For(RibbonEnvironment.ZeroDoc, showDeveloperTools)
-            .SelectMany(p => p.Buttons)
-            .Select(b => b.CommandInternalName)
-            .ToList();
+        // Aidan, 2026-10-17 (spec 01 question 4): with no document open too.
+        foreach (var environment in RibbonEnvironments.All)
+        {
+            var panels = RibbonLayout.For(environment, showDeveloperTools);
+            var last = panels[^1];
 
-        Assert.DoesNotContain(CommandNames.Settings, names);
-        Assert.DoesNotContain(CommandNames.About, names);
-        Assert.True(RibbonLayout.HasPanels(RibbonEnvironment.ZeroDoc, showDeveloperTools));
+            Assert.Equal(RibbonIds.AwbPanelId, last.Id);
+            Assert.Equal(new[] { CommandNames.Settings, CommandNames.About }, last.Buttons.Select(b => b.CommandInternalName));
+        }
     }
 
     [Theory]
