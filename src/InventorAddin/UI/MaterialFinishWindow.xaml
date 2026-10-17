@@ -58,134 +58,147 @@
         </Style>
     </Window.Resources>
 
-    <StackPanel Style="{DynamicResource DialogContent}">
+    <Grid Style="{DynamicResource DialogContent}">
+        <!-- Header, body, footer. The body row is star-sized, so it scrolls when the window is capped at the screen's height. -->
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
         <!-- The header icon is put in the window's resources by WindowHost (HeaderIcon), in the window's theme. -->
-        <controls:DialogHeader Icon="{DynamicResource HeaderIcon}"
+        <controls:DialogHeader Grid.Row="0"
+                               Icon="{DynamicResource HeaderIcon}"
                                Title="{Binding HeaderTitle, Mode=OneWay}"
                                Subline="{Binding HeaderSubline, Mode=OneWay}" />
 
-        <controls:FormSection Heading="Filter">
-            <controls:FieldRow Label="_Category" Target="{Binding ElementName=CategoryBox}">
-                <ComboBox x:Name="CategoryBox"
-                          IsEditable="False"
-                          ItemsSource="{Binding Categories, Mode=OneTime}"
-                          SelectedItem="{Binding SelectedCategory, Mode=TwoWay}" />
-            </controls:FieldRow>
-            <controls:FieldRow>
-                <StackPanel Orientation="Horizontal">
-                    <CheckBox Style="{DynamicResource InlineCheckBox}"
-                              Content="_Preferred only"
-                              IsChecked="{Binding PreferredOnly, Mode=TwoWay}" />
-                    <CheckBox Style="{DynamicResource InlineCheckBox}"
-                              Content="_Show paints"
-                              IsChecked="{Binding ShowPaints, Mode=TwoWay}" />
-                </StackPanel>
-            </controls:FieldRow>
-        </controls:FormSection>
-
-        <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-
-            <StackPanel Grid.Column="0" Style="{DynamicResource LeftColumn}">
-                <controls:FormSection Heading="Materials">
-                    <controls:FieldRow Label="Find _material" Target="{Binding ElementName=MaterialSearchBox}">
-                        <TextBox x:Name="MaterialSearchBox"
-                                 PreviewKeyDown="OnMaterialSearchKeyDown"
-                                 Text="{Binding MaterialSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+        <ScrollViewer Grid.Row="1" Style="{DynamicResource DialogBody}">
+            <StackPanel>
+                <controls:FormSection Heading="Filter">
+                    <controls:FieldRow Label="_Category" Target="{Binding ElementName=CategoryBox}">
+                        <ComboBox x:Name="CategoryBox"
+                                  IsEditable="False"
+                                  ItemsSource="{Binding Categories, Mode=OneTime}"
+                                  SelectedItem="{Binding SelectedCategory, Mode=TwoWay}" />
                     </controls:FieldRow>
-                    <ListBox x:Name="MaterialsList"
-                             Style="{DynamicResource PickList}"
-                             AutomationProperties.Name="Materials"
-                             ItemsSource="{Binding Materials, Mode=OneWay}"
-                             SelectedItem="{Binding MaterialListSelection, Mode=TwoWay}"
-                             MouseDoubleClick="OnMaterialDoubleClick"
-                             PreviewKeyDown="OnMaterialsKeyDown">
-                        <ListBox.ItemTemplate>
-                            <!-- DataContext is a MaterialRow. -->
-                            <DataTemplate>
-                                <DockPanel>
-                                    <!--
-                                        Not a Tab stop, so Tab leaves the list in one step; Space on the entry toggles
-                                        the star from the keyboard (code-behind). Tag draws a preferred star strong.
-                                    -->
-                                    <Button DockPanel.Dock="Left"
-                                            Style="{DynamicResource StarButton}"
-                                            Focusable="False"
-                                            Command="{Binding ToggleStarCommand}"
-                                            Tag="{Binding IsPreferred, Mode=OneWay}"
-                                            AutomationProperties.Name="Preferred material"
-                                            ToolTip="Preferred material. Click, or press Space on the entry, to add or remove the star.">
-                                        <TextBlock x:Name="Star" Text="&#x2606;" />
-                                    </Button>
-                                    <TextBlock Style="{DynamicResource ValueText}"
-                                               TextWrapping="NoWrap"
-                                               TextTrimming="CharacterEllipsis"
-                                               Text="{Binding Name, Mode=OneTime}"
-                                               ToolTip="{Binding Name, Mode=OneTime}" />
-                                </DockPanel>
-                                <DataTemplate.Triggers>
-                                    <DataTrigger Binding="{Binding IsPreferred, Mode=OneWay}" Value="True">
-                                        <Setter TargetName="Star" Property="Text" Value="&#x2605;" />
-                                    </DataTrigger>
-                                </DataTemplate.Triggers>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
+                    <controls:FieldRow>
+                        <StackPanel Orientation="Horizontal">
+                            <CheckBox Style="{DynamicResource InlineCheckBox}"
+                                      Content="_Preferred only"
+                                      IsChecked="{Binding PreferredOnly, Mode=TwoWay}" />
+                            <CheckBox Style="{DynamicResource InlineCheckBox}"
+                                      Content="_Show paints"
+                                      IsChecked="{Binding ShowPaints, Mode=TwoWay}" />
+                        </StackPanel>
+                    </controls:FieldRow>
+                </controls:FormSection>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Style="{DynamicResource LeftColumn}">
+                        <controls:FormSection Heading="Materials">
+                            <controls:FieldRow Label="Find _material" Target="{Binding ElementName=MaterialSearchBox}">
+                                <TextBox x:Name="MaterialSearchBox"
+                                         PreviewKeyDown="OnMaterialSearchKeyDown"
+                                         Text="{Binding MaterialSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            </controls:FieldRow>
+                            <ListBox x:Name="MaterialsList"
+                                     Style="{DynamicResource PickList}"
+                                     AutomationProperties.Name="Materials"
+                                     ItemsSource="{Binding Materials, Mode=OneWay}"
+                                     SelectedItem="{Binding MaterialListSelection, Mode=TwoWay}"
+                                     MouseDoubleClick="OnMaterialDoubleClick"
+                                     PreviewKeyDown="OnMaterialsKeyDown">
+                                <ListBox.ItemTemplate>
+                                    <!-- DataContext is a MaterialRow. -->
+                                    <DataTemplate>
+                                        <DockPanel>
+                                            <!--
+                                                Not a Tab stop, so Tab leaves the list in one step; Space on the entry toggles
+                                                the star from the keyboard (code-behind). Tag draws a preferred star strong.
+                                            -->
+                                            <Button DockPanel.Dock="Left"
+                                                    Style="{DynamicResource StarButton}"
+                                                    Focusable="False"
+                                                    Command="{Binding ToggleStarCommand}"
+                                                    Tag="{Binding IsPreferred, Mode=OneWay}"
+                                                    AutomationProperties.Name="Preferred material"
+                                                    ToolTip="Preferred material. Click, or press Space on the entry, to add or remove the star.">
+                                                <TextBlock x:Name="Star" Text="&#x2606;" />
+                                            </Button>
+                                            <TextBlock Style="{DynamicResource ValueText}"
+                                                       TextWrapping="NoWrap"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       Text="{Binding Name, Mode=OneTime}"
+                                                       ToolTip="{Binding Name, Mode=OneTime}" />
+                                        </DockPanel>
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding IsPreferred, Mode=OneWay}" Value="True">
+                                                <Setter TargetName="Star" Property="Text" Value="&#x2605;" />
+                                            </DataTrigger>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </controls:FormSection>
+                    </StackPanel>
+
+                    <controls:FormSection Grid.Column="1" Heading="Finishes">
+                        <controls:FieldRow Label="Find _finish" Target="{Binding ElementName=FinishSearchBox}">
+                            <TextBox x:Name="FinishSearchBox"
+                                     PreviewKeyDown="OnFinishSearchKeyDown"
+                                     Text="{Binding FinishSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </controls:FieldRow>
+                        <!-- Empty until a material is selected; then None first. -->
+                        <ListBox x:Name="FinishesList"
+                                 Style="{DynamicResource PickList}"
+                                 AutomationProperties.Name="Finishes"
+                                 ItemsSource="{Binding Finishes, Mode=OneWay}"
+                                 SelectedItem="{Binding FinishListSelection, Mode=TwoWay}"
+                                 MouseDoubleClick="OnFinishDoubleClick">
+                            <ListBox.ItemTemplate>
+                                <!-- DataContext is a FinishRow. -->
+                                <DataTemplate>
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Right"
+                                                   Style="{DynamicResource SideIdentifierText}"
+                                                   Text="{Binding Code, Mode=OneTime}" />
+                                        <TextBlock Style="{DynamicResource ValueText}"
+                                                   TextWrapping="NoWrap"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Text="{Binding Name, Mode=OneTime}"
+                                                   ToolTip="{Binding Name, Mode=OneTime}" />
+                                    </DockPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </controls:FormSection>
+                </Grid>
+
+                <controls:FormSection>
+                    <controls:FieldRow Label="Selected">
+                        <StackPanel>
+                            <ContentControl Style="{StaticResource SelectionOrPlaceholder}"
+                                            Content="{Binding SelectionText, Mode=OneWay}" />
+                            <TextBlock Style="{DynamicResource MutedText}"
+                                       Text="Hidden from a list by a filter or search; Apply still uses it."
+                                       Visibility="{Binding SelectionIsHidden, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}" />
+                        </StackPanel>
+                    </controls:FieldRow>
                 </controls:FormSection>
             </StackPanel>
-
-            <controls:FormSection Grid.Column="1" Heading="Finishes">
-                <controls:FieldRow Label="Find _finish" Target="{Binding ElementName=FinishSearchBox}">
-                    <TextBox x:Name="FinishSearchBox"
-                             PreviewKeyDown="OnFinishSearchKeyDown"
-                             Text="{Binding FinishSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                </controls:FieldRow>
-                <!-- Empty until a material is selected; then None first. -->
-                <ListBox x:Name="FinishesList"
-                         Style="{DynamicResource PickList}"
-                         AutomationProperties.Name="Finishes"
-                         ItemsSource="{Binding Finishes, Mode=OneWay}"
-                         SelectedItem="{Binding FinishListSelection, Mode=TwoWay}"
-                         MouseDoubleClick="OnFinishDoubleClick">
-                    <ListBox.ItemTemplate>
-                        <!-- DataContext is a FinishRow. -->
-                        <DataTemplate>
-                            <DockPanel>
-                                <TextBlock DockPanel.Dock="Right"
-                                           Style="{DynamicResource SideIdentifierText}"
-                                           Text="{Binding Code, Mode=OneTime}" />
-                                <TextBlock Style="{DynamicResource ValueText}"
-                                           TextWrapping="NoWrap"
-                                           TextTrimming="CharacterEllipsis"
-                                           Text="{Binding Name, Mode=OneTime}"
-                                           ToolTip="{Binding Name, Mode=OneTime}" />
-                            </DockPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </controls:FormSection>
-        </Grid>
-
-        <controls:FormSection>
-            <controls:FieldRow Label="Selected">
-                <StackPanel>
-                    <ContentControl Style="{StaticResource SelectionOrPlaceholder}"
-                                    Content="{Binding SelectionText, Mode=OneWay}" />
-                    <TextBlock Style="{DynamicResource MutedText}"
-                               Text="Hidden from a list by a filter or search; Apply still uses it."
-                               Visibility="{Binding SelectionIsHidden, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}" />
-                </StackPanel>
-            </controls:FieldRow>
-        </controls:FormSection>
+        </ScrollViewer>
 
         <!--
             Status line and buttons in one row: the result of the last Apply or star, or the finish list's problems at
             open; its tooltip lists every note (skipped components, appearances not found, finish rows left out).
         -->
-        <controls:DialogFooter Status="{Binding StatusText, Mode=OneWay}"
+        <controls:DialogFooter Grid.Row="2"
+                               Status="{Binding StatusText, Mode=OneWay}"
                                IsError="{Binding StatusIsError, Mode=OneWay}"
                                StatusToolTip="{Binding StatusDetails, Mode=OneWay}">
             <Button Content="_Apply" Command="{Binding ApplyCommand}" />
@@ -193,5 +206,5 @@
             <!-- IsCancel closes a dialog shown with ShowDialog; nothing more is applied. -->
             <Button Content="Cancel" IsCancel="True" />
         </controls:DialogFooter>
-    </StackPanel>
+    </Grid>
 </Window>

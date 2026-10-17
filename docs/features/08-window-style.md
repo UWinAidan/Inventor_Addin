@@ -85,6 +85,8 @@ Every window has the same three bands:
 2. **Body.** One or more sections. A section is a heading and a two-column grid of label and value.
 3. **Footer.** The status line on the left, buttons on the right. The status line and the buttons share one row.
 
+**Never taller than the screen** (Aidan, 2026-10-17). No window is taller than the working area of the screen it opens on (the screen less the taskbar), and none opens with its bottom off the screen. When the content is taller, the body scrolls and the header and footer stay visible. How it is built: each window's content is a Grid in the `DialogContent` style with the header, the body in a `ScrollViewer` in the `DialogBody` style on a star-sized row, and the footer; `WindowHost` caps the height and moves the window up if it would run off the bottom. A XAML rules test checks the layout of every window. A window with tabs (Settings) keeps its tab strip outside the scrolling body too.
+
 ## The three windows
 
 **Part Properties**
@@ -107,6 +109,7 @@ Every window has the same three bands:
 **Settings**
 
 - Header: "Settings", with "AWB Addin" under it.
+- **Tabs** (Aidan, 2026-10-17; the window was taller than the screen): a tab strip under the header, in this order: General, Part numbers, Folders, Material and finish, Developer. Each tab holds the section of the same name below, without a section heading (the tab names it). Save and Cancel stay below the tabs and apply to every tab. The window keeps one height, the tallest tab's, so it does not jump when a tab is picked. Ctrl+Tab and Ctrl+Shift+Tab move between tabs from anywhere in the window; the arrow keys move between tabs when the strip has focus. Shared pieces in `Styles.xaml`: `TabStrip` (headers on a divider line, no content host) and the implicit `TabItem` style (muted text, strong text with a 2 px Accent line along the bottom when selected).
 - Section **General**: Default designer (text box) with its one-line explanation under it in muted text.
 - Section **General** also has Other names (text box, under Default designer; help text "Names in old files that mean you, separated by commas, for example Aidan.Brown, 4aida. Your Windows user name always counts.") and New file units (dropdown: Metric, Imperial; was "Units for new files", shortened to fit the label column, task 049).
 - Section **Part numbers**: Register folder (text box) with a Browse button beside it in the side button style, and its help text under it (tasks 037 and 049).

@@ -20,130 +20,163 @@
         Labels stay short to fit the 100-wide label column; the help line under each box explains it. The other CAD
         folders row is labelled "Other folders" for that reason.
 
+        Five tabs (Aidan, 2026-10-17): General, Part numbers, Folders, Material and finish, Developer. The tab strip
+        shows headers only; every page sits in one cell of the body and the pages not shown are Hidden, not
+        Collapsed, so the window keeps the tallest page's height and does not jump when a tab is picked. Save and
+        Cancel are below the tabs and apply to every tab. Ctrl+Tab and Ctrl+Shift+Tab move between tabs from
+        anywhere in the window (code-behind). The body scrolls if the window is capped at the screen's height.
+
         Access keys: D default designer, N other names, U new file units, R register folder, B browse (register),
         W work folder, E browse (work folder), O other folders, M material library, F finish list, S show developer
         tools. The Browse buttons beside the material library and finish list have no access key: every letter of
         "Browse" is taken.
     -->
-    <StackPanel Style="{DynamicResource DialogContent}">
+    <Grid Style="{DynamicResource DialogContent}">
+        <!-- Header, tab strip, body, footer. The body row is star-sized so it scrolls when the window is capped. -->
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
         <!-- The header icon is put in the window's resources by WindowHost (HeaderIcon), in the window's theme. -->
-        <controls:DialogHeader Icon="{DynamicResource HeaderIcon}"
+        <controls:DialogHeader Grid.Row="0"
+                               Icon="{DynamicResource HeaderIcon}"
                                Title="{Binding HeaderTitle, Mode=OneTime}"
                                Subline="{Binding HeaderSubline, Mode=OneTime}" />
 
-        <controls:FormSection Heading="General">
-            <controls:FieldRow Label="_Default designer" Target="{Binding ElementName=DefaultDesignerBox}">
-                <TextBox x:Name="DefaultDesignerBox"
-                         Text="{Binding DefaultDesigner, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-            </controls:FieldRow>
-            <controls:FieldRow>
-                <TextBlock Style="{DynamicResource MutedText}" Text="{Binding DefaultDesignerHelp, Mode=OneTime}" />
-            </controls:FieldRow>
-            <controls:FieldRow Label="Other _names" Target="{Binding ElementName=OtherNamesBox}">
-                <TextBox x:Name="OtherNamesBox"
-                         Text="{Binding OtherNamesForMe, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-            </controls:FieldRow>
-            <controls:FieldRow>
-                <TextBlock Style="{DynamicResource MutedText}" Text="{Binding OtherNamesHelp, Mode=OneTime}" />
-            </controls:FieldRow>
-            <controls:FieldRow Label="New file _units" Target="{Binding ElementName=DefaultUnitsBox}">
-                <ComboBox x:Name="DefaultUnitsBox"
-                          IsEditable="False"
-                          ItemsSource="{Binding UnitsOptions, Mode=OneTime}"
-                          DisplayMemberPath="DisplayText"
-                          SelectedValuePath="Units"
-                          SelectedValue="{Binding DefaultUnits, Mode=TwoWay}" />
-            </controls:FieldRow>
-        </controls:FormSection>
+        <!-- Tab headers only; the pages are in the body below, in the same order (code-behind shows one). -->
+        <TabControl x:Name="Tabs"
+                    Grid.Row="1"
+                    Style="{DynamicResource TabStrip}"
+                    SelectionChanged="OnTabChanged">
+            <TabItem Header="General" />
+            <TabItem Header="Part numbers" />
+            <TabItem Header="Folders" />
+            <TabItem Header="Material and finish" />
+            <TabItem Header="Developer" />
+        </TabControl>
 
-        <controls:FormSection Heading="Part numbers">
-            <controls:FieldRow Label="_Register folder" Target="{Binding ElementName=RegisterFolderBox}">
-                <DockPanel>
-                    <!-- Opens a folder picker and puts the chosen folder in the box beside it (code-behind). -->
-                    <Button DockPanel.Dock="Right"
-                            Style="{DynamicResource SideButton}"
-                            Content="_Browse..."
-                            Click="OnBrowseRegisterFolder" />
-                    <TextBox x:Name="RegisterFolderBox"
-                             Text="{Binding RegisterFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                </DockPanel>
-            </controls:FieldRow>
-            <controls:FieldRow>
-                <TextBlock Style="{DynamicResource MutedText}" Text="{Binding RegisterFolderHelp, Mode=OneTime}" />
-            </controls:FieldRow>
-        </controls:FormSection>
-
-        <controls:FormSection Heading="Folders">
-            <controls:FieldRow Label="_Work folder" Target="{Binding ElementName=WorkFolderBox}">
-                <DockPanel>
-                    <Button DockPanel.Dock="Right"
-                            Style="{DynamicResource SideButton}"
-                            Content="Brows_e..."
-                            Click="OnBrowseWorkFolder" />
-                    <TextBox x:Name="WorkFolderBox"
-                             Text="{Binding WorkFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                </DockPanel>
-            </controls:FieldRow>
-            <controls:FieldRow>
-                <TextBlock Style="{DynamicResource MutedText}" Text="{Binding WorkFolderHelp, Mode=OneTime}" />
-            </controls:FieldRow>
-            <!-- One folder per line. AcceptsReturn makes Enter start a new line here instead of pressing Save. -->
-            <controls:FieldRow Label="_Other folders" Target="{Binding ElementName=OtherCadFoldersBox}">
-                <TextBox x:Name="OtherCadFoldersBox"
-                         Style="{DynamicResource MultiLineTextBox}"
-                         AcceptsReturn="True"
-                         Text="{Binding OtherCadFolders, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-            </controls:FieldRow>
-            <controls:FieldRow>
-                <TextBlock Style="{DynamicResource MutedText}" Text="{Binding OtherCadFoldersHelp, Mode=OneTime}" />
-            </controls:FieldRow>
-        </controls:FormSection>
-
-        <controls:FormSection Heading="Material and finish">
-            <controls:FieldRow Label="_Material library" Target="{Binding ElementName=MaterialLibraryBox}">
-                <DockPanel>
-                    <!-- Opens a file picker for an .adsklib and puts the chosen file in the box beside it (code-behind). -->
-                    <Button DockPanel.Dock="Right"
-                            Style="{DynamicResource SideButton}"
-                            Content="Browse..."
-                            Click="OnBrowseMaterialLibrary" />
-                    <TextBox x:Name="MaterialLibraryBox"
-                             Text="{Binding MaterialLibraryPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                </DockPanel>
-            </controls:FieldRow>
-            <controls:FieldRow>
-                <TextBlock Style="{DynamicResource MutedText}" Text="{Binding MaterialLibraryHelp, Mode=OneTime}" />
-            </controls:FieldRow>
-            <controls:FieldRow Label="_Finish list" Target="{Binding ElementName=FinishListBox}">
-                <DockPanel>
-                    <Button DockPanel.Dock="Right"
-                            Style="{DynamicResource SideButton}"
-                            Content="Browse..."
-                            Click="OnBrowseFinishList" />
-                    <TextBox x:Name="FinishListBox"
-                             Text="{Binding FinishListPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                </DockPanel>
-            </controls:FieldRow>
-            <controls:FieldRow>
-                <TextBlock Style="{DynamicResource MutedText}" Text="{Binding FinishListHelp, Mode=OneTime}" />
-            </controls:FieldRow>
-        </controls:FormSection>
-
-        <controls:FormSection Heading="Developer">
-            <controls:FieldRow>
-                <CheckBox Content="_Show developer tools"
-                          IsChecked="{Binding ShowDeveloperTools, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-            </controls:FieldRow>
-            <controls:FieldRow>
-                <TextBlock Style="{DynamicResource MutedText}" Text="{Binding RestartNotice, Mode=OneTime}" />
-            </controls:FieldRow>
-        </controls:FormSection>
+        <ScrollViewer Grid.Row="2" Style="{DynamicResource DialogBody}">
+            <!-- Every page sits in the same cell; the pages not shown are Hidden, so the tallest sets the height. -->
+            <Grid>
+                <!-- General -->
+                <controls:FormSection x:Name="GeneralPage">
+                    <controls:FieldRow Label="_Default designer" Target="{Binding ElementName=DefaultDesignerBox}">
+                        <TextBox x:Name="DefaultDesignerBox"
+                                 Text="{Binding DefaultDesigner, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </controls:FieldRow>
+                    <controls:FieldRow>
+                        <TextBlock Style="{DynamicResource MutedText}" Text="{Binding DefaultDesignerHelp, Mode=OneTime}" />
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="Other _names" Target="{Binding ElementName=OtherNamesBox}">
+                        <TextBox x:Name="OtherNamesBox"
+                                 Text="{Binding OtherNamesForMe, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </controls:FieldRow>
+                    <controls:FieldRow>
+                        <TextBlock Style="{DynamicResource MutedText}" Text="{Binding OtherNamesHelp, Mode=OneTime}" />
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="New file _units" Target="{Binding ElementName=DefaultUnitsBox}">
+                        <ComboBox x:Name="DefaultUnitsBox"
+                                  IsEditable="False"
+                                  ItemsSource="{Binding UnitsOptions, Mode=OneTime}"
+                                  DisplayMemberPath="DisplayText"
+                                  SelectedValuePath="Units"
+                                  SelectedValue="{Binding DefaultUnits, Mode=TwoWay}" />
+                    </controls:FieldRow>
+                </controls:FormSection>
+                <!-- Part numbers -->
+                <controls:FormSection x:Name="PartNumbersPage">
+                    <controls:FieldRow Label="_Register folder" Target="{Binding ElementName=RegisterFolderBox}">
+                        <DockPanel>
+                            <!-- Opens a folder picker and puts the chosen folder in the box beside it (code-behind). -->
+                            <Button DockPanel.Dock="Right"
+                                    Style="{DynamicResource SideButton}"
+                                    Content="_Browse..."
+                                    Click="OnBrowseRegisterFolder" />
+                            <TextBox x:Name="RegisterFolderBox"
+                                     Text="{Binding RegisterFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </DockPanel>
+                    </controls:FieldRow>
+                    <controls:FieldRow>
+                        <TextBlock Style="{DynamicResource MutedText}" Text="{Binding RegisterFolderHelp, Mode=OneTime}" />
+                    </controls:FieldRow>
+                </controls:FormSection>
+                <!-- Folders -->
+                <controls:FormSection x:Name="FoldersPage">
+                    <controls:FieldRow Label="_Work folder" Target="{Binding ElementName=WorkFolderBox}">
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right"
+                                    Style="{DynamicResource SideButton}"
+                                    Content="Brows_e..."
+                                    Click="OnBrowseWorkFolder" />
+                            <TextBox x:Name="WorkFolderBox"
+                                     Text="{Binding WorkFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </DockPanel>
+                    </controls:FieldRow>
+                    <controls:FieldRow>
+                        <TextBlock Style="{DynamicResource MutedText}" Text="{Binding WorkFolderHelp, Mode=OneTime}" />
+                    </controls:FieldRow>
+                    <!-- One folder per line. AcceptsReturn makes Enter start a new line here instead of pressing Save. -->
+                    <controls:FieldRow Label="_Other folders" Target="{Binding ElementName=OtherCadFoldersBox}">
+                        <TextBox x:Name="OtherCadFoldersBox"
+                                 Style="{DynamicResource MultiLineTextBox}"
+                                 AcceptsReturn="True"
+                                 Text="{Binding OtherCadFolders, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </controls:FieldRow>
+                    <controls:FieldRow>
+                        <TextBlock Style="{DynamicResource MutedText}" Text="{Binding OtherCadFoldersHelp, Mode=OneTime}" />
+                    </controls:FieldRow>
+                </controls:FormSection>
+                <!-- Material and finish -->
+                <controls:FormSection x:Name="MaterialFinishPage">
+                    <controls:FieldRow Label="_Material library" Target="{Binding ElementName=MaterialLibraryBox}">
+                        <DockPanel>
+                            <!-- Opens a file picker for an .adsklib and puts the chosen file in the box beside it (code-behind). -->
+                            <Button DockPanel.Dock="Right"
+                                    Style="{DynamicResource SideButton}"
+                                    Content="Browse..."
+                                    Click="OnBrowseMaterialLibrary" />
+                            <TextBox x:Name="MaterialLibraryBox"
+                                     Text="{Binding MaterialLibraryPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </DockPanel>
+                    </controls:FieldRow>
+                    <controls:FieldRow>
+                        <TextBlock Style="{DynamicResource MutedText}" Text="{Binding MaterialLibraryHelp, Mode=OneTime}" />
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="_Finish list" Target="{Binding ElementName=FinishListBox}">
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right"
+                                    Style="{DynamicResource SideButton}"
+                                    Content="Browse..."
+                                    Click="OnBrowseFinishList" />
+                            <TextBox x:Name="FinishListBox"
+                                     Text="{Binding FinishListPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </DockPanel>
+                    </controls:FieldRow>
+                    <controls:FieldRow>
+                        <TextBlock Style="{DynamicResource MutedText}" Text="{Binding FinishListHelp, Mode=OneTime}" />
+                    </controls:FieldRow>
+                </controls:FormSection>
+                <!-- Developer -->
+                <controls:FormSection x:Name="DeveloperPage">
+                    <controls:FieldRow>
+                        <CheckBox Content="_Show developer tools"
+                                  IsChecked="{Binding ShowDeveloperTools, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </controls:FieldRow>
+                    <controls:FieldRow>
+                        <TextBlock Style="{DynamicResource MutedText}" Text="{Binding RestartNotice, Mode=OneTime}" />
+                    </controls:FieldRow>
+                </controls:FormSection>
+            </Grid>
+        </ScrollViewer>
 
         <!-- ErrorText is null when there is no error, which collapses the status line. -->
-        <controls:DialogFooter Status="{Binding ErrorText}" IsError="{Binding HasError}">
+        <controls:DialogFooter Grid.Row="3" Status="{Binding ErrorText}" IsError="{Binding HasError}">
             <Button Style="{DynamicResource PrimaryButton}" Content="Save" IsDefault="True" Command="{Binding SaveCommand}" />
             <!-- IsCancel closes a dialog shown with ShowDialog; nothing is saved. -->
             <Button Content="Cancel" IsCancel="True" />
         </controls:DialogFooter>
-    </StackPanel>
+    </Grid>
 </Window>

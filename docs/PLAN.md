@@ -254,6 +254,11 @@ Spike 067 ran first and was walked through with Aidan. The rest was planned on 2
 
 **Order.** 068, 069, 070, 071, 072, 074, then 073 once Python is available, then 075 and 076. If 073 cannot run, 075 stops before it; everything up to 074 does not need it.
 
+**M3 fixes** (Aidan's M3 checks, 2026-10-17), on the same branch before merging:
+
+- [x] 077 Settings in tabs, and no window taller than the screen
+- [x] 078 Settings and About on every ribbon, including no document open
+
 Not in M3: print notes on the drawing (M5), Inventor finish features (`FinishReader` stays as a developer export only).
 
 ### M4: Hole generator and hole table wizard (spec 04)

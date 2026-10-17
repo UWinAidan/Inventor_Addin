@@ -2,6 +2,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Media;
 using InventorAddin.Core.Ribbon;
 using InventorAddin.Core.Theming;
 
@@ -10,7 +11,9 @@ namespace InventorAddin.UI
     /// <summary>
     /// Shows the add-in's WPF windows. A dialog is owned by Inventor's main window, so it opens in
     /// front of Inventor and Inventor cannot be used until it closes. Every window gets the shared look here,
-    /// in the colours of Inventor's active theme; no window applies the theme itself.
+    /// in the colours of Inventor's active theme; no window applies the theme itself. Every window is also kept within
+    /// the working area of the screen it opens on (Aidan, 2026-10-17): never taller, and moved up if it would run off
+    /// the bottom. A window's body scrolls when its content is taller (the <c>DialogBody</c> style).
     /// </summary>
     internal static class WindowHost
     {
@@ -18,6 +21,7 @@ namespace InventorAddin.UI
         private const int DwmUseImmersiveDarkMode = 20;
 
         private static bool _darkTitleBarFailureLogged;
+        private static bool _screenFailureLogged;
 
         /// <summary>
         /// Resource key of the header icon, which <see cref="ShowDialog"/> puts in the window's resources.
@@ -59,7 +63,57 @@ namespace InventorAddin.UI
             UiTheme theme = ApplyTheme(window);
             if (headerIconName != null)
                 SetHeaderIcon(window, headerIconName, theme);
+
+            IntPtr screenHandle = owner != null
+                ? new WindowInteropHelper(owner).Handle
+                : new IntPtr(hwnd ?? 0);
+            FitToScreen(window, screenHandle);
             return window.ShowDialog();
+        }
+
+        /// <summary>
+        /// Caps the window's height at the working area of the screen that <paramref name="screenHandle"/> (the owner)
+        /// is on, and keeps the window inside it as it opens and whenever it changes size (windows size to their
+        /// content). With no handle the primary screen is used. A failure leaves the window as it is and is logged once
+        /// per session.
+        /// </summary>
+        private static void FitToScreen(Window window, IntPtr screenHandle)
+        {
+            Rect workArea;
+            try
+            {
+                System.Drawing.Rectangle pixels = System.Windows.Forms.Screen.FromHandle(screenHandle).WorkingArea;
+
+                // The working area is in device pixels; the window's sizes are in WPF units at the window's own scale.
+                IntPtr handle = new WindowInteropHelper(window).EnsureHandle();
+                Matrix fromDevice = HwndSource.FromHwnd(handle)?.CompositionTarget?.TransformFromDevice ?? Matrix.Identity;
+                workArea = new Rect(
+                    fromDevice.Transform(new Point(pixels.Left, pixels.Top)),
+                    fromDevice.Transform(new Point(pixels.Right, pixels.Bottom)));
+            }
+            catch (Exception ex)
+            {
+                if (!_screenFailureLogged)
+                {
+                    _screenFailureLogged = true;
+                    AddinServices.Log.Warn($"Could not read the screen's working area; windows are not kept on screen. {ex.Message}");
+                }
+                return;
+            }
+
+            double? maxHeight = WindowFit.MaxHeight(workArea.Height);
+            if (maxHeight.HasValue)
+                window.MaxHeight = Math.Min(window.MaxHeight, maxHeight.Value);
+
+            void KeepOnScreen()
+            {
+                double? top = WindowFit.ClampTop(window.Top, window.ActualHeight, workArea.Top, workArea.Bottom);
+                if (top.HasValue)
+                    window.Top = top.Value;
+            }
+
+            window.Loaded += (_, _) => KeepOnScreen();
+            window.SizeChanged += (_, _) => KeepOnScreen();
         }
 
         /// <summary>

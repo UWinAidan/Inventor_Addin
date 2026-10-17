@@ -11,28 +11,40 @@
         so shared styles are referred to with DynamicResource. SizeToContent and ResizeMode are repeated from the
         DialogWindow style so the window still sizes to its content if the shared styles fail to load.
     -->
-    <StackPanel Style="{DynamicResource DialogContent}">
+    <Grid Style="{DynamicResource DialogContent}">
+        <!-- Header, body, footer. The body row is star-sized, so it scrolls when the window is capped at the screen's height. -->
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
         <!-- The header icon is put in the window's resources by WindowHost (HeaderIcon), in the window's theme. -->
-        <controls:DialogHeader Icon="{DynamicResource HeaderIcon}"
+        <controls:DialogHeader Grid.Row="0"
+                               Icon="{DynamicResource HeaderIcon}"
                                Title="{Binding Title, Mode=OneTime}"
                                Subline="{Binding HeaderSubline, Mode=OneTime}" />
 
-        <controls:FormSection>
-            <controls:FieldRow Label="Built">
-                <TextBlock Style="{DynamicResource ValueText}" Text="{Binding BuildDate, Mode=OneTime}" />
-            </controls:FieldRow>
-            <controls:FieldRow Label="Inventor version">
-                <TextBlock Style="{DynamicResource ValueText}" Text="{Binding InventorRelease, Mode=OneTime}" />
-            </controls:FieldRow>
-            <controls:FieldRow Label="Log folder">
-                <!-- Selectable so the path can be copied. -->
-                <TextBox Style="{DynamicResource SelectableIdentifierText}" Text="{Binding LogFolder, Mode=OneTime}" />
-            </controls:FieldRow>
-        </controls:FormSection>
+        <ScrollViewer Grid.Row="1" Style="{DynamicResource DialogBody}">
+            <StackPanel>
+                <controls:FormSection>
+                    <controls:FieldRow Label="Built">
+                        <TextBlock Style="{DynamicResource ValueText}" Text="{Binding BuildDate, Mode=OneTime}" />
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="Inventor version">
+                        <TextBlock Style="{DynamicResource ValueText}" Text="{Binding InventorRelease, Mode=OneTime}" />
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="Log folder">
+                        <!-- Selectable so the path can be copied. -->
+                        <TextBox Style="{DynamicResource SelectableIdentifierText}" Text="{Binding LogFolder, Mode=OneTime}" />
+                    </controls:FieldRow>
+                </controls:FormSection>
+            </StackPanel>
+        </ScrollViewer>
 
-        <controls:DialogFooter>
+        <controls:DialogFooter Grid.Row="2">
             <!-- IsCancel closes a dialog shown with ShowDialog; IsDefault lets Enter close it too. -->
             <Button Style="{DynamicResource PrimaryButton}" Content="Close" IsDefault="True" IsCancel="True" />
         </controls:DialogFooter>
-    </StackPanel>
+    </Grid>
 </Window>

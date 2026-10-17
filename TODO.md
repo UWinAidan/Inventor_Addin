@@ -2,12 +2,12 @@
 
 Everything that needs doing and is not already a task in `docs/PLAN.md`. Kept current by the parent session: items are added when they come up and removed when they are done or turned into a task. Where the project stands is in `STATUS.md`; why things are the way they are is in `DECISIONS.md`.
 
-Last updated: 2026-10-12
+Last updated: 2026-10-17
 
 ## Next up
 
-1. Aidan checks M3 in Inventor (below); then push `claude/m3-material-finish`, open the pull request and merge.
-2. Aidan finishes the remaining run 1 and Part Properties checks below.
+1. Aidan checks the M3 fixes 077 and 078 in Inventor (below); then push `claude/m3-material-finish`, open the pull request and merge.
+2. Aidan finishes the remaining Part Properties checks below.
 3. M4: discuss the hole generator's details with Aidan (spec 04).
 
 ## Waiting on Aidan: checks in Inventor
@@ -18,18 +18,13 @@ Last updated: 2026-10-12
 
 **M2 fix run 2** (062 to 066) was checked on 2026-10-12: every check passed.
 
-**M3** (068 to 076, built and deployed 2026-10-12 on `claude/m3-material-finish`; full steps in each task's Verification section)
-- [ ] Task 070, Settings: Material library and Finish list rows, Browse, a missing file refused on Save (6 steps)
-- [ ] Task 071: open `libraries\StarterMaterials.adsklib` in the Material Browser; the materials show under their categories with sensible appearances
-- [ ] Task 073: the Material and Finish icon reads on the ribbon in light and dark
-- [ ] Task 075, Material and Finish: the button, filters, stars, apply and one Undo (material, appearance and the four Finish iProperties), assemblies with selected parts, your NAS library, a bad or missing finish list, keyboard and themes, editing in place (24 steps)
-- [ ] Task 076, Part Properties: Change opens the window over it and refreshes, the "Not from the material library" warning, pending edits kept, Undo order (14 steps)
+**M3** (068 to 076) was checked on 2026-10-17: every check passed. Aidan found two things, now tasks 077 and 078.
 
-**M2 run 1** (full steps in each task's Verification section). Aidan's run 1 checks found three things, now tasks 049 to 051; tick the rest here when confirmed
-- [ ] Task 037, Settings: units dropdown and register folder, Browse, validation, access keys, an unknown units value in `settings.json`; is "Units for new files" cut off?
-- [ ] Task 038, Part Properties: a Designer or Detailer equal to the Windows login name is replaced by the default designer, and left alone when the default is blank
-- [ ] Task 039, Generate part number: online, offline, Undo, lock busy, duplicates, a typed number not in the register, a never-saved part, a new-format file name, and a register folder changed while Inventor runs (11 steps)
-- [ ] Task 042: ribbon unchanged with no new log warnings; do the five new icons in `docs/ui-mockups/ribbon-icons.png` read? Optionally, force one command to fail and check the rest of the ribbon still builds
+**M3 fixes** (077, 078, built 2026-10-17 on `claude/m3-material-finish`; full steps in each task's Verification section)
+- [ ] Task 077: Settings in five tabs, Save and Cancel below them, no height change between tabs, Ctrl+Tab, access keys; every other window looks as before; at a high display scale a tall window fits the screen and its body scrolls (7 steps)
+- [ ] Task 078: Settings and About on the AWB Addin tab with no document open, and on part, assembly and drawing (4 steps)
+
+**M2 run 1** (037, 038, 039, 042): Aidan reported on 2026-10-17 that the remaining checks passed.
 
 From Part Properties (task 019):
 
@@ -76,7 +71,6 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Whether and when to add an installer and a download page. It was to be decided when M2 was planned and is still parked
 
 **Smaller, not blocking**
-- Should Settings and About appear with no document open? (spec 01, question 4)
 - Should About check for a newer version? (spec 01, question 2)
 - More fields for the properties window: revision, vendor, vendor part number, project, notes? (spec 07, question 1)
 
@@ -125,6 +119,8 @@ Small things noticed while building. None is urgent. The parent turns these into
 - Task 030: embed only `UI/Icons/*.png`. The `.svg` sources sit in the same folder and must stay out of the build. (task 024)
 
 **Window style**
+- The scrolling body's scroll bar stays light in the dark theme, like the list scroll bars; spec 08 has no scroll bar style. The working area is read when a window opens, so dragging it to a smaller screen does not re-cap it. (task 077)
+- Settings: a save error about a setting on another tab (a missing library file) shows below the tabs but does not switch to that tab; the message names the setting. (task 077)
 - The remark in `UiTheme.cs` still says the dark-theme rule waits for spike 020; name the confirmed `LightTheme` and `DarkTheme`. (task 026)
 - Settings: the gap between a control and its note is the full row gap (9). If it looks loose, add a shared `HelpText` style. (task 028)
 - Settings: the restart note lines up with the checkbox's box, not its label text. (task 028)

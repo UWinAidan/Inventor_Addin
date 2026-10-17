@@ -26,106 +26,118 @@
         <BooleanToVisibilityConverter x:Key="VisibleWhenTrue" />
     </Window.Resources>
 
-    <StackPanel Style="{DynamicResource DialogContent}">
+    <Grid Style="{DynamicResource DialogContent}">
+        <!-- Header, body, footer. The body row is star-sized, so it scrolls when the window is capped at the screen's height. -->
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
         <!-- The header icon is put in the window's resources by WindowHost (HeaderIcon), in the window's theme. -->
-        <controls:DialogHeader Icon="{DynamicResource HeaderIcon}"
+        <controls:DialogHeader Grid.Row="0"
+                               Icon="{DynamicResource HeaderIcon}"
                                Title="{Binding HeaderTitle, Mode=OneTime}"
                                Subline="{Binding HeaderSubline, Mode=OneTime}" />
 
-        <controls:FormSection Heading="Folder">
-            <controls:FieldRow Label="F_older" Target="{Binding ElementName=FolderBox}">
-                <DockPanel>
-                    <!-- Scan is the default button, so Enter in the folder box scans. -->
-                    <Button DockPanel.Dock="Right"
-                            Style="{DynamicResource SideButton}"
-                            Content="_Scan"
-                            IsDefault="True"
-                            Command="{Binding ScanCommand}" />
-                    <!-- Opens a folder picker and puts the chosen folder in the box (code-behind). -->
-                    <Button DockPanel.Dock="Right"
-                            Style="{DynamicResource SideButton}"
-                            Content="_Browse..."
-                            IsEnabled="{Binding IsIdle, Mode=OneWay}"
-                            Click="OnBrowseFolder" />
-                    <TextBox x:Name="FolderBox"
-                             IsEnabled="{Binding IsIdle, Mode=OneWay}"
-                             Text="{Binding Folder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                </DockPanel>
-            </controls:FieldRow>
-        </controls:FormSection>
+        <ScrollViewer Grid.Row="1" Style="{DynamicResource DialogBody}">
+            <StackPanel>
+                <controls:FormSection Heading="Folder">
+                    <controls:FieldRow Label="F_older" Target="{Binding ElementName=FolderBox}">
+                        <DockPanel>
+                            <!-- Scan is the default button, so Enter in the folder box scans. -->
+                            <Button DockPanel.Dock="Right"
+                                    Style="{DynamicResource SideButton}"
+                                    Content="_Scan"
+                                    IsDefault="True"
+                                    Command="{Binding ScanCommand}" />
+                            <!-- Opens a folder picker and puts the chosen folder in the box (code-behind). -->
+                            <Button DockPanel.Dock="Right"
+                                    Style="{DynamicResource SideButton}"
+                                    Content="_Browse..."
+                                    IsEnabled="{Binding IsIdle, Mode=OneWay}"
+                                    Click="OnBrowseFolder" />
+                            <TextBox x:Name="FolderBox"
+                                     IsEnabled="{Binding IsIdle, Mode=OneWay}"
+                                     Text="{Binding Folder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </DockPanel>
+                    </controls:FieldRow>
+                </controls:FormSection>
 
-        <controls:FormSection Heading="Files"
-                              Visibility="{Binding HasRows, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
-            <controls:FieldRow Label="Found">
-                <TextBlock Style="{DynamicResource ValueText}" Text="{Binding CountsText, Mode=OneWay}" />
-            </controls:FieldRow>
-            <!-- Shown when the Default designer is blank, so Replace names is offered nowhere. -->
-            <controls:FieldRow Label="Names"
-                               Visibility="{Binding HasReplaceNamesDisabledReason, Mode=OneTime, Converter={StaticResource VisibleWhenTrue}}">
-                <TextBlock Style="{DynamicResource MutedText}" Text="{Binding ReplaceNamesDisabledReason, Mode=OneTime}" />
-            </controls:FieldRow>
-            <controls:FieldRow Label="Tick all">
-                <StackPanel Orientation="Horizontal" IsEnabled="{Binding IsIdle, Mode=OneWay}">
-                    <CheckBox Style="{DynamicResource InlineCheckBox}"
-                              Content="_Register"
-                              IsChecked="{Binding TickAllRegister, Mode=TwoWay}" />
-                    <CheckBox Style="{DynamicResource InlineCheckBox}"
-                              Content="Assi_gn"
-                              IsChecked="{Binding TickAllAssign, Mode=TwoWay}" />
-                    <CheckBox Style="{DynamicResource InlineCheckBox}"
-                              Content="Replace _names"
-                              IsChecked="{Binding TickAllReplaceNames, Mode=TwoWay}" />
-                </StackPanel>
-            </controls:FieldRow>
+                <controls:FormSection Heading="Files"
+                                      Visibility="{Binding HasRows, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
+                    <controls:FieldRow Label="Found">
+                        <TextBlock Style="{DynamicResource ValueText}" Text="{Binding CountsText, Mode=OneWay}" />
+                    </controls:FieldRow>
+                    <!-- Shown when the Default designer is blank, so Replace names is offered nowhere. -->
+                    <controls:FieldRow Label="Names"
+                                       Visibility="{Binding HasReplaceNamesDisabledReason, Mode=OneTime, Converter={StaticResource VisibleWhenTrue}}">
+                        <TextBlock Style="{DynamicResource MutedText}" Text="{Binding ReplaceNamesDisabledReason, Mode=OneTime}" />
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="Tick all">
+                        <StackPanel Orientation="Horizontal" IsEnabled="{Binding IsIdle, Mode=OneWay}">
+                            <CheckBox Style="{DynamicResource InlineCheckBox}"
+                                      Content="_Register"
+                                      IsChecked="{Binding TickAllRegister, Mode=TwoWay}" />
+                            <CheckBox Style="{DynamicResource InlineCheckBox}"
+                                      Content="Assi_gn"
+                                      IsChecked="{Binding TickAllAssign, Mode=TwoWay}" />
+                            <CheckBox Style="{DynamicResource InlineCheckBox}"
+                                      Content="Replace _names"
+                                      IsChecked="{Binding TickAllReplaceNames, Mode=TwoWay}" />
+                        </StackPanel>
+                    </controls:FieldRow>
 
-            <ScrollViewer Style="{DynamicResource ListScroller}">
-                <ItemsControl
-                              Focusable="False"
-                              IsEnabled="{Binding IsIdle, Mode=OneWay}"
-                              ItemsSource="{Binding Rows, Mode=OneWay}">
-                    <ItemsControl.ItemTemplate>
-                        <!-- DataContext is a MassUpdateRow. -->
-                        <DataTemplate>
-                            <StackPanel Style="{DynamicResource ListItem}" ToolTip="{Binding FullPath, Mode=OneTime}">
-                                <DockPanel>
-                                    <TextBlock DockPanel.Dock="Right"
-                                               Style="{DynamicResource SideIdentifierText}"
-                                               Text="{Binding PartNumberText, Mode=OneTime}" />
-                                    <TextBlock Style="{DynamicResource ValueText}" Text="{Binding FileName, Mode=OneTime}" />
-                                </DockPanel>
-                                <TextBlock Style="{DynamicResource MutedText}" Text="{Binding StateText, Mode=OneTime}" />
-                                <!-- Only the tick boxes that apply to the file; the line is hidden when none does. -->
-                                <StackPanel Orientation="Horizontal"
-                                            Visibility="{Binding HasActions, Mode=OneTime, Converter={StaticResource VisibleWhenTrue}}">
-                                    <CheckBox Style="{DynamicResource InlineCheckBox}"
-                                              Content="Register"
-                                              IsChecked="{Binding Register, Mode=TwoWay}"
-                                              Visibility="{Binding CanRegister, Mode=OneTime, Converter={StaticResource VisibleWhenTrue}}" />
-                                    <CheckBox Style="{DynamicResource InlineCheckBox}"
-                                              Content="Assign"
-                                              IsChecked="{Binding Assign, Mode=TwoWay}"
-                                              Visibility="{Binding CanAssign, Mode=OneTime, Converter={StaticResource VisibleWhenTrue}}" />
-                                    <CheckBox Style="{DynamicResource InlineCheckBox}"
-                                              Content="Replace names"
-                                              IsChecked="{Binding ReplaceNames, Mode=TwoWay}"
-                                              Visibility="{Binding CanReplaceNames, Mode=OneTime, Converter={StaticResource VisibleWhenTrue}}" />
-                                    <TextBlock Style="{DynamicResource MutedText}" Text="{Binding ReplaceNamesNote, Mode=OneTime}" />
-                                </StackPanel>
-                                <!-- After Apply: Done in the status style, or the error in the error style. -->
-                                <TextBlock Style="{DynamicResource StatusText}"
-                                           Text="{Binding ResultText, Mode=OneWay}"
-                                           Visibility="{Binding ResultIsDone, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}" />
-                                <TextBlock Style="{DynamicResource ErrorStatusText}"
-                                           Text="{Binding ResultText, Mode=OneWay}"
-                                           Visibility="{Binding ResultIsError, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}" />
-                            </StackPanel>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
-        </controls:FormSection>
+                    <ScrollViewer Style="{DynamicResource ListScroller}">
+                        <ItemsControl
+                                      Focusable="False"
+                                      IsEnabled="{Binding IsIdle, Mode=OneWay}"
+                                      ItemsSource="{Binding Rows, Mode=OneWay}">
+                            <ItemsControl.ItemTemplate>
+                                <!-- DataContext is a MassUpdateRow. -->
+                                <DataTemplate>
+                                    <StackPanel Style="{DynamicResource ListItem}" ToolTip="{Binding FullPath, Mode=OneTime}">
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Right"
+                                                       Style="{DynamicResource SideIdentifierText}"
+                                                       Text="{Binding PartNumberText, Mode=OneTime}" />
+                                            <TextBlock Style="{DynamicResource ValueText}" Text="{Binding FileName, Mode=OneTime}" />
+                                        </DockPanel>
+                                        <TextBlock Style="{DynamicResource MutedText}" Text="{Binding StateText, Mode=OneTime}" />
+                                        <!-- Only the tick boxes that apply to the file; the line is hidden when none does. -->
+                                        <StackPanel Orientation="Horizontal"
+                                                    Visibility="{Binding HasActions, Mode=OneTime, Converter={StaticResource VisibleWhenTrue}}">
+                                            <CheckBox Style="{DynamicResource InlineCheckBox}"
+                                                      Content="Register"
+                                                      IsChecked="{Binding Register, Mode=TwoWay}"
+                                                      Visibility="{Binding CanRegister, Mode=OneTime, Converter={StaticResource VisibleWhenTrue}}" />
+                                            <CheckBox Style="{DynamicResource InlineCheckBox}"
+                                                      Content="Assign"
+                                                      IsChecked="{Binding Assign, Mode=TwoWay}"
+                                                      Visibility="{Binding CanAssign, Mode=OneTime, Converter={StaticResource VisibleWhenTrue}}" />
+                                            <CheckBox Style="{DynamicResource InlineCheckBox}"
+                                                      Content="Replace names"
+                                                      IsChecked="{Binding ReplaceNames, Mode=TwoWay}"
+                                                      Visibility="{Binding CanReplaceNames, Mode=OneTime, Converter={StaticResource VisibleWhenTrue}}" />
+                                            <TextBlock Style="{DynamicResource MutedText}" Text="{Binding ReplaceNamesNote, Mode=OneTime}" />
+                                        </StackPanel>
+                                        <!-- After Apply: Done in the status style, or the error in the error style. -->
+                                        <TextBlock Style="{DynamicResource StatusText}"
+                                                   Text="{Binding ResultText, Mode=OneWay}"
+                                                   Visibility="{Binding ResultIsDone, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}" />
+                                        <TextBlock Style="{DynamicResource ErrorStatusText}"
+                                                   Text="{Binding ResultText, Mode=OneWay}"
+                                                   Visibility="{Binding ResultIsError, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </controls:FormSection>
+            </StackPanel>
+        </ScrollViewer>
 
-        <controls:DialogFooter Status="{Binding StatusText, Mode=OneWay}" IsError="{Binding StatusIsError, Mode=OneWay}">
+        <controls:DialogFooter Grid.Row="2" Status="{Binding StatusText, Mode=OneWay}" IsError="{Binding StatusIsError, Mode=OneWay}">
             <!-- Stops a scan after the file being read. Shown only while a scan runs. -->
             <Button Content="S_top"
                     Command="{Binding CancelCommand}"
@@ -135,5 +147,5 @@
             <!-- IsCancel closes a dialog shown with ShowDialog. Disabled while a scan or apply runs. -->
             <Button Content="Close" IsCancel="True" IsEnabled="{Binding IsIdle, Mode=OneWay}" />
         </controls:DialogFooter>
-    </StackPanel>
+    </Grid>
 </Window>

@@ -37,6 +37,85 @@
         <Setter Property="MaxWidth" Value="560" />
     </Style>
 
+    <!--
+        The window's body, between the header and the footer (Aidan, 2026-10-17): a window is never taller than the
+        screen's working area (WindowHost caps it), and when the content is taller the body scrolls while the header
+        and buttons stay in view. The root panel is a Grid whose body row is star-sized, so it takes what is left.
+        No sideways scroll: the content wraps to the window's width.
+    -->
+    <Style x:Key="DialogBody" TargetType="{x:Type ScrollViewer}">
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+        <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
+        <Setter Property="Focusable" Value="False" />
+    </Style>
+
+    <!-- ===== Tabs ===== -->
+
+    <!--
+        A strip of tabs over a body that the window lays out itself (Settings): the TabControl shows only its tab
+        headers, on a divider line, and the window shows the page for the selected tab. There is no content host,
+        so every page can stay in the layout and the window keeps one height whichever tab is open.
+        One Tab stop for the strip; the arrow keys move between tabs (a tab is selected when it gets focus).
+    -->
+    <Style x:Key="TabStrip" TargetType="{x:Type TabControl}">
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="Margin" Value="0,0,0,14" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type TabControl}">
+                    <Grid SnapsToDevicePixels="True">
+                        <Border Height="1"
+                                VerticalAlignment="Bottom"
+                                Background="{DynamicResource DividerBrush}" />
+                        <TabPanel IsItemsHost="True"
+                                  KeyboardNavigation.TabNavigation="Once"
+                                  KeyboardNavigation.DirectionalNavigation="Cycle" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        A tab header: muted text, the primary text colour on hover, and strong text with a 2 px Accent line along the
+        bottom when selected. The weight does not change, so the tabs do not shift when one is picked.
+    -->
+    <Style TargetType="{x:Type TabItem}">
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusOutline}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+        <Setter Property="Padding" Value="2,6,2,8" />
+        <Setter Property="Margin" Value="0,0,18,0" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type TabItem}">
+                    <Grid Background="Transparent" SnapsToDevicePixels="True">
+                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                          ContentSource="Header"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          RecognizesAccessKey="True" />
+                        <Border x:Name="Underline"
+                                Height="2"
+                                VerticalAlignment="Bottom"
+                                CornerRadius="1"
+                                Background="{DynamicResource AccentBrush}"
+                                Visibility="Hidden" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                        </Trigger>
+                        <!-- After the hover trigger, so the selected tab keeps the strong colour under the mouse. -->
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Underline" Property="Visibility" Value="Visible" />
+                            <Setter Property="Foreground" Value="{DynamicResource TextStrongBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- ===== Keyboard focus ===== -->
 
     <!--
