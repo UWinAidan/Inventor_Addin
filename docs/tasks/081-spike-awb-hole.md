@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 1
 - **Feature spec:** `docs/features/09-awb-hole.md`
-- **Status:** todo
+- **Status:** in progress
 - **Depends on:** none
 - **Needs:** windows (local session on Aidan's PC, walked through with Aidan)
 - **Parallel-safe with:** none
@@ -73,7 +73,61 @@ Record which is smooth enough, how Undo history looks afterwards, and whether th
 
 ## Results
 
-To be filled in on Aidan's PC.
+Run on Aidan's PC, 2026-10-17, Inventor 2026.2. Two tools: a throwaway console app (scratchpad `Spike081`) driving its own invisible Inventor on a scratch block (questions 1, 4, 5, 6), and a temporary spike command in the add-in on branch `spike/081-in-inventor`, never merged (questions 2, 3, 7), tried by Aidan with the results read from `awbaddin.log`.
+
+### 1. Creating each hole type and termination
+
+- **All types, seats, terminations and bottoms work** through `HoleFeatures`: `AddDrilledByThroughAllExtent`, `AddDrilledByDistanceExtent2`, `AddDrilledByToFaceExtent2`, `AddCBoreByThroughAllExtent`, `AddCBoreByDistanceExtent2`, `AddCSinkByThroughAllExtent`, and the matching `...ToFaceExtent2` methods. The `...2` methods take a `HoleDrillPointTypeEnum`: `kAngledDrillPointType` with `"118 deg"` or `"90 deg"`, and **`kFlatDrillPointType` gives a flat bottom**. Values are centimetres or unit strings (`"6 mm"`).
+- **Direction:** for a sketch whose normal points out of the material, **`kPositiveExtentDirection` goes into the material**; negative gives a hole that cuts nothing (health `kDriverLostHealth`, no faces, no error). The add-in must check `HealthStatus` and `Faces.Count` after creating a hole.
+- **Placement:** `CreateSketchPlacementDefinition(points)` with sketch points, several centres in one feature. `CreatePointPlacementDefinition` refuses a transient point (E_INVALIDARG) and accepts a work point. Sketch points are the way.
+- **Editing a hole afterwards works without deleting it**: `HoleDiameter.Expression`, `SetDistanceExtent2`, `SetThroughAllExtent`, `SetToFaceExtent2`, `SetCBore`, `SetCSink`, `SetDrilled`, and `HoleCenterPoints =` a new collection. Each change plus `Document.Update` takes 3 to 18 ms on the scratch block.
+- **Tapped holes:** `CreateTapInfo(rightHanded, "ISO Metric profile", "M6x1", "6H", fullDepth, threadDepth)`; imperial `"ANSI Unified Screw Threads"`, `"1/4-20 UNC"`, `"2B"`. The designation must be Inventor's: `M6` alone fails (use `M6x1`), and number sizes are written **without `#`** (`10-32 UNF`, `4-40 UNC`), so the workbook's `#10-32 UNF` needs mapping. Thread depth and drill depth are editable after creation (`TapInfo.ThreadDepth.Expression`, `SetDistanceExtent2`).
+- **Our own tap drill:** a hole made with `CreateTapInfo` models the thread's **minor diameter** (4.917 mm for M6x1) whatever `TapDrillDiameter` says; setting `TapDrillDiameter` changes only the label. **The hidden `HoleFeatures._CreateTapInfo(..., ModelDiameterFromThreadEnum.kThreadTapDrillDiameter, ..., TapDrillDiameter)` models exactly our tap drill** (5.2 mm measured), the value in the thread table's units (mm for metric, inches for imperial; a number, not a unit string). Switching an existing tapped hole to that mode fails, so a tapped hole is created that way from the start. It is an underscore (hidden) member, so it could change in a later Inventor.
+- **One transaction, one Undo** covers the hole, its tolerance, its colour and its attributes (`TransactionManager.StartTransaction` on the part, `End`; one `UndoTransaction` removes all of it). Aidan confirmed Ctrl+Z in Inventor.
+
+### 2. Live preview
+
+- **A real hole feature inside an open transaction**, edited as options change, with `Document.Update`: **30 to 60 ms per change** in Inventor (about 56 ms seen by Aidan); type and sliders update in real time. Cancel aborts the transaction and leaves nothing; OK ends it as one Undo step. The window stays modeless meanwhile.
+- **Client graphics** (`ClientGraphicsCollection.Add`, `TransientBRep.CreateSolidCylinderCone`, `AddSurfaceGraphics`): about 17 to 27 ms, but only an approximation (no seats, threads or drill points without drawing each one).
+- **Recommendation: the real feature** is the preview (exact for every type); client graphics are not needed.
+
+### 3. Replacing Inventor's Hole
+
+- Inventor's Hole is command **`PartHoleCmd`**, default shortcut **H** (`DrawingFillHatchSketchRegionCmd` also uses H, in drawings only). On the Part ribbon it is a large button in **tab `id_TabModel`, panel `id_PanelP_ModelModify`**; it also sits small on the Sheet Metal (`id_PanelP_SheetMetalModify`) and Flat Pattern (`id_PanelP_FlatPatternModify`) tabs.
+- `CommandControls.AddButton(def, true, true, "PartHoleCmd", true)` puts our button where Inventor's is; `CommandControl.Visible = false` hides Inventor's. **Aidan: AWB Hole replaces Hole on 3D Model** (A).
+- `ControlDefinition.OverrideShortcut = "H"` on ours and `""` on `PartHoleCmd` gives H to AWB Hole. **It persists across a restart** (E), and both can be switched while Inventor runs (D).
+- **Bug found:** giving Hole back by setting `PartHoleCmd.OverrideShortcut = ""` left Inventor's Hole with an empty override, so **H did nothing** while both buttons showed. Fix: whenever Inventor's Hole is restored, give it its default back (`OverrideShortcut = DefaultShortcut`) and clear ours. Round 2 checks it.
+- `UserInterfaceEvents.OnResetShortcuts` exists, so a user resetting shortcuts can be followed by re-applying the takeover.
+
+### 4. A tolerance on the hole diameter
+
+- `HoleDiameter.Tolerance.SetToFits(kLimitsFitsStackedTolerance, "H7", "")`: **Inventor works out the ISO 286 limits itself** (6 mm: H7 +0.012/0, N7 -0.004/-0.016, P7 -0.008/-0.020, G7 +0.016/+0.004, F7 +0.022/+0.010). Core still needs ISO 286 limits to show them in the window and for the hole table (spec 04).
+- `SetToDeviation(upper, lower)` applies Limits rows (cm, or unit strings): 1/4 in with +0.0005/0 in read back exactly.
+- The model stays at the nominal size (`ModelValueType = kNominalValue`); `kUpperValue` and `kMedianValue` move it to the limit or the middle. Recommendation: keep nominal.
+- Tolerances survive save and reopen.
+
+### 5. Colouring hole faces
+
+- An appearance made in the part: `PartDocument.Assets.Add(kAssetTypeAppearance, "Generic", name, displayName)`, then its `"generic_diffuse"` `ColorAssetValue.Value = TransientObjects.CreateColor(r, g, b)`.
+- `Face.Appearance = asset` works and survives a resize, a rectangular pattern (the pattern's faces are coloured too), Inventor's own Edit Feature (Aidan, C), and save and reopen.
+- **Aidan: the bottom of the hole was not coloured.** Round 1 coloured `SideFaces`; **`Faces` includes the drill point cone and a flat bottom**, so the colour goes on `Faces`. Round 2 checks it.
+
+### 6. Data on the feature
+
+- `HoleFeature.AttributeSets.Add("AWB_Hole", true)` with string, integer and double attributes; they survive save and reopen and edits. `AttributeManager.FindObjects("AWB_Hole")` finds AWB holes in a few ms. A rectangular pattern does not copy them to its elements.
+
+### 7. Edit AWB Hole and Inventor's edits
+
+- **Inventor's Edit Feature on a hole is command `PartNGxHoleEditCtxCmd`.** Aidan wants no separate menu item: Edit Feature and double-click open the AWB Hole window for holes.
+- **Double-click works**: `UserInputEvents.OnDoubleClick` with `kEventHandled` opens our window instead of Inventor's (C). In the browser it reports the hole; in the graphics window it reports a **Face**, mapped to its hole through `Face.CreatedByFeature`.
+- A right-click raises `OnLinearMarkingMenu` and `OnRadialMarkingMenu`; adding our own item there worked (round 1's "Edit AWB Hole", which Aidan does not want).
+- **Edits by Inventor's command:** `ModelingEvents.OnFeatureChange` fires before and after every change of a hole, from any source, with the feature; `OnActivateCommand` reports `PartNGxHoleEditCtxCmd`. Inventor's edit kept the colour, so a re-apply offer is needed only when the fit or tolerance no longer matches what is stored.
+
+### Round 2 (with Aidan)
+
+- **Inventor-style centre selection** with `InteractionEvents` and `SelectEvents` (sketch point filter, single select) running while the window is open: all hole centres of the sketch picked when the window opens, a click toggles a point without Ctrl, a `HighlightSet` shows them blue, the preview follows; and whether points stay clickable once the preview hole consumes the sketch.
+- **Redirecting Edit Feature:** plan A, swap `PartNGxHoleEditCtxCmd` for our own "Edit Feature" in the right-click menus; plan B, `ControlDefinitionEvents.OnCommandInputs` on the built-in command.
+- The H fix, and colouring all hole faces.
 
 ## Recommendations
 
