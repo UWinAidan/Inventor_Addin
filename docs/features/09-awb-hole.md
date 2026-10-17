@@ -27,10 +27,12 @@ It follows Inventor's Hole panel, with a **Metric or Imperial** selector at the 
 | Size | The rows of the matching tab for the units, in workbook order, `Show = N` rows left out |
 | Fit | Clearance: Close, Normal, Loose. Dowel and precision: Slip, Normal, Press |
 | Tolerance | Dowel and precision only: the Precision Tol rows for the units and fit; the row with Default = Y is preselected |
-| Thread depth, drill depth | Tapped only: defaults from the workbook, editable per hole |
-| Termination | Distance, Through All, To (Default: Inventor's three) |
+| Thread depth, drill depth | Blind tapped holes only: defaults from the workbook, editable per hole |
+| Termination | Distance, Through All (Default). To is left out until the end face can be picked; an edited hole that already ends at a face shows To with a note (task 090) |
+| Depth | Blind clearance and dowel holes: typed, in the window's units (open question 7) |
 | Drill point | Blind holes only: the Drill Point rows (118 deg, 90 deg, Flat); Default = Y preselected |
 | Direction | Flip, as Inventor's |
+| Centres | How many centres are picked; for an edited hole whose centres are not sketch points, says they cannot be picked (task 090) |
 
 - **The window is modeless** and uses the add-in's shared light and dark look (Aidan). It stays open while the user picks hole centres in the model.
 - **Hole centres, as Inventor's Hole picks them** (Aidan, spike round 2): when the window opens, the sketch the user selected (or the sketch of the selected points), else the newest visible sketch with hole-centre points, gives the centres, all of them picked. Clicking a point adds or removes it, without Ctrl. Picked centres are highlighted blue. The preview follows. There is no "use selected points" button. When editing, the hole's own centres are picked and points of its sketch can be added or removed. The sketch is shown while the window is open and put back afterwards. OK needs at least one centre. One feature holds all the centres (question 4).

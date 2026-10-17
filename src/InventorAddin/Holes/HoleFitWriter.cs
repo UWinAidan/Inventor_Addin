@@ -2,6 +2,7 @@ using System;
 using Inventor;
 using InventorAddin.Core.Holes;
 using InventorAddin.Core.Logging;
+using InventorAddin.Core.ViewModels;
 
 namespace InventorAddin.Holes
 {
@@ -13,7 +14,7 @@ namespace InventorAddin.Holes
     /// </summary>
     public static class HoleFitWriter
     {
-        private const string LogPrefix = "AWB Hole: ";
+        private const string LogPrefix = AwbHoleViewModel.CommandName + ": ";
 
         /// <summary>
         /// Applies what the add-in leaves on a hole when it is kept (task 089, OK): for a dowel the tolerance and the

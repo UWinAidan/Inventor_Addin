@@ -142,6 +142,17 @@ Every window has the same three bands:
 - Keyboard: Enter in a search box moves to its list. Double-clicking a material moves to Finishes; double-clicking a finish does OK. Access keys: C, P, S, M, F, A.
 - Shared pieces added for it in `Styles.xaml`: `PickList` and `PickListItem` (a list to pick one entry from: input fill and border, Divider fill and semibold on the selected entry, an Accent outline on the entry with keyboard focus), `StarButton`, and `LeftColumn` (12 to the right). `DialogFooter` gained `StatusToolTip`, a tooltip on the status line only.
 
+**AWB Hole** (spec 09, "The window"; task 090)
+
+- **Modeless** (the first): it stays open while the user picks hole centres in the model. `WindowHost.ShowModeless` gives it what a dialog gets (owned by Inventor's main window, the theme, the header icon, kept on the screen) and keyboard input through `ElementHost.EnableModelessKeyboardInterop`; it is opened through `Dispatcher.BeginInvoke` after Inventor's command has returned (spike 081 round 3). One at a time: AWB Hole pressed while it is open brings it to the front.
+- Header: the `AwbHole` icon; "AWB Hole", or "Edit AWB Hole" for an existing hole, with the part's file name under it. A hole made by Inventor's Hole opens with a muted note that OK makes it an AWB hole, and the read-back's notes under it.
+- Section **Hole**: Units, Type, Seat, Standard, Fastener type, Size, Fit, Tolerance (dropdowns). A dowel's Fit row shows the fit colour from the workbook as a small square (`ColourSwatch` in `UI/Controls`, the one place a data colour is drawn) with its name.
+- Section **Depth and direction**: Thread depth and Drill depth (tapped, blind), Termination, Depth (clearance and dowel, blind), Drill point (blind), Direction (Flip). The depth boxes are narrow text boxes with the unit (mm or in) beside them; text that is not a number stays in the box with "Enter a number." under it and OK disabled.
+- Section **Centres**: the number picked, the problem when none is, and how to pick (or that an edited hole's centres are not sketch points and cannot be changed).
+- A field that does not apply is not shown. Each field's problem is shown under it in the error colour.
+- Footer: status line (the workbook's problems at open, Inventor's refusal of a change in the error style, or the add-in's notes on the hole as made); OK (primary), Cancel.
+- Keyboard: Enter commits the box being typed in and does OK only when OK is enabled; Esc is Cancel. Access keys: U, Y, E, S, F, Z, I, T, H, D, R, P, O, L.
+
 ## Part number display
 
 Decided by Aidan on 2026-10-06: a file that has not been given a part number must not show its name as if it were one.
@@ -161,7 +172,7 @@ Replaced in M2 (task 039) by spec 02, "Part number": a Part Number in the `AWB-1
 ## Ribbon icons
 
 - Every ribbon button gets an icon in 16 px and 32 px. The ribbon shows the 32 px icon on a large button and the 16 px icon on a small one. The buttons on the ribbon today, by panel, with their size (sizes: Aidan, 2026-10-11, spec 02; panels: Aidan, 2026-10-12, spec 01):
-  - Create: New Part (large), Save As Copy (small), Save As and Replace (small)
+  - Create: New Part (large), Save As Copy (small), Save As and Replace (small), AWB Hole (large, icon `AwbHole`, task 087; button task 090)
   - Properties: Part Properties (large), Mass Update (small), Material and Finish (small, icon `MaterialFinish`, task 073; button task 075)
   - Drawing: Create Print (large)
   - Developer: Export Model Data (small), Export Libraries (small)

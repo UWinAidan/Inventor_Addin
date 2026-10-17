@@ -1,3 +1,4 @@
+using System.Globalization;
 using InventorAddin.Core.Holes;
 
 namespace InventorAddin.Core.ViewModels;
@@ -85,12 +86,41 @@ public sealed class AwbHoleViewModel : ObservableObject
         new(HoleStandards.TappedType, HoleStandards.TappedType),
     ];
 
-    public static IReadOnlyList<HoleOption<HoleTermination>> TerminationOptions { get; } =
+    // Termination To needs the end face picked, which the window cannot do yet (task 090): To is listed only for an
+    // edited hole that already ends at a face, so the window shows what the hole is.
+    private static readonly IReadOnlyList<HoleOption<HoleTermination>> PickableTerminations =
+    [
+        new(HoleTermination.Distance, DistanceText),
+        new(HoleTermination.ThroughAll, ThroughAllText),
+    ];
+
+    private static readonly IReadOnlyList<HoleOption<HoleTermination>> TerminationsWithTo =
     [
         new(HoleTermination.Distance, DistanceText),
         new(HoleTermination.ThroughAll, ThroughAllText),
         new(HoleTermination.ToFace, ToText),
     ];
+
+    /// <summary>The window says this under Termination while an edited hole still ends at a face.</summary>
+    public const string ToFaceNoteText =
+        CommandName + " cannot pick the face a hole ends at yet. Choose Distance or Through All to change this hole.";
+
+    /// <summary>The window says this under the centres of an edited hole whose centres are not sketch points.</summary>
+    public const string CentresNotPickableText =
+        "This hole's centres are not sketch points, so none can be added or removed here.";
+
+    /// <summary>The window says this under the centres while they can be picked.</summary>
+    public const string CentresHelpText = "Click a point in the model to add or remove a hole centre.";
+
+    /// <summary>Beside a depth box whose text is not a number.</summary>
+    public const string NotANumberText = "Enter a number.";
+
+    /// <summary>The message when the command is started in a document that is not a part.</summary>
+    public const string WrongDocumentText = CommandName + " works in part files. Open a part and try again.";
+
+    /// <summary>When the hole workbook gives nothing to make a hole from and no reason was reported.</summary>
+    public const string NoHoleSizesText =
+        "The hole workbook has no hole sizes. Check the hole data in Settings.";
 
     private static readonly IReadOnlyList<HoleOption<HoleSeat>> AllSeats =
     [
@@ -137,6 +167,11 @@ public sealed class AwbHoleViewModel : ObservableObject
     private HoleUnits _depthUnits;
 
     private int _centreCount;
+    private bool _canPickCentres = true;
+
+    // Depth box text that is not a number, by field; cleared by every change that reaches the fields.
+    private readonly Dictionary<HoleField, string> _invalidText = [];
+
     private HoleSpec _spec;
     private HoleBuildResult _build;
     private IReadOnlyList<HoleCheck> _checks = [];
@@ -169,6 +204,7 @@ public sealed class AwbHoleViewModel : ObservableObject
             .Where(n => n.Length > 0)
             .ToList()
             .AsReadOnly();
+        TerminationOptions = editSpec?.Termination == HoleTermination.ToFace ? TerminationsWithTo : PickableTerminations;
 
         if (editSpec is null)
         {
@@ -247,6 +283,47 @@ public sealed class AwbHoleViewModel : ObservableObject
     {
         ArgumentNullException.ThrowIfNull(closestSpec);
         return new AwbHoleViewModel(workbook, partName, closestSpec, true, notes, problems);
+    }
+
+    /// <summary>
+    /// Edit mode from the add-in's read-back of a hole (task 088, <c>HoleFeatureReader.ReadSpec</c>): an AWB hole opens
+    /// on its stored spec (<see cref="ForEdit"/>), any other hole on the closest spec with the read-back's notes
+    /// (<see cref="ForInventorHole"/>).
+    /// </summary>
+    public static AwbHoleViewModel ForReadBack(
+        HoleWorkbook workbook,
+        string partName,
+        HoleReadBackResult readBack,
+        IEnumerable<HoleWorkbookProblem>? problems = null)
+    {
+        ArgumentNullException.ThrowIfNull(readBack);
+        return readBack.IsInventorHole
+            ? ForInventorHole(workbook, partName, readBack.Spec, readBack.Notes, problems)
+            : ForEdit(workbook, partName, readBack.Spec, problems);
+    }
+
+    /// <summary>
+    /// Why the window cannot open on this workbook, or null when it can: a workbook with no Clearance, Tapped or Dowel
+    /// rows has nothing to make a hole from. The message is the workbook's own problems with the file (a missing or
+    /// unreadable file), else <see cref="NoHoleSizesText"/>. Rows with problems do not stop the window.
+    /// </summary>
+    public static string? WorkbookStopMessage(HoleWorkbookReadResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+
+        var workbook = result.Workbook;
+        if (workbook.Clearance.Count > 0 || workbook.Tapped.Count > 0 || workbook.Dowel.Count > 0)
+        {
+            return null;
+        }
+
+        var fileProblems = result.Problems
+            .Where(p => p.Row is null)
+            .Select(p => p.ToString().Trim())
+            .Where(m => m.Length > 0)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        return fileProblems.Count == 0 ? NoHoleSizesText : string.Join(Environment.NewLine, fileProblems);
     }
 
     /// <summary>
@@ -455,6 +532,15 @@ public sealed class AwbHoleViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Distance and Through All; To as well only for an edited hole that ends at a face, since the window cannot pick
+    /// the end face yet (task 090).
+    /// </summary>
+    public IReadOnlyList<HoleOption<HoleTermination>> TerminationOptions { get; }
+
+    /// <summary><see cref="ToFaceNoteText"/> while the hole ends at a face; else null.</summary>
+    public string? TerminationNote => _termination == HoleTermination.ToFace ? ToFaceNoteText : null;
+
     public HoleTermination Termination
     {
         get => _termination;
@@ -482,6 +568,36 @@ public sealed class AwbHoleViewModel : ObservableObject
         get => _depth;
         set => Change(() => Set(ref _depth, value, nameof(Depth)));
     }
+
+    // The depth boxes. The window binds these texts, not the numbers, so text that is not a number is kept in the box
+    // with a message beside it, and the number keeps its last value (task 090).
+
+    /// <summary>The length unit of the units chosen, <c>mm</c> or <c>in</c>, beside the depth boxes.</summary>
+    public string LengthUnitText => _units == HoleUnits.Imperial ? "in" : "mm";
+
+    /// <summary><see cref="ThreadDepth"/> as text; blank puts back the Tapped row's default.</summary>
+    public string ThreadDepthText
+    {
+        get => TextOf(HoleField.ThreadDepth, _threadDepth);
+        set => SetText(HoleField.ThreadDepth, value, nameof(ThreadDepthText), v => ThreadDepth = v);
+    }
+
+    /// <summary><see cref="DrillDepth"/> as text; blank puts back the Tapped row's default.</summary>
+    public string DrillDepthText
+    {
+        get => TextOf(HoleField.DrillDepth, _drillDepth);
+        set => SetText(HoleField.DrillDepth, value, nameof(DrillDepthText), v => DrillDepth = v);
+    }
+
+    /// <summary><see cref="Depth"/> as text; blank clears it.</summary>
+    public string DepthText
+    {
+        get => TextOf(HoleField.Depth, _depth);
+        set => SetText(HoleField.Depth, value, nameof(DepthText), v => Depth = v);
+    }
+
+    /// <summary>True while a depth box holds text that is not a number; OK is disabled until it is fixed.</summary>
+    public bool HasTextThatIsNotANumber => _invalidText.Count > 0;
 
     /// <summary>The Drill Point rows; empty unless the hole ends at a distance.</summary>
     public IReadOnlyList<HoleOption<string>> DrillPointOptions => _drillPointOptions;
@@ -517,6 +633,32 @@ public sealed class AwbHoleViewModel : ObservableObject
         }
     }
 
+    /// <summary>The picked centres for the window: <c>None picked</c>, <c>1 picked</c>, <c>3 picked</c>.</summary>
+    public string CentresText => _centreCount switch
+    {
+        0 => "None picked",
+        var n => $"{n} picked",
+    };
+
+    /// <summary>
+    /// False, set by the add-in, for an edited hole whose centres are not sketch points: clicks in the model do
+    /// nothing, and <see cref="CentresHelp"/> says so (task 089).
+    /// </summary>
+    public bool CanPickCentres
+    {
+        get => _canPickCentres;
+        set
+        {
+            if (SetProperty(ref _canPickCentres, value))
+            {
+                OnPropertyChanged(nameof(CentresHelp));
+            }
+        }
+    }
+
+    /// <summary>How to pick centres, or <see cref="CentresNotPickableText"/> when they cannot be picked.</summary>
+    public string CentresHelp => _canPickCentres ? CentresHelpText : CentresNotPickableText;
+
     /// <summary>The spec the fields give, normalised.</summary>
     public HoleSpec Spec => _spec;
 
@@ -551,16 +693,21 @@ public sealed class AwbHoleViewModel : ObservableObject
 
     public string? ToleranceProblem => ProblemFor(HoleField.Tolerance);
 
-    public string? ThreadDepthProblem => ProblemFor(HoleField.ThreadDepth);
+    /// <summary><see cref="NotANumberText"/> while the box holds text that is not a number, else the field's checks.</summary>
+    public string? ThreadDepthProblem => NotANumber(HoleField.ThreadDepth) ?? ProblemFor(HoleField.ThreadDepth);
 
-    public string? DrillDepthProblem => ProblemFor(HoleField.DrillDepth);
+    /// <summary><see cref="NotANumberText"/> while the box holds text that is not a number, else the field's checks.</summary>
+    public string? DrillDepthProblem => NotANumber(HoleField.DrillDepth) ?? ProblemFor(HoleField.DrillDepth);
 
-    public string? DepthProblem => ProblemFor(HoleField.Depth);
+    /// <summary><see cref="NotANumberText"/> while the box holds text that is not a number, else the field's checks.</summary>
+    public string? DepthProblem => NotANumber(HoleField.Depth) ?? ProblemFor(HoleField.Depth);
 
     public string? DrillPointProblem => ProblemFor(HoleField.DrillPoint);
 
-    /// <summary>True when the spec builds and at least one centre is picked.</summary>
-    public bool CanOk => _build.Succeeded && _centreCount >= 1;
+    /// <summary>
+    /// True when the spec builds, at least one centre is picked, and every depth box holds a number (or is blank).
+    /// </summary>
+    public bool CanOk => _build.Succeeded && _centreCount >= 1 && _invalidText.Count == 0;
 
     /// <summary>Raises <see cref="OkRequested"/>. Enabled when <see cref="CanOk"/>.</summary>
     public RelayCommand OkCommand { get; }
@@ -610,6 +757,51 @@ public sealed class AwbHoleViewModel : ObservableObject
         SetStatus(_openStatusText, false, _openStatusNotes);
     }
 
+    /// <summary>
+    /// The preview took the change, and the add-in has notes on the hole as it was made (task 088: the tap drill
+    /// fallback, a hole made again at the end of the browser). The status line shows them, not as an error; its
+    /// details list them first, then the workbook's problems. No notes puts back the status at open. A refused status
+    /// is cleared either way. Call after each change Inventor took; the notes stay until the next one.
+    /// </summary>
+    public void ShowNotes(IEnumerable<string>? notes)
+    {
+        var list = (notes ?? [])
+            .Select(n => (n ?? "").Trim())
+            .Where(n => n.Length > 0)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        if (_isRefused)
+        {
+            _isRefused = false;
+            OnPropertyChanged(nameof(IsRefused));
+        }
+
+        if (list.Count == 0)
+        {
+            if (_statusText != _openStatusText || _statusIsError || !_statusNotes.SequenceEqual(_openStatusNotes))
+            {
+                SetStatus(_openStatusText, false, _openStatusNotes);
+            }
+
+            return;
+        }
+
+        SetStatus(NotesText(list), false, list.Concat(_openStatusNotes).ToList());
+    }
+
+    /// <summary>The status line for the add-in's notes on the hole: the note itself, or how many there are.</summary>
+    public static string NotesText(IReadOnlyList<string> notes)
+    {
+        ArgumentNullException.ThrowIfNull(notes);
+        return notes.Count switch
+        {
+            0 => "",
+            1 => notes[0],
+            var n => $"{n} notes on this hole; see the details.",
+        };
+    }
+
     /// <summary>The status at open for <paramref name="problems"/> workbook problems; <c>""</c> for none.</summary>
     public static string WorkbookProblemsText(int problems) => problems switch
     {
@@ -649,6 +841,7 @@ public sealed class AwbHoleViewModel : ObservableObject
         _changing = true;
         try
         {
+            _invalidText.Clear();
             apply();
             Refresh(keepExact: false);
             ClearRefused();
@@ -962,7 +1155,8 @@ public sealed class AwbHoleViewModel : ObservableObject
         nameof(ShowsDrillPoint), nameof(Spec), nameof(BuildResult), nameof(Geometry), nameof(Checks),
         nameof(HasProblems), nameof(CentresProblem), nameof(SeatProblem), nameof(FastenerProblem), nameof(SizeProblem),
         nameof(ToleranceProblem), nameof(ThreadDepthProblem), nameof(DrillDepthProblem), nameof(DepthProblem),
-        nameof(DrillPointProblem), nameof(CanOk),
+        nameof(DrillPointProblem), nameof(CanOk), nameof(ThreadDepthText), nameof(DrillDepthText), nameof(DepthText),
+        nameof(HasTextThatIsNotANumber), nameof(LengthUnitText), nameof(TerminationNote), nameof(CentresText),
     ];
 
     private void Reevaluate()
@@ -987,6 +1181,69 @@ public sealed class AwbHoleViewModel : ObservableObject
         OnPropertyChanged(nameof(StatusNotes));
         OnPropertyChanged(nameof(HasStatusDetails));
     }
+
+    private string TextOf(HoleField field, decimal? value) =>
+        _invalidText.TryGetValue(field, out var text) ? text : FormatNumber(value);
+
+    /// <summary>A depth for its box: up to six decimals, no trailing zeros, in the user's number format.</summary>
+    public static string FormatNumber(decimal? value) =>
+        value is { } v ? v.ToString("0.######", CultureInfo.CurrentCulture) : "";
+
+    /// <summary>
+    /// A number typed in a depth box, in the user's number format or with a point as the decimal separator. No
+    /// thousands separators, so <c>1,5</c> is not read as 15 where the comma groups thousands.
+    /// </summary>
+    public static bool TryParseNumber(string? text, out decimal value)
+    {
+        var trimmed = (text ?? "").Trim();
+        value = 0m;
+        return trimmed.Length > 0
+            && (decimal.TryParse(trimmed, NumberStyles.Float, CultureInfo.CurrentCulture, out value)
+                || decimal.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out value));
+    }
+
+    private void SetText(HoleField field, string? text, string textProperty, Action<decimal?> set)
+    {
+        var raw = text ?? "";
+        decimal? value = null;
+        if (raw.Trim().Length > 0)
+        {
+            if (!TryParseNumber(raw, out var parsed))
+            {
+                _invalidText[field] = raw;
+                OnPropertyChanged(textProperty);
+                OnPropertyChanged(ProblemPropertyOf(field));
+                OnPropertyChanged(nameof(HasTextThatIsNotANumber));
+                OnPropertyChanged(nameof(CanOk));
+                OkCommand.RaiseCanExecuteChanged();
+                return;
+            }
+
+            value = parsed;
+        }
+
+        var wasInvalid = _invalidText.Remove(field);
+        set(value);
+
+        // The number may not have changed ("12.0" for 12, or the old text was not a number): show it as it is.
+        OnPropertyChanged(textProperty);
+        if (wasInvalid)
+        {
+            OnPropertyChanged(ProblemPropertyOf(field));
+            OnPropertyChanged(nameof(HasTextThatIsNotANumber));
+            OnPropertyChanged(nameof(CanOk));
+            OkCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    private string? NotANumber(HoleField field) => _invalidText.ContainsKey(field) ? NotANumberText : null;
+
+    private static string ProblemPropertyOf(HoleField field) => field switch
+    {
+        HoleField.ThreadDepth => nameof(ThreadDepthProblem),
+        HoleField.DrillDepth => nameof(DrillDepthProblem),
+        _ => nameof(DepthProblem),
+    };
 
     private static string? Find(IReadOnlyList<HoleOption<string>> options, string? value) =>
         options.FirstOrDefault(o => SameText(o.Value, value))?.Value;

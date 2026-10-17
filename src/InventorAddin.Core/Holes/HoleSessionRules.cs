@@ -158,6 +158,69 @@ public static class HoleSessionRules
     }
 }
 
+/// <summary>What the session does when Inventor stops the hole centre picking.</summary>
+public enum HolePickingStop
+{
+    /// <summary>Another command started, or Esc in the model: the session is cancelled (Default, task 089).</summary>
+    Cancel,
+
+    /// <summary>
+    /// The AWB Hole command itself started (its button or shortcut pressed while the window is open): the picking is
+    /// started again and the session goes on; the command brings the window to the front (task 090).
+    /// </summary>
+    Restart,
+}
+
+/// <summary>
+/// Tells, when Inventor stops the hole centre picking, whether it was stopped by the AWB Hole command itself
+/// (task 090). Pressing AWB Hole while its window is open must bring the window to the front, not cancel the
+/// session, but starting any command, ours included, may stop the picking first. The add-in reports each command
+/// Inventor starts (<c>UserInputEvents.OnActivateCommand</c>); when the picking stops right after AWB Hole started,
+/// the picking is restarted.
+/// </summary>
+/// <remarks>
+/// This relies on Inventor reporting the new command before it stops the picking, which is not confirmed. If it is the
+/// other way round, the session is cancelled and the command opens a new window: nothing is lost from the part, only
+/// the window's settings. <c>CommandManager.ActiveCommand</c> is not used as a second signal: while the picking runs it
+/// may itself name AWB Hole, which would turn Esc and every other command into a restart, letting another command run
+/// inside the session's transaction.
+/// </remarks>
+public sealed class HolePickingWatch
+{
+    private readonly string _ownCommand;
+    private string? _lastStarted;
+
+    /// <param name="ownCommand">The AWB Hole command's internal name (<c>CommandNames.AwbHole</c>).</param>
+    public HolePickingWatch(string ownCommand)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownCommand);
+        _ownCommand = ownCommand;
+    }
+
+    /// <summary>The last command Inventor reported starting since the picking last stopped or was resumed.</summary>
+    public string? LastStarted => _lastStarted;
+
+    /// <summary>Inventor started a command.</summary>
+    public void CommandStarted(string? commandName) => _lastStarted = commandName;
+
+    /// <summary>
+    /// Inventor stopped the picking: restart when the last command it started is AWB Hole, else cancel. Forgets the
+    /// last command started, so a later Esc cancels.
+    /// </summary>
+    public HolePickingStop PickingStopped()
+    {
+        var own = IsOwn(_lastStarted);
+        _lastStarted = null;
+        return own ? HolePickingStop.Restart : HolePickingStop.Cancel;
+    }
+
+    /// <summary>The picking was started again: forget the last command started.</summary>
+    public void Resumed() => _lastStarted = null;
+
+    // Inventor's internal command names are matched exactly, as the ribbon defines them.
+    private bool IsOwn(string? name) => string.Equals(name?.Trim(), _ownCommand, StringComparison.Ordinal);
+}
+
 /// <summary>What the preview does for one window change.</summary>
 public enum HolePreviewAction
 {

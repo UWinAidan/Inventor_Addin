@@ -4,6 +4,7 @@ using System.Diagnostics;
 using Inventor;
 using InventorAddin.Core.Holes;
 using InventorAddin.Core.Logging;
+using InventorAddin.Core.Ribbon;
 using InventorAddin.Core.ViewModels;
 
 namespace InventorAddin.Holes
@@ -28,12 +29,17 @@ namespace InventorAddin.Holes
     /// closing the document, Inventor stopping the picking, and <see cref="Dispose"/>.
     /// </para>
     /// <para>
+    /// Inventor stopping the picking cancels the session, except when the command that stopped it is AWB Hole itself
+    /// (its button pressed while the window is open, task 090): the picking is then started again
+    /// (<see cref="HolePickingWatch"/>, <see cref="ResumePicking"/>), and the command brings the window to the front.
+    /// </para>
+    /// <para>
     /// Nothing here throws into Inventor's events: a failure there is logged and the session is cancelled.
     /// </para>
     /// </remarks>
     public sealed class HoleSession : IDisposable
     {
-        private const string LogPrefix = "AWB Hole: ";
+        private const string LogPrefix = AwbHoleViewModel.CommandName + ": ";
 
         private readonly Application _app;
         private readonly PartDocument _doc;
@@ -63,6 +69,14 @@ namespace InventorAddin.Holes
         private SelectEvents? _select;
         private HighlightSet? _highlight;
         private ApplicationEvents? _appEvents;
+        private UserInputEvents? _userInput;
+
+        // Tells whether the picking was stopped by AWB Hole itself (its button pressed while the window is open), so
+        // it is started again instead of the session being cancelled (task 090).
+        private readonly HolePickingWatch _watch = new HolePickingWatch(CommandNames.AwbHole);
+
+        // Inventor's main thread: the picking is started again after Inventor's terminate event has returned.
+        private readonly System.Windows.Threading.Dispatcher _dispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher;
 
         private bool _ending;
         private bool _ended;
@@ -181,6 +195,33 @@ namespace InventorAddin.Holes
         /// <summary>Cancel: aborts the outer transaction, so the part is as it was, also for an edited hole.</summary>
         public void Cancel() => Cancel(HoleSessionEndReason.Cancel);
 
+        /// <summary>
+        /// The AWB Hole command was started again while the window is open (task 090): the picking is started again
+        /// if Inventor stopped it, and is left as it is otherwise. Call after Inventor's command has returned. If the
+        /// picking cannot be started, the session is cancelled, as when Inventor stops it.
+        /// </summary>
+        public void ResumePicking()
+        {
+            if (_ended)
+                return;
+
+            _watch.Resumed();
+            if (_interaction != null)
+                return;
+
+            try
+            {
+                StartInteraction();
+                Highlight();
+                _log.Info(LogPrefix + "the hole centre picking was started again.");
+            }
+            catch (Exception ex)
+            {
+                _log.Error(LogPrefix + "starting the hole centre picking again failed; the session is cancelled.", ex);
+                Cancel(HoleSessionEndReason.Failed);
+            }
+        }
+
         /// <summary>Cancels the session if it has not ended.</summary>
         public void Dispose()
         {
@@ -207,10 +248,14 @@ namespace InventorAddin.Holes
 
             _appEvents = _app.ApplicationEvents;
             _appEvents.OnCloseDocument += OnCloseDocument;
+            _userInput = _app.CommandManager.UserInputEvents;
+            _userInput.OnActivateCommand += OnActivateCommand;
             _viewModel.PreviewNeeded += OnPreviewNeeded;
             _viewModel.OkRequested += OnOkRequested;
             _viewModel.CancelRequested += OnCancelRequested;
 
+            // An edited hole whose centres are not sketch points has no sketch to pick in; the window says so.
+            _viewModel.CanPickCentres = !(_edit && _picks.Sketch == null);
             _viewModel.CentreCount = _picks.Count;
             Highlight();
 
@@ -310,6 +355,12 @@ namespace InventorAddin.Holes
             HoleColour blue = HoleSessionRules.PickedColour;
             _highlight.SetColor(blue.R, blue.G, blue.B);
 
+            StartInteraction();
+        }
+
+        /// <summary>The interaction events that pick the centres; made again when AWB Hole restarts the picking.</summary>
+        private void StartInteraction()
+        {
             _interaction = _app.CommandManager.CreateInteractionEvents();
             _interaction.StatusBarText = HoleSessionRules.StatusBarText;
             _select = _interaction.SelectEvents;
@@ -318,6 +369,27 @@ namespace InventorAddin.Holes
             _select.OnSelect += OnSelect;
             _interaction.OnTerminate += OnTerminate;
             _interaction.Start();
+        }
+
+        /// <summary>
+        /// Lets go of the interaction events: their handlers detached, and, when <paramref name="stop"/>, stopped. Not
+        /// stopped when Inventor has already terminated them.
+        /// </summary>
+        private void DropInteraction(bool stop)
+        {
+            SelectEvents? select = _select;
+            InteractionEvents? interaction = _interaction;
+            _select = null;
+            _interaction = null;
+
+            if (select != null)
+                ComSafe.Run(() => select.OnSelect -= OnSelect);
+            if (interaction != null)
+            {
+                ComSafe.Run(() => interaction.OnTerminate -= OnTerminate);
+                if (stop)
+                    ComSafe.Run(() => interaction.Stop());
+            }
         }
 
         // ---- events ----
@@ -386,15 +458,41 @@ namespace InventorAddin.Holes
 
         /// <summary>
         /// Inventor stopped the picking (another command started, or Esc in the model): the session is cancelled, so
-        /// no other command runs inside its transaction. Our own <c>Stop</c> raises this too, and is ignored.
+        /// no other command runs inside its transaction. Our own <c>Stop</c> raises this too, and is ignored. When the
+        /// command that stopped it is AWB Hole itself (<see cref="HolePickingWatch"/>), the picking is started again
+        /// once Inventor's event has returned, and the command brings the window to the front (task 090).
         /// </summary>
         private void OnTerminate()
         {
             if (_ending || _ended)
                 return;
 
+            try
+            {
+                if (_watch.PickingStopped() == HolePickingStop.Restart)
+                {
+                    _log.Info(LogPrefix + AwbHoleViewModel.CommandName + " was started while its window is open; the picking is started again.");
+                    DropInteraction(stop: false);
+                    _dispatcher.BeginInvoke(new Action(ResumePicking));
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.Error(LogPrefix + "restarting the hole centre picking failed; the session is cancelled.", ex);
+            }
+
             _log.Info(LogPrefix + "Inventor stopped the hole centre picking; the session is cancelled.");
             Cancel(HoleSessionEndReason.ByInventor);
+        }
+
+        /// <summary>Each command Inventor starts, so the picking stopped by AWB Hole itself can be told apart.</summary>
+        private void OnActivateCommand(string commandName, NameValueMap context)
+        {
+            if (_ended)
+                return;
+
+            _watch.CommandStarted(commandName);
         }
 
         private void OnCloseDocument(
@@ -521,7 +619,9 @@ namespace InventorAddin.Holes
             _appliedCentresVersion = centresVersion;
             foreach (string note in result.Notes)
                 _log.Info(LogPrefix + note);
-            _viewModel.ClearRefused();
+
+            // Clears a refusal too; the notes (the tap drill fallback, a hole made again) show in the status line.
+            _viewModel.ShowNotes(result.Notes);
         }
 
         /// <summary>
@@ -703,16 +803,12 @@ namespace InventorAddin.Holes
 
             try
             {
-                if (_select != null)
-                    ComSafe.Run(() => _select.OnSelect -= OnSelect);
-                if (_interaction != null)
-                {
-                    ComSafe.Run(() => _interaction.OnTerminate -= OnTerminate);
-                    ComSafe.Run(() => _interaction.Stop());
-                }
+                DropInteraction(stop: true);
                 ComSafe.Run(() => _highlight?.Delete());
                 if (_appEvents != null)
                     ComSafe.Run(() => _appEvents.OnCloseDocument -= OnCloseDocument);
+                if (_userInput != null)
+                    ComSafe.Run(() => _userInput.OnActivateCommand -= OnActivateCommand);
                 _viewModel.PreviewNeeded -= OnPreviewNeeded;
                 _viewModel.OkRequested -= OnOkRequested;
                 _viewModel.CancelRequested -= OnCancelRequested;
@@ -724,6 +820,7 @@ namespace InventorAddin.Holes
                 _interaction = null;
                 _highlight = null;
                 _appEvents = null;
+                _userInput = null;
                 _ended = true;
                 _ending = false;
             }

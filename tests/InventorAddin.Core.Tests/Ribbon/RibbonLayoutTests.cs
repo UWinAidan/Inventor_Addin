@@ -62,6 +62,7 @@ public sealed class RibbonLayoutTests
         Assert.Equal($"{Branding.IdPrefix}_CreatePrint", CommandNames.CreatePrint);
         Assert.Equal($"{Branding.IdPrefix}_MassUpdate", CommandNames.MassUpdate);
         Assert.Equal($"{Branding.IdPrefix}_MaterialFinish", CommandNames.MaterialFinish);
+        Assert.Equal($"{Branding.IdPrefix}_AwbHole", CommandNames.AwbHole);
     }
 
     public static TheoryData<RibbonEnvironment, bool> DocumentEnvironmentsAndSetting()
@@ -117,14 +118,14 @@ public sealed class RibbonLayoutTests
             },
             (RibbonEnvironment.Part, false) => new[]
             {
-                Create(Large("NewPart"), Small("SaveAsCopy")),
+                Create(Large("NewPart"), Small("SaveAsCopy"), Large("AwbHole")),
                 Properties(Large("PartProperties"), Small("MassUpdate"), Small("MaterialFinish")),
                 DrawingPanel(Large("CreatePrint")),
                 Awb(),
             },
             (RibbonEnvironment.Part, true) => new[]
             {
-                Create(Large("NewPart"), Small("SaveAsCopy")),
+                Create(Large("NewPart"), Small("SaveAsCopy"), Large("AwbHole")),
                 Properties(Large("PartProperties"), Small("MassUpdate"), Small("MaterialFinish")),
                 DrawingPanel(Large("CreatePrint")),
                 Developer(Small("ExportModelData"), Small("ExportLibraries")),
@@ -284,6 +285,7 @@ public sealed class RibbonLayoutTests
     [InlineData(CommandNames.SaveAsReplace, IconNames.SaveAsReplace)]
     [InlineData(CommandNames.MassUpdate, IconNames.MassUpdate)]
     [InlineData(CommandNames.MaterialFinish, IconNames.MaterialFinish)]
+    [InlineData(CommandNames.AwbHole, IconNames.AwbHole)]
     public void EachCommand_UsesItsIconName_InEveryEnvironment(string command, string iconName)
     {
         var buttons = RibbonEnvironments.All
@@ -296,7 +298,8 @@ public sealed class RibbonLayoutTests
         Assert.All(buttons, b => Assert.Equal(iconName, b.IconName));
     }
 
-    // Aidan, 2026-10-11 (spec 02): New Part, Part Properties and Create Print are large; every other button is small.
+    // Aidan, 2026-10-11 (spec 02): New Part, Part Properties and Create Print are large; every other button is small,
+    // except AWB Hole, large (task 090, spec 09).
     // Changing a size here should be a deliberate decision, not a side effect.
     [Theory]
     [InlineData(CommandNames.NewPart, ButtonSize.Large)]
@@ -308,6 +311,7 @@ public sealed class RibbonLayoutTests
     [InlineData(CommandNames.About, ButtonSize.Small)]
     [InlineData(CommandNames.MassUpdate, ButtonSize.Small)]
     [InlineData(CommandNames.MaterialFinish, ButtonSize.Small)]
+    [InlineData(CommandNames.AwbHole, ButtonSize.Large)]
     [InlineData(CommandNames.ExportModelData, ButtonSize.Small)]
     [InlineData(CommandNames.ExportLibraries, ButtonSize.Small)]
     public void EachCommand_HasItsSize_InEveryEnvironment(string command, ButtonSize size)
@@ -336,7 +340,7 @@ public sealed class RibbonLayoutTests
         Assert.Equal(
             new[]
             {
-                CommandNames.About, CommandNames.CreatePrint, CommandNames.ExportLibraries, CommandNames.ExportModelData,
+                CommandNames.About, CommandNames.AwbHole, CommandNames.CreatePrint, CommandNames.ExportLibraries, CommandNames.ExportModelData,
                 CommandNames.MassUpdate, CommandNames.MaterialFinish, CommandNames.NewPart, CommandNames.PartProperties, CommandNames.SaveAsCopy,
                 CommandNames.SaveAsReplace, CommandNames.Settings,
             }.OrderBy(n => n, StringComparer.Ordinal),
@@ -358,6 +362,7 @@ public sealed class RibbonLayoutTests
         Assert.Equal(CommandNames.SaveAsReplace, prefix + IconNames.SaveAsReplace);
         Assert.Equal(CommandNames.MassUpdate, prefix + IconNames.MassUpdate);
         Assert.Equal(CommandNames.MaterialFinish, prefix + IconNames.MaterialFinish);
+        Assert.Equal(CommandNames.AwbHole, prefix + IconNames.AwbHole);
     }
 
     [Fact]
@@ -370,7 +375,7 @@ public sealed class RibbonLayoutTests
             .Select(g => g.First().IconName)
             .ToList();
 
-        Assert.Equal(11, iconNames.Count);
+        Assert.Equal(12, iconNames.Count);
         Assert.Equal(iconNames.Count, iconNames.Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
 

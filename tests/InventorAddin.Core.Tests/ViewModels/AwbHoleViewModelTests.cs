@@ -79,7 +79,7 @@ public sealed class AwbHoleViewModelTests
     {
         Assert.Equal(["Metric", "Imperial"], Values(AwbHoleViewModel.UnitsOptions));
         Assert.Equal(["Clearance", "Tapped"], Values(AwbHoleViewModel.TypeOptions));
-        Assert.Equal(["Distance", "Through All", "To"], Values(AwbHoleViewModel.TerminationOptions));
+        Assert.Equal(["Distance", "Through All"], Values(NewHole().TerminationOptions));
     }
 
     // ---- Lists ----
@@ -266,7 +266,7 @@ public sealed class AwbHoleViewModelTests
         Assert.Equal(["118 deg", "90 deg", "Flat"], Values(vm.DrillPointOptions));
         Assert.Equal("118 deg", vm.DrillPoint);
 
-        vm.Termination = HoleTermination.ToFace;
+        vm.Termination = HoleTermination.ThroughAll;
         Assert.Empty(vm.DrillPointOptions);
         Assert.Null(vm.DrillPoint);
     }

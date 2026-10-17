@@ -1108,6 +1108,21 @@
         </Setter>
     </Style>
 
+    <!--
+        A square of a colour that is data (a dowel hole's fit colour, AWB Hole, task 090): 14 square, radius 3, an input
+        border round it so a light colour still shows on the light theme, 8 before the text beside it. The control sets
+        the fill from the data; nothing here does.
+    -->
+    <Style TargetType="{x:Type controls:ColourSwatch}">
+        <Setter Property="Width" Value="14" />
+        <Setter Property="Height" Value="14" />
+        <Setter Property="CornerRadius" Value="3" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
+        <Setter Property="Margin" Value="0,0,8,0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
     <!-- Row: label column 100 wide, 12 to the value, 9 below each row. -->
     <Style TargetType="{x:Type controls:FieldRow}">
         <Setter Property="Margin" Value="0,0,0,9" />

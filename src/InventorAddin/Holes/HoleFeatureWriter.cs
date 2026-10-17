@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using Inventor;
 using InventorAddin.Core.Holes;
 using InventorAddin.Core.Logging;
+using InventorAddin.Core.ViewModels;
 
 namespace InventorAddin.Holes
 {
@@ -21,7 +22,7 @@ namespace InventorAddin.Holes
     /// </remarks>
     public static class HoleFeatureWriter
     {
-        private const string LogPrefix = "AWB Hole: ";
+        private const string LogPrefix = AwbHoleViewModel.CommandName + ": ";
 
         /// <summary>
         /// Makes a hole at <paramref name="centres"/> (sketch points, all in one feature).

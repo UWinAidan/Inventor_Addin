@@ -1,0 +1,280 @@
+<Window x:Class="InventorAddin.UI.AwbHoleWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:InventorAddin.UI.Controls"
+        xmlns:vm="clr-namespace:InventorAddin.Core.ViewModels;assembly=InventorAddin.Core"
+        SizeToContent="WidthAndHeight"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False">
+    <!--
+        DataContext is an AwbHoleViewModel (InventorAddin.Core.ViewModels), set in the constructor. Layout and bindings
+        only: the look comes from UI/Theme, applied by WindowHost after the window is built, so shared styles are
+        referred to with DynamicResource. SizeToContent and ResizeMode are repeated from the DialogWindow style so the
+        window still sizes to its content if the shared styles fail to load.
+
+        Spec 09, "The window" (task 090). Modeless: it stays open while the user picks hole centres in the model, and
+        the HoleSession (task 089) keeps the real hole in step with it. Fields in the spec's order: Units, Type, Seat,
+        Standard, Fastener type, Size, Fit, Tolerance, then Thread depth, Drill depth, Termination, Depth, Drill point,
+        Direction. A field that does not apply is not shown. Each field's problem from HoleRules is shown under it in
+        the error style. Under the fields, the picked centres. Footer: the status line (the workbook's problems at open,
+        Inventor's refusal of a change, or the add-in's notes on the hole as made; its tooltip lists every note); OK and
+        Cancel.
+
+        Dropdowns bind SelectedValue (SelectedValuePath="Value") to the field; when a dropdown's items change it may
+        write null, which the view-model ignores. Depth boxes bind the view-model's text properties, updated when the
+        box loses focus (or on Enter), so a preview is not made for every key.
+
+        Keyboard: Enter commits the box being typed in and does OK when OK is enabled (code-behind; OK is not IsDefault,
+        so Enter cannot press it twice). Esc is Cancel (IsCancel). Access keys: U units, Y type, E seat, S standard,
+        F fastener type, Z size, I fit, T tolerance, H thread depth, D drill depth, R termination, P depth, O drill point,
+        L flip.
+    -->
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="VisibleWhenTrue" />
+        <controls:VisibleWhenTextConverter x:Key="VisibleWhenText" />
+    </Window.Resources>
+
+    <Grid Style="{DynamicResource DialogContent}">
+        <!-- Header, body, footer. The body row is star-sized, so it scrolls when the window is capped at the screen's height. -->
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- The header icon is put in the window's resources by WindowHost (HeaderIcon), in the window's theme. -->
+        <controls:DialogHeader Grid.Row="0"
+                               Icon="{DynamicResource HeaderIcon}"
+                               Title="{Binding HeaderTitle, Mode=OneTime}"
+                               Subline="{Binding HeaderSubline, Mode=OneTime}" />
+
+        <ScrollViewer Grid.Row="1" Style="{DynamicResource DialogBody}">
+            <StackPanel Style="{DynamicResource DialogBodyContent}">
+                <!-- A hole made by Inventor's Hole command: OK makes it an AWB hole; each guess the read-back made. -->
+                <controls:FormSection Visibility="{Binding IsInventorHole, Mode=OneTime, Converter={StaticResource VisibleWhenTrue}}">
+                    <StackPanel>
+                        <TextBlock Style="{DynamicResource MutedText}" Text="{Binding InventorHoleNote, Mode=OneTime}" />
+                        <ItemsControl ItemsSource="{Binding InventorHoleNotes, Mode=OneTime}" Focusable="False">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Style="{DynamicResource MutedText}" Text="{Binding Mode=OneTime}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </controls:FormSection>
+
+                <controls:FormSection Heading="Hole">
+                    <controls:FieldRow Label="_Units" Target="{Binding ElementName=UnitsBox}">
+                        <ComboBox x:Name="UnitsBox"
+                                  IsEditable="False"
+                                  ItemsSource="{x:Static vm:AwbHoleViewModel.UnitsOptions}"
+                                  DisplayMemberPath="Text"
+                                  SelectedValuePath="Value"
+                                  SelectedValue="{Binding Units, Mode=TwoWay}" />
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="T_ype" Target="{Binding ElementName=TypeBox}">
+                        <ComboBox x:Name="TypeBox"
+                                  IsEditable="False"
+                                  ItemsSource="{x:Static vm:AwbHoleViewModel.TypeOptions}"
+                                  DisplayMemberPath="Text"
+                                  SelectedValuePath="Value"
+                                  SelectedValue="{Binding Type, Mode=TwoWay}" />
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="S_eat" Target="{Binding ElementName=SeatBox}">
+                        <StackPanel>
+                            <ComboBox x:Name="SeatBox"
+                                      IsEditable="False"
+                                      ItemsSource="{Binding SeatOptions, Mode=OneWay}"
+                                      DisplayMemberPath="Text"
+                                      SelectedValuePath="Value"
+                                      SelectedValue="{Binding Seat, Mode=TwoWay}" />
+                            <TextBlock Style="{DynamicResource ErrorStatusText}"
+                                       Text="{Binding SeatProblem, Mode=OneWay}"
+                                       Visibility="{Binding SeatProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
+                        </StackPanel>
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="_Standard" Target="{Binding ElementName=StandardBox}">
+                        <ComboBox x:Name="StandardBox"
+                                  IsEditable="False"
+                                  ItemsSource="{Binding StandardOptions, Mode=OneWay}"
+                                  DisplayMemberPath="Text"
+                                  SelectedValuePath="Value"
+                                  SelectedValue="{Binding Standard, Mode=TwoWay}" />
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="_Fastener type"
+                                       Target="{Binding ElementName=FastenerBox}"
+                                       Visibility="{Binding ShowsFastener, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
+                        <StackPanel>
+                            <ComboBox x:Name="FastenerBox"
+                                      IsEditable="False"
+                                      ItemsSource="{Binding FastenerOptions, Mode=OneWay}"
+                                      DisplayMemberPath="Text"
+                                      SelectedValuePath="Value"
+                                      SelectedValue="{Binding Fastener, Mode=TwoWay}" />
+                            <TextBlock Style="{DynamicResource ErrorStatusText}"
+                                       Text="{Binding FastenerProblem, Mode=OneWay}"
+                                       Visibility="{Binding FastenerProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
+                        </StackPanel>
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="Si_ze" Target="{Binding ElementName=SizeBox}">
+                        <StackPanel>
+                            <ComboBox x:Name="SizeBox"
+                                      IsEditable="False"
+                                      ItemsSource="{Binding SizeOptions, Mode=OneWay}"
+                                      DisplayMemberPath="Text"
+                                      SelectedValuePath="Value"
+                                      SelectedValue="{Binding Size, Mode=TwoWay}" />
+                            <TextBlock Style="{DynamicResource ErrorStatusText}"
+                                       Text="{Binding SizeProblem, Mode=OneWay}"
+                                       Visibility="{Binding SizeProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
+                        </StackPanel>
+                    </controls:FieldRow>
+                    <!-- A dowel's fit colours its faces: the colour from the workbook and its name beside the dropdown's row. -->
+                    <controls:FieldRow Label="F_it"
+                                       Target="{Binding ElementName=FitBox}"
+                                       Visibility="{Binding ShowsFit, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
+                        <StackPanel>
+                            <ComboBox x:Name="FitBox"
+                                      IsEditable="False"
+                                      ItemsSource="{Binding FitOptions, Mode=OneWay}"
+                                      DisplayMemberPath="Text"
+                                      SelectedValuePath="Value"
+                                      SelectedValue="{Binding Fit, Mode=TwoWay}" />
+                            <StackPanel Orientation="Horizontal"
+                                        Visibility="{Binding ShowsFitColour, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
+                                <controls:ColourSwatch Colour="{Binding FitSwatch, Mode=OneWay}" />
+                                <TextBlock Style="{DynamicResource MutedText}" Text="{Binding FitColourText, Mode=OneWay}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="_Tolerance"
+                                       Target="{Binding ElementName=ToleranceBox}"
+                                       Visibility="{Binding ShowsTolerance, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
+                        <StackPanel>
+                            <ComboBox x:Name="ToleranceBox"
+                                      IsEditable="False"
+                                      ItemsSource="{Binding ToleranceOptions, Mode=OneWay}"
+                                      DisplayMemberPath="Text"
+                                      SelectedValuePath="Value"
+                                      SelectedValue="{Binding Tolerance, Mode=TwoWay}" />
+                            <TextBlock Style="{DynamicResource ErrorStatusText}"
+                                       Text="{Binding ToleranceProblem, Mode=OneWay}"
+                                       Visibility="{Binding ToleranceProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
+                        </StackPanel>
+                    </controls:FieldRow>
+                </controls:FormSection>
+
+                <controls:FormSection Heading="Depth and direction">
+                    <controls:FieldRow Label="T_hread depth"
+                                       Target="{Binding ElementName=ThreadDepthBox}"
+                                       Visibility="{Binding ShowsThreadDepths, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBox x:Name="ThreadDepthBox"
+                                         Style="{DynamicResource NarrowTextBox}"
+                                         Text="{Binding ThreadDepthText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding LengthUnitText, Mode=OneWay}" />
+                            </StackPanel>
+                            <TextBlock Style="{DynamicResource ErrorStatusText}"
+                                       Text="{Binding ThreadDepthProblem, Mode=OneWay}"
+                                       Visibility="{Binding ThreadDepthProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
+                        </StackPanel>
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="_Drill depth"
+                                       Target="{Binding ElementName=DrillDepthBox}"
+                                       Visibility="{Binding ShowsThreadDepths, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBox x:Name="DrillDepthBox"
+                                         Style="{DynamicResource NarrowTextBox}"
+                                         Text="{Binding DrillDepthText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding LengthUnitText, Mode=OneWay}" />
+                            </StackPanel>
+                            <TextBlock Style="{DynamicResource ErrorStatusText}"
+                                       Text="{Binding DrillDepthProblem, Mode=OneWay}"
+                                       Visibility="{Binding DrillDepthProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
+                        </StackPanel>
+                    </controls:FieldRow>
+                    <!-- Distance and Through All; To only for an edited hole that already ends at a face, with a note. -->
+                    <controls:FieldRow Label="Te_rmination" Target="{Binding ElementName=TerminationBox}">
+                        <StackPanel>
+                            <ComboBox x:Name="TerminationBox"
+                                      IsEditable="False"
+                                      ItemsSource="{Binding TerminationOptions, Mode=OneTime}"
+                                      DisplayMemberPath="Text"
+                                      SelectedValuePath="Value"
+                                      SelectedValue="{Binding Termination, Mode=TwoWay}" />
+                            <TextBlock Style="{DynamicResource MutedText}"
+                                       Text="{Binding TerminationNote, Mode=OneWay}"
+                                       Visibility="{Binding TerminationNote, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
+                        </StackPanel>
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="De_pth"
+                                       Target="{Binding ElementName=DepthBox}"
+                                       Visibility="{Binding ShowsDepth, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBox x:Name="DepthBox"
+                                         Style="{DynamicResource NarrowTextBox}"
+                                         Text="{Binding DepthText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding LengthUnitText, Mode=OneWay}" />
+                            </StackPanel>
+                            <TextBlock Style="{DynamicResource ErrorStatusText}"
+                                       Text="{Binding DepthProblem, Mode=OneWay}"
+                                       Visibility="{Binding DepthProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
+                        </StackPanel>
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="Drill p_oint"
+                                       Target="{Binding ElementName=DrillPointBox}"
+                                       Visibility="{Binding ShowsDrillPoint, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
+                        <StackPanel>
+                            <ComboBox x:Name="DrillPointBox"
+                                      IsEditable="False"
+                                      ItemsSource="{Binding DrillPointOptions, Mode=OneWay}"
+                                      DisplayMemberPath="Text"
+                                      SelectedValuePath="Value"
+                                      SelectedValue="{Binding DrillPoint, Mode=TwoWay}" />
+                            <TextBlock Style="{DynamicResource ErrorStatusText}"
+                                       Text="{Binding DrillPointProblem, Mode=OneWay}"
+                                       Visibility="{Binding DrillPointProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
+                        </StackPanel>
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="Direction">
+                        <CheckBox Content="F_lip" IsChecked="{Binding Flip, Mode=TwoWay}" />
+                    </controls:FieldRow>
+                </controls:FormSection>
+
+                <!--
+                    The picked hole centres (spec 09, "Hole centres"): the count, the problem when none is picked, and how
+                    to pick, or why nothing can be picked for an edited hole whose centres are not sketch points.
+                -->
+                <controls:FormSection Heading="Centres">
+                    <controls:FieldRow Label="Centres">
+                        <StackPanel>
+                            <TextBlock Style="{DynamicResource ValueText}" Text="{Binding CentresText, Mode=OneWay}" />
+                            <TextBlock Style="{DynamicResource ErrorStatusText}"
+                                       Text="{Binding CentresProblem, Mode=OneWay}"
+                                       Visibility="{Binding CentresProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
+                            <TextBlock Style="{DynamicResource MutedText}" Text="{Binding CentresHelp, Mode=OneWay}" />
+                        </StackPanel>
+                    </controls:FieldRow>
+                </controls:FormSection>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!--
+            Status line and buttons in one row. Cancel and closing the window put the part back as it was (the session's
+            Cancel); OK keeps the hole as one Undo step and closes the window, or keeps it open with the reason in the
+            status line when the hole in the model is not what the window shows.
+        -->
+        <controls:DialogFooter Grid.Row="2"
+                               Status="{Binding StatusText, Mode=OneWay}"
+                               IsError="{Binding StatusIsError, Mode=OneWay}"
+                               StatusToolTip="{Binding StatusDetails, Mode=OneWay}">
+            <Button Style="{DynamicResource PrimaryButton}" Content="OK" Command="{Binding OkCommand}" />
+            <!-- IsCancel makes Esc press it; the window is modeless, so the button does not close it: the session does. -->
+            <Button Content="Cancel" IsCancel="True" Command="{Binding CancelCommand}" />
+        </controls:DialogFooter>
+    </Grid>
+</Window>

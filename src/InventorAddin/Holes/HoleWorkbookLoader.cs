@@ -3,6 +3,7 @@ using InventorAddin.Core.Holes;
 using InventorAddin.Core.Logging;
 using InventorAddin.Core.Materials;
 using InventorAddin.Core.Settings;
+using InventorAddin.Core.ViewModels;
 
 namespace InventorAddin.Holes
 {
@@ -13,7 +14,7 @@ namespace InventorAddin.Holes
     /// </summary>
     public static class HoleWorkbookLoader
     {
-        private const string LogPrefix = "AWB Hole: ";
+        private const string LogPrefix = AwbHoleViewModel.CommandName + ": ";
 
         public static HoleWorkbookReadResult Load(AddinSettings settings, ILog log)
         {

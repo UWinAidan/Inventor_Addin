@@ -96,6 +96,7 @@ public static class CommandNames
     public const string CreatePrint = Prefix + "CreatePrint";
     public const string MassUpdate = Prefix + "MassUpdate";
     public const string MaterialFinish = Prefix + "MaterialFinish";
+    public const string AwbHole = Prefix + "AwbHole";
 
     private const string Prefix = Branding.IdPrefix + "_";
 }

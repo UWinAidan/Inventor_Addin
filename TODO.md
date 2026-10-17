@@ -6,7 +6,7 @@ Last updated: 2026-10-17
 
 ## Next up
 
-1. M4 part 1: run tasks 082 to 092 (spec 09, `docs/PLAN.md`) in a local session on Aidan's PC, branch `claude/m4-hole-generator`. Before the first add-in build, Aidan closes Inventor and rebuilds from this branch, so the spike build (branch `spike/081-in-inventor`) is replaced.
+1. M4 part 1: tasks 082 to 090 are done on branch `claude/m4-hole-generator`. Aidan checks making holes in Inventor (below), then 091 and 092 run.
 2. Ribbon icon colours: Aidan picks option A, B or C from `docs/ui-mockups/ribbon-icons-colour-options.png` on branch `claude/ribbon-icon-colour`; then build it.
 3. Aidan finishes the remaining Part Properties checks below.
 
@@ -21,6 +21,8 @@ Last updated: 2026-10-17
 **M3** (068 to 076) and its fixes (077 to 080) were checked on 2026-10-17: every check passed. Merged into main from `claude/m3-material-finish` on 2026-10-17.
 
 **M2 run 1** (037, 038, 039, 042): Aidan reported on 2026-10-17 that the remaining checks passed.
+
+**M4 part 1, after 090** (making holes): close Inventor, run `dotnet build InventorAddin.slnx -tl:off` on `claude/m4-hole-generator` (this also replaces the spike build), and follow steps 1 to 21 and 25 of the checklist in `docs/tasks/090-awb-hole-window-command.md` (steps 22 to 24, editing, wait for 092). Step 4 (AWB Hole pressed again while its window is open) and steps 17a to 17c (keys typed in the window) test behaviour nobody has confirmed yet.
 
 From Part Properties (task 019):
 
@@ -95,6 +97,8 @@ Small things noticed while building. None is urgent. The parent turns these into
 - ISO 286 tables (task 083) were typed from the standard's values and checked from memory by the reviewer, not against a copy of ISO 286-2; worth a spot-check, mainly sizes over 250 mm. K9 to K11 over 3 mm and N9 to N11 up to 1 mm are refused (readings of the standard's footnotes). JS7 to JS11 round an odd IT value down before halving, as ISO 286-2 prints it; if the Precision Tol tab ever holds a JS code, compare one odd-IT size with Inventor's own fit. (task 083)
 
 - The AWB Hole icon (task 087) is drawn in the current single-colour style; recolour it with the others once a ribbon icon colour option is chosen. Its 16 px version has no hatching (too narrow). `tools/icons/render.py` could skip writing a PNG whose pixels already match, since Pillow 12 re-encodes unchanged icons. (task 087)
+
+- AWB Hole: termination To needs a face pick (a second selection mode in the session, passed as the end face to the writer); until then To is left out for new holes. Switching to another document while the AWB Hole window is open is not handled: the outer transaction stays open on the part. Recreating an existing hole that has dependent features has not been tried. (tasks 088 to 090)
 
 **Create Print**
 - If `ANSI (mm).idw` is missing beside the `.dwg` template but `standard.idw` exists, Create Print uses `standard.idw` without saying so; its units may not match. Only the log records it. Also, the template lookup runs before the existing-print check, so the log can warn about a missing template when a print exists. (task 063)
