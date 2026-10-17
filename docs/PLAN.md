@@ -263,11 +263,19 @@ Spike 067 ran first and was walked through with Aidan. The rest was planned on 2
 
 Not in M3: print notes on the drawing (M5), Inventor finish features (`FinishReader` stays as a developer export only).
 
-### M4: Hole generator and hole table wizard (spec 04)
+### M4: AWB Hole, then the hole table wizard (specs 09, 04)
 
-**First a hole generator for part files** (Aidan, 2026-10-12): every hole type Aidan has decided on, with precision and dowel holes coloured by fit (tight red, regular blue, loose green). Its details are to be discussed with Aidan before M4 is planned.
+**Part 1: AWB Hole** (spec 09; Aidan, 2026-10-17). Our own hole command for part files: real Inventor hole features, options from `libraries/AWB_Holes.xlsx`, fit tolerances and fit colours on dowel and precision holes, replacing Inventor's Hole on the 3D Model tab. Planned and run as a local session on Aidan's PC.
 
-Then the hole table wizard, the largest feature. Its Core half (classification, grouping, tagging, descriptions, fit limits, table model) can be planned once questions 1, 6 and 7 are answered. The add-in half waits on the Windows spike described in the spec.
+Spike 081 comes first and is walked through with Aidan. The remaining tasks (082 onwards) are planned after it, on what it proves. Expected shape, to be confirmed by the spike: the workbook reader and its models (Core), ISO 286 limits (Core, shared with part 2), the AWB Hole view-model (Core), Settings rows, creating and editing the hole feature, the preview, the ribbon and shortcut takeover, the colour and tolerance, Edit AWB Hole.
+
+| Task | Needs | Depends on | Parallel-safe with |
+|---|---|---|---|
+| 081 | **windows** (spike, local session with Aidan) | none | none |
+
+- [ ] 081 Spike: AWB Hole through the Inventor API (Windows)
+
+**Part 2: the hole table wizard** (spec 04), planned after part 1. Its Core half (classification, grouping, tagging, descriptions, table model) can be planned once spec 04's questions 1, 6 and 7 are answered; the add-in half waits on the Windows spike described in the spec.
 
 ### M5: Drawing tools (spec 05)
 
