@@ -286,7 +286,7 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 
 - [x] 081 Spike: AWB Hole through the Inventor API (Windows)
 - [ ] 082 Hole workbook: reader and models (Core)
-- [ ] 083 ISO 286 hole limits (Core)
+- [x] 083 ISO 286 hole limits (Core)
 - [ ] 084 Hole spec, geometry, checks and stored data (Core)
 - [ ] 085 AWB Hole window view-model (Core)
 - [ ] 086 Settings: Holes section and the shipped hole workbook

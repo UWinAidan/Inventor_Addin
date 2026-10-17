@@ -28,6 +28,8 @@ One Core model of an AWB hole (what the user chose) and the rules that turn it i
 
 ## Notes for the implementer
 
+- `Iso286.HoleLimits` compares the size to the step limits exactly; round the nominal size (for example to 6 decimals of a mm) before calling it, so a size converted from centimetres such as 18.000000000000004 stays in the 10 to 18 mm step (task 083 review).
+
 - Units: workbook metric rows are mm and imperial rows inches; convert to centimetres at the geometry boundary, keeping the tap drill in table units as noted.
 - Keep these as plain records and static rules; the view-model (085) and the add-in (088) both use them.
 
