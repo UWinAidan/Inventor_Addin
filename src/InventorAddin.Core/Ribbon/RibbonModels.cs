@@ -122,4 +122,7 @@ public static class IconNames
 
     // M3 (task 073). Material and Finish; task 075 added its layout entry.
     public const string MaterialFinish = "MaterialFinish";
+
+    // M4 part 1 (task 087). AWB Hole; its command task adds the layout entry.
+    public const string AwbHole = "AwbHole";
 }

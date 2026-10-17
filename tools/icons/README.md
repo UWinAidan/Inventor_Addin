@@ -10,7 +10,7 @@ The add-in's ribbon icons are drawn here as SVG and rendered to the PNG files th
 | Preview for review | `docs/ui-mockups/ribbon-icons.png` |
 | Renderer | `tools/icons/render.py` |
 
-`{Name}` is the icon name from `IconNames` in Core: `PartProperties`, `Settings`, `About`, `ExportModelData`, `ExportLibraries`, `NewPart`, `SaveAsCopy`, `SaveAsReplace`, `CreatePrint`, `MassUpdate`, `MaterialFinish`. `Light` is the set for Inventor's light theme (dark strokes); `Dark` is the set for its dark theme (light strokes).
+`{Name}` is the icon name from `IconNames` in Core: `PartProperties`, `Settings`, `About`, `ExportModelData`, `ExportLibraries`, `NewPart`, `SaveAsCopy`, `SaveAsReplace`, `CreatePrint`, `MassUpdate`, `MaterialFinish`, `AwbHole`. `Light` is the set for Inventor's light theme (dark strokes); `Dark` is the set for its dark theme (light strokes).
 
 ## Re-rendering
 
@@ -20,7 +20,7 @@ python3 tools/icons/render.py
 
 Needs Python 3.8 or later and Pillow 10.1 or later (with FreeType, which the usual Pillow wheels include). Nothing else.
 
-It rewrites all 44 PNGs and the preview. Commit the sources, the PNGs and the preview together. The output depends only on the sources and the Pillow version, so a second run gives byte-identical files.
+It rewrites all 48 PNGs and the preview. Commit the sources, the PNGs and the preview together. The output depends only on the sources and the Pillow version, so a second run gives byte-identical files.
 
 ## How it renders
 
@@ -33,7 +33,7 @@ ImageMagick was the first option, but the copy in the cloud session cannot read 
 - A PNG is RGBA (32-bit) with a transparent background and no metadata, colour profile or dpi.
 - The script stops with an error if any part of a drawing, including half the stroke width, lies outside the frame.
 
-If a `{Name}.16.svg` is missing, the 32 px drawing is halved and drawn with a 1 px stroke. All eleven icons have their own 16 px drawing, because halving a 32 px drawing puts its lines between pixels.
+If a `{Name}.16.svg` is missing, the 32 px drawing is halved and drawn with a 1 px stroke. All twelve icons have their own 16 px drawing, because halving a 32 px drawing puts its lines between pixels.
 
 ### SVG features read
 
@@ -64,5 +64,6 @@ Elements `line`, `polyline`, `polygon`, `rect` (with `rx`), `circle`, `path` (co
 | `CreatePrint` | A landscape sheet with a view rectangle and a title block band |
 | `MassUpdate` | A stack of three sheets with a check mark on the front one |
 | `MaterialFinish` | A material ball: a circle with a short highlight arc at the upper left and section hatching across the lower right |
+| `AwbHole` | A block in section with a blind drilled hole and its drill point; section hatching either side at 32 px only |
 
 To add an icon: draw `{Name}.svg` and `{Name}.16.svg`, add the name to `ICONS` in `render.py` and to `IconNames` in Core, re-render, and add a row above.
