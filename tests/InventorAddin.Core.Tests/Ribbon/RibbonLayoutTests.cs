@@ -61,6 +61,7 @@ public sealed class RibbonLayoutTests
         Assert.Equal($"{Branding.IdPrefix}_SaveAsReplace", CommandNames.SaveAsReplace);
         Assert.Equal($"{Branding.IdPrefix}_CreatePrint", CommandNames.CreatePrint);
         Assert.Equal($"{Branding.IdPrefix}_MassUpdate", CommandNames.MassUpdate);
+        Assert.Equal($"{Branding.IdPrefix}_MaterialFinish", CommandNames.MaterialFinish);
     }
 
     public static TheoryData<RibbonEnvironment, bool> DocumentEnvironmentsAndSetting()
@@ -100,29 +101,31 @@ public sealed class RibbonLayoutTests
     private static PanelLayout[] ExpectedLayout(RibbonEnvironment environment, bool showDeveloperTools) =>
         (environment, showDeveloperTools) switch
         {
-            // No Settings or About on ZeroDoc yet (spec 01 open question 4), so no AWB panel there.
+            // Settings and About on every ribbon (Aidan, 2026-10-17, spec 01 question 4), so ZeroDoc has the AWB panel.
             (RibbonEnvironment.ZeroDoc, false) => new[]
             {
                 Create(Large("NewPart")),
                 Properties(Small("MassUpdate")),
+                Awb(),
             },
             (RibbonEnvironment.ZeroDoc, true) => new[]
             {
                 Create(Large("NewPart")),
                 Properties(Small("MassUpdate")),
                 Developer(Small("ExportLibraries")),
+                Awb(),
             },
             (RibbonEnvironment.Part, false) => new[]
             {
                 Create(Large("NewPart"), Small("SaveAsCopy")),
-                Properties(Large("PartProperties"), Small("MassUpdate")),
+                Properties(Large("PartProperties"), Small("MassUpdate"), Small("MaterialFinish")),
                 DrawingPanel(Large("CreatePrint")),
                 Awb(),
             },
             (RibbonEnvironment.Part, true) => new[]
             {
                 Create(Large("NewPart"), Small("SaveAsCopy")),
-                Properties(Large("PartProperties"), Small("MassUpdate")),
+                Properties(Large("PartProperties"), Small("MassUpdate"), Small("MaterialFinish")),
                 DrawingPanel(Large("CreatePrint")),
                 Developer(Small("ExportModelData"), Small("ExportLibraries")),
                 Awb(),
@@ -130,14 +133,14 @@ public sealed class RibbonLayoutTests
             (RibbonEnvironment.Assembly, false) => new[]
             {
                 Create(Large("NewPart"), Small("SaveAsCopy"), Small("SaveAsReplace")),
-                Properties(Large("PartProperties"), Small("MassUpdate")),
+                Properties(Large("PartProperties"), Small("MassUpdate"), Small("MaterialFinish")),
                 DrawingPanel(Large("CreatePrint")),
                 Awb(),
             },
             (RibbonEnvironment.Assembly, true) => new[]
             {
                 Create(Large("NewPart"), Small("SaveAsCopy"), Small("SaveAsReplace")),
-                Properties(Large("PartProperties"), Small("MassUpdate")),
+                Properties(Large("PartProperties"), Small("MassUpdate"), Small("MaterialFinish")),
                 DrawingPanel(Large("CreatePrint")),
                 Developer(Small("ExportModelData"), Small("ExportLibraries")),
                 Awb(),
@@ -194,16 +197,17 @@ public sealed class RibbonLayoutTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void ZeroDoc_HasNoSettingsOrAboutButton_ButHasTheTab(bool showDeveloperTools)
+    public void EveryEnvironment_HasSettingsAndAbout_InTheAwbPanelFarRight(bool showDeveloperTools)
     {
-        var names = RibbonLayout.For(RibbonEnvironment.ZeroDoc, showDeveloperTools)
-            .SelectMany(p => p.Buttons)
-            .Select(b => b.CommandInternalName)
-            .ToList();
+        // Aidan, 2026-10-17 (spec 01 question 4): with no document open too.
+        foreach (var environment in RibbonEnvironments.All)
+        {
+            var panels = RibbonLayout.For(environment, showDeveloperTools);
+            var last = panels[^1];
 
-        Assert.DoesNotContain(CommandNames.Settings, names);
-        Assert.DoesNotContain(CommandNames.About, names);
-        Assert.True(RibbonLayout.HasPanels(RibbonEnvironment.ZeroDoc, showDeveloperTools));
+            Assert.Equal(RibbonIds.AwbPanelId, last.Id);
+            Assert.Equal(new[] { CommandNames.Settings, CommandNames.About }, last.Buttons.Select(b => b.CommandInternalName));
+        }
     }
 
     [Theory]
@@ -279,6 +283,7 @@ public sealed class RibbonLayoutTests
     [InlineData(CommandNames.SaveAsCopy, IconNames.SaveAsCopy)]
     [InlineData(CommandNames.SaveAsReplace, IconNames.SaveAsReplace)]
     [InlineData(CommandNames.MassUpdate, IconNames.MassUpdate)]
+    [InlineData(CommandNames.MaterialFinish, IconNames.MaterialFinish)]
     public void EachCommand_UsesItsIconName_InEveryEnvironment(string command, string iconName)
     {
         var buttons = RibbonEnvironments.All
@@ -302,6 +307,7 @@ public sealed class RibbonLayoutTests
     [InlineData(CommandNames.Settings, ButtonSize.Small)]
     [InlineData(CommandNames.About, ButtonSize.Small)]
     [InlineData(CommandNames.MassUpdate, ButtonSize.Small)]
+    [InlineData(CommandNames.MaterialFinish, ButtonSize.Small)]
     [InlineData(CommandNames.ExportModelData, ButtonSize.Small)]
     [InlineData(CommandNames.ExportLibraries, ButtonSize.Small)]
     public void EachCommand_HasItsSize_InEveryEnvironment(string command, ButtonSize size)
@@ -331,7 +337,7 @@ public sealed class RibbonLayoutTests
             new[]
             {
                 CommandNames.About, CommandNames.CreatePrint, CommandNames.ExportLibraries, CommandNames.ExportModelData,
-                CommandNames.MassUpdate, CommandNames.NewPart, CommandNames.PartProperties, CommandNames.SaveAsCopy,
+                CommandNames.MassUpdate, CommandNames.MaterialFinish, CommandNames.NewPart, CommandNames.PartProperties, CommandNames.SaveAsCopy,
                 CommandNames.SaveAsReplace, CommandNames.Settings,
             }.OrderBy(n => n, StringComparer.Ordinal),
             commands);
@@ -351,6 +357,7 @@ public sealed class RibbonLayoutTests
         Assert.Equal(CommandNames.SaveAsCopy, prefix + IconNames.SaveAsCopy);
         Assert.Equal(CommandNames.SaveAsReplace, prefix + IconNames.SaveAsReplace);
         Assert.Equal(CommandNames.MassUpdate, prefix + IconNames.MassUpdate);
+        Assert.Equal(CommandNames.MaterialFinish, prefix + IconNames.MaterialFinish);
     }
 
     [Fact]
@@ -363,7 +370,7 @@ public sealed class RibbonLayoutTests
             .Select(g => g.First().IconName)
             .ToList();
 
-        Assert.Equal(10, iconNames.Count);
+        Assert.Equal(11, iconNames.Count);
         Assert.Equal(iconNames.Count, iconNames.Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
 

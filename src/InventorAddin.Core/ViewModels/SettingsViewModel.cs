@@ -1,4 +1,5 @@
 using InventorAddin.Core.Logging;
+using InventorAddin.Core.Materials;
 using InventorAddin.Core.PartProperties;
 using InventorAddin.Core.Settings;
 
@@ -56,6 +57,18 @@ public sealed class SettingsViewModel : ObservableObject
 
     public const string WorkFolderNotFullPathError = @"Enter the work folder as a full folder path, such as C:\CAD.";
 
+    /// <summary>The material library row's label, and the name its messages use.</summary>
+    public const string MaterialLibraryFieldName = "Material library";
+
+    /// <summary>The finish list row's label, and the name its messages use.</summary>
+    public const string FinishListFieldName = "Finish list";
+
+    /// <summary>The one-line explanation shown under the material library box.</summary>
+    public const string MaterialLibraryHelpText = "Blank uses the starter material library shipped with the add-in.";
+
+    /// <summary>The one-line explanation shown under the finish list box.</summary>
+    public const string FinishListHelpText = "Blank uses the starter finish list shipped with the add-in.";
+
     /// <summary>
     /// The line break the other CAD folders text is shown with: the one a WPF text box inserts. Any line break is
     /// accepted when reading it back.
@@ -85,17 +98,28 @@ public sealed class SettingsViewModel : ObservableObject
     private string _otherNamesText;
     private string _workFolderText;
     private string _otherCadFoldersText;
+    private string _materialLibraryText;
+    private string _finishListText;
+
+    private readonly Func<string, bool> _fileExists;
 
     private string? _validationError;
     private string? _saveError;
 
-    public SettingsViewModel(AddinSettings settings, SettingsStore store, ILog? log = null)
+    /// <param name="fileExists">
+    /// Whether a file exists, used by <see cref="SaveCommand"/> to check a changed library path. Defaults to
+    /// <see cref="File.Exists(string)"/>; tests pass their own.
+    /// </param>
+    public SettingsViewModel(AddinSettings settings, SettingsStore store, ILog? log = null, Func<string, bool>? fileExists = null)
     {
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(store);
 
         _store = store;
         _log = log ?? NullLog.Instance;
+        _fileExists = fileExists ?? File.Exists;
+        _materialLibraryText = settings.MaterialLibraryPath;
+        _finishListText = settings.FinishListPath;
         _saved = Normalise(settings);
         _edited = Normalise(settings);
         _defaultDesignerText = settings.DefaultDesigner;
@@ -229,6 +253,46 @@ public sealed class SettingsViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// The material library path as typed. Saved trimmed; only the trimmed value counts towards <see cref="IsDirty"/>.
+    /// Blank means the starter library shipped with the add-in. Checked as text while typing
+    /// (<see cref="ValidateMaterialLibraryPath"/>); whether the file exists is checked on save.
+    /// </summary>
+    public string MaterialLibraryPath
+    {
+        get => _materialLibraryText;
+        set
+        {
+            value ??= string.Empty;
+            if (_materialLibraryText == value)
+                return;
+
+            _materialLibraryText = value;
+            _edited.MaterialLibraryPath = PropertyValues.NormaliseText(value);
+            OnPropertyChanged();
+            SetValidationError(Validate());
+            OnEditChanged();
+        }
+    }
+
+    /// <summary>The finish list path as typed. As <see cref="MaterialLibraryPath"/>, for a <c>.csv</c> file.</summary>
+    public string FinishListPath
+    {
+        get => _finishListText;
+        set
+        {
+            value ??= string.Empty;
+            if (_finishListText == value)
+                return;
+
+            _finishListText = value;
+            _edited.FinishListPath = PropertyValues.NormaliseText(value);
+            OnPropertyChanged();
+            SetValidationError(Validate());
+            OnEditChanged();
+        }
+    }
+
     /// <summary>The units new files are created in.</summary>
     public UnitsSystem DefaultUnits
     {
@@ -262,6 +326,21 @@ public sealed class SettingsViewModel : ObservableObject
 
     public string HeaderSubline => Branding.ProductName;
 
+    // One-line summaries shown beside a collapsed section's heading (SettingsSummaries), from the values being edited.
+
+    public string GeneralSummary => SettingsSummaries.General(
+        _edited.DefaultDesigner,
+        _edited.OtherNamesForMe,
+        AllUnitsOptions.FirstOrDefault(o => o.Units == _edited.DefaultUnits)?.DisplayText ?? _edited.DefaultUnits.ToString());
+
+    public string PartNumbersSummary => SettingsSummaries.PartNumbers(_edited.RegisterFolder);
+
+    public string FoldersSummary => SettingsSummaries.Folders(_edited.WorkFolder, _edited.OtherCadFolders);
+
+    public string MaterialFinishSummary => SettingsSummaries.MaterialFinish(_edited.MaterialLibraryPath, _edited.FinishListPath);
+
+    public string DeveloperSummary => SettingsSummaries.Developer(_edited.ShowDeveloperTools);
+
     public string DefaultDesignerHelp => DefaultDesignerHelpText;
 
     public string RegisterFolderHelp => RegisterFolderHelpText;
@@ -271,6 +350,10 @@ public sealed class SettingsViewModel : ObservableObject
     public string WorkFolderHelp => WorkFolderHelpText;
 
     public string OtherCadFoldersHelp => OtherCadFoldersHelpText;
+
+    public string MaterialLibraryHelp => MaterialLibraryHelpText;
+
+    public string FinishListHelp => FinishListHelpText;
 
     /// <summary>Where the settings are written, for display.</summary>
     public string SettingsFilePath => _store.FilePath;
@@ -326,6 +409,39 @@ public sealed class SettingsViewModel : ObservableObject
         return null;
     }
 
+    /// <summary>
+    /// Null when <paramref name="path"/> can be saved as the material library, otherwise the reason, naming the
+    /// setting. Checked after trimming. Blank is valid (the starter library). Otherwise it must be a full Windows path
+    /// (the rule of <see cref="ValidateRegisterFolder"/>) ending in <see cref="LibraryPaths.MaterialLibraryExtension"/>.
+    /// Whether the file exists is checked on save, not here.
+    /// </summary>
+    public static string? ValidateMaterialLibraryPath(string? path) =>
+        ValidateLibraryFile(path, MaterialLibraryFieldName, LibraryPaths.MaterialLibraryExtension, @"D:\Libraries\Materials.adsklib");
+
+    /// <summary>As <see cref="ValidateMaterialLibraryPath"/>, for the finish list, which must end in <c>.csv</c>.</summary>
+    public static string? ValidateFinishListPath(string? path) =>
+        ValidateLibraryFile(path, FinishListFieldName, LibraryPaths.FinishListExtension, @"D:\Libraries\finishes.csv");
+
+    /// <summary>The message <see cref="SaveCommand"/> shows when a changed library path names no file.</summary>
+    public static string LibraryFileNotFoundError(string fieldName, string path) =>
+        $"{fieldName}: '{path}' was not found. Choose an existing file, or leave it blank to use the starter file.";
+
+    private static string? ValidateLibraryFile(string? path, string fieldName, string extension, string example)
+    {
+        var error = ValidateFolder(
+            path,
+            $"{fieldName} contains a character Windows does not allow.",
+            $"{fieldName}: enter a full path to the file, such as {example}.");
+        if (error is not null)
+            return error;
+
+        var normalised = PropertyValues.NormaliseText(path);
+        if (normalised.Length > 0 && !normalised.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
+            return $"{fieldName} must be a file ending in {extension}.";
+
+        return null;
+    }
+
     /// <summary>The other CAD folders text as a list: one folder per line, each trimmed, blank lines dropped.</summary>
     public static IReadOnlyList<string> ParseFolderLines(string? text) =>
         SplitLines(text).Select(PropertyValues.NormaliseText).Where(line => line.Length > 0).ToArray();
@@ -366,21 +482,57 @@ public sealed class SettingsViewModel : ObservableObject
             OtherNamesForMe = PropertyValues.NormaliseText(settings.OtherNamesForMe),
             WorkFolder = PropertyValues.NormaliseText(settings.WorkFolder),
             OtherCadFolders = settings.OtherCadFolders.Select(PropertyValues.NormaliseText).Where(f => f.Length > 0).ToArray(),
+            MaterialLibraryPath = PropertyValues.NormaliseText(settings.MaterialLibraryPath),
+            FinishListPath = PropertyValues.NormaliseText(settings.FinishListPath),
         };
 
     // The first problem in window order: General (default designer, other names), then Part numbers (register
-    // folder), then Folders (work folder, other CAD folders).
+    // folder), then Folders (work folder, other CAD folders), then Material and finish (library, finish list).
     private string? Validate() =>
         PropertyValues.ValidateText(DefaultDesignerFieldName, _defaultDesignerText)
         ?? PropertyValues.ValidateText(OtherNamesFieldName, _otherNamesText)
         ?? ValidateRegisterFolder(_registerFolderText)
         ?? ValidateWorkFolder(_workFolderText)
-        ?? ValidateOtherCadFolders(_otherCadFoldersText);
+        ?? ValidateOtherCadFolders(_otherCadFoldersText)
+        ?? ValidateMaterialLibraryPath(_materialLibraryText)
+        ?? ValidateFinishListPath(_finishListText);
+
+    // Whether the library files exist is checked only on save, and only for a path that changed: a check per
+    // keystroke could block on a disconnected drive (spike 032), and a library on a NAS that is offline today should
+    // not stop the user saving another setting.
+    private string? CheckLibraryFilesExist() =>
+        CheckFileExists(MaterialLibraryFieldName, _edited.MaterialLibraryPath, _saved.MaterialLibraryPath)
+        ?? CheckFileExists(FinishListFieldName, _edited.FinishListPath, _saved.FinishListPath);
+
+    private string? CheckFileExists(string fieldName, string path, string savedPath)
+    {
+        if (path.Length == 0 || path == savedPath)
+            return null;
+
+        bool exists;
+        try
+        {
+            exists = _fileExists(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            exists = false;
+        }
+
+        return exists ? null : LibraryFileNotFoundError(fieldName, path);
+    }
 
     private void Save()
     {
         if (_validationError is not null)
             return;
+
+        var missing = CheckLibraryFilesExist();
+        if (missing is not null)
+        {
+            SetSaveError(missing);
+            return;
+        }
 
         var toWrite = _edited with { };
         try
@@ -432,6 +584,18 @@ public sealed class SettingsViewModel : ObservableObject
             OnPropertyChanged(nameof(OtherCadFolders));
         }
 
+        if (_materialLibraryText != toWrite.MaterialLibraryPath)
+        {
+            _materialLibraryText = toWrite.MaterialLibraryPath;
+            OnPropertyChanged(nameof(MaterialLibraryPath));
+        }
+
+        if (_finishListText != toWrite.FinishListPath)
+        {
+            _finishListText = toWrite.FinishListPath;
+            OnPropertyChanged(nameof(FinishListPath));
+        }
+
         OnEditChanged();
         Saved?.Invoke(this, EventArgs.Empty);
     }
@@ -461,5 +625,12 @@ public sealed class SettingsViewModel : ObservableObject
         SetSaveError(null);
         OnPropertyChanged(nameof(IsDirty));
         SaveCommand.RaiseCanExecuteChanged();
+
+        // Cheap to rebuild, so every edit refreshes every summary rather than tracking which section changed.
+        OnPropertyChanged(nameof(GeneralSummary));
+        OnPropertyChanged(nameof(PartNumbersSummary));
+        OnPropertyChanged(nameof(FoldersSummary));
+        OnPropertyChanged(nameof(MaterialFinishSummary));
+        OnPropertyChanged(nameof(DeveloperSummary));
     }
 }

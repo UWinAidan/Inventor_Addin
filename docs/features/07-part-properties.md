@@ -26,8 +26,8 @@ The window stores nothing itself. Every field is an iProperty in the file, so In
 | Designer | yes | standard Designer |
 | Detailer | yes, follows Designer by default | custom property `Detailer` |
 | Cost | yes | standard Cost (shown in Inventor as Estimated Cost) |
-| Material | no, shown only | the document's material, set in the Material and Finish window (spec 03) |
-| Finish | no, shown only | custom property `Finish`, set in the Material and Finish window (spec 03) |
+| Material | no, shown only; Change opens the Material and Finish window | the document's material, set in the Material and Finish window (spec 03) |
+| Finish | no, shown only; set with Material through Change | custom property `Finish`, set in the Material and Finish window (spec 03) |
 | Weight | no, shown only | not stored; read from the model's mass in the document's units |
 
 Standard properties are used wherever Inventor has one.
@@ -57,7 +57,9 @@ Standard properties are used wherever Inventor has one.
 - **The Windows user name counts as blank** (Aidan, 2026-10-10). Old files carry the Windows login name as Designer and Detailer. A Designer or Detailer equal to the Windows user name is treated as blank, so it pre-fills as above. The full rule is in spec 02, "Windows user name as Designer or Detailer". Planned in M2 (task 038). Names listed in Settings' Other names count the same way (task 051).
 - **Detailer follows Designer by default.** When the file has no Detailer, the field shows the Designer and keeps following it as the Designer is edited. Once the user types a different Detailer, it stops following. On apply the Detailer is written as its own value.
 - **Cost** is a number, zero or more, blank allowed.
-- **Material and Finish are shown, not edited here.** Both are chosen in a separate Material and Finish window (spec 03), which uses Aidan's own material library. That window is a later milestone. Until it exists, Material shows what the file has and Finish shows what the `Finish` property holds, usually nothing. When it exists, a Change button beside these two fields opens it; no placeholder button is added now.
+- **Material and Finish are shown, not edited here.** Both are chosen in the separate Material and Finish window (spec 03), which uses Aidan's own material library. Material shows the part's material and Finish shows what the `Finish` property holds.
+- **Change** (task 076). A Change button beside Material opens the Material and Finish window for the part this window shows, over this window. That window applies in its own transaction, so one Undo reverts each of its applies. When it closes, Part Properties reads the part again and shows its material, finish and weight (a new material changes the weight). Edits not yet applied in Part Properties stay pending: the Material and Finish window writes none of the properties edited here. Change is disabled for a file that cannot be edited and for an assembly, which has no material (Default, task 076).
+- **Not from the material library** (Aidan, 2026-10-12). When Part Properties opens a part, it reads the material library (spec 03; about a second from the NAS). A part whose material is not in the library, for example an imported file or one given a material from Inventor's own list, shows "Not from the material library" under the Material value, in muted text (spec 08 has no warning style). It is a warning only: it is not shown as an error and never blocks Apply or OK. There is no warning when the library could not be read (the reason is logged once and the window still opens), for an assembly, or when the material is blank. The match ignores case and surrounding spaces (spec 03).
 - **Weight** is display only. If the mass cannot be read, show a dash.
 - **Only changed fields are written.** Opening the window and pressing OK without changes writes nothing and does not mark the document as modified.
 - **One undo.** All writes from one Apply are a single transaction, so one Undo in Inventor reverts them.

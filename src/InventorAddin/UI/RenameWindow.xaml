@@ -23,42 +23,54 @@
         <BooleanToVisibilityConverter x:Key="VisibleWhenTrue" />
     </Window.Resources>
 
-    <StackPanel Style="{DynamicResource DialogContent}">
+    <Grid Style="{DynamicResource DialogContent}">
+        <!-- Header, body, footer. The body row is star-sized, so it scrolls when the window is capped at the screen's height. -->
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
         <!-- The header icon is put in the window's resources by WindowHost (HeaderIcon), in the window's theme. -->
-        <controls:DialogHeader Icon="{DynamicResource HeaderIcon}"
+        <controls:DialogHeader Grid.Row="0"
+                               Icon="{DynamicResource HeaderIcon}"
                                Title="{Binding HeaderTitle, Mode=OneTime}"
                                Subline="{Binding HeaderSubline, Mode=OneTime}" />
 
-        <controls:FormSection Heading="Name">
-            <controls:FieldRow Label="Current name">
-                <TextBlock Style="{DynamicResource ValueText}" Text="{Binding CurrentName, Mode=OneTime}" />
-            </controls:FieldRow>
-            <controls:FieldRow Label="_New name" Target="{Binding ElementName=NewNameBox}">
-                <TextBox x:Name="NewNameBox"
-                         CharacterCasing="Upper"
-                         IsEnabled="{Binding IsEditing, Mode=OneWay}"
-                         Text="{Binding NewName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-            </controls:FieldRow>
-            <!-- The new file name: the number is kept when the old file name has one. Empty while the name is not valid. -->
-            <controls:FieldRow Label="File name">
-                <TextBlock Style="{DynamicResource IdentifierText}" Text="{Binding NewFileNamePreview, Mode=OneWay}" />
-            </controls:FieldRow>
-            <TextBlock Style="{DynamicResource MutedText}"
-                       Text="Every assembly, drawing and presentation in the CAD folders that uses this file is updated and saved. Rename cannot be undone with Undo."
-                       Visibility="{Binding IsEditing, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}" />
-        </controls:FormSection>
+        <ScrollViewer Grid.Row="1" Style="{DynamicResource DialogBody}">
+            <StackPanel Style="{DynamicResource DialogBodyContent}">
+                <controls:FormSection Heading="Name">
+                    <controls:FieldRow Label="Current name">
+                        <TextBlock Style="{DynamicResource ValueText}" Text="{Binding CurrentName, Mode=OneTime}" />
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="_New name" Target="{Binding ElementName=NewNameBox}">
+                        <TextBox x:Name="NewNameBox"
+                                 CharacterCasing="Upper"
+                                 IsEnabled="{Binding IsEditing, Mode=OneWay}"
+                                 Text="{Binding NewName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </controls:FieldRow>
+                    <!-- The new file name: the number is kept when the old file name has one. Empty while the name is not valid. -->
+                    <controls:FieldRow Label="File name">
+                        <TextBlock Style="{DynamicResource IdentifierText}" Text="{Binding NewFileNamePreview, Mode=OneWay}" />
+                    </controls:FieldRow>
+                    <TextBlock Style="{DynamicResource MutedText}"
+                               Text="Every assembly, drawing and presentation in the CAD folders that uses this file is updated and saved. Rename cannot be undone with Undo."
+                               Visibility="{Binding IsEditing, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}" />
+                </controls:FormSection>
 
-        <!-- The result list: one line per file updated or not (with the reason), then the notes. Read-only, scrolls with the wheel. -->
-        <controls:FormSection Heading="Result"
-                              Visibility="{Binding IsDone, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
-            <controls:FieldRow Label="Files">
-                <TextBox Style="{DynamicResource MultiLineTextBox}"
-                         IsReadOnly="True"
-                         Text="{Binding ResultText, Mode=OneWay}" />
-            </controls:FieldRow>
-        </controls:FormSection>
+                <!-- The result list: one line per file updated or not (with the reason), then the notes. Read-only, scrolls with the wheel. -->
+                <controls:FormSection Heading="Result"
+                                      Visibility="{Binding IsDone, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
+                    <controls:FieldRow Label="Files">
+                        <TextBox Style="{DynamicResource MultiLineTextBox}"
+                                 IsReadOnly="True"
+                                 Text="{Binding ResultText, Mode=OneWay}" />
+                    </controls:FieldRow>
+                </controls:FormSection>
+            </StackPanel>
+        </ScrollViewer>
 
-        <controls:DialogFooter Status="{Binding StatusText, Mode=OneWay}" IsError="{Binding HasError, Mode=OneWay}">
+        <controls:DialogFooter Grid.Row="2" Status="{Binding StatusText, Mode=OneWay}" IsError="{Binding HasError, Mode=OneWay}">
             <Button Style="{DynamicResource PrimaryButton}"
                     Content="_Rename"
                     IsDefault="{Binding IsEditing, Mode=OneWay}"
@@ -70,5 +82,5 @@
                     IsDefault="{Binding IsDone, Mode=OneWay}"
                     IsEnabled="{Binding CanClose, Mode=OneWay}" />
         </controls:DialogFooter>
-    </StackPanel>
+    </Grid>
 </Window>

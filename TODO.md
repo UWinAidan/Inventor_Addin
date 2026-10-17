@@ -2,12 +2,12 @@
 
 Everything that needs doing and is not already a task in `docs/PLAN.md`. Kept current by the parent session: items are added when they come up and removed when they are done or turned into a task. Where the project stands is in `STATUS.md`; why things are the way they are is in `DECISIONS.md`.
 
-Last updated: 2026-10-12
+Last updated: 2026-10-17
 
 ## Next up
 
-1. Aidan finishes the remaining run 1 and Part Properties checks below.
-2. Plan the next milestone; M3 to M6 wait on Aidan's decisions listed below.
+1. Aidan finishes the remaining Part Properties checks below.
+2. M4: discuss the hole generator's details with Aidan (spec 04).
 
 ## Waiting on Aidan: checks in Inventor
 
@@ -17,11 +17,9 @@ Last updated: 2026-10-12
 
 **M2 fix run 2** (062 to 066) was checked on 2026-10-12: every check passed.
 
-**M2 run 1** (full steps in each task's Verification section). Aidan's run 1 checks found three things, now tasks 049 to 051; tick the rest here when confirmed
-- [ ] Task 037, Settings: units dropdown and register folder, Browse, validation, access keys, an unknown units value in `settings.json`; is "Units for new files" cut off?
-- [ ] Task 038, Part Properties: a Designer or Detailer equal to the Windows login name is replaced by the default designer, and left alone when the default is blank
-- [ ] Task 039, Generate part number: online, offline, Undo, lock busy, duplicates, a typed number not in the register, a never-saved part, a new-format file name, and a register folder changed while Inventor runs (11 steps)
-- [ ] Task 042: ribbon unchanged with no new log warnings; do the five new icons in `docs/ui-mockups/ribbon-icons.png` read? Optionally, force one command to fail and check the rest of the ribbon still builds
+**M3** (068 to 076) and its fixes (077 to 080) were checked on 2026-10-17: every check passed. Merged into main from `claude/m3-material-finish` on 2026-10-17.
+
+**M2 run 1** (037, 038, 039, 042): Aidan reported on 2026-10-17 that the remaining checks passed.
 
 From Part Properties (task 019):
 
@@ -39,12 +37,14 @@ Confirmed so far: the window opens on an assembly, pre-fills Designer, Detailer 
 
 Each spec lists its own open questions in full. These are the ones that block planning.
 
-**Material and finish (spec 03), blocks M3**
-- The finish list: names, codes, which materials each applies to
-- Hardening: a finish, or separate hardened materials as the library has now
-- How a finish is stored on the part, and whether it changes the appearance
+**Material and finish (spec 03), not blocking**
+- Questions 10 to 17 in spec 03: ambiguous appearance names, where preferred materials are recorded, Show paints, the Finish Thickness text, the starter library's materials, sub-assemblies in a selection, Passivate's AppliesTo, the ribbon button. Each has a default
+- The finish appearances are spike 067's suggestions for now; Aidan edits `libraries/finishes.csv` if he wants others
 
-**Hole table (spec 04), blocks M4**
+**Hole generator (spec 04), blocks M4**
+- The hole types, their sizes and fits, how holes are placed, and how the fit colours are applied
+
+**Hole table (spec 04), blocks the wizard half of M4**
 - What makes a hole "precision"
 - How groups are ordered in the clearance table
 - Where the origin comes from
@@ -66,7 +66,6 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Whether and when to add an installer and a download page. It was to be decided when M2 was planned and is still parked
 
 **Smaller, not blocking**
-- Should Settings and About appear with no document open? (spec 01, question 4)
 - Should About check for a newer version? (spec 01, question 2)
 - More fields for the properties window: revision, vendor, vendor part number, project, notes? (spec 07, question 1)
 
@@ -78,6 +77,16 @@ Each spec lists its own open questions in full. These are the ones that block pl
 ## Follow-ups from finished tasks
 
 Small things noticed while building. None is urgent. The parent turns these into tasks when planning a milestone that touches the same code.
+
+**Material and finish**
+- Applies made through Part Properties' Change are named "Part Properties" in Inventor's Undo list; an optional transaction name on `DocumentEditCommand.RunInTransaction` would fix it. Part Properties keeps `kFilePropertyEditCmdType` though Change now also changes material and appearance; decide whether to switch to `kNonShapeEditCmdType`. Spec 08's Part Properties section should list the Change button and the warning line; a warning colour token and style would set the warning apart from help text. (task 076)
+- Material and Finish window: the view-model's `CancelCommand` is unused (Cancel closes through `IsCancel`); a missing NAS drive gives the "cannot be read" wording rather than "missing" (add `DriveNotFoundException` to the missing filter); the lists scroll by pixel without virtualizing, fine unless a library is very large. (task 075)
+- The Material and Finish log line names part file names and the library path, while Part Properties keeps file names out of the log; pick one rule for both. (task 074)
+- `MaterialFinishViewModel` tests check that a hidden selection comes back but not that `PropertyChanged` fires for `MaterialListSelection`/`FinishListSelection`; add that if the window ever loses a selection. (task 072 review)
+- The starter library (`libraries/StarterMaterials.adsklib`, about 1 MB) changes completely on every regeneration; regenerate and commit it only when `starter-materials.csv` changes. Properties other than density come from the stock template; per-grade strength would need more CSV columns. (task 071)
+- The Browse buttons beside Material library and Finish list have no access key (every letter of "Browse" is taken); relabel or leave. (task 070)
+- `CsvTable` (task 068) repeats the CSV splitting loop in `RegisterCsv`; `RegisterCsv.Read` could use `CsvTable.Parse`. (task 068)
+- A finish list saved by Excel as plain "CSV" (not "CSV UTF-8") is in the Windows code page, so a non-ASCII character in a print note would read as a replacement character. Whoever reads the file (task 075) could fall back to the ANSI code page when the bytes are not valid UTF-8. (task 068)
 
 **Create Print**
 - If `ANSI (mm).idw` is missing beside the `.dwg` template but `standard.idw` exists, Create Print uses `standard.idw` without saying so; its units may not match. Only the log records it. Also, the template lookup runs before the existing-print check, so the log can warn about a missing template when a print exists. (task 063)
@@ -99,11 +108,15 @@ Small things noticed while building. None is urgent. The parent turns these into
 - The agent definitions say "the AWB Addin add-in", which repeats "add-in". (task 011)
 
 **Ribbon icons**
+- Rendering icons on Windows (Pillow 12.3.0) re-encodes 12 existing 32 px PNGs with identical pixels but different bytes; restore them with `git checkout` after a render, or make `render.py` skip writing a PNG whose pixels match the file on disk. At 16 px the second hatch line of `MaterialFinish` touches the ring at (12,8); shorten it if it ever shows. (task 073)
 - `RibbonSetup.AddButton` returns early when a control with the command's name is already on the panel, so if Inventor ever keeps the add-in's controls between sessions a size change would not show. Only if a button shows its old size. (task 056)
 - When Inventor refuses the icons but has already created the definition, the log says "the button shows text only" and then that the definition was reused; the first line may be untrue. (task 042)
 - Task 030: embed only `UI/Icons/*.png`. The `.svg` sources sit in the same folder and must stay out of the build. (task 024)
 
 **Window style**
+- The working area is read when a window opens, so dragging it to a smaller screen does not re-cap it. (task 077)
+- Settings: an access key for a field in a collapsed section does nothing; it could expand the section. A save error for a setting in a collapsed section does not expand it; the message names the setting. (task 079)
+- Only Settings is resizable and remembers its state. Mass Update and Material and Finish, with their long lists, may want the same; any window can opt in with `ResizeMode="CanResize"` and a state key. (task 079)
 - The remark in `UiTheme.cs` still says the dark-theme rule waits for spike 020; name the confirmed `LightTheme` and `DarkTheme`. (task 026)
 - Settings: the gap between a control and its note is the full row gap (9). If it looks loose, add a shared `HelpText` style. (task 028)
 - Settings: the restart note lines up with the checkbox's box, not its label text. (task 028)
@@ -136,7 +149,7 @@ Small things noticed while building. None is urgent. The parent turns these into
 - Rename: when an occurrence's new name is already taken in the assembly, that occurrence keeps its name and a note says so; the add-in does not pick another number. Occurrences in sub-assemblies are renamed only through the sub-assembly's own update. Untested in Inventor: whether a closed assembly's occurrences read the old or new path after `ReplaceReference` (the code accepts either), and setting a name on a suppressed occurrence or with several model states. (task 058)
 - Create Print: an old print found beside the model is opened where it is, not moved into `Prints`; the "already exists" question does not say where the print was found. (task 057)
 - Names: only the view-models add the `ASSY_` prefix; `NewPartCreator` and `SaveAsCopyCreator` take the request as given, so a new caller must use `PartFileName.ForKind`. A name pre-filled from an old lower-case file shows in lower case in the box until edited (`CharacterCasing` only changes typing). Reserved names are checked on the typed name, so `CON` is refused for an assembly though the file would be `ASSY_CON`. If reading the kind fails, Rename adds no prefix. (task 054)
-- Mass Update: a file whose number was already registered but whose names were replaced is reported as an error, not a change; give `FileUpdateResult` a note field. A first-sync `IOException` says "a number may already have been taken" when none was; use that message only part way. Parts left loaded by an assembly closed earlier may show as "Open in Inventor" (try `Documents.CloseAll(true)` if so). The window does not redraw during the sync (about 8 s) or a slow folder listing. The list's scroll bar does not follow the dark theme; spec 08 has no list styles. (task 048)
+- Mass Update: a file whose number was already registered but whose names were replaced is reported as an error, not a change; give `FileUpdateResult` a note field. A first-sync `IOException` says "a number may already have been taken" when none was; use that message only part way. Parts left loaded by an assembly closed earlier may show as "Open in Inventor" (try `Documents.CloseAll(true)` if so). The window does not redraw during the sync (about 8 s) or a slow folder listing. (task 048)
 - Rename: Inventor freezes while CAD folders are listed (up to 3 s per unreachable folder, 60 s per slow one); move the wait off the UI thread with progress. The Rename window is owned by Inventor, not Part Properties (needs an owner overload in `WindowHost`). The result list uses the four-line text box with no visible scroll bar. Spec 08 should list the Part name row with Rename. (task 047)
 - Save As and Replace: `kReferencesChangeCmdType` may suit it better than `kShapeEditCmdType`. Saving the sub-assembly with `Save()` may save its other unsaved files or show a dialog; consider `SilentOperation` around it and say so in the warning. `((AssemblyComponentDefinition)x).Parent` returns the sub-assembly document directly and avoids the unconfirmed `.Document`. Spec 08 should name the button. (task 046 review)
 - Save As Copy: rename `NewPartException` and `NewPartResult` to neutral names now that copy commands share them; `NewPartCommand.cs` probably has an unused `using System;`. Spec 08 should list the Save As Copy icon and dialog. (task 045)

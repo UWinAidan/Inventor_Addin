@@ -4,6 +4,12 @@ For a drawing view, find every hole, sort the holes into precision and clearance
 
 Reference screenshots (local only): `hole wizard pop up.png`, `hole wizard popup after loading veiw data.png`, `hole table result.png`, `hole table drawing leaders.png`, `Screenshot 2026-09-04 082249.png`.
 
+## First: a hole generator for part files
+
+Aidan, 2026-10-12: before the hole table wizard, M4 builds a **hole generator** that works in part files. It creates holes of every hole type Aidan has decided on, and colours precision and dowel holes by their fit: **tight red, regular blue, loose green**. The wizard comes after it in M4.
+
+The details (the hole types and their sizes and fits, how holes are placed, what "colour" is applied to: the hole's faces, as an appearance) are to be discussed with Aidan before M4 is planned, and written here then. The hole types Aidan has decided are not yet recorded in the repo.
+
 ## What exists today
 
 - `PartExtractor` reads hole features into `HoleData`: type, termination, diameter, depth, counterbore, countersink, spotface, thread data, and a centre point per instance in model space.

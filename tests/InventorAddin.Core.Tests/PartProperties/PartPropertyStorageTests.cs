@@ -23,6 +23,9 @@ public sealed class PartPropertyStorageTests
         { nameof(PartPropertyStorage.Detailer), PropertySetNames.UserDefined, "Detailer", PropertyValueKind.Text, true },
         { nameof(PartPropertyStorage.Cost), PropertySetNames.DesignTracking, "Cost", PropertyValueKind.Currency, false },
         { nameof(PartPropertyStorage.Finish), PropertySetNames.UserDefined, "Finish", PropertyValueKind.Text, true },
+        { nameof(PartPropertyStorage.FinishCode), PropertySetNames.UserDefined, "Finish Code", PropertyValueKind.Text, true },
+        { nameof(PartPropertyStorage.FinishThickness), PropertySetNames.UserDefined, "Finish Thickness", PropertyValueKind.Text, true },
+        { nameof(PartPropertyStorage.FinishNote), PropertySetNames.UserDefined, "Finish Note", PropertyValueKind.Text, true },
     };
 
     [Theory]

@@ -7,7 +7,7 @@ namespace InventorAddin.Core.Settings;
 /// </summary>
 /// <remarks>
 /// A record so that two instances with the same values compare equal. <see cref="Equals(AddinSettings?)"/> is
-/// written out because <see cref="OtherCadFolders"/> is a list, which a record would compare by reference: a new
+/// written out because <see cref="OtherCadFolders"/> and <see cref="PreferredMaterials"/> are lists, which a record would compare by reference: a new
 /// setting must be added there and to <see cref="GetHashCode"/>.
 /// </remarks>
 public sealed record AddinSettings
@@ -102,7 +102,48 @@ public sealed record AddinSettings
 
     private string _otherNamesForMe = string.Empty;
 
-    /// <summary>Value equality over every setting, comparing <see cref="OtherCadFolders"/> entry by entry, in order.</summary>
+    /// <summary>
+    /// The material library (<c>.adsklib</c>) the Material and Finish window reads. <c>""</c> by default, which means
+    /// the starter library shipped with the add-in (<see cref="Materials.LibraryPaths.MaterialLibrary"/>). A null is
+    /// stored as <c>""</c>.
+    /// </summary>
+    public string MaterialLibraryPath
+    {
+        get => _materialLibraryPath;
+        set => _materialLibraryPath = value ?? string.Empty;
+    }
+
+    private string _materialLibraryPath = string.Empty;
+
+    /// <summary>
+    /// The finish list (<c>.csv</c>). <c>""</c> by default, which means the starter list shipped with the add-in
+    /// (<see cref="Materials.LibraryPaths.FinishList"/>). A null is stored as <c>""</c>.
+    /// </summary>
+    public string FinishListPath
+    {
+        get => _finishListPath;
+        set => _finishListPath = value ?? string.Empty;
+    }
+
+    private string _finishListPath = string.Empty;
+
+    /// <summary>
+    /// Display names of the materials starred as preferred in the Material and Finish window (spec 03, question 11).
+    /// Not shown in the Settings window. Empty by default; a null list is stored as empty and null entries are
+    /// dropped. The list is copied when set. Changed through <see cref="Materials.LibraryPaths.TogglePreferred"/>.
+    /// </summary>
+    public IReadOnlyList<string> PreferredMaterials
+    {
+        get => _preferredMaterials;
+        set => _preferredMaterials = value is null ? Array.Empty<string>() : value.Where(m => m is not null).ToArray();
+    }
+
+    private IReadOnlyList<string> _preferredMaterials = Array.Empty<string>();
+
+    /// <summary>
+    /// Value equality over every setting, comparing <see cref="OtherCadFolders"/> and <see cref="PreferredMaterials"/>
+    /// entry by entry, in order.
+    /// </summary>
     public bool Equals(AddinSettings? other) =>
         other is not null
         && SchemaVersion == other.SchemaVersion
@@ -112,7 +153,10 @@ public sealed record AddinSettings
         && DefaultUnits == other.DefaultUnits
         && WorkFolder == other.WorkFolder
         && OtherCadFolders.SequenceEqual(other.OtherCadFolders, StringComparer.Ordinal)
-        && OtherNamesForMe == other.OtherNamesForMe;
+        && OtherNamesForMe == other.OtherNamesForMe
+        && MaterialLibraryPath == other.MaterialLibraryPath
+        && FinishListPath == other.FinishListPath
+        && PreferredMaterials.SequenceEqual(other.PreferredMaterials, StringComparer.Ordinal);
 
     public override int GetHashCode()
     {
@@ -126,6 +170,10 @@ public sealed record AddinSettings
         foreach (var folder in OtherCadFolders)
             hash.Add(folder, StringComparer.Ordinal);
         hash.Add(OtherNamesForMe, StringComparer.Ordinal);
+        hash.Add(MaterialLibraryPath, StringComparer.Ordinal);
+        hash.Add(FinishListPath, StringComparer.Ordinal);
+        foreach (var material in PreferredMaterials)
+            hash.Add(material, StringComparer.Ordinal);
         return hash.ToHashCode();
     }
 }

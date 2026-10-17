@@ -1,5 +1,7 @@
 using System.Globalization;
 using InventorAddin.Core.Logging;
+using InventorAddin.Core.Materials;
+using InventorAddin.Core.Models;
 using InventorAddin.Core.Numbering;
 using InventorAddin.Core.PartProperties;
 
@@ -40,12 +42,35 @@ public sealed record PartTypeOption(string Code, string FullName, string Display
 }
 
 /// <summary>
+/// Opens the Material and Finish window from Part Properties (spec 07; task 076). The add-in supplies it: it shows the
+/// window for the part Part Properties shows, owned by the Part Properties window, and reads the part again when it
+/// closes. Tests use a fake.
+/// </summary>
+public interface IMaterialFinishChanger
+{
+    /// <summary>
+    /// Shows the Material and Finish window and, when it closes, returns the part's material, finish and weight as the
+    /// file now holds them, whether or not anything was applied. Null when the window could not be shown (the add-in has
+    /// already told the user why). Throws, with a message fit to show, only when something unexpected went wrong.
+    /// </summary>
+    PartMaterialFinish? Change();
+}
+
+/// <summary>A part's material, finish and weight as read after the Material and Finish window closed.</summary>
+/// <param name="Material">The material's display name, or null or blank when there is none.</param>
+/// <param name="Finish">The <c>Finish</c> iProperty, or null or blank when there is none.</param>
+/// <param name="WeightDisplay">The mass in the document's units, or null when it could not be read.</param>
+public sealed record PartMaterialFinish(string? Material, string? Finish, string? WeightDisplay);
+
+/// <summary>
 /// View-model for the Part Properties window (spec 07). It holds what was read from the file as the original,
 /// the edited fields, the pre-fills, Detailer following Designer, validation, dirty tracking, Apply and OK, and
 /// the status line. Writes go through an <see cref="IPropertyWriteTarget"/>; Cancel needs no command because
 /// nothing is written until Apply or OK. It also shows the part number by spec 02 and offers Generate part number
 /// for a file without one, through an <see cref="IPartNumberAssigner"/>, and Rename beside the part name for a saved,
-/// editable file, through an <see cref="IPartRenamer"/> (task 047).
+/// editable file, through an <see cref="IPartRenamer"/> (task 047). Change beside Material opens the Material and Finish
+/// window through an <see cref="IMaterialFinishChanger"/>, and a part whose material is not in the library shows
+/// <see cref="NotFromLibraryWarning"/> under it (task 076).
 /// </summary>
 /// <remarks>
 /// Part type codes are held in the list's spelling: a file code that <see cref="PartTypes.Find"/> matches in a
@@ -71,6 +96,8 @@ public sealed class PartPropertiesViewModel : ObservableObject
     public const string GenerateErrorPrefix = "Generate part number failed: ";
     public const string RenamedNoticeFormat = "Renamed to {0}.";
     public const string RenameErrorPrefix = "Rename failed: ";
+    public const string NotFromLibraryWarning = "Not from the material library";
+    public const string ChangeMaterialFinishErrorPrefix = "Material and Finish failed: ";
     public const string DuplicatesHeading =
         "The register sync found part numbers given to two files. Both rows are kept in the register; fix them by hand.";
 
@@ -80,6 +107,8 @@ public sealed class PartPropertiesViewModel : ObservableObject
     private readonly IPropertyWriteTarget _target;
     private readonly IPartNumberAssigner _assigner;
     private readonly IPartRenamer? _renamer;
+    private readonly IMaterialFinishChanger? _materialFinishChanger;
+    private readonly IReadOnlyList<LibraryMaterial>? _libraryMaterials;
     private readonly CultureInfo _culture;
     private readonly IReadOnlyCollection<string> _namesThatMeanMe;
     private readonly ILog _log;
@@ -92,6 +121,13 @@ public sealed class PartPropertiesViewModel : ObservableObject
     private string _detailer;
     private string _costText;
     private bool _detailerFollowsDesigner;
+
+    // Read-only values that the Material and Finish window can change (task 076).
+    private string _materialDisplay;
+    private bool _isMaterialSet;
+    private string _finishDisplay;
+    private bool _isFinishSet;
+    private string _weight;
 
     // True when the window opened with values the file does not hold yet (open question 5).
     private readonly bool _pendingAtOpen;
@@ -125,6 +161,11 @@ public sealed class PartPropertiesViewModel : ObservableObject
     /// <param name="culture">The culture the cost is shown and typed in.</param>
     /// <param name="log">Where writes and failures are logged.</param>
     /// <param name="renamer">What the Rename button calls; null hides the button.</param>
+    /// <param name="libraryMaterials">
+    /// The materials in the material library, or null when the library could not be read; null shows no
+    /// <see cref="MaterialWarning"/>.
+    /// </param>
+    /// <param name="materialFinishChanger">What the Change button calls; null leaves the button disabled.</param>
     public PartPropertiesViewModel(
         PartPropertiesSnapshot snapshot,
         IPropertyWriteTarget target,
@@ -134,7 +175,9 @@ public sealed class PartPropertiesViewModel : ObservableObject
         IReadOnlyCollection<string> namesThatMeanMe,
         CultureInfo culture,
         ILog? log = null,
-        IPartRenamer? renamer = null)
+        IPartRenamer? renamer = null,
+        IReadOnlyList<LibraryMaterial>? libraryMaterials = null,
+        IMaterialFinishChanger? materialFinishChanger = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(target);
@@ -147,6 +190,8 @@ public sealed class PartPropertiesViewModel : ObservableObject
         _target = target;
         _assigner = assigner;
         _renamer = renamer;
+        _libraryMaterials = libraryMaterials;
+        _materialFinishChanger = materialFinishChanger;
         _culture = culture;
         _namesThatMeanMe = namesThatMeanMe;
         _log = log ?? NullLog.Instance;
@@ -154,7 +199,7 @@ public sealed class PartPropertiesViewModel : ObservableObject
         IsEditable = snapshot.EditBlock == EditBlock.None;
         EditBlockMessage = PartPropertiesSnapshot.EditBlockMessage(snapshot.EditBlock);
 
-        Weight = snapshot.WeightDisplay ?? NoWeightText;
+        _weight = snapshot.WeightDisplay ?? NoWeightText;
 
         var saved = !string.IsNullOrWhiteSpace(snapshot.FullFileName);
 
@@ -168,10 +213,8 @@ public sealed class PartPropertiesViewModel : ObservableObject
         _isPartNumberAssigned = hasNumber(snapshot.PartNumber);
         IsSaved = saved;
 
-        MaterialDisplay = DisplayOrNotSet(snapshot.Material, out var materialSet);
-        IsMaterialSet = materialSet;
-        FinishDisplay = DisplayOrNotSet(snapshot.Finish, out var finishSet);
-        IsFinishSet = finishSet;
+        _materialDisplay = DisplayOrNotSet(snapshot.Material, out _isMaterialSet);
+        _finishDisplay = DisplayOrNotSet(snapshot.Finish, out _isFinishSet);
 
         // Part type: listed codes in the list's spelling; anything else kept as the file holds it.
         var fileType = PropertyValues.NormaliseText(snapshot.PartType);
@@ -204,6 +247,7 @@ public sealed class PartPropertiesViewModel : ObservableObject
         OkCommand = new RelayCommand(Ok, () => IsValid || !IsEditable);
         GenerateCommand = new RelayCommand(Generate, () => CanGenerate && IsSaved);
         RenameCommand = new RelayCommand(Rename, () => CanRename);
+        ChangeMaterialFinishCommand = new RelayCommand(ChangeMaterialFinish, () => CanChangeMaterialFinish);
 
         Recalculate();
         _pendingAtOpen = _hasChanges;
@@ -220,8 +264,11 @@ public sealed class PartPropertiesViewModel : ObservableObject
 
     // Read-only display.
 
-    /// <summary>The mass in the document's units, or <see cref="NoWeightText"/> when it could not be read.</summary>
-    public string Weight { get; }
+    /// <summary>
+    /// The mass in the document's units, or <see cref="NoWeightText"/> when it could not be read. Read again after the
+    /// Material and Finish window closes, since a new material changes it.
+    /// </summary>
+    public string Weight => _weight;
 
     // Display text for the restyled window (spec 08). Each "Is...Set" flag is false when the window shows
     // placeholder text, so it can use the placeholder colour.
@@ -300,15 +347,51 @@ public sealed class PartPropertiesViewModel : ObservableObject
     /// <summary>True when <see cref="GenerateNote"/> is not null.</summary>
     public bool HasGenerateNote => GenerateNote is not null;
 
-    /// <summary>The material trimmed, or <see cref="NotSetText"/> when blank.</summary>
-    public string MaterialDisplay { get; }
+    /// <summary>
+    /// The material trimmed, or <see cref="NotSetText"/> when blank. Read again after the Material and Finish window
+    /// closes.
+    /// </summary>
+    public string MaterialDisplay => _materialDisplay;
 
-    public bool IsMaterialSet { get; }
+    public bool IsMaterialSet => _isMaterialSet;
 
-    /// <summary>The finish trimmed, or <see cref="NotSetText"/> when blank.</summary>
-    public string FinishDisplay { get; }
+    /// <summary>
+    /// The finish trimmed, or <see cref="NotSetText"/> when blank. Read again after the Material and Finish window
+    /// closes.
+    /// </summary>
+    public string FinishDisplay => _finishDisplay;
 
-    public bool IsFinishSet { get; }
+    public bool IsFinishSet => _isFinishSet;
+
+    /// <summary>
+    /// <see cref="NotFromLibraryWarning"/> for a part whose material is not in the material library
+    /// (<see cref="MaterialFilter.IsInLibrary"/>), for example an imported file or one given a material from Inventor's
+    /// own list (Aidan, 2026-10-12). Null when the library could not be read, for an assembly, and when the material is
+    /// blank. A warning only: it never blocks Apply or OK and is not an error in the status line.
+    /// </summary>
+    public string? MaterialWarning =>
+        _libraryMaterials is not null
+        && IsPartKind(_original.DocumentKind)
+        && _isMaterialSet
+        && !MaterialFilter.IsInLibrary(_original.Material, _libraryMaterials)
+            ? NotFromLibraryWarning
+            : null;
+
+    /// <summary>True when <see cref="MaterialWarning"/> is not null.</summary>
+    public bool HasMaterialWarning => MaterialWarning is not null;
+
+    /// <summary>
+    /// Whether Change beside Material is enabled: a part (an assembly has no material; Default, task 076) that can be
+    /// edited, when a changer was given. The button is always shown.
+    /// </summary>
+    public bool CanChangeMaterialFinish =>
+        _materialFinishChanger is not null && IsEditable && IsPartKind(_original.DocumentKind);
+
+    /// <summary>
+    /// Opens the Material and Finish window; afterwards Material, Finish and Weight show what the file holds. Edits not
+    /// yet applied in this window stay pending. Enabled while <see cref="CanChangeMaterialFinish"/>.
+    /// </summary>
+    public RelayCommand ChangeMaterialFinishCommand { get; }
 
     /// <summary>False when the file cannot be edited; every editable field binds its enabled state to this.</summary>
     public bool IsEditable { get; }
@@ -491,6 +574,8 @@ public sealed class PartPropertiesViewModel : ObservableObject
 
         return fullFileName[(fullFileName.LastIndexOfAny(new[] { '\\', '/' }) + 1)..];
     }
+
+    private static bool IsPartKind(DocumentKind kind) => kind is DocumentKind.Part or DocumentKind.SheetMetalPart;
 
     private static bool IsBlankName(string value, IReadOnlyCollection<string> namesThatMeanMe, string? defaultDesigner) =>
         PropertyValues.NormaliseText(value).Length == 0
@@ -681,6 +766,54 @@ public sealed class PartPropertiesViewModel : ObservableObject
         OnPropertyChanged(nameof(HeaderTitle));
         OnPropertyChanged(nameof(HeaderSubline));
         OnPropertyChanged(nameof(PartNameDisplay));
+        OnStateChanged();
+    }
+
+    /// <summary>
+    /// Runs the changer and shows the material, finish and weight it read back. Only those change: the edited fields,
+    /// and so any pending changes, are kept, since the Material and Finish window writes none of the properties this
+    /// window edits. On failure the status line shows the reason.
+    /// </summary>
+    private void ChangeMaterialFinish()
+    {
+        if (!CanChangeMaterialFinish)
+            return;
+
+        PartMaterialFinish? reread;
+        try
+        {
+            reread = _materialFinishChanger!.Change();
+        }
+        catch (Exception ex)
+        {
+            // A UI boundary, as Apply.
+            _log.Error("Could not change the material and finish.", ex);
+            _lastResult = ChangeMaterialFinishErrorPrefix + ex.Message;
+            _lastFailed = true;
+            OnStateChanged();
+            return;
+        }
+
+        if (reread is null)
+            return;
+
+        _original = _original with
+        {
+            Material = reread.Material,
+            Finish = reread.Finish,
+            WeightDisplay = reread.WeightDisplay,
+        };
+        _materialDisplay = DisplayOrNotSet(reread.Material, out _isMaterialSet);
+        _finishDisplay = DisplayOrNotSet(reread.Finish, out _isFinishSet);
+        _weight = reread.WeightDisplay ?? NoWeightText;
+
+        OnPropertyChanged(nameof(MaterialDisplay));
+        OnPropertyChanged(nameof(IsMaterialSet));
+        OnPropertyChanged(nameof(FinishDisplay));
+        OnPropertyChanged(nameof(IsFinishSet));
+        OnPropertyChanged(nameof(Weight));
+        OnPropertyChanged(nameof(MaterialWarning));
+        OnPropertyChanged(nameof(HasMaterialWarning));
         OnStateChanged();
     }
 

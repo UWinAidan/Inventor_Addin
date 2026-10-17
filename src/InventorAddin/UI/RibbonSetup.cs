@@ -50,6 +50,7 @@ namespace InventorAddin.UI
             yield return new PartPropertiesCommand();
             yield return new CreatePrintCommand();
             yield return new MassUpdateCommand();
+            yield return new MaterialFinishCommand();
             yield return new SettingsCommand();
             yield return new AboutCommand();
             yield return new ExportModelDataCommand();

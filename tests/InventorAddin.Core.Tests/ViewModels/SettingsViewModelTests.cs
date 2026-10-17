@@ -28,10 +28,16 @@ public sealed class SettingsViewModelTests : IDisposable
     private SettingsViewModel Create(AddinSettings? settings = null, ILog? log = null) =>
         new(settings ?? new AddinSettings(), new SettingsStore(_folder), log);
 
+    // The section summaries (task 079) are refreshed on every edit and have their own tests below, so the tests that
+    // pin which properties an edit raises leave them out.
     private static List<string> RecordPropertyChanges(INotifyPropertyChanged source)
     {
         var names = new List<string>();
-        source.PropertyChanged += (_, e) => names.Add(e.PropertyName!);
+        source.PropertyChanged += (_, e) =>
+        {
+            if (!e.PropertyName!.EndsWith("Summary", StringComparison.Ordinal))
+                names.Add(e.PropertyName);
+        };
         return names;
     }
 
@@ -1439,5 +1445,323 @@ public sealed class SettingsViewModelTests : IDisposable
 
         Assert.Equal(expected, SettingsViewModel.DefaultDesignerHelpText);
         Assert.Equal(expected, Create().DefaultDesignerHelp);
+    }
+
+    // ---- Material library and finish list (task 070) ----
+
+    private const string LibraryFile = @"D:\Libraries\Mine.adsklib";
+    private const string FinishFile = @"D:\Libraries\finishes.csv";
+
+    // Only the given files exist; the paths that were asked about are recorded.
+    private SettingsViewModel CreateWithFiles(AddinSettings? settings, List<string> asked, params string[] existing) =>
+        new(settings ?? new AddinSettings(), new SettingsStore(_folder), null, path =>
+        {
+            asked.Add(path);
+            return existing.Contains(path);
+        });
+
+    [Fact]
+    public void LibraryPaths_StartWithGivenValues_NotDirty()
+    {
+        var vm = Create(new AddinSettings { MaterialLibraryPath = LibraryFile, FinishListPath = FinishFile });
+
+        Assert.Equal(LibraryFile, vm.MaterialLibraryPath);
+        Assert.Equal(FinishFile, vm.FinishListPath);
+        Assert.False(vm.IsDirty);
+        Assert.Null(vm.ErrorText);
+    }
+
+    [Fact]
+    public void LibraryPaths_Defaults_AreBlank()
+    {
+        var vm = Create();
+
+        Assert.Equal("", vm.MaterialLibraryPath);
+        Assert.Equal("", vm.FinishListPath);
+    }
+
+    [Fact]
+    public void MaterialLibraryPath_Changing_MakesDirty_RaisesValueAndIsDirty()
+    {
+        var vm = CreateWithFiles(null, new List<string>(), LibraryFile);
+        var changed = RecordPropertyChanges(vm);
+
+        vm.MaterialLibraryPath = LibraryFile;
+
+        Assert.True(vm.IsDirty);
+        Assert.True(vm.SaveCommand.CanExecute(null));
+        Assert.Equal(new[] { nameof(SettingsViewModel.MaterialLibraryPath), nameof(SettingsViewModel.IsDirty) }, changed);
+    }
+
+    [Fact]
+    public void FinishListPath_Changing_MakesDirty_RaisesValueAndIsDirty()
+    {
+        var vm = CreateWithFiles(null, new List<string>(), FinishFile);
+        var changed = RecordPropertyChanges(vm);
+
+        vm.FinishListPath = FinishFile;
+
+        Assert.True(vm.IsDirty);
+        Assert.Equal(new[] { nameof(SettingsViewModel.FinishListPath), nameof(SettingsViewModel.IsDirty) }, changed);
+    }
+
+    [Fact]
+    public void LibraryPaths_OnlySpaces_IsNotAChange()
+    {
+        var vm = Create();
+
+        vm.MaterialLibraryPath = "   ";
+        vm.FinishListPath = "\t";
+
+        Assert.False(vm.IsDirty);
+        Assert.Null(vm.ErrorText);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("  ")]
+    [InlineData(@"D:\Libraries\Mine.adsklib")]
+    [InlineData(@"  D:\Libraries\Mine.ADSKLIB  ")]
+    [InlineData(@"\\server\share\Mine.adsklib")]
+    public void ValidateMaterialLibraryPath_BlankOrFullAdsklibPath_IsValid(string? path)
+    {
+        Assert.Null(SettingsViewModel.ValidateMaterialLibraryPath(path));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(@"D:\Libraries\finishes.csv")]
+    [InlineData(@"\\server\share\Finishes.CSV")]
+    public void ValidateFinishListPath_BlankOrFullCsvPath_IsValid(string? path)
+    {
+        Assert.Null(SettingsViewModel.ValidateFinishListPath(path));
+    }
+
+    [Theory]
+    [InlineData("Mine.adsklib")]
+    [InlineData(@"Libraries\Mine.adsklib")]
+    [InlineData(@"\Libraries\Mine.adsklib")]
+    public void ValidateMaterialLibraryPath_NotFullPath_NamesTheSetting(string path)
+    {
+        Assert.Equal(
+            @"Material library: enter a full path to the file, such as D:\Libraries\Materials.adsklib.",
+            SettingsViewModel.ValidateMaterialLibraryPath(path));
+    }
+
+    [Fact]
+    public void ValidateFinishListPath_NotFullPath_NamesTheSetting()
+    {
+        Assert.Equal(
+            @"Finish list: enter a full path to the file, such as D:\Libraries\finishes.csv.",
+            SettingsViewModel.ValidateFinishListPath("finishes.csv"));
+    }
+
+    [Theory]
+    [InlineData(@"D:\Libraries\Mine.csv")]
+    [InlineData(@"D:\Libraries\Mine.adsklib.bak")]
+    [InlineData(@"D:\Libraries\Mine")]
+    public void ValidateMaterialLibraryPath_WrongExtension_NamesTheSetting(string path)
+    {
+        Assert.Equal("Material library must be a file ending in .adsklib.", SettingsViewModel.ValidateMaterialLibraryPath(path));
+    }
+
+    [Fact]
+    public void ValidateFinishListPath_WrongExtension_NamesTheSetting()
+    {
+        Assert.Equal("Finish list must be a file ending in .csv.", SettingsViewModel.ValidateFinishListPath(@"D:\finishes.xlsx"));
+    }
+
+    [Fact]
+    public void ValidateLibraryPaths_InvalidCharacter_NamesTheSetting()
+    {
+        Assert.Equal(
+            "Material library contains a character Windows does not allow.",
+            SettingsViewModel.ValidateMaterialLibraryPath(@"D:\Li?b.adsklib"));
+        Assert.Equal(
+            "Finish list contains a character Windows does not allow.",
+            SettingsViewModel.ValidateFinishListPath("D:\\fin|ishes.csv"));
+    }
+
+    [Fact]
+    public void LibraryPath_Invalid_SetsError_AndDisablesSave_ThenFixingClearsIt()
+    {
+        var vm = Create();
+
+        vm.FinishListPath = @"D:\finishes.txt";
+
+        Assert.Equal("Finish list must be a file ending in .csv.", vm.ErrorText);
+        Assert.False(vm.SaveCommand.CanExecute(null));
+
+        vm.FinishListPath = "";
+
+        Assert.Null(vm.ErrorText);
+    }
+
+    [Fact]
+    public void Validation_LibraryPathsComeAfterTheFolders()
+    {
+        var vm = Create();
+        vm.FinishListPath = "Relative.csv";
+        vm.MaterialLibraryPath = "Relative.adsklib";
+        vm.OtherCadFolders = "Relative";
+
+        Assert.Equal(@"Other folders, line 1: enter a full folder path, such as D:\CAD.", vm.ErrorText);
+        vm.OtherCadFolders = "";
+        Assert.StartsWith("Material library:", vm.ErrorText);
+        vm.MaterialLibraryPath = "";
+        Assert.StartsWith("Finish list:", vm.ErrorText);
+        vm.FinishListPath = "";
+        Assert.Null(vm.ErrorText);
+    }
+
+    [Fact]
+    public void Save_MissingMaterialLibrary_IsRefused_WithMessageNamingTheSetting()
+    {
+        var asked = new List<string>();
+        var vm = CreateWithFiles(null, asked);
+        vm.MaterialLibraryPath = $"  {LibraryFile}  ";
+        var saved = false;
+        vm.Saved += (_, _) => saved = true;
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.Equal(SettingsViewModel.LibraryFileNotFoundError("Material library", LibraryFile), vm.ErrorText);
+        Assert.StartsWith("Material library: ", vm.ErrorText);
+        Assert.Contains(LibraryFile, vm.ErrorText);
+        Assert.True(vm.HasError);
+        Assert.Equal(new[] { LibraryFile }, asked);
+        Assert.False(saved);
+        Assert.Null(vm.SavedSettings);
+        Assert.False(File.Exists(SettingsPath));
+        Assert.True(vm.IsDirty);
+    }
+
+    [Fact]
+    public void Save_MissingFinishList_IsRefused_ThenEditingClearsTheMessage()
+    {
+        var vm = CreateWithFiles(null, new List<string>(), LibraryFile);
+        vm.MaterialLibraryPath = LibraryFile;
+        vm.FinishListPath = FinishFile;
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.Equal(SettingsViewModel.LibraryFileNotFoundError("Finish list", FinishFile), vm.ErrorText);
+        Assert.False(File.Exists(SettingsPath));
+
+        vm.FinishListPath = "";
+
+        Assert.Null(vm.ErrorText);
+    }
+
+    [Fact]
+    public void Save_ExistingLibraryFiles_AreSavedTrimmed_AndRoundTrip()
+    {
+        var vm = CreateWithFiles(null, new List<string>(), LibraryFile, FinishFile);
+        vm.MaterialLibraryPath = $" {LibraryFile} ";
+        vm.FinishListPath = $"\t{FinishFile}";
+        var changed = RecordPropertyChanges(vm);
+
+        vm.SaveCommand.Execute(null);
+
+        var expected = new AddinSettings { MaterialLibraryPath = LibraryFile, FinishListPath = FinishFile };
+        var loaded = new SettingsStore(_folder).Load();
+        Assert.Null(vm.ErrorText);
+        Assert.Equal(expected, loaded.Settings);
+        Assert.Equal(expected, vm.SavedSettings);
+        Assert.Equal(LibraryFile, vm.MaterialLibraryPath);
+        Assert.Equal(FinishFile, vm.FinishListPath);
+        Assert.Contains(nameof(SettingsViewModel.MaterialLibraryPath), changed);
+        Assert.Contains(nameof(SettingsViewModel.FinishListPath), changed);
+    }
+
+    [Fact]
+    public void Save_UnchangedOrBlankLibraryPaths_AreNotCheckedOnDisk()
+    {
+        // The library was saved earlier; its drive is offline now. Saving another setting is not refused.
+        var asked = new List<string>();
+        var vm = CreateWithFiles(new AddinSettings { MaterialLibraryPath = LibraryFile }, asked);
+        vm.ShowDeveloperTools = true;
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.Null(vm.ErrorText);
+        Assert.NotNull(vm.SavedSettings);
+        Assert.Empty(asked);
+    }
+
+    [Fact]
+    public void Save_FileCheckThatThrows_CountsAsNotFound()
+    {
+        var vm = new SettingsViewModel(new AddinSettings(), new SettingsStore(_folder), null,
+            _ => throw new IOException("The network path was not found."));
+        vm.FinishListPath = FinishFile;
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.Equal(SettingsViewModel.LibraryFileNotFoundError("Finish list", FinishFile), vm.ErrorText);
+    }
+
+    [Fact]
+    public void Save_KeepsPreferredMaterials_ThatTheWindowDoesNotShow()
+    {
+        var vm = Create(new AddinSettings { PreferredMaterials = new[] { "Test Steel" } });
+        vm.ShowDeveloperTools = true;
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.Equal(new[] { "Test Steel" }, new SettingsStore(_folder).Load().Settings.PreferredMaterials);
+        Assert.Equal(new[] { "Test Steel" }, vm.SavedSettings!.PreferredMaterials);
+    }
+
+    [Fact]
+    public void LibraryHelp_SaysBlankUsesTheStarter()
+    {
+        var vm = Create();
+
+        Assert.Equal("Blank uses the starter material library shipped with the add-in.", vm.MaterialLibraryHelp);
+        Assert.Equal("Blank uses the starter finish list shipped with the add-in.", vm.FinishListHelp);
+    }
+
+    // ---- Section summaries (task 079) ----
+
+    [Fact]
+    public void Summaries_DescribeTheValuesBeingEdited()
+    {
+        var vm = new SettingsViewModel(
+            new AddinSettings
+            {
+                DefaultDesigner = "Test Designer",
+                OtherNamesForMe = "tdesigner, t.designer",
+                RegisterFolder = @"Z:\Register",
+                WorkFolder = @"C:\CAD_TEST",
+                OtherCadFolders = new[] { @"D:\One", @"D:\Two" },
+                MaterialLibraryPath = "",
+                FinishListPath = @"D:\Libraries\shop-finishes.csv",
+                ShowDeveloperTools = true,
+            },
+            new SettingsStore(_folder));
+
+        Assert.Equal("Test Designer, 2 other names, Metric", vm.GeneralSummary);
+        Assert.Equal(@"Z:\Register", vm.PartNumbersSummary);
+        Assert.Equal(@"C:\CAD_TEST, 2 other folders", vm.FoldersSummary);
+        Assert.Equal("starter library, shop-finishes.csv", vm.MaterialFinishSummary);
+        Assert.Equal("Developer tools shown", vm.DeveloperSummary);
+    }
+
+    [Fact]
+    public void Summaries_FollowEdits_AndRaiseTheirChange()
+    {
+        var vm = Create();
+        var changed = new List<string>();
+        vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName!);
+
+        vm.WorkFolder = @"  C:\Elsewhere  ";
+        vm.OtherCadFolders = "D:\\One\r\n\r\nD:\\Two\r\nD:\\Three";
+
+        Assert.Equal(@"C:\Elsewhere, 3 other folders", vm.FoldersSummary);
+        Assert.Contains(nameof(SettingsViewModel.FoldersSummary), changed);
+        Assert.Contains(nameof(SettingsViewModel.GeneralSummary), changed);
     }
 }

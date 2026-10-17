@@ -20,10 +20,10 @@ The tab shows different panels depending on the environment.
 | Panel | Buttons | Ribbons |
 |---|---|---|
 | Create | New Part (large); Save As Copy, Save As and Replace (small) | New Part: ZeroDoc, Part, Assembly. Save As Copy: Part, Assembly. Save As and Replace: Assembly |
-| Properties | Part Properties (large); Mass Update (small) | Part Properties: Part, Assembly. Mass Update: ZeroDoc, Part, Assembly |
+| Properties | Part Properties (large); Mass Update, Material and Finish (small) | Part Properties: Part, Assembly. Mass Update: ZeroDoc, Part, Assembly. Material and Finish: Part, Assembly (Default, spec 03 question 17; task 075) |
 | Drawing | Create Print (large) | Part, Assembly |
 | Developer | Export Model Data, Export Libraries (small) | as before; only when developer tools are on |
-| AWB | Settings, About (small) | Part, Assembly, Drawing |
+| AWB | Settings, About (small) | ZeroDoc, Part, Assembly, Drawing (Aidan, 2026-10-17, question 4) |
 
 **At startup** (Aidan, 2026-10-12): when Inventor starts with no document open, the AWB Addin tab is made the active tab. Opening files later does not change the tab. Inventor switches back to its own tab about a second after it is ready, so the add-in watches for 5 s and makes the tab active once more the first time that happens, then stops (Default, spike 062).
 
@@ -33,7 +33,7 @@ The rest of this section is the reference tool's layout, kept for the buttons st
 
 | Panel | Button | Size | Spec |
 |---|---|---|---|
-| CAD Automation | Change Material and Finish | large | 03 |
+| CAD Automation | Change Material and Finish | large | 03 (built as Material and Finish, small, in Properties: see "Panels today") |
 | CAD Automation | New Part | small | 02 (also on ZeroDoc, Default) |
 | CAD Automation | Save As Copy | small | 02 |
 | CAD Automation | Save As and Replace | small | 02 |
@@ -74,5 +74,5 @@ A button appears only once its command exists. Do not add placeholder buttons.
 
 1. What should "Mass Update" do? The reference button's behaviour is not known. Partly answered 2026-10-10: Aidan wants a folder scan or Mass Update to replace the Windows login name in Designer and Detailer in bulk. Default: one command, Mass Update, scans a folder and also registers and assigns part numbers (spec 02, "Commands").
 2. Should the About button also check for a newer version somewhere, or only display the current one?
-3. Which settings does the first version need? Candidates: designer name, library file locations, template folder, default sheet size. Until answered, M0 builds only `ShowDeveloperTools` (default off). M1 added `DefaultDesigner`; M2 adds `RegisterFolder`, `DefaultUnits`, `WorkFolder`, `OtherCadFolders` and `OtherNamesForMe` (spec 02). A templates folder comes later (Aidan, 2026-10-10).
-4. Should Settings and About also appear on the ZeroDoc ribbon (Inventor with no document open)? Until answered, ZeroDoc keeps only the Developer panel.
+3. Which settings does the first version need? Candidates: designer name, library file locations, template folder, default sheet size. Until answered, M0 builds only `ShowDeveloperTools` (default off). M1 added `DefaultDesigner`; M2 adds `RegisterFolder`, `DefaultUnits`, `WorkFolder`, `OtherCadFolders` and `OtherNamesForMe` (spec 02); M3 adds `MaterialLibraryPath`, `FinishListPath` and `PreferredMaterials` (spec 03). A templates folder comes later (Aidan, 2026-10-10).
+4. ~~Should Settings and About also appear on the ZeroDoc ribbon (Inventor with no document open)?~~ Answered 2026-10-17 (Aidan): yes. Settings and About are on the AWB Addin tab in every environment: no document open, part, assembly and drawing.

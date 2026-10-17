@@ -224,11 +224,50 @@ Not in M2: browser folders (Aidan: no), a templates folder setting (later, with 
 
 ### M3: Material and finish (spec 03)
 
-Blocked on questions 1 to 3 of the spec. Needs the Windows spike described in the spec before its add-in side is planned.
+Aidan answered the spec's questions on 2026-10-12: a starter library in the repo and his own on the NAS, hardening as part of the material, his finish list `libraries/finishes.csv`, four finish iProperties, one window for both, preferred stars, selected components in assemblies, and a warning in Part Properties. Planned in a local session on Aidan's PC.
 
-### M4: Hole table wizard (spec 04)
+Spike 067 ran first and was walked through with Aidan. The rest was planned on 2026-10-12 after he accepted the suggested finish appearances for now. Run in a local session on Aidan's PC, in the order below (not number order: 073 needs Python, which this PC lacks).
 
-The largest feature. Its Core half (classification, grouping, tagging, descriptions, fit limits, table model) can be planned once questions 1, 6 and 7 are answered. The add-in half waits on the Windows spike described in the spec.
+| Task | Needs | Depends on | Parallel-safe with |
+|---|---|---|---|
+| 067 | **windows** (spike, local session with Aidan) | none | none |
+| 068 | Core | none | 069, 070 |
+| 069 | Core | 068 | 070 |
+| 070 | windows build | none | 068, 069 |
+| 071 | **windows** (drives Inventor) | 068, 070 | none |
+| 072 | Core | 068, 069, 070 | 071, 073 |
+| 073 | **Python with Pillow** (cloud, or Python installed) | none | 068 to 072 |
+| 074 | windows build | 067 to 070, 072 | 071, 073 |
+| 075 | windows build | 072, 073, 074 | none |
+| 076 | windows build | 074, 075 | none |
+
+- [x] 067 Spike: material libraries, materials and appearances (Windows)
+- [x] 068 Finish list: model, CSV file and validation (Core)
+- [x] 069 Material list, filters, finish matching and appearance lookup (Core)
+- [x] 070 Library settings, preferred materials, and the shipped starter files
+- [x] 071 Starter material library: data file and generator
+- [x] 072 Material and Finish window view-model (Core)
+- [x] 073 Ribbon and window icon for Material and Finish
+- [x] 074 Read the library and apply material and finish in Inventor
+- [x] 075 Material and Finish command, window and ribbon button
+- [x] 076 Part Properties: Change material and finish, and the not-from-the-library warning
+
+**Order.** 068, 069, 070, 071, 072, 074, then 073 once Python is available, then 075 and 076. If 073 cannot run, 075 stops before it; everything up to 074 does not need it.
+
+**M3 fixes** (Aidan's M3 checks, 2026-10-17), on the same branch before merging:
+
+- [x] 077 Settings in tabs, and no window taller than the screen
+- [x] 078 Settings and About on every ribbon, including no document open
+- [x] 079 Settings as one page of collapsible sections, resizable and remembered (replaces 077's tabs)
+- [x] 080 Dialogs with only a close button; a themed scroll bar for every scrolling area
+
+Not in M3: print notes on the drawing (M5), Inventor finish features (`FinishReader` stays as a developer export only).
+
+### M4: Hole generator and hole table wizard (spec 04)
+
+**First a hole generator for part files** (Aidan, 2026-10-12): every hole type Aidan has decided on, with precision and dowel holes coloured by fit (tight red, regular blue, loose green). Its details are to be discussed with Aidan before M4 is planned.
+
+Then the hole table wizard, the largest feature. Its Core half (classification, grouping, tagging, descriptions, fit limits, table model) can be planned once questions 1, 6 and 7 are answered. The add-in half waits on the Windows spike described in the spec.
 
 ### M5: Drawing tools (spec 05)
 

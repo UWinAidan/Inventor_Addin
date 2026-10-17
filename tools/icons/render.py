@@ -48,6 +48,7 @@ ICONS = [
     ("SaveAsReplace", "Save As and Replace"),
     ("CreatePrint", "Create Print"),
     ("MassUpdate", "Mass Update"),
+    ("MaterialFinish", "Material and Finish"),
 ]
 
 # Stroke colour per set. "Light" is for Inventor's light theme (dark strokes).

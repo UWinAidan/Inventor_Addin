@@ -54,6 +54,19 @@ public static class PartPropertyStorage
     public static readonly PropertyLocation Cost =
         new(PropertySetNames.DesignTracking, "Cost", PropertyValueKind.Currency);
 
+    /// <summary>The finish's name (spec 03).</summary>
     public static readonly PropertyLocation Finish =
         new(PropertySetNames.UserDefined, "Finish", PropertyValueKind.Text);
+
+    /// <summary>The finish's short code (spec 03).</summary>
+    public static readonly PropertyLocation FinishCode =
+        new(PropertySetNames.UserDefined, "Finish Code", PropertyValueKind.Text);
+
+    /// <summary>The finish's thickness range in mm, as text (spec 03).</summary>
+    public static readonly PropertyLocation FinishThickness =
+        new(PropertySetNames.UserDefined, "Finish Thickness", PropertyValueKind.Text);
+
+    /// <summary>The finish's print note for the drawing (spec 03).</summary>
+    public static readonly PropertyLocation FinishNote =
+        new(PropertySetNames.UserDefined, "Finish Note", PropertyValueKind.Text);
 }

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#3B4350" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter" shape-rendering="crispEdges">
+  <title>Material and Finish, 16 px: a material ball with a highlight and section hatching</title>
+  <!-- r is 6.2 rather than 6 so the crisp-edged circle has no doubled pixels on its diagonals (as in About) -->
+  <circle cx="7.5" cy="7.5" r="6.2"/>
+  <polyline points="4.5,6.5 5.5,5.5 6.5,4.5"/>
+  <line x1="6.5" y1="11.5" x2="11.5" y2="6.5"/>
+  <line x1="8.5" y1="12.5" x2="12.5" y2="8.5"/>
+</svg>

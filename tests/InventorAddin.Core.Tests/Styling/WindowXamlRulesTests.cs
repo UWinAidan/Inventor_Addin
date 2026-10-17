@@ -101,6 +101,79 @@ public sealed class WindowXamlRulesTests
         Assert.True(failures.Count == 0, "Window XAML breaks the spec 08 style rules:\n" + string.Join("\n", failures));
     }
 
+    /// <summary>
+    /// Aidan, 2026-10-17: a window is never taller than the screen's working area, and when its content is taller the
+    /// body scrolls while the header and buttons stay visible. So every window's root is a Grid in the DialogContent
+    /// style, its body is a ScrollViewer in the DialogBody style on a star-sized row, and the header and footer are
+    /// outside that ScrollViewer. WindowHost caps the height. A resizable window (Settings, task 079) uses the
+    /// ResizableDialogContent style, which widens with the window.
+    /// </summary>
+    [Fact]
+    public void EveryWindow_ScrollsItsBody_AndKeepsHeaderAndFooterOutside()
+    {
+        var windows = WindowXamlFiles().Where(f => !f.IsControls).ToList();
+        Assert.True(windows.Count > 0, $"No window XAML found under {UiFolder()}.");
+
+        var failures = new List<string>();
+        foreach (var file in windows)
+        {
+            var doc = XDocument.Load(file.FullPath, LoadOptions.SetLineInfo);
+            var root = doc.Root!.Elements().Where(e => !e.Name.LocalName.Contains('.')).ToList();
+            if (root.Count != 1 || root[0].Name.LocalName != "Grid"
+                || DynamicKeyOf(root[0].Attribute("Style")?.Value) is not ("DialogContent" or "ResizableDialogContent"))
+            {
+                failures.Add($"{file.RelativePath}: the window's content must be one Grid in the DialogContent (or ResizableDialogContent) style.");
+                continue;
+            }
+
+            var bodies = doc.Descendants()
+                .Where(e => e.Name.LocalName == "ScrollViewer" && DynamicKeyOf(e.Attribute("Style")?.Value) == "DialogBody")
+                .ToList();
+            if (bodies.Count != 1)
+                failures.Add($"{file.RelativePath}: needs exactly one ScrollViewer in the DialogBody style, found {bodies.Count}.");
+
+            foreach (var body in bodies)
+            {
+                if (body.Parent != root[0])
+                    failures.Add($"{file.RelativePath}{LineOf(body)}: the DialogBody ScrollViewer must be a child of the root Grid.");
+                if (!IsOnStarRow(root[0], body))
+                    failures.Add($"{file.RelativePath}{LineOf(body)}: the DialogBody ScrollViewer must sit on a star-sized row.");
+
+                // The scroll bar sits outside the content column (Aidan, 2026-10-17): the panel inside puts back the
+                // room DialogBody takes, so it must use DialogBodyContent.
+                var content = body.Elements().Where(e => !e.Name.LocalName.Contains('.')).ToList();
+                if (content.Count != 1 || DynamicKeyOf(content[0].Attribute("Style")?.Value) != "DialogBodyContent")
+                    failures.Add($"{file.RelativePath}{LineOf(body)}: the DialogBody ScrollViewer must hold one panel in the DialogBodyContent style.");
+            }
+
+            foreach (var piece in doc.Descendants().Where(e => e.Name.LocalName is "DialogHeader" or "DialogFooter"))
+            {
+                if (piece.Parent != root[0])
+                    failures.Add($"{file.RelativePath}{LineOf(piece)}: {piece.Name.LocalName} must be a child of the root Grid, outside the body.");
+            }
+        }
+
+        Assert.True(failures.Count == 0, "Windows break the fit-to-screen layout:\n" + string.Join("\n", failures));
+    }
+
+    private static string? DynamicKeyOf(string? value)
+    {
+        if (value is null)
+            return null;
+        var match = DynamicResourceOnly.Match(value);
+        return match.Success ? match.Groups[1].Value : null;
+    }
+
+    private static bool IsOnStarRow(XElement grid, XElement child)
+    {
+        var rows = grid.Elements()
+            .Where(e => e.Name.LocalName == "Grid.RowDefinitions")
+            .SelectMany(e => e.Elements())
+            .ToList();
+        int row = int.TryParse(child.Attribute("Grid.Row")?.Value, out int r) ? r : 0;
+        return row < rows.Count && (rows[row].Attribute("Height")?.Value.Trim().EndsWith('*') ?? false);
+    }
+
     [Fact]
     public void ColourSets_DefineTheSameKeys_ExactlyTheSpecTokens()
     {

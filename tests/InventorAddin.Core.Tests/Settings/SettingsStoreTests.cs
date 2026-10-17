@@ -368,6 +368,9 @@ public sealed class SettingsStoreTests : IDisposable
             s => s with { WorkFolder = "" },
             s => s with { OtherCadFolders = new[] { @"D:\One" } },
             s => s with { OtherNamesForMe = "x" },
+            s => s with { MaterialLibraryPath = @"D:\Lib.adsklib" },
+            s => s with { FinishListPath = @"D:\finishes.csv" },
+            s => s with { PreferredMaterials = new[] { "Test Steel" } },
         };
         var settableProperties = typeof(AddinSettings).GetProperties().Count(p => p.CanWrite);
 
@@ -378,6 +381,120 @@ public sealed class SettingsStoreTests : IDisposable
             Assert.NotEqual(new AddinSettings(), changed);
             Assert.NotEqual(new AddinSettings().GetHashCode(), changed.GetHashCode());
         }
+    }
+
+    // ---- Library paths and preferred materials (task 070) ----
+
+    [Fact]
+    public void LibrarySettings_Defaults_AreBlankAndEmpty()
+    {
+        var settings = new AddinSettings();
+
+        Assert.Equal("", settings.MaterialLibraryPath);
+        Assert.Equal("", settings.FinishListPath);
+        Assert.Empty(settings.PreferredMaterials);
+    }
+
+    [Fact]
+    public void Load_FileWrittenBeforeLibrarySettings_LoadsDefaults()
+    {
+        WriteSettingsFile("""
+            {
+              "schemaVersion": 1,
+              "defaultDesigner": "A. Person",
+              "workFolder": "D:\\Work",
+              "otherCadFolders": [ "E:\\One" ],
+              "otherNamesForMe": "ap"
+            }
+            """);
+
+        var result = new SettingsStore(_folder).Load();
+
+        Assert.Empty(result.Warnings);
+        Assert.Equal("", result.Settings.MaterialLibraryPath);
+        Assert.Equal("", result.Settings.FinishListPath);
+        Assert.Empty(result.Settings.PreferredMaterials);
+        Assert.Equal("A. Person", result.Settings.DefaultDesigner);
+    }
+
+    [Fact]
+    public void Load_NullLibrarySettings_LoadDefaults()
+    {
+        WriteSettingsFile("""{ "materialLibraryPath": null, "finishListPath": null, "preferredMaterials": null }""");
+
+        var result = new SettingsStore(_folder).Load();
+
+        Assert.Empty(result.Warnings);
+        Assert.Equal(new AddinSettings(), result.Settings);
+    }
+
+    [Fact]
+    public void Load_PreferredMaterials_ReadsArray_DroppingNullEntries()
+    {
+        WriteSettingsFile("""{ "preferredMaterials": [ "Test Steel", null, "Test Alloy" ] }""");
+
+        var result = new SettingsStore(_folder).Load();
+
+        Assert.Empty(result.Warnings);
+        Assert.Equal(new[] { "Test Steel", "Test Alloy" }, result.Settings.PreferredMaterials);
+    }
+
+    [Fact]
+    public void LibrarySetters_Null_StoreDefaults()
+    {
+        var settings = new AddinSettings { MaterialLibraryPath = null!, FinishListPath = null!, PreferredMaterials = null! };
+
+        Assert.Equal("", settings.MaterialLibraryPath);
+        Assert.Equal("", settings.FinishListPath);
+        Assert.Empty(settings.PreferredMaterials);
+    }
+
+    [Fact]
+    public void PreferredMaterials_IsCopiedWhenSet()
+    {
+        var list = new List<string> { "Test Steel" };
+        var settings = new AddinSettings { PreferredMaterials = list };
+
+        list.Add("Test Alloy");
+
+        Assert.Equal(new[] { "Test Steel" }, settings.PreferredMaterials);
+    }
+
+    [Fact]
+    public void Equality_ComparesPreferredMaterialsByValueAndOrder()
+    {
+        Assert.Equal(
+            new AddinSettings { PreferredMaterials = new[] { "A", "B" } },
+            new AddinSettings { PreferredMaterials = new List<string> { "A", "B" } });
+        Assert.Equal(
+            new AddinSettings { PreferredMaterials = new[] { "A" } }.GetHashCode(),
+            new AddinSettings { PreferredMaterials = new List<string> { "A" } }.GetHashCode());
+        Assert.NotEqual(
+            new AddinSettings { PreferredMaterials = new[] { "A", "B" } },
+            new AddinSettings { PreferredMaterials = new[] { "B", "A" } });
+    }
+
+    [Fact]
+    public void Save_WritesLibrarySettingsInCamelCase_ThenRoundTrips()
+    {
+        var store = new SettingsStore(_folder);
+        var original = new AddinSettings
+        {
+            MaterialLibraryPath = @"D:\Ünïcode\Lib.adsklib",
+            FinishListPath = @"\\server\share\finishes.csv",
+            PreferredMaterials = new[] { "Test Steel", "Test \"Alloy\"" },
+        };
+
+        store.Save(original);
+
+        var json = JsonNode.Parse(File.ReadAllText(SettingsPath))!.AsObject();
+        Assert.Equal(@"D:\Ünïcode\Lib.adsklib", json["materialLibraryPath"]!.GetValue<string>());
+        Assert.Equal(@"\\server\share\finishes.csv", json["finishListPath"]!.GetValue<string>());
+        Assert.Equal(new[] { "Test Steel", "Test \"Alloy\"" }, json["preferredMaterials"]!.AsArray().Select(m => m!.GetValue<string>()));
+
+        var result = store.Load();
+        Assert.Empty(result.Warnings);
+        Assert.Equal(original, result.Settings);
     }
 
     [Fact]

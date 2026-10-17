@@ -30,7 +30,7 @@ namespace InventorAddin.Commands
             }
 
             var viewModel = new SettingsViewModel(AddinServices.Settings, new SettingsStore(folder), AddinServices.Log);
-            WindowHost.ShowDialog(new SettingsWindow(viewModel), IconNames.Settings);
+            WindowHost.ShowDialog(new SettingsWindow(viewModel), IconNames.Settings, stateKey: "Settings");
 
             // Set only by a successful save; null after Cancel or closing the window.
             AddinSettings? saved = viewModel.SavedSettings;

@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Globalization;
 using InventorAddin.Core.Logging;
+using InventorAddin.Core.Materials;
 using InventorAddin.Core.Models;
 using InventorAddin.Core.Numbering;
 using InventorAddin.Core.PartProperties;
@@ -106,7 +107,9 @@ public sealed class PartPropertiesViewModelTests
         Func<string?, bool>? hasNumber = null,
         FakeAssigner? assigner = null,
         IReadOnlyCollection<string>? namesThatMeanMe = null,
-        IPartRenamer? renamer = null) =>
+        IPartRenamer? renamer = null,
+        IReadOnlyList<LibraryMaterial>? libraryMaterials = null,
+        IMaterialFinishChanger? materialFinishChanger = null) =>
         new(
             snapshot,
             target ?? new FakeTarget(),
@@ -116,7 +119,9 @@ public sealed class PartPropertiesViewModelTests
             namesThatMeanMe ?? (windowsUserName is null ? [] : [windowsUserName]),
             culture ?? Invariant,
             log,
-            renamer);
+            renamer,
+            libraryMaterials,
+            materialFinishChanger);
 
     private static List<string> RecordPropertyChanges(INotifyPropertyChanged source)
     {
@@ -1778,5 +1783,295 @@ public sealed class PartPropertiesViewModelTests
         var write = Assert.Single(Assert.Single(target.Calls));
         Assert.Equal(PartPropertyStorage.Description, write.Location);
         Assert.Equal("base plate", write.TextValue);
+    }
+
+    // Material and Finish from Part Properties (task 076)
+
+    private static readonly IReadOnlyList<LibraryMaterial> TestLibrary =
+    [
+        new("Test Steel", "Steel", "Test Steel Look"),
+        new("Test Alloy", "Aluminium", null),
+    ];
+
+    private sealed class FakeMaterialFinishChanger : IMaterialFinishChanger
+    {
+        public int Calls { get; private set; }
+        public PartMaterialFinish? Result { get; set; }
+        public Exception? Throw { get; set; }
+
+        public PartMaterialFinish? Change()
+        {
+            Calls++;
+            if (Throw is not null)
+                throw Throw;
+            return Result;
+        }
+    }
+
+    [Fact]
+    public void MaterialWarning_MaterialInTheLibrary_None()
+    {
+        var vm = Create(Complete(), libraryMaterials: TestLibrary);
+
+        Assert.Null(vm.MaterialWarning);
+        Assert.False(vm.HasMaterialWarning);
+    }
+
+    [Theory]
+    [InlineData("  test steel ")]
+    [InlineData("TEST ALLOY")]
+    public void MaterialWarning_MatchIgnoresCaseAndSpaces(string material)
+    {
+        var vm = Create(Complete() with { Material = material }, libraryMaterials: TestLibrary);
+
+        Assert.Null(vm.MaterialWarning);
+    }
+
+    [Theory]
+    [InlineData(DocumentKind.Part)]
+    [InlineData(DocumentKind.SheetMetalPart)]
+    public void MaterialWarning_PartWithAMaterialNotInTheLibrary_Warns(DocumentKind kind)
+    {
+        var vm = Create(Complete() with { DocumentKind = kind, Material = "Imported Stuff" }, libraryMaterials: TestLibrary);
+
+        Assert.Equal(PartPropertiesViewModel.NotFromLibraryWarning, vm.MaterialWarning);
+        Assert.Equal("Not from the material library", vm.MaterialWarning);
+        Assert.True(vm.HasMaterialWarning);
+    }
+
+    [Fact]
+    public void MaterialWarning_IsNotAnError_AndDoesNotBlockApplyOrOk()
+    {
+        var target = new FakeTarget();
+        var vm = Create(Complete() with { Material = "Imported Stuff" }, target, libraryMaterials: TestLibrary);
+
+        vm.Designer = "Someone Else";
+
+        Assert.True(vm.HasMaterialWarning);
+        Assert.False(vm.HasError);
+        Assert.True(vm.IsValid);
+        Assert.NotEqual(PartPropertiesViewModel.NotFromLibraryWarning, vm.StatusText);
+        Assert.True(vm.ApplyCommand.CanExecute(null));
+        Assert.True(vm.OkCommand.CanExecute(null));
+
+        vm.ApplyCommand.Execute(null);
+
+        Assert.Single(target.Calls);
+        Assert.Equal(PartPropertiesViewModel.SavedNotice, vm.StatusText);
+    }
+
+    [Fact]
+    public void MaterialWarning_LibraryNotRead_None()
+    {
+        var vm = Create(Complete() with { Material = "Imported Stuff" }, libraryMaterials: null);
+
+        Assert.Null(vm.MaterialWarning);
+        Assert.False(vm.HasMaterialWarning);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void MaterialWarning_BlankMaterial_None(string? material)
+    {
+        var vm = Create(Complete() with { Material = material }, libraryMaterials: TestLibrary);
+
+        Assert.Null(vm.MaterialWarning);
+    }
+
+    [Theory]
+    [InlineData(DocumentKind.Assembly)]
+    [InlineData(DocumentKind.WeldmentAssembly)]
+    public void MaterialWarning_Assembly_None(DocumentKind kind)
+    {
+        var vm = Create(
+            Complete() with { DocumentKind = kind, FullFileName = @"C:\Work\Frame.iam", Material = "Imported Stuff" },
+            libraryMaterials: TestLibrary);
+
+        Assert.Null(vm.MaterialWarning);
+    }
+
+    [Fact]
+    public void MaterialWarning_ReadOnlyPart_StillWarns()
+    {
+        var vm = Create(
+            Complete() with { Material = "Imported Stuff", EditBlock = EditBlock.ReadOnlyFile },
+            libraryMaterials: TestLibrary);
+
+        Assert.True(vm.HasMaterialWarning);
+    }
+
+    [Theory]
+    [InlineData(DocumentKind.Part)]
+    [InlineData(DocumentKind.SheetMetalPart)]
+    public void ChangeMaterialFinish_EditablePart_Enabled(DocumentKind kind)
+    {
+        var vm = Create(Complete() with { DocumentKind = kind }, materialFinishChanger: new FakeMaterialFinishChanger());
+
+        Assert.True(vm.CanChangeMaterialFinish);
+        Assert.True(vm.ChangeMaterialFinishCommand.CanExecute(null));
+    }
+
+    [Theory]
+    [InlineData(DocumentKind.Assembly)]
+    [InlineData(DocumentKind.WeldmentAssembly)]
+    public void ChangeMaterialFinish_Assembly_Disabled(DocumentKind kind)
+    {
+        var changer = new FakeMaterialFinishChanger();
+        var vm = Create(
+            Complete() with { DocumentKind = kind, FullFileName = @"C:\Work\Frame.iam" }, materialFinishChanger: changer);
+
+        Assert.False(vm.CanChangeMaterialFinish);
+        Assert.False(vm.ChangeMaterialFinishCommand.CanExecute(null));
+
+        vm.ChangeMaterialFinishCommand.Execute(null);
+        Assert.Equal(0, changer.Calls);
+    }
+
+    [Theory]
+    [InlineData(EditBlock.ReadOnlyFile)]
+    [InlineData(EditBlock.NotModifiable)]
+    public void ChangeMaterialFinish_FileThatCannotBeEdited_Disabled(EditBlock block)
+    {
+        var changer = new FakeMaterialFinishChanger();
+        var vm = Create(Complete() with { EditBlock = block }, materialFinishChanger: changer);
+
+        Assert.False(vm.CanChangeMaterialFinish);
+        Assert.False(vm.ChangeMaterialFinishCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void ChangeMaterialFinish_NoChanger_Disabled()
+    {
+        var vm = Create(Complete());
+
+        Assert.False(vm.CanChangeMaterialFinish);
+        Assert.False(vm.ChangeMaterialFinishCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void ChangeMaterialFinish_ShowsWhatWasReadBack_AndUpdatesTheWarning()
+    {
+        var changer = new FakeMaterialFinishChanger { Result = new PartMaterialFinish("Test Alloy", "Test Anodise", "0.456 kg") };
+        var vm = Create(
+            Complete() with { Material = "Imported Stuff" }, libraryMaterials: TestLibrary, materialFinishChanger: changer);
+        Assert.True(vm.HasMaterialWarning);
+        var changes = RecordPropertyChanges(vm);
+
+        vm.ChangeMaterialFinishCommand.Execute(null);
+
+        Assert.Equal(1, changer.Calls);
+        Assert.Equal("Test Alloy", vm.MaterialDisplay);
+        Assert.True(vm.IsMaterialSet);
+        Assert.Equal("Test Anodise", vm.FinishDisplay);
+        Assert.True(vm.IsFinishSet);
+        Assert.Equal("0.456 kg", vm.Weight);
+        Assert.False(vm.HasMaterialWarning);
+        Assert.Contains(nameof(vm.MaterialDisplay), changes);
+        Assert.Contains(nameof(vm.IsMaterialSet), changes);
+        Assert.Contains(nameof(vm.FinishDisplay), changes);
+        Assert.Contains(nameof(vm.IsFinishSet), changes);
+        Assert.Contains(nameof(vm.Weight), changes);
+        Assert.Contains(nameof(vm.MaterialWarning), changes);
+        Assert.Contains(nameof(vm.HasMaterialWarning), changes);
+    }
+
+    [Fact]
+    public void ChangeMaterialFinish_BlankReadBack_ShowsPlaceholders()
+    {
+        var changer = new FakeMaterialFinishChanger { Result = new PartMaterialFinish(null, " ", null) };
+        var vm = Create(Complete(), materialFinishChanger: changer);
+
+        vm.ChangeMaterialFinishCommand.Execute(null);
+
+        Assert.Equal(PartPropertiesViewModel.NotSetText, vm.MaterialDisplay);
+        Assert.False(vm.IsMaterialSet);
+        Assert.Equal(PartPropertiesViewModel.NotSetText, vm.FinishDisplay);
+        Assert.False(vm.IsFinishSet);
+        Assert.Equal(PartPropertiesViewModel.NoWeightText, vm.Weight);
+    }
+
+    [Fact]
+    public void ChangeMaterialFinish_ToAMaterialNotInTheLibrary_Warns()
+    {
+        var changer = new FakeMaterialFinishChanger { Result = new PartMaterialFinish("Imported Stuff", null, "1 kg") };
+        var vm = Create(Complete(), libraryMaterials: TestLibrary, materialFinishChanger: changer);
+        Assert.False(vm.HasMaterialWarning);
+
+        vm.ChangeMaterialFinishCommand.Execute(null);
+
+        Assert.True(vm.HasMaterialWarning);
+    }
+
+    [Fact]
+    public void ChangeMaterialFinish_KeepsPendingEdits()
+    {
+        var target = new FakeTarget();
+        var changer = new FakeMaterialFinishChanger { Result = new PartMaterialFinish("Test Alloy", "Test Anodise", "0.456 kg") };
+        var vm = Create(Complete(), target, materialFinishChanger: changer);
+        vm.Designer = "Someone Else";
+        vm.CostText = "20";
+        Assert.True(vm.HasChanges);
+
+        vm.ChangeMaterialFinishCommand.Execute(null);
+
+        Assert.Equal("Someone Else", vm.Designer);
+        Assert.Equal("20", vm.CostText);
+        Assert.True(vm.HasChanges);
+        Assert.True(vm.ApplyCommand.CanExecute(null));
+
+        vm.ApplyCommand.Execute(null);
+
+        var writes = Assert.Single(target.Calls);
+        Assert.Contains(writes, w => w.Location == PartPropertyStorage.Designer && w.TextValue == "Someone Else");
+        Assert.Contains(writes, w => w.Location == PartPropertyStorage.Cost && w.CurrencyValue == 20m);
+    }
+
+    [Fact]
+    public void ChangeMaterialFinish_NoPendingEdits_StaysClean()
+    {
+        var target = new FakeTarget();
+        var changer = new FakeMaterialFinishChanger { Result = new PartMaterialFinish("Test Alloy", "Test Anodise", "0.456 kg") };
+        var vm = Create(Complete(), target, materialFinishChanger: changer);
+        Assert.False(vm.HasChanges);
+
+        vm.ChangeMaterialFinishCommand.Execute(null);
+
+        Assert.False(vm.HasChanges);
+        Assert.False(vm.ApplyCommand.CanExecute(null));
+        vm.OkCommand.Execute(null);
+        Assert.Empty(target.Calls);
+    }
+
+    [Fact]
+    public void ChangeMaterialFinish_WindowNotShown_ChangesNothing()
+    {
+        var changer = new FakeMaterialFinishChanger { Result = null };
+        var vm = Create(Complete(), libraryMaterials: TestLibrary, materialFinishChanger: changer);
+        var changes = RecordPropertyChanges(vm);
+
+        vm.ChangeMaterialFinishCommand.Execute(null);
+
+        Assert.Equal(1, changer.Calls);
+        Assert.Equal("Test Steel", vm.MaterialDisplay);
+        Assert.Equal("Test Paint", vm.FinishDisplay);
+        Assert.Equal("1.234 kg", vm.Weight);
+        Assert.Empty(changes);
+    }
+
+    [Fact]
+    public void ChangeMaterialFinish_Throws_ShowsTheErrorAndLogsIt()
+    {
+        var log = new RecordingLog();
+        var changer = new FakeMaterialFinishChanger { Throw = new InvalidOperationException("boom") };
+        var vm = Create(Complete(), log: log, materialFinishChanger: changer);
+
+        vm.ChangeMaterialFinishCommand.Execute(null);
+
+        Assert.True(vm.HasError);
+        Assert.Equal(PartPropertiesViewModel.ChangeMaterialFinishErrorPrefix + "boom", vm.StatusText);
+        Assert.Single(log.Errors);
+        Assert.Equal("Test Steel", vm.MaterialDisplay);
     }
 }

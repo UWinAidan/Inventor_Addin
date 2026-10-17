@@ -68,131 +68,160 @@
         </Style>
     </Window.Resources>
 
-    <StackPanel Style="{DynamicResource DialogContent}">
+    <Grid Style="{DynamicResource DialogContent}">
+        <!-- Header, body, footer. The body row is star-sized, so it scrolls when the window is capped at the screen's height. -->
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
         <!--
             The header icon is put in the window's resources by WindowHost (HeaderIcon), in the window's theme.
             Title and subline are OneWay because a Rename changes them.
         -->
-        <controls:DialogHeader Icon="{DynamicResource HeaderIcon}"
+        <controls:DialogHeader Grid.Row="0"
+                               Icon="{DynamicResource HeaderIcon}"
                                Title="{Binding HeaderTitle, Mode=OneWay}"
                                Subline="{Binding HeaderSubline, Mode=OneWay}" />
 
-        <controls:FormSection Heading="Identity">
-            <!--
-                Spec 02, "Display in Part Properties": a number in the format is shown (with a muted note when the
-                register does not hold it), anything else as "Not assigned". The Generate button shows while the file
-                has no registered number and can be edited; for a never-saved file it is disabled and a note says why.
-                The bindings are OneWay because a successful Generate changes them. Access key G.
-            -->
-            <controls:FieldRow Label="Part number">
-                <StackPanel Orientation="Horizontal">
-                    <ContentControl Style="{StaticResource IdentifierOrPlaceholder}"
-                                    Content="{Binding PartNumberDisplay, Mode=OneWay}"
-                                    Tag="{Binding IsPartNumberWellFormed, Mode=OneWay}" />
-                    <TextBlock Style="{DynamicResource SideNoteText}"
-                               Text="{Binding PartNumberNote, Mode=OneWay}"
-                               Visibility="{Binding IsPartNumberUnregistered, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}" />
-                    <Button Style="{DynamicResource SideButton}"
-                            Content="_Generate part number"
-                            Command="{Binding GenerateCommand}"
-                            Visibility="{Binding CanGenerate, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}" />
-                    <TextBlock Style="{DynamicResource SideNoteText}"
-                               Text="{Binding GenerateNote, Mode=OneWay}"
-                               Visibility="{Binding HasGenerateNote, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}" />
-                </StackPanel>
-            </controls:FieldRow>
-            <!--
-                Spec 07: the part name follows the file name and is not edited here. The Rename button (task 047) shows
-                for a saved file that can be edited, and opens the Rename window; afterwards the row and the header show
-                the new name. "Not saved yet" in placeholder colour for a file never saved. Access key R.
-            -->
-            <controls:FieldRow Label="Part name">
-                <StackPanel Orientation="Horizontal">
-                    <ContentControl Style="{StaticResource ValueOrPlaceholder}"
-                                    Content="{Binding PartNameDisplay, Mode=OneWay}"
-                                    Tag="{Binding IsSaved, Mode=OneTime}" />
-                    <Button Style="{DynamicResource SideButton}"
-                            Content="_Rename"
-                            Command="{Binding RenameCommand}"
-                            Visibility="{Binding CanRename, Mode=OneTime, Converter={StaticResource VisibleWhenTrue}}" />
-                </StackPanel>
-            </controls:FieldRow>
-            <controls:FieldRow Label="Part _type" Target="{Binding ElementName=PartTypeBox}">
-                <StackPanel Orientation="Horizontal">
+        <ScrollViewer Grid.Row="1" Style="{DynamicResource DialogBody}">
+            <StackPanel Style="{DynamicResource DialogBodyContent}">
+                <controls:FormSection Heading="Identity">
                     <!--
-                        Not editable. The closed box shows the code; each dropdown entry shows "code: full name".
-                        The template tells the two apart by whether it sits inside a ComboBoxItem (only dropdown
-                        entries do). The tooltip is null for a blank code, so none is shown rather than an empty one.
+                        Spec 02, "Display in Part Properties": a number in the format is shown (with a muted note when the
+                        register does not hold it), anything else as "Not assigned". The Generate button shows while the file
+                        has no registered number and can be edited; for a never-saved file it is disabled and a note says why.
+                        The bindings are OneWay because a successful Generate changes them. Access key G.
                     -->
-                    <ComboBox x:Name="PartTypeBox"
-                              Style="{DynamicResource CodeComboBox}"
-                              IsEditable="False"
-                              IsEnabled="{Binding IsEditable, Mode=OneWay}"
-                              ItemsSource="{Binding PartTypeOptions, Mode=OneWay}"
-                              SelectedValuePath="Code"
-                              SelectedValue="{Binding PartType, Mode=TwoWay}"
-                              ToolTip="{Binding PartTypeToolTip, Mode=OneWay}">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock x:Name="OptionText" Text="{Binding DisplayText, Mode=OneWay}" />
-                                <DataTemplate.Triggers>
-                                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ComboBoxItem}}" Value="{x:Null}">
-                                        <Setter TargetName="OptionText" Property="Text" Value="{Binding Code, Mode=OneWay}" />
-                                    </DataTrigger>
-                                </DataTemplate.Triggers>
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                    <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding PartTypeFullName, Mode=OneWay}" />
-                </StackPanel>
-            </controls:FieldRow>
-        </controls:FormSection>
+                    <controls:FieldRow Label="Part number">
+                        <StackPanel Orientation="Horizontal">
+                            <ContentControl Style="{StaticResource IdentifierOrPlaceholder}"
+                                            Content="{Binding PartNumberDisplay, Mode=OneWay}"
+                                            Tag="{Binding IsPartNumberWellFormed, Mode=OneWay}" />
+                            <TextBlock Style="{DynamicResource SideNoteText}"
+                                       Text="{Binding PartNumberNote, Mode=OneWay}"
+                                       Visibility="{Binding IsPartNumberUnregistered, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}" />
+                            <Button Style="{DynamicResource SideButton}"
+                                    Content="_Generate part number"
+                                    Command="{Binding GenerateCommand}"
+                                    Visibility="{Binding CanGenerate, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}" />
+                            <TextBlock Style="{DynamicResource SideNoteText}"
+                                       Text="{Binding GenerateNote, Mode=OneWay}"
+                                       Visibility="{Binding HasGenerateNote, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}" />
+                        </StackPanel>
+                    </controls:FieldRow>
+                    <!--
+                        Spec 07: the part name follows the file name and is not edited here. The Rename button (task 047) shows
+                        for a saved file that can be edited, and opens the Rename window; afterwards the row and the header show
+                        the new name. "Not saved yet" in placeholder colour for a file never saved. Access key R.
+                    -->
+                    <controls:FieldRow Label="Part name">
+                        <StackPanel Orientation="Horizontal">
+                            <ContentControl Style="{StaticResource ValueOrPlaceholder}"
+                                            Content="{Binding PartNameDisplay, Mode=OneWay}"
+                                            Tag="{Binding IsSaved, Mode=OneTime}" />
+                            <Button Style="{DynamicResource SideButton}"
+                                    Content="_Rename"
+                                    Command="{Binding RenameCommand}"
+                                    Visibility="{Binding CanRename, Mode=OneTime, Converter={StaticResource VisibleWhenTrue}}" />
+                        </StackPanel>
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="Part _type" Target="{Binding ElementName=PartTypeBox}">
+                        <StackPanel Orientation="Horizontal">
+                            <!--
+                                Not editable. The closed box shows the code; each dropdown entry shows "code: full name".
+                                The template tells the two apart by whether it sits inside a ComboBoxItem (only dropdown
+                                entries do). The tooltip is null for a blank code, so none is shown rather than an empty one.
+                            -->
+                            <ComboBox x:Name="PartTypeBox"
+                                      Style="{DynamicResource CodeComboBox}"
+                                      IsEditable="False"
+                                      IsEnabled="{Binding IsEditable, Mode=OneWay}"
+                                      ItemsSource="{Binding PartTypeOptions, Mode=OneWay}"
+                                      SelectedValuePath="Code"
+                                      SelectedValue="{Binding PartType, Mode=TwoWay}"
+                                      ToolTip="{Binding PartTypeToolTip, Mode=OneWay}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock x:Name="OptionText" Text="{Binding DisplayText, Mode=OneWay}" />
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ComboBoxItem}}" Value="{x:Null}">
+                                                <Setter TargetName="OptionText" Property="Text" Value="{Binding Code, Mode=OneWay}" />
+                                            </DataTrigger>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding PartTypeFullName, Mode=OneWay}" />
+                        </StackPanel>
+                    </controls:FieldRow>
+                </controls:FormSection>
 
-        <controls:FormSection Heading="People">
-            <controls:FieldRow Label="_Designer" Target="{Binding ElementName=DesignerBox}">
-                <TextBox x:Name="DesignerBox"
-                         IsEnabled="{Binding IsEditable, Mode=OneWay}"
-                         Text="{Binding Designer, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-            </controls:FieldRow>
-            <controls:FieldRow Label="D_etailer" Target="{Binding ElementName=DetailerBox}">
-                <TextBox x:Name="DetailerBox"
-                         IsEnabled="{Binding IsEditable, Mode=OneWay}"
-                         Text="{Binding Detailer, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-            </controls:FieldRow>
-        </controls:FormSection>
+                <controls:FormSection Heading="People">
+                    <controls:FieldRow Label="_Designer" Target="{Binding ElementName=DesignerBox}">
+                        <TextBox x:Name="DesignerBox"
+                                 IsEnabled="{Binding IsEditable, Mode=OneWay}"
+                                 Text="{Binding Designer, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="D_etailer" Target="{Binding ElementName=DetailerBox}">
+                        <TextBox x:Name="DetailerBox"
+                                 IsEnabled="{Binding IsEditable, Mode=OneWay}"
+                                 Text="{Binding Detailer, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </controls:FieldRow>
+                </controls:FormSection>
 
-        <controls:FormSection Heading="Cost and make-up">
-            <controls:FieldRow Label="_Cost" Target="{Binding ElementName=CostBox}">
-                <TextBox x:Name="CostBox"
-                         Style="{DynamicResource NarrowTextBox}"
-                         IsEnabled="{Binding IsEditable, Mode=OneWay}"
-                         Text="{Binding CostText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-            </controls:FieldRow>
-            <controls:FieldRow Label="Material">
-                <ContentControl Style="{StaticResource ValueOrPlaceholder}"
-                                Content="{Binding MaterialDisplay, Mode=OneTime}"
-                                Tag="{Binding IsMaterialSet, Mode=OneTime}" />
-            </controls:FieldRow>
-            <controls:FieldRow Label="Finish">
-                <ContentControl Style="{StaticResource ValueOrPlaceholder}"
-                                Content="{Binding FinishDisplay, Mode=OneTime}"
-                                Tag="{Binding IsFinishSet, Mode=OneTime}" />
-            </controls:FieldRow>
-            <controls:FieldRow Label="Weight">
-                <!-- The view-model gives a dash when the weight could not be read. -->
-                <TextBlock Style="{DynamicResource ValueText}" Text="{Binding Weight, Mode=OneTime}" />
-            </controls:FieldRow>
-        </controls:FormSection>
+                <controls:FormSection Heading="Cost and make-up">
+                    <controls:FieldRow Label="_Cost" Target="{Binding ElementName=CostBox}">
+                        <TextBox x:Name="CostBox"
+                                 Style="{DynamicResource NarrowTextBox}"
+                                 IsEnabled="{Binding IsEditable, Mode=OneWay}"
+                                 Text="{Binding CostText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </controls:FieldRow>
+                    <!--
+                        Spec 07 (task 076): Change opens the Material and Finish window over this one, for a part that can be
+                        edited (disabled for an assembly and a file that cannot be edited). When it closes, Material, Finish and
+                        Weight show what the file holds, so their bindings are OneWay. A part whose material is not in the
+                        library shows a muted warning under the value; it never blocks Apply. Spec 08 has no warning style, so
+                        the muted text style is used. Access key H.
+                    -->
+                    <controls:FieldRow Label="Material">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <ContentControl Style="{StaticResource ValueOrPlaceholder}"
+                                                Content="{Binding MaterialDisplay, Mode=OneWay}"
+                                                Tag="{Binding IsMaterialSet, Mode=OneWay}" />
+                                <Button Style="{DynamicResource SideButton}"
+                                        Content="C_hange"
+                                        Command="{Binding ChangeMaterialFinishCommand}" />
+                            </StackPanel>
+                            <TextBlock Style="{DynamicResource MutedText}"
+                                       Text="{Binding MaterialWarning, Mode=OneWay}"
+                                       Visibility="{Binding HasMaterialWarning, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}" />
+                        </StackPanel>
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="Finish">
+                        <ContentControl Style="{StaticResource ValueOrPlaceholder}"
+                                        Content="{Binding FinishDisplay, Mode=OneWay}"
+                                        Tag="{Binding IsFinishSet, Mode=OneWay}" />
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="Weight">
+                        <!-- The view-model gives a dash when the weight could not be read. -->
+                        <TextBlock Style="{DynamicResource ValueText}" Text="{Binding Weight, Mode=OneWay}" />
+                    </controls:FieldRow>
+                </controls:FormSection>
+            </StackPanel>
+        </ScrollViewer>
 
         <!--
             Status line and buttons in one row: the status line wraps in the left column and is not drawn when empty,
             so there is no band between the last row and the buttons. Error style for a validation or write error.
         -->
-        <controls:DialogFooter Status="{Binding StatusText, Mode=OneWay}" IsError="{Binding HasError, Mode=OneWay}">
+        <controls:DialogFooter Grid.Row="2" Status="{Binding StatusText, Mode=OneWay}" IsError="{Binding HasError, Mode=OneWay}">
             <Button Content="_Apply" Command="{Binding ApplyCommand}" />
             <Button Style="{DynamicResource PrimaryButton}" Content="OK" IsDefault="True" Command="{Binding OkCommand}" />
             <!-- IsCancel closes a dialog shown with ShowDialog; nothing is written. -->
             <Button Content="Cancel" IsCancel="True" />
         </controls:DialogFooter>
-    </StackPanel>
+    </Grid>
 </Window>

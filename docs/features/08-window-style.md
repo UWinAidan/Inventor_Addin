@@ -85,6 +85,14 @@ Every window has the same three bands:
 2. **Body.** One or more sections. A section is a heading and a two-column grid of label and value.
 3. **Footer.** The status line on the left, buttons on the right. The status line and the buttons share one row.
 
+**Never taller than the screen** (Aidan, 2026-10-17). No window is taller than the working area of the screen it opens on (the screen less the taskbar), and none opens with its bottom off the screen. When the content is taller, the body scrolls and the header and footer stay visible. How it is built: each window's content is a Grid in the `DialogContent` style with the header, the body in a `ScrollViewer` in the `DialogBody` style on a star-sized row, and the footer; `WindowHost` caps the height and moves the window up if it would run off the bottom. A XAML rules test checks the layout of every window.
+
+**Resizable windows** (Aidan, 2026-10-17; Settings so far). The XAML sets `ResizeMode="CanResize"` and the root Grid uses `ResizableDialogContent`, which widens with the window. `WindowHost` gives it the `ResizableDialogWindow` style (620 wide to start, as tall as its content, at least 460 by 320). It is resized by dragging its edges. Like every dialog it has only the close button: no minimise or maximise button, and snapping it to the top of the screen does not maximise it (Aidan, 2026-10-17). It never opens taller than the working area. Shown with a state key, it reopens at the size and position it had when it closed, Cancel included, pulled back onto a screen that still exists (Default).
+
+**Scroll bars** (Aidan, 2026-10-17). One implicit `ScrollBar` style in `Styles.xaml` for every scroll bar: 8 thick, no arrow buttons, a transparent track, a rounded thumb in the input border colour that turns the muted text colour on hover and while dragged; colours from the theme dictionaries only. In a window's body the bar sits in the right margin, outside the content column, 12 from the content, so the content's right edge lines up with the header and footer whether or not the bar shows (`DialogBody` and `DialogBodyContent`). In the Mass Update list (`ListScroller`) the bar keeps a 12 gap from the entries in a column that is always reserved.
+
+**Collapsible sections** (Aidan, 2026-10-17). `CollapsibleSection` in `UI/Controls` is a section whose heading line is a button: a chevron, the heading, and, while collapsed, a one-line summary of the section's values in muted text, cut short with an ellipsis (the tooltip has it all). Sections start expanded. A window shown with a state key remembers which of its named sections were collapsed. Window state lives in `windows.json` beside `settings.json` (Default), written whenever the window closes.
+
 ## The three windows
 
 **Part Properties**
@@ -107,11 +115,13 @@ Every window has the same three bands:
 **Settings**
 
 - Header: "Settings", with "AWB Addin" under it.
+- **One scrolling page of collapsible sections** (Aidan, 2026-10-17, replacing tabs, whose labels were cut off and showed too little at once): General, Part numbers, Folders, Material and finish, Developer, in that order, each a `CollapsibleSection`. Collapsed summaries (Default wording): General "designer, N other names, units" ("No default designer" when blank); Part numbers the register folder or "No shared register"; Folders "work folder, N other folders"; Material and finish each file's name, or "starter library" and "starter finish list"; Developer "Developer tools shown" or "hidden". The window is resizable by its edges, with only the close button, and remembered ("Resizable windows" above); Save and Cancel stay visible below the scrolling page.
 - Section **General**: Default designer (text box) with its one-line explanation under it in muted text.
 - Section **General** also has Other names (text box, under Default designer; help text "Names in old files that mean you, separated by commas, for example Aidan.Brown, 4aida. Your Windows user name always counts.") and New file units (dropdown: Metric, Imperial; was "Units for new files", shortened to fit the label column, task 049).
 - Section **Part numbers**: Register folder (text box) with a Browse button beside it in the side button style, and its help text under it (tasks 037 and 049).
 - Section **Folders** (task 049): Work folder (text box, Browse beside it; help text "Where New Part and Mass Update start, and the first folder Rename searches."), and Other folders, the Other CAD folders setting (a four-line text box, one folder per line; help text "Other folders that hold your CAD. Rename searches these too."). The label is shortened so it fits the 100-wide label column.
-- Labels are kept short enough for the 100-wide label column; the help text carries the explanation. Access keys are unique across the window: D, N, U, R, B (Browse, register folder), W, E (Browse, work folder), O, S.
+- Section **Material and finish** (task 070): Material library and Finish list (text boxes, Browse beside each opening a file picker for `*.adsklib` or `*.csv`; help text says blank uses the starter file shipped with the add-in). Whether the file exists is checked on Save.
+- Labels are kept short enough for the 100-wide label column; the help text carries the explanation. Access keys are unique across the window: D, N, U, R, B (Browse, register folder), W, E (Browse, work folder), O, M, F, S. The two Browse buttons in Material and finish have none: every letter of "Browse" is taken.
 - Section **Developer**: Show developer tools (checkbox), with the note that it takes effect when Inventor next starts.
 - Footer: error text when a save fails; Save (primary), Cancel.
 
@@ -120,6 +130,16 @@ Every window has the same three bands:
 - Header: "AWB Addin", with the version under it.
 - One section, no heading: Built, Inventor version, Log folder, as label and text rows. The log folder is in the identifier font.
 - Footer: Close (primary).
+
+**Select Material and Finish** (spec 03, "Target window"; task 075)
+
+- Header: the `MaterialFinish` icon; the part's file name, or "N parts selected" in an assembly, as the title. Under it, the current material and finish with its code, for example "Steel, 1018 · Hard chrome (HC)", or "No material", "No finish", "Varies".
+- Section **Filter**: Category (dropdown, "All" first), then *Preferred only* and *Show paints* as a line of checkboxes.
+- Two columns side by side, 12 apart. Left, section **Materials**: Find material (search box), then the materials list, each entry a star (filled when preferred; click it, or press Space on the entry, to change it) and the name. Right, section **Finishes**: Find finish, then the finishes list, each entry the name with its code on the right in the identifier font. The lists are pick lists: 260 wide and 280 tall, so the window keeps its size while filters change, and they scroll.
+- Row **Selected**, always shown: the selected material and finish, "No material selected" in placeholder colour when there is none, and a muted note when a filter or search hides the selection from its list.
+- Footer: status line (its tooltip lists every note behind it); Apply, OK (primary), Cancel.
+- Keyboard: Enter in a search box moves to its list. Double-clicking a material moves to Finishes; double-clicking a finish does OK. Access keys: C, P, S, M, F, A.
+- Shared pieces added for it in `Styles.xaml`: `PickList` and `PickListItem` (a list to pick one entry from: input fill and border, Divider fill and semibold on the selected entry, an Accent outline on the entry with keyboard focus), `StarButton`, and `LeftColumn` (12 to the right). `DialogFooter` gained `StatusToolTip`, a tooltip on the status line only.
 
 ## Part number display
 
@@ -141,7 +161,7 @@ Replaced in M2 (task 039) by spec 02, "Part number": a Part Number in the `AWB-1
 
 - Every ribbon button gets an icon in 16 px and 32 px. The ribbon shows the 32 px icon on a large button and the 16 px icon on a small one. The buttons on the ribbon today, by panel, with their size (sizes: Aidan, 2026-10-11, spec 02; panels: Aidan, 2026-10-12, spec 01):
   - Create: New Part (large), Save As Copy (small), Save As and Replace (small)
-  - Properties: Part Properties (large), Mass Update (small)
+  - Properties: Part Properties (large), Mass Update (small), Material and Finish (small, icon `MaterialFinish`, task 073; button task 075)
   - Drawing: Create Print (large)
   - Developer: Export Model Data (small), Export Libraries (small)
   - AWB: Settings (small), About (small)
