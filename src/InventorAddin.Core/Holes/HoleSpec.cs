@@ -106,6 +106,13 @@ public static class HoleStandards
 /// Blind holes: the Name of the Drill Point row. Null takes the row marked Default, else the first.
 /// </param>
 /// <param name="Flip">The direction is flipped, as Inventor's Flip.</param>
+/// <remarks>
+/// A depth typed as an Inventor expression (<c>d0</c>, <c>1.5*d0+1</c>, <c>12 mm</c>; task 100) keeps its text in
+/// <see cref="ThreadDepthExpression"/>, <see cref="DrillDepthExpression"/> or <see cref="DepthExpression"/>, beside
+/// its value: the depth field holds what the expression came to when it was checked, in the spec's units, and every
+/// check uses that value. The add-in writes the expression into the hole's parameter, so the hole stays parametric.
+/// An expression is null for a depth typed as a plain number.
+/// </remarks>
 public sealed record HoleSpec(
     HoleUnits Units,
     HoleKind Kind,
@@ -127,17 +134,28 @@ public sealed record HoleSpec(
         units, HoleKind.Clearance, HoleSeat.None, size, null, ClearanceFit.Normal, PrecisionFit.Normal, null,
         null, null, HoleTermination.ThroughAll, null, null, false);
 
+    /// <summary>Tapped holes: the expression <see cref="ThreadDepth"/> came from, or null for a plain number.</summary>
+    public string? ThreadDepthExpression { get; init; }
+
+    /// <summary>Tapped holes: the expression <see cref="DrillDepth"/> came from, or null for a plain number.</summary>
+    public string? DrillDepthExpression { get; init; }
+
+    /// <summary>Clearance and dowel holes: the expression <see cref="Depth"/> came from, or null for a plain number.</summary>
+    public string? DepthExpression { get; init; }
+
     /// <summary>True when the hole ends at a distance and so has a bottom.</summary>
     public bool IsBlind => Termination == HoleTermination.Distance;
 
     /// <summary>
     /// The same spec with every choice that does not apply to its kind, seat and termination put back to its default
-    /// (null, or Normal for the fits), so two specs that build the same hole compare equal. This is what
-    /// <see cref="HoleStoredData"/> stores.
+    /// (null, or Normal for the fits), so two specs that build the same hole compare equal. A depth's expression is
+    /// trimmed, and goes with its depth: null when the depth is. This is what <see cref="HoleStoredData"/> stores.
     /// </summary>
     public HoleSpec Normalised()
     {
         var seated = Seat != HoleSeat.None;
+        var tapped = Kind == HoleKind.Tapped;
+        var depthApplies = IsBlind && !tapped;
         return this with
         {
             Size = Size.Trim(),
@@ -145,10 +163,13 @@ public sealed record HoleSpec(
             ClearanceFit = Kind == HoleKind.Clearance && Seat == HoleSeat.None ? ClearanceFit : ClearanceFit.Normal,
             PrecisionFit = Kind == HoleKind.Dowel ? PrecisionFit : PrecisionFit.Normal,
             Tolerance = Kind == HoleKind.Dowel ? Tolerance?.Trim() : null,
-            ThreadDepth = Kind == HoleKind.Tapped ? ThreadDepth : null,
-            DrillDepth = Kind == HoleKind.Tapped ? DrillDepth : null,
-            Depth = IsBlind && Kind != HoleKind.Tapped ? Depth : null,
+            ThreadDepth = tapped ? ThreadDepth : null,
+            DrillDepth = tapped ? DrillDepth : null,
+            Depth = depthApplies ? Depth : null,
             DrillPoint = IsBlind ? DrillPoint?.Trim() : null,
+            ThreadDepthExpression = tapped && ThreadDepth is not null ? HoleExpressions.Clean(ThreadDepthExpression) : null,
+            DrillDepthExpression = tapped && DrillDepth is not null ? HoleExpressions.Clean(DrillDepthExpression) : null,
+            DepthExpression = depthApplies && Depth is not null ? HoleExpressions.Clean(DepthExpression) : null,
         };
     }
 }

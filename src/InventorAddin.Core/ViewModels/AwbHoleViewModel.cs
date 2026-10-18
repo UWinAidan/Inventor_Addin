@@ -212,6 +212,7 @@ public sealed class AwbHoleViewModel : ObservableObject
     private readonly HoleWorkbook _workbook;
     private readonly string _partName;
     private readonly HoleLastDepths _lastDepths;
+    private readonly IHoleExpressionChecker? _expressionChecker;
 
     // The fields, in window order.
     private HoleUnits _units;
@@ -253,8 +254,14 @@ public sealed class AwbHoleViewModel : ObservableObject
     private int _centreCount;
     private bool _canPickCentres = true;
 
-    // Depth box text that is not a number, by field; cleared by every change that reaches the fields.
+    // Depth box text that is not a number, by field, and Inventor's reason when it gave one; cleared by every change
+    // that reaches the fields.
     private readonly Dictionary<HoleField, string> _invalidText = [];
+    private readonly Dictionary<HoleField, string> _invalidReason = [];
+
+    // The expression each depth was typed as (task 100), with the value it came to. It holds only while the depth
+    // still has that value: a depth changed any other way (a units switch, a new size's defaults) is a plain number.
+    private readonly Dictionary<HoleField, (string Text, decimal Value)> _expressions = [];
 
     private HoleSpec _spec;
     private HoleBuildResult _build;
@@ -276,13 +283,15 @@ public sealed class AwbHoleViewModel : ObservableObject
         bool madeByInventor,
         IEnumerable<string>? inventorHoleNotes,
         IEnumerable<HoleWorkbookProblem>? problems,
-        HoleLastDepths? lastDepths)
+        HoleLastDepths? lastDepths,
+        IHoleExpressionChecker? expressionChecker)
     {
         ArgumentNullException.ThrowIfNull(workbook);
 
         _workbook = workbook;
         _partName = (partName ?? "").Trim();
         _lastDepths = lastDepths ?? HoleLastDepths.None;
+        _expressionChecker = expressionChecker;
         IsEdit = editSpec is not null;
         IsInventorHole = madeByInventor;
         InventorHoleNotes = (inventorHoleNotes ?? [])
@@ -319,6 +328,9 @@ public sealed class AwbHoleViewModel : ObservableObject
             _drillPoint = spec.DrillPoint;
             _flip = spec.Flip;
             _depthUnits = _units;
+            OpenExpression(HoleField.ThreadDepth, spec.ThreadDepthExpression, ref _threadDepth);
+            OpenExpression(HoleField.DrillDepth, spec.DrillDepthExpression, ref _drillDepth);
+            OpenExpression(HoleField.Depth, spec.DepthExpression, ref _depth);
             Refresh(keepExact: true);
         }
 
@@ -340,12 +352,16 @@ public sealed class AwbHoleViewModel : ObservableObject
     /// <param name="partName">The part's file name, for the header subline.</param>
     /// <param name="problems">The workbook's problems; the status line counts them at open, not as an error.</param>
     /// <param name="lastDepths">The last blind depth used in each units; a blind hole starts at it.</param>
+    /// <param name="expressionChecker">
+    /// Reads depth text that is not a plain number as Inventor does (task 100); without one, such text is refused.
+    /// </param>
     public AwbHoleViewModel(
         HoleWorkbook workbook,
         string partName,
         IEnumerable<HoleWorkbookProblem>? problems = null,
-        HoleLastDepths? lastDepths = null)
-        : this(workbook, partName, null, false, null, problems, lastDepths)
+        HoleLastDepths? lastDepths = null,
+        IHoleExpressionChecker? expressionChecker = null)
+        : this(workbook, partName, null, false, null, problems, lastDepths, expressionChecker)
     {
     }
 
@@ -358,10 +374,11 @@ public sealed class AwbHoleViewModel : ObservableObject
         string partName,
         HoleSpec spec,
         IEnumerable<HoleWorkbookProblem>? problems = null,
-        HoleLastDepths? lastDepths = null)
+        HoleLastDepths? lastDepths = null,
+        IHoleExpressionChecker? expressionChecker = null)
     {
         ArgumentNullException.ThrowIfNull(spec);
-        return new AwbHoleViewModel(workbook, partName, spec, false, null, problems, lastDepths);
+        return new AwbHoleViewModel(workbook, partName, spec, false, null, problems, lastDepths, expressionChecker);
     }
 
     /// <summary>
@@ -376,10 +393,12 @@ public sealed class AwbHoleViewModel : ObservableObject
         HoleSpec closestSpec,
         IEnumerable<string>? notes = null,
         IEnumerable<HoleWorkbookProblem>? problems = null,
-        HoleLastDepths? lastDepths = null)
+        HoleLastDepths? lastDepths = null,
+        IHoleExpressionChecker? expressionChecker = null)
     {
         ArgumentNullException.ThrowIfNull(closestSpec);
-        return new AwbHoleViewModel(workbook, partName, closestSpec, true, notes, problems, lastDepths);
+        return new AwbHoleViewModel(
+            workbook, partName, closestSpec, true, notes, problems, lastDepths, expressionChecker);
     }
 
     /// <summary>
@@ -392,12 +411,14 @@ public sealed class AwbHoleViewModel : ObservableObject
         string partName,
         HoleReadBackResult readBack,
         IEnumerable<HoleWorkbookProblem>? problems = null,
-        HoleLastDepths? lastDepths = null)
+        HoleLastDepths? lastDepths = null,
+        IHoleExpressionChecker? expressionChecker = null)
     {
         ArgumentNullException.ThrowIfNull(readBack);
         return readBack.IsInventorHole
-            ? ForInventorHole(workbook, partName, readBack.Spec, readBack.Notes, problems, lastDepths)
-            : ForEdit(workbook, partName, readBack.Spec, problems, lastDepths);
+            ? ForInventorHole(
+                workbook, partName, readBack.Spec, readBack.Notes, problems, lastDepths, expressionChecker)
+            : ForEdit(workbook, partName, readBack.Spec, problems, lastDepths, expressionChecker);
     }
 
     /// <summary>
@@ -691,7 +712,10 @@ public sealed class AwbHoleViewModel : ObservableObject
     }
 
     // The depth boxes. The window binds these texts, not the numbers, so text that is not a number is kept in the box
-    // with a message beside it, and the number keeps its last value (task 090).
+    // with a message beside it, and the number keeps its last value (task 090). With an expression checker, text that
+    // is not a plain number is read as Inventor reads it (task 100): a length with a unit, the part's parameters, or an
+    // expression of them. The box then shows the expression, the number holds its value in the units' length, and the
+    // spec carries both, so every check uses the value and the add-in writes the expression.
 
     /// <summary>The length unit of the units chosen, <c>mm</c> or <c>in</c>, beside the depth boxes.</summary>
     public string LengthUnitText => _units == HoleUnits.Imperial ? "in" : "mm";
@@ -717,7 +741,10 @@ public sealed class AwbHoleViewModel : ObservableObject
         set => SetText(HoleField.Depth, value, nameof(DepthText), v => Depth = v);
     }
 
-    /// <summary>True while a depth box holds text that is not a number; OK is disabled until it is fixed.</summary>
+    /// <summary>
+    /// True while a depth box holds text that is not a number, or an expression Inventor cannot read as a length; OK is
+    /// disabled until it is fixed.
+    /// </summary>
     public bool HasTextThatIsNotANumber => _invalidText.Count > 0;
 
     /// <summary>The Drill Point rows; empty unless the hole ends at a distance.</summary>
@@ -814,13 +841,13 @@ public sealed class AwbHoleViewModel : ObservableObject
 
     public string? ToleranceProblem => ProblemFor(HoleField.Tolerance);
 
-    /// <summary><see cref="NotANumberText"/> while the box holds text that is not a number, else the field's checks.</summary>
+    /// <summary>Why the box's text is not a length while it is not one, else the field's checks.</summary>
     public string? ThreadDepthProblem => NotANumber(HoleField.ThreadDepth) ?? ProblemFor(HoleField.ThreadDepth);
 
-    /// <summary><see cref="NotANumberText"/> while the box holds text that is not a number, else the field's checks.</summary>
+    /// <summary>Why the box's text is not a length while it is not one, else the field's checks.</summary>
     public string? DrillDepthProblem => NotANumber(HoleField.DrillDepth) ?? ProblemFor(HoleField.DrillDepth);
 
-    /// <summary><see cref="NotANumberText"/> while the box holds text that is not a number, else the field's checks.</summary>
+    /// <summary>Why the box's text is not a length while it is not one, else the field's checks.</summary>
     public string? DepthProblem => NotANumber(HoleField.Depth) ?? ProblemFor(HoleField.Depth);
 
     public string? DrillPointProblem => ProblemFor(HoleField.DrillPoint);
@@ -961,6 +988,7 @@ public sealed class AwbHoleViewModel : ObservableObject
         try
         {
             _invalidText.Clear();
+            _invalidReason.Clear();
             apply();
             Refresh(keepExact: false);
             ClearRefused();
@@ -1384,7 +1412,12 @@ public sealed class AwbHoleViewModel : ObservableObject
             _termination,
             _depth,
             _drillPoint,
-            _flip).Normalised();
+            _flip)
+        {
+            ThreadDepthExpression = ExpressionOf(HoleField.ThreadDepth, _threadDepth),
+            DrillDepthExpression = ExpressionOf(HoleField.DrillDepth, _drillDepth),
+            DepthExpression = ExpressionOf(HoleField.Depth, _depth),
+        }.Normalised();
 
         var build = HoleRules.Build(spec, _workbook, Math.Max(1, _centreCount));
         var checks = _centreCount >= 1
@@ -1428,7 +1461,47 @@ public sealed class AwbHoleViewModel : ObservableObject
     }
 
     private string TextOf(HoleField field, decimal? value) =>
-        _invalidText.TryGetValue(field, out var text) ? text : FormatNumber(value);
+        _invalidText.TryGetValue(field, out var text) ? text : ExpressionOf(field, value) ?? FormatNumber(value);
+
+    /// <summary>The expression <paramref name="value"/> was typed as, while the depth still has the value it came to.</summary>
+    private string? ExpressionOf(HoleField field, decimal? value) =>
+        value is { } v && _expressions.TryGetValue(field, out var expression) && expression.Value == v
+            ? expression.Text
+            : null;
+
+    /// <summary>
+    /// An edited hole's depth expression: checked again when there is a checker, since the part's parameters may have
+    /// changed since the hole was made, so the depth takes the value it comes to now; shown as text that is not a
+    /// length when Inventor can no longer read it. Without a checker the stored value stands.
+    /// </summary>
+    private void OpenExpression(HoleField field, string? expression, ref decimal? value)
+    {
+        if (HoleExpressions.Clean(expression) is not { } text || value is null)
+        {
+            return;
+        }
+
+        if (_expressionChecker is null)
+        {
+            _expressions[field] = (text, value.Value);
+            return;
+        }
+
+        var check = _expressionChecker.Check(text, _units);
+        if (check is { IsValid: true, ValueCm: { } cm })
+        {
+            value = HoleReadBack.FromCm(cm, _units);
+            _expressions[field] = (text, value.Value);
+        }
+        else
+        {
+            _invalidText[field] = text;
+            if (check.Reason is { } reason)
+            {
+                _invalidReason[field] = reason;
+            }
+        }
+    }
 
     /// <summary>A depth for its box: up to six decimals, no trailing zeros, in the user's number format.</summary>
     public static string FormatNumber(decimal? value) =>
@@ -1450,24 +1523,51 @@ public sealed class AwbHoleViewModel : ObservableObject
     private void SetText(HoleField field, string? text, string textProperty, Action<decimal?> set)
     {
         var raw = text ?? "";
+        var trimmed = raw.Trim();
         decimal? value = null;
-        if (raw.Trim().Length > 0)
+        string? expression = null;
+        if (trimmed.Length > 0)
         {
-            if (!TryParseNumber(raw, out var parsed))
+            if (TryParseNumber(raw, out var parsed))
             {
-                _invalidText[field] = raw;
-                OnPropertyChanged(textProperty);
-                OnPropertyChanged(ProblemPropertyOf(field));
-                OnPropertyChanged(nameof(HasTextThatIsNotANumber));
-                OnPropertyChanged(nameof(CanOk));
-                OkCommand.RaiseCanExecuteChanged();
-                return;
+                value = parsed;
             }
+            else
+            {
+                var check = _expressionChecker?.Check(trimmed, _units) ?? HoleExpressionCheck.Invalid();
+                if (check is not { IsValid: true, ValueCm: { } cm })
+                {
+                    _invalidText[field] = raw;
+                    _invalidReason.Remove(field);
+                    if (check.Reason is { } reason)
+                    {
+                        _invalidReason[field] = reason;
+                    }
 
-            value = parsed;
+                    OnPropertyChanged(textProperty);
+                    OnPropertyChanged(ProblemPropertyOf(field));
+                    OnPropertyChanged(nameof(HasTextThatIsNotANumber));
+                    OnPropertyChanged(nameof(CanOk));
+                    OkCommand.RaiseCanExecuteChanged();
+                    return;
+                }
+
+                value = HoleReadBack.FromCm(cm, _units);
+                expression = trimmed;
+            }
         }
 
         var wasInvalid = _invalidText.Remove(field);
+        _invalidReason.Remove(field);
+        if (expression is not null && value is { } typed)
+        {
+            _expressions[field] = (expression, typed);
+        }
+        else
+        {
+            _expressions.Remove(field);
+        }
+
         set(value);
 
         // The number may not have changed ("12.0" for 12, or the old text was not a number): show it as it is.
@@ -1481,7 +1581,16 @@ public sealed class AwbHoleViewModel : ObservableObject
         }
     }
 
-    private string? NotANumber(HoleField field) => _invalidText.ContainsKey(field) ? NotANumberText : null;
+    /// <summary>
+    /// Why the box's text is not a length: Inventor's reason when it gave one, else
+    /// <see cref="HoleExpressions.NotALengthText"/> when there is a checker to read expressions, else
+    /// <see cref="NotANumberText"/>. Null while the text is a length.
+    /// </summary>
+    private string? NotANumber(HoleField field) =>
+        !_invalidText.ContainsKey(field) ? null
+        : _invalidReason.TryGetValue(field, out var reason) ? reason
+        : _expressionChecker is null ? NotANumberText
+        : HoleExpressions.NotALengthText;
 
     private static string ProblemPropertyOf(HoleField field) => field switch
     {

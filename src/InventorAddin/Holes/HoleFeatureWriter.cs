@@ -124,6 +124,8 @@ namespace InventorAddin.Holes
                     SetThreadDepth(hole, geometry);
                     SetExtent(hole, geometry, endFace);
                 }
+
+                WriteExpressions(hole, geometry);
             }
             catch (Exception ex)
             {
@@ -164,7 +166,12 @@ namespace InventorAddin.Holes
         {
             HoleFeatures features = doc.ComponentDefinition.Features.HoleFeatures;
             if (geometry.Thread is not { } thread)
-                return AddWith(features, features.CreateSketchPlacementDefinition(centres), geometry.HoleDiameterCm, geometry, endFace);
+            {
+                HoleFeature drilled = AddWith(
+                    features, features.CreateSketchPlacementDefinition(centres), geometry.HoleDiameterCm, geometry, endFace);
+                WriteExpressions(drilled, geometry);
+                return drilled;
+            }
 
             // Inventor's own tap info, so the hole shows its thread in the model (task 095: a hole made with the
             // hidden _CreateTapInfo has no pitch and shows none). The workbook's tap drill is written afterwards.
@@ -174,6 +181,7 @@ namespace InventorAddin.Holes
             HoleFeature hole = AddWith(features, features.CreateSketchPlacementDefinition(centres), tapInfo, geometry, endFace);
             ComSafe.Run(() => doc.Update());
             SetTapDrill(hole, thread, notes, log);
+            WriteExpressions(hole, geometry);
             return hole;
         }
 
@@ -335,6 +343,34 @@ namespace InventorAddin.Holes
                 return;
             if (ComSafe.Get(() => hole.TapInfo) is HoleTapInfo tap)
                 tap.ThreadDepth.Value = thread.ThreadDepthCm;
+        }
+
+        /// <summary>
+        /// Writes each depth typed as an expression into its parameter, so the hole stays parametric (task 100). The
+        /// depths already hold the values the expressions came to, so this changes nothing unless the part's
+        /// parameters moved since the window checked them. Each parameter first takes the window's length unit, so a
+        /// number with no unit in the expression reads as the window read it (spike 100). A depth typed as a plain
+        /// number is left as the value in centimetres written above: writing a value replaces an earlier expression
+        /// (spike 100), and it keeps the hole's parameters in the units they were in. Inventor refuses an expression
+        /// that refers to the hole's own parameters; that throws, and the caller refuses the change.
+        /// </summary>
+        private static void WriteExpressions(HoleFeature hole, HoleGeometry g)
+        {
+            if (g.Termination != HoleTermination.Distance)
+                return;
+
+            string unit = HoleExpressions.UnitName(g.ExpressionUnits);
+            if (g.Thread is { FullDepth: false, ThreadDepthExpression: { } threadExpression }
+                && ComSafe.Get(() => hole.TapInfo) is HoleTapInfo tap)
+                WriteExpression(tap.ThreadDepth, threadExpression, unit);
+            if (g.DepthExpression is { } depthExpression && ComSafe.Get(() => hole.Extent) is DistanceExtent extent)
+                WriteExpression(extent.Distance, depthExpression, unit);
+        }
+
+        private static void WriteExpression(Parameter parameter, string expression, string unit)
+        {
+            parameter.set_Units(unit);
+            parameter.Expression = expression;
         }
 
         /// <summary>

@@ -142,7 +142,9 @@ public sealed record HoleStoredDataReadResult(HoleStoredData? Data, string Messa
 /// The AWB settings stored on a hole feature, as the <see cref="AttributeSetName"/> attribute set (spec 09, "The
 /// command"; spike 081): the spec the user chose and the state the add-in applied. Written with
 /// <see cref="ToAttributes"/> and read back with <see cref="Read"/>. Enums are stored as their names, lengths as
-/// doubles in the spec's units, flags as integers 0 or 1.
+/// doubles in the spec's units, flags as integers 0 or 1. A depth typed as an Inventor expression stores its text too
+/// (<see cref="DepthExpressionName"/> and the like, task 100), beside the value it came to; data written before
+/// task 100 has none, and reads as plain numbers, so the version is unchanged.
 /// </summary>
 public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
 {
@@ -166,6 +168,9 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
     public const string TerminationName = "Termination";
     public const string DepthName = "Depth";
     public const string DrillPointName = "DrillPoint";
+    public const string ThreadDepthExpressionName = "ThreadDepthExpression";
+    public const string DrillDepthExpressionName = "DrillDepthExpression";
+    public const string DepthExpressionName = "DepthExpression";
     public const string FlipName = "Flip";
     public const string AppliedDiameterName = "AppliedDiameterCm";
     public const string AppliedIsoCodeName = "AppliedToleranceIsoCode";
@@ -227,6 +232,9 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
         AddNumber(DepthName, spec.Depth);
         AddText(DrillPointName, spec.DrillPoint);
         attributes.Add(new HoleAttribute(FlipName, spec.Flip ? 1 : 0));
+        AddText(ThreadDepthExpressionName, spec.ThreadDepthExpression);
+        AddText(DrillDepthExpressionName, spec.DrillDepthExpression);
+        AddText(DepthExpressionName, spec.DepthExpression);
 
         attributes.Add(new HoleAttribute(AppliedDiameterName, Applied.HoleDiameterCm));
         AddText(AppliedIsoCodeName, Applied.ToleranceIsoCode);
@@ -337,7 +345,12 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
                 termination,
                 blind && kind != HoleKind.Tapped ? RequiredDecimal(DepthName) : null,
                 blind ? OptionalText(DrillPointName) : null,
-                RequiredFlag(FlipName));
+                RequiredFlag(FlipName))
+            {
+                ThreadDepthExpression = kind == HoleKind.Tapped ? OptionalText(ThreadDepthExpressionName) : null,
+                DrillDepthExpression = kind == HoleKind.Tapped ? OptionalText(DrillDepthExpressionName) : null,
+                DepthExpression = blind && kind != HoleKind.Tapped ? OptionalText(DepthExpressionName) : null,
+            };
 
             var applied = new HoleAppliedState(
                 RequiredDouble(AppliedDiameterName),

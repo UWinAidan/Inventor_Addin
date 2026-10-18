@@ -2,7 +2,30 @@
 
 Where each big item stands. One line per item, kept current by the parent session. For the order of work and the task lists see `docs/PLAN.md`; for what needs doing next see `TODO.md`.
 
-Last updated: 2026-10-17
+Last updated: 2026-10-18
+
+## Session handoff (ContextKeeper)
+
+- Updated: 2026-10-18 13:48. Branch `claude/m4-hole-generator`, latest commit `8c28d3a` (task 099). Task 100 is committed on top of it (reviewer PASS).
+- Goal: finish task 100 (`docs/tasks/100-depth-expressions.md`): the depth boxes take Inventor parameters and expressions, and the hole stays parametric.
+- Done this session (committed as task 100):
+  - Core: `Holes/HoleExpressions.cs` (new: `IHoleExpressionChecker`, `HoleExpressionCheck`, `HoleExpressions`). Each depth's expression sits beside its value in `HoleSpec`, `HoleGeometry` (`DepthExpression`, `ExpressionUnits`), `HoleThread.ThreadDepthExpression`, `HoleStoredData`, `HoleReadBack`/`InventorHoleFacts` and `HoleRules`.
+  - `ViewModels/AwbHoleViewModel.cs`: optional `expressionChecker` on the constructor and every factory. `_expressions` keeps (text, value); an expression is dropped when its depth's value changes. `OpenExpression` checks an edited hole's expression again.
+  - Add-in: `Holes/HoleExpressionChecker.cs` (new; uses the part's `UnitsOfMeasure`). `HoleFeatureWriter.WriteExpressions` sets the parameter's units, then its `Expression`, after create and change. `HoleFeatureReader.Expression` reads a parameter's expression only when `DrivenBy.Count > 0`. `AwbHoleCommand` passes the checker.
+  - Tests: `Holes/HoleExpressionsTests.cs` and `ViewModels/AwbHoleExpressionViewModelTests.cs` (new).
+  - The task file's Verification and Follow-ups are filled in; its status is "in review".
+- Current state: `dotnet test tests/InventorAddin.Core.Tests` passed (3364 tests). `dotnet build InventorAddin.slnx -p:DeployToInventor=false` built with no new warnings. Not run in Inventor (unverified).
+- In progress: nothing. Task 100 waits for Aidan's manual checklist in Inventor.
+- Next steps:
+  1. Task 101 (preview holes in translucent red), per the order in `docs/PLAN.md`.
+  2. Aidan runs task 100's manual checklist in Inventor.
+- Gotchas:
+  - Spike 100 (an Inventor console app) is in the scratchpad of an earlier session: `%TEMP%/claude/C--Users-4aida-.../81133c16-.../scratchpad/Spike100` (`Program.cs`, `out.txt`).
+  - In Inventor 2026, `GetValueFromExpression` throws "Unspecified error" on text it cannot read, and gives no reason. A cycle also throws "Unspecified error".
+  - C#: `Parameter.set_Units("mm")` is a method; there is no settable `Units` property.
+  - Python heredocs in Git Bash can turn backslash-n escapes into real line breaks. For multi-line edits, write the script to the scratchpad and run it.
+  - `AwbHoleTestWorkbook`: size M4 is hidden, so `Size = "M4"` is ignored. Use M3 or M5.
+- Read first: `docs/tasks/100-depth-expressions.md`, `src/InventorAddin.Core/Holes/HoleExpressions.cs`, `git diff`.
 
 ## Big items
 

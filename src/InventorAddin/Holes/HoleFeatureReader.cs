@@ -83,7 +83,11 @@ namespace InventorAddin.Holes
                 isoCode,
                 upper,
                 lower,
-                ReadFlip(hole));
+                ReadFlip(hole))
+            {
+                ThreadDepthExpression = tap == null || fullThread || !blind ? null : Expression(() => tap.ThreadDepth),
+                DepthExpression = blind ? Expression(() => ((DistanceExtent)hole.Extent).Distance) : null,
+            };
         }
 
         /// <summary>
@@ -159,6 +163,17 @@ namespace InventorAddin.Holes
 
         private static double? Length(Func<Parameter> parameter) =>
             ComSafe.Get(() => (double?)(double)parameter().Value);
+
+        /// <summary>
+        /// The parameter's expression when other parameters drive it (<c>d0</c>, <c>1.5 ul * d0 + 1 mm</c>; task 100),
+        /// or null for a plain length such as <c>12 mm</c>.
+        /// </summary>
+        private static string? Expression(Func<Parameter> parameter) =>
+            ComSafe.Get(() =>
+            {
+                Parameter p = parameter();
+                return p.DrivenBy.Count > 0 ? p.Expression : null;
+            });
 
         private static double? Degrees(Func<Parameter> parameter) =>
             ComSafe.Get(() => (double?)((double)parameter().Value * 180.0 / Math.PI));

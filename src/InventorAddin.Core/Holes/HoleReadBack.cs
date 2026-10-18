@@ -45,6 +45,15 @@ public sealed record InventorHoleFacts(
     bool Flip)
 {
     public bool HasTolerance => ToleranceIsoCode is not null || ToleranceUpperCm is not null || ToleranceLowerCm is not null;
+
+    /// <summary>
+    /// Tapped holes whose thread is not full depth: the thread depth parameter's expression when other parameters drive
+    /// it (<c>d0</c>, <c>1.5 ul * d0 + 1 mm</c>; task 100); null when it is a plain length.
+    /// </summary>
+    public string? ThreadDepthExpression { get; init; }
+
+    /// <summary>Blind holes: the depth parameter's expression when other parameters drive it; null when it is a plain length.</summary>
+    public string? DepthExpression { get; init; }
 }
 
 /// <summary>Where the spec of a hole read back came from.</summary>
@@ -162,7 +171,7 @@ public static class HoleReadBack
                 spec = spec with { DrillPoint = DrillPoint() };
                 if (spec.Kind != HoleKind.Tapped && facts.DepthCm is { } depth)
                 {
-                    spec = spec with { Depth = FromCm(depth, spec.Units) };
+                    spec = spec with { Depth = FromCm(depth, spec.Units), DepthExpression = facts.DepthExpression };
                 }
             }
 
@@ -202,6 +211,9 @@ public static class HoleReadBack
                 // A hole that is not blind has no depths in Inventor; take the row's defaults, as HoleRules does.
                 ThreadDepth = blind && facts.ThreadDepthCm is { } thread ? FromCm(thread, units) : row?.ThreadDepth,
                 DrillDepth = blind && facts.DepthCm is { } drill ? FromCm(drill, units) : row?.DrillDepth,
+                // A depth driven by parameters shows its expression in the window (task 100).
+                ThreadDepthExpression = blind && facts.ThreadDepthCm is not null ? facts.ThreadDepthExpression : null,
+                DrillDepthExpression = blind && facts.DepthCm is not null ? facts.DepthExpression : null,
             };
         }
 

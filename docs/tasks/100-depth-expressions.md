@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 1
 - **Feature spec:** `docs/features/09-awb-hole.md` ("The window")
-- **Status:** todo
+- **Status:** done
 - **Depends on:** 097, 099
 - **Needs:** windows build
 - **Parallel-safe with:** none
@@ -36,13 +36,31 @@ Aidan, 090 check: the depth boxes (Depth, Thread depth, Drill depth) accept Inve
 
 Filled in by the implementer.
 
-- **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):**
-- **Inventor API members not confirmed:**
+- **Ran:** `dotnet test tests/InventorAddin.Core.Tests`: 3364 passed. `dotnet build InventorAddin.slnx -p:DeployToInventor=false`: builds, no new warnings. Spike 100 (a console app driving an invisible Inventor 2026) answered the API questions below.
+- **Not compiled (changed under `src/InventorAddin`):** none; the add-in was built on Windows. Not yet run inside Inventor.
+- **Inventor API members not confirmed:** none. Spike 100 called each one: `UnitsOfMeasure.IsExpressionValid` and `GetValueFromExpression` (taking a `UnitsTypeEnum` as the units), `Parameter.Expression`, `Parameter.set_Units`, `Parameter.DrivenBy`, `DistanceExtent.Distance`, `HoleTapInfo.ThreadDepth`.
+- **What spike 100 found:**
+  - `IsExpressionValid` answers false for text it cannot read, and `GetValueFromExpression` then fails with "Unspecified error". Inventor gives no reason, so the window shows its own message (`HoleExpressions.NotALengthText`).
+  - A number with no unit is read in the units passed: `1.5*d0+1` with d0 = 50 mm is 76 mm read in millimetres and 100.4 mm read in inches. Names are case sensitive. A unitless or angle parameter on its own is not a length.
+  - Writing `Parameter.Expression` keeps the hole parametric. Inventor rewrites it (`1.5*dd+1` becomes `1.5 ul * dd + 1 mm`) and follows a change to `dd`. Writing `Value`, or `SetDistanceExtent2` with a number, makes the parameter plain again.
+  - Setting the parameter's units to `in` before writing the expression makes `dd+1` read as dd + 1 in.
+  - An expression that refers to the hole's own parameters fails with "Unspecified error", and the hole is unchanged.
+  - Reassigning `TapInfo` (the tap drill write) keeps the thread depth's expression.
+- **Choices made:**
+  - A plain number still goes to Inventor as a value in cm, as before. Only text that is not a plain number is written as an expression, after the parameter takes the window's length unit. Typing a plain number over an expression replaces it.
+  - An expression lasts only while its depth keeps the value it came to. A units switch, or a new size putting back the Tapped row's depths, turns it into a plain number.
+  - Editing a hole checks its expression again, so the depth takes today's value. An expression Inventor can no longer read shows as text that is not a length, and OK is disabled.
+  - The reader treats a parameter as an expression only when other parameters drive it (`DrivenBy.Count > 0`), so `12 mm` reads back as a plain number.
 - **Manual checklist for Inventor:**
   1. A part with an extrusion of distance `d0` (say 20 mm). AWB Hole, Distance, Depth `d0`: the hole is 20 mm deep. OK; Manage > Parameters: the hole's depth reads `d0`. Change `d0` to 30: the hole follows.
-  2. Depth `1.5*d0+1`, `12 mm`, `0.5 in` (in a metric window): each gives the right depth. `abc`: Inventor's reason under the box, OK disabled.
+  2. Depth `1.5*d0+1`, `12 mm`, `0.5 in` (in a metric window): each gives the right depth. `abc`: the message under the box, OK disabled.
   3. Tapped blind with Thread depth `d0` and Drill depth `d0+5 mm`: both parametric. Thread depth deeper than drill: refused.
-  4. Edit the hole (after 092): the boxes show `d0` and `1.5*d0+1`.
+  4. Depth set to the hole's own depth parameter (its `dNN` name from Manage > Parameters): refused with Inventor's message, the last good hole kept.
+  5. Edit the hole: the boxes show `d0` and `1.5*d0+1`. Change `d0` first, then edit: the depth is today's value.
+  6. Make a new blind hole after step 1: it starts at the last depth's value, not at `d0`.
+  7. A tapped blind hole with expressions on both depths, then change its thread size, so the hole is made again: both depth parameters still read their expressions.
 
 ## Follow-ups
+
+- An expression changed in Inventor's own Parameters dialog after OK is not seen by Edit: an AWB hole opens on its stored expression, not the parameter's. Task 092's stored-versus-applied comparison could compare the depth expressions too.
+- Inventor gives no reason for text it cannot read, so the message under the box is the add-in's own. If a later Inventor gives one, `HoleExpressionChecker` can pass it on.

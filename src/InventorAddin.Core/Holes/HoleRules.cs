@@ -273,7 +273,14 @@ public static class HoleRules
                 _drillPoint,
                 _thread,
                 _tolerance,
-                _colour);
+                _colour)
+            {
+                // Checks above use the depths' values; the expressions go to Inventor as they were typed (task 100).
+                DepthExpression = spec.IsBlind
+                    ? spec.Kind == HoleKind.Tapped ? spec.DrillDepthExpression : spec.DepthExpression
+                    : null,
+                ExpressionUnits = Units,
+            };
 
             return new HoleBuildResult(geometry, _resolved, _problems.AsReadOnly());
         }
@@ -474,7 +481,10 @@ public static class HoleRules
                 (double)row.TapDrill,
                 row.Units,
                 FullDepth: !spec.IsBlind,
-                ToCm(threadDepth, Units));
+                ToCm(threadDepth, Units))
+            {
+                ThreadDepthExpression = spec.IsBlind ? spec.ThreadDepthExpression : null,
+            };
 
             BuildSeatOfSameSize(row.Nominal);
         }

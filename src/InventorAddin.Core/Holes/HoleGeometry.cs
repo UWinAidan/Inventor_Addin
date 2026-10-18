@@ -40,6 +40,20 @@ public sealed record HoleGeometry(
 {
     /// <summary>True when the hole's faces are coloured by fit (dowel and precision holes only).</summary>
     public bool IsColoured => FitColour is not null;
+
+    /// <summary>
+    /// The Inventor expression the hole depth comes from (the drill depth when tapped), when it was typed as one
+    /// (task 100): the add-in writes it into the hole's depth parameter after <see cref="DepthCm"/>, so the hole stays
+    /// parametric. Null for a plain number and when the hole is not blind.
+    /// </summary>
+    public string? DepthExpression { get; init; }
+
+    /// <summary>
+    /// The units a number with no unit in <see cref="DepthExpression"/> or <see cref="HoleThread.ThreadDepthExpression"/>
+    /// is in: the window's. The add-in gives a parameter that takes an expression this length unit
+    /// (<see cref="HoleExpressions.UnitName"/>), so Inventor reads the expression as the window did.
+    /// </summary>
+    public HoleUnits ExpressionUnits { get; init; }
 }
 
 /// <summary>
@@ -72,7 +86,14 @@ public sealed record HoleThread(
     double TapDrillInTableUnits,
     HoleUnits TableUnits,
     bool FullDepth,
-    double ThreadDepthCm);
+    double ThreadDepthCm)
+{
+    /// <summary>
+    /// The Inventor expression the thread depth comes from, when it was typed as one and the thread is not full depth
+    /// (task 100); written into the thread depth parameter after <see cref="ThreadDepthCm"/>. Else null.
+    /// </summary>
+    public string? ThreadDepthExpression { get; init; }
+}
 
 /// <summary>
 /// The tolerance on a dowel hole's diameter, from a Precision Tol row. ISO rows carry the code, which Inventor
