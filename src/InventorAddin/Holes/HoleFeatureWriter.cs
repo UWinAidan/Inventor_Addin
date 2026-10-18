@@ -56,7 +56,7 @@ namespace InventorAddin.Holes
                 return HoleWriteResult.Refused(HoleFeatureMessages.Refused(ex.Message), null, notes);
             }
 
-            return Check(doc, hole, notes, recreated: false, log);
+            return Check(doc, hole, geometry, notes, recreated: false, log);
         }
 
         /// <summary>
@@ -128,7 +128,7 @@ namespace InventorAddin.Holes
                 return HoleWriteResult.Refused(HoleFeatureMessages.Refused(ex.Message), hole, notes);
             }
 
-            return Check(doc, hole, notes, recreated: false, log);
+            return Check(doc, hole, geometry, notes, recreated: false, log);
         }
 
         /// <summary>The hole centres as Inventor takes them.</summary>
@@ -272,21 +272,52 @@ namespace InventorAddin.Holes
             hole.HoleDiameter.Value = g.HoleDiameterCm;
         }
 
+        /// <summary>
+        /// Gives the hole the geometry's seat. <c>SetCBore</c> and <c>SetCSink</c> change a hole's seat, but on a hole
+        /// that already has that seat they do nothing, without an error (task 093), so a hole that has the seat
+        /// already gets its seat parameters written instead.
+        /// </summary>
         private static void SetSeat(HoleFeature hole, HoleGeometry g)
         {
+            HoleTypeEnum? current = ComSafe.Get(() => (HoleTypeEnum?)hole.HoleType);
             switch (g.Seat)
             {
                 case HoleSeat.Counterbore:
-                    hole.SetCBore(Required(g.CounterboreDiameterCm), Required(g.CounterboreDepthCm));
+                    if (current == HoleTypeEnum.kCounterBoreHole)
+                    {
+                        SetParameter(hole.CBoreDiameter, Required(g.CounterboreDiameterCm), HoleStateComparison.LengthToleranceCm);
+                        SetParameter(hole.CBoreDepth, Required(g.CounterboreDepthCm), HoleStateComparison.LengthToleranceCm);
+                    }
+                    else
+                    {
+                        hole.SetCBore(Required(g.CounterboreDiameterCm), Required(g.CounterboreDepthCm));
+                    }
                     break;
                 case HoleSeat.Countersink:
-                    hole.SetCSink(Required(g.CountersinkDiameterCm), Radians(g.CountersinkAngleDeg));
+                    if (current == HoleTypeEnum.kCounterSinkHole)
+                    {
+                        SetParameter(hole.CSinkDiameter, Required(g.CountersinkDiameterCm), HoleStateComparison.LengthToleranceCm);
+                        SetParameter(hole.CSinkAngle, Radians(g.CountersinkAngleDeg), Radians(HoleReadBack.AngleToleranceDeg));
+                    }
+                    else
+                    {
+                        hole.SetCSink(Required(g.CountersinkDiameterCm), Radians(g.CountersinkAngleDeg));
+                    }
                     break;
                 default:
-                    if (ComSafe.Get(() => (HoleTypeEnum?)hole.HoleType) != HoleTypeEnum.kDrilledHole)
+                    if (current != HoleTypeEnum.kDrilledHole)
                         hole.SetDrilled();
                     break;
             }
+        }
+
+        /// <summary>Writes <paramref name="value"/> (centimetres or radians) unless the parameter already has it.</summary>
+        private static void SetParameter(Parameter parameter, double value, double tolerance)
+        {
+            double? now = ComSafe.Get(() => (double?)(double)parameter.Value);
+            if (now is { } v && Math.Abs(v - value) < tolerance)
+                return;
+            parameter.Value = value;
         }
 
         private static void SetExtent(HoleFeature hole, HoleGeometry g, Face? endFace)
@@ -400,7 +431,7 @@ namespace InventorAddin.Holes
                 ComSafe.Run(() => hole.Name = name!);
 
             log.Info(LogPrefix + $"{name} made again ({(placeKept ? "same place" : "at the end")}).");
-            HoleWriteResult result = Check(doc, hole, notes, recreated: true, log);
+            HoleWriteResult result = Check(doc, hole, g, notes, recreated: true, log);
             LogUnhealthyFeatures(def, name, log);
             return result;
         }
@@ -433,7 +464,8 @@ namespace InventorAddin.Holes
 
         // ---- shared ----
 
-        private static HoleWriteResult Check(PartDocument doc, HoleFeature hole, List<string> notes, bool recreated, ILog log)
+        private static HoleWriteResult Check(
+            PartDocument doc, HoleFeature hole, HoleGeometry geometry, List<string> notes, bool recreated, ILog log)
         {
             ComSafe.Run(() => doc.Update());
 
@@ -452,7 +484,20 @@ namespace InventorAddin.Holes
                 return HoleWriteResult.Refused(HoleFeatureMessages.CutsNothing, hole, notes, recreated);
             }
 
+            CheckSeat(hole, geometry, log);
             return HoleWriteResult.Made(hole, notes, recreated);
+        }
+
+        /// <summary>
+        /// Reads the seat back and logs a warning for each value that does not match the geometry, so a seat that did
+        /// not follow a change shows in the log (task 093).
+        /// </summary>
+        private static void CheckSeat(HoleFeature hole, HoleGeometry geometry, ILog log)
+        {
+            InventorHoleFacts facts = HoleFeatureReader.ReadFacts(hole);
+            IReadOnlyList<string> differences = HoleSeatCheck.Differences(geometry, facts);
+            if (differences.Count > 0)
+                log.Warn(LogPrefix + $"hole {ComSafe.Get(() => hole.Name)} does not match its seat: {string.Join(" ", differences)}");
         }
 
         /// <summary>Into the material, for a sketch whose normal points out of it (spike 081); Flip reverses it.</summary>

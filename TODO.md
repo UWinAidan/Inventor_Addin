@@ -92,6 +92,7 @@ Small things noticed while building. None is urgent. The parent turns these into
 - A finish list saved by Excel as plain "CSV" (not "CSV UTF-8") is in the Windows code page, so a non-ASCII character in a print note would read as a replacement character. Whoever reads the file (task 075) could fall back to the ANSI code page when the bytes are not valid UTF-8. (task 068)
 
 **AWB Hole**
+- In `HoleFeatureWriter.Change` the seat is ordered against the hole diameter only; a Distance counterbore made deeper while the hole is made shallower in one step (or the reverse) is not ordered against the depth. Not reached with workbook rows; fix if "Inventor refused the change" shows in the log for it (task 093)
 - ISO 286 tables (task 083) were typed from the standard's values and checked from memory by the reviewer, not against a copy of ISO 286-2; worth a spot-check, mainly sizes over 250 mm. K9 to K11 over 3 mm and N9 to N11 up to 1 mm are refused (readings of the standard's footnotes). JS7 to JS11 round an odd IT value down before halving, as ISO 286-2 prints it; if the Precision Tol tab ever holds a JS code, compare one odd-IT size with Inventor's own fit. (task 083)
 
 - The AWB Hole icon (task 087) is drawn in the current single-colour style; recolour it with the others once a ribbon icon colour option is chosen. Its 16 px version has no hatching (too narrow). `tools/icons/render.py` could skip writing a PNG whose pixels already match, since Pillow 12 re-encodes unchanged icons. (task 087)

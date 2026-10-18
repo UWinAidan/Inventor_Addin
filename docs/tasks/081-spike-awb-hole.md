@@ -73,6 +73,9 @@ Record which is smooth enough, how Undo history looks afterwards, and whether th
 
 ## Results
 
+Note (task 093): `SetCBore` and `SetCSink` change a hole's seat type only; on a hole that already has that seat they change nothing. A seat is resized through `CBoreDiameter`, `CBoreDepth`, `CSinkDiameter` and `CSinkAngle`.
+
+
 Run on Aidan's PC, 2026-10-17, Inventor 2026.2. Two tools: a throwaway console app (scratchpad `Spike081`) driving its own invisible Inventor on a scratch block (questions 1, 4, 5, 6), and a temporary spike command in the add-in on branch `spike/081-in-inventor`, never merged (questions 2, 3, 7), tried by Aidan with the results read from `awbaddin.log`.
 
 ### 1. Creating each hole type and termination

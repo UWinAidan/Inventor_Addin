@@ -309,7 +309,7 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 - [x] 090 AWB Hole window and command
 - [ ] 091 AWB Hole replaces Inventor's Hole and its H shortcut
 - [ ] 092 Edit Feature and double-click open AWB Hole; re-apply offer
-- [ ] 093 Counterbore and countersink follow a size change
+- [x] 093 Counterbore and countersink follow a size change
 - [ ] 094 The hole's sketch is consumed under it after OK
 - [ ] 095 Tapped holes show their thread in the model
 - [ ] 096 Removing a dowel's colour resets every face
