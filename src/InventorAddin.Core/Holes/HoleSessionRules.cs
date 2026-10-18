@@ -25,6 +25,19 @@ public static class HoleSessionRules
     public const string StepTransactionName = CommandName + " step";
 
     /// <summary>
+    /// The name of the preview transaction: the preview appearance on the hole's faces is painted in it and it is left
+    /// open while the window waits, then aborted before every other change and on every way out (task 101). It never
+    /// reaches the Undo list.
+    /// </summary>
+    public const string PreviewTransactionName = CommandName + " preview";
+
+    /// <summary>Painting or clearing the preview colour slower than this is logged at Info (task 101).</summary>
+    public const int SlowPaintMs = 30;
+
+    /// <summary>True when painting or clearing the preview colour took long enough to log at Info.</summary>
+    public static bool IsSlowPaint(TimeSpan elapsed) => elapsed.TotalMilliseconds > SlowPaintMs;
+
+    /// <summary>
     /// The window did not apply what it shows (the last change was refused or could not be checked), so OK keeps the
     /// window open.
     /// </summary>

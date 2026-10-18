@@ -31,6 +31,23 @@ public sealed class HoleSessionRulesTests
     }
 
     [Theory]
+    [InlineData(5, false)]
+    [InlineData(30, false)]
+    [InlineData(31, true)]
+    public void IsSlowPaint_OnlyOver30Ms(int ms, bool slow)
+    {
+        Assert.Equal(slow, HoleSessionRules.IsSlowPaint(TimeSpan.FromMilliseconds(ms)));
+    }
+
+    [Fact]
+    public void PreviewTransactionName_IsNotTheSessionsOrAStepsName()
+    {
+        Assert.Equal(Branding.ShortName + " Hole preview", HoleSessionRules.PreviewTransactionName);
+        Assert.NotEqual(HoleSessionRules.PreviewTransactionName, HoleSessionRules.StepTransactionName);
+        Assert.NotEqual(HoleSessionRules.PreviewTransactionName, HoleSessionRules.TransactionName(false));
+    }
+
+    [Theory]
     // A kept new hole's sketch ends hidden, as Inventor leaves it.
     [InlineData(true, true, true, false)]
     [InlineData(true, true, false, false)]

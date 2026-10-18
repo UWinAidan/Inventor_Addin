@@ -6,26 +6,11 @@ Last updated: 2026-10-18
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-10-18 13:48. Branch `claude/m4-hole-generator`, latest commit `8c28d3a` (task 099). Task 100 is committed on top of it (reviewer PASS).
-- Goal: finish task 100 (`docs/tasks/100-depth-expressions.md`): the depth boxes take Inventor parameters and expressions, and the hole stays parametric.
-- Done this session (committed as task 100):
-  - Core: `Holes/HoleExpressions.cs` (new: `IHoleExpressionChecker`, `HoleExpressionCheck`, `HoleExpressions`). Each depth's expression sits beside its value in `HoleSpec`, `HoleGeometry` (`DepthExpression`, `ExpressionUnits`), `HoleThread.ThreadDepthExpression`, `HoleStoredData`, `HoleReadBack`/`InventorHoleFacts` and `HoleRules`.
-  - `ViewModels/AwbHoleViewModel.cs`: optional `expressionChecker` on the constructor and every factory. `_expressions` keeps (text, value); an expression is dropped when its depth's value changes. `OpenExpression` checks an edited hole's expression again.
-  - Add-in: `Holes/HoleExpressionChecker.cs` (new; uses the part's `UnitsOfMeasure`). `HoleFeatureWriter.WriteExpressions` sets the parameter's units, then its `Expression`, after create and change. `HoleFeatureReader.Expression` reads a parameter's expression only when `DrivenBy.Count > 0`. `AwbHoleCommand` passes the checker.
-  - Tests: `Holes/HoleExpressionsTests.cs` and `ViewModels/AwbHoleExpressionViewModelTests.cs` (new).
-  - The task file's Verification and Follow-ups are filled in; its status is "in review".
-- Current state: `dotnet test tests/InventorAddin.Core.Tests` passed (3364 tests). `dotnet build InventorAddin.slnx -p:DeployToInventor=false` built with no new warnings. Not run in Inventor (unverified).
-- In progress: nothing. Task 100 waits for Aidan's manual checklist in Inventor.
-- Next steps:
-  1. Task 101 (preview holes in translucent red), per the order in `docs/PLAN.md`.
-  2. Aidan runs task 100's manual checklist in Inventor.
-- Gotchas:
-  - Spike 100 (an Inventor console app) is in the scratchpad of an earlier session: `%TEMP%/claude/C--Users-4aida-.../81133c16-.../scratchpad/Spike100` (`Program.cs`, `out.txt`).
-  - In Inventor 2026, `GetValueFromExpression` throws "Unspecified error" on text it cannot read, and gives no reason. A cycle also throws "Unspecified error".
-  - C#: `Parameter.set_Units("mm")` is a method; there is no settable `Units` property.
-  - Python heredocs in Git Bash can turn backslash-n escapes into real line breaks. For multi-line edits, write the script to the scratchpad and run it.
-  - `AwbHoleTestWorkbook`: size M4 is hidden, so `Size = "M4"` is ignored. Use M3 or M5.
-- Read first: `docs/tasks/100-depth-expressions.md`, `src/InventorAddin.Core/Holes/HoleExpressions.cs`, `git diff`.
+- Updated: 2026-10-18. Branch `claude/m4-hole-generator`; task 101 committed on top of task 100 (reviewer PASS).
+- Task 101: the preview hole is painted red in its own transaction nested in the session's (`Holes/HolePreviewWriter.cs`, `HoleSession`), aborted before every other change, OK and Cancel. Spike 101 (scratchpad of session db5df2bc, `Spike101/Program.cs`) found Inventor 2026 draws a face's `generic_transparency` opaque, so the red is solid: criterion 1 open, spec 09 question 13 for Aidan.
+- Build and tests: `dotnet build InventorAddin.slnx -p:DeployToInventor=false` built; 3382 Core tests pass. Not run in Inventor.
+- Next steps, per `docs/PLAN.md`: 091 (takeover of Hole and H), 092 (Edit Feature and double-click), then 102 (mockup). Aidan runs the checklists of 093 to 101 and answers question 13.
+- Gotchas: `GetValueFromExpression` and some other calls throw "Unspecified error" with no reason; abort a nested transaction before its parent (the reverse throws); Python heredocs in Git Bash can break backslash-n escapes, so write scripts to the scratchpad; `AwbHoleTestWorkbook` hides M4, use M3 or M5.
 
 ## Big items
 
@@ -56,5 +41,5 @@ States used: Not started, Planned, In progress, Built (merged, not tested in Inv
 
 ## Numbers
 
-- Tasks finished: 90 (001 to 090)
+- Tasks finished: 90 (001 to 090), plus 093 to 101 on branch `claude/m4-hole-generator`
 - Core tests: 2650 after task 080; they run in the cloud and on Windows with `dotnet test tests/InventorAddin.Core.Tests`

@@ -317,7 +317,7 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 - [x] 098 Tolerance list shows the limits for the size
 - [x] 099 Counterbore and countersink on tapped and dowel holes
 - [x] 100 Depth boxes take Inventor parameters and expressions
-- [ ] 101 Preview holes in translucent red
+- [x] 101 Preview holes in translucent red (solid red; see spec 09 question 13)
 - [ ] 102 AWB Hole window redesign: mockup for Aidan
 - [ ] 103 Spike: AWB Hole in a part edited in place in an assembly (with Aidan)
 - [ ] 104 AWB Hole window redesign

@@ -34,6 +34,47 @@ public static class HoleFitAppearances
     public static bool IsFitAppearance(string? displayName) => FitFor(displayName) is not null;
 }
 
+/// <summary>
+/// The appearance the AWB Hole preview paints on every face of the preview hole while the window is open (task 101;
+/// spec 09, "Live 3D preview"): red and partly see-through, as Inventor's Hole shows its preview. It is made in the
+/// session's preview transaction, which is aborted before every other change and on every way out, so it never
+/// reaches the Undo list and never stays in the part. Its name is not a fit appearance's, so it never counts as a fit
+/// colour (task 096's <see cref="HoleSessionRules.ResetsFaceAppearances"/>).
+/// </summary>
+public static class HolePreviewAppearance
+{
+    /// <summary>The colour: RGB 220, 40, 40 (Default, task 101).</summary>
+    public static HoleColour Colour { get; } = new(220, 40, 40);
+
+    /// <summary>How opaque the preview is, 0 to 1: about half (Default, task 101).</summary>
+    public const double Opacity = 0.5;
+
+    /// <summary>The display name the add-in gives the appearance and finds it by: <c>AWB Hole preview</c>.</summary>
+    public static string DisplayName => $"{Branding.ShortName} Hole preview";
+
+    /// <summary>The name passed in <c>Assets.Add</c>'s reserved argument: <c>Awb_HolePreview</c>.</summary>
+    public static string Name => $"{Branding.IdPrefix}_HolePreview";
+
+    /// <summary>
+    /// The Generic appearance value that holds how see-through it is (task 101's spike: a float, 0 opaque to 1 clear).
+    /// </summary>
+    public const string TransparencyValueName = "generic_transparency";
+
+    /// <summary>The Generic appearance value that holds the colour (spike 081).</summary>
+    public const string ColourValueName = "generic_diffuse";
+
+    /// <summary>
+    /// The <see cref="TransparencyValueName"/> value for an opacity: 1 minus the opacity, held to 0..1 (an opacity
+    /// that is not a number gives fully opaque).
+    /// </summary>
+    public static double Transparency(double opacity) =>
+        double.IsNaN(opacity) ? 0 : Math.Clamp(1 - opacity, 0, 1);
+
+    /// <summary>True when <paramref name="displayName"/> is the preview appearance, ignoring case and surrounding spaces.</summary>
+    public static bool Is(string? displayName) =>
+        string.Equals(displayName?.Trim(), DisplayName, StringComparison.OrdinalIgnoreCase);
+}
+
 /// <summary>The thread names Inventor's hidden <c>_CreateTapInfo</c> takes (spike 081).</summary>
 public static class HoleThreadNames
 {

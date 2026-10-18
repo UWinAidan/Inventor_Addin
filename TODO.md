@@ -45,6 +45,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - The finish appearances are spike 067's suggestions for now; Aidan edits `libraries/finishes.csv` if he wants others
 
 **AWB Hole (spec 09), not blocking**
+- Question 13 in spec 09: the preview red is drawn opaque, since Inventor 2026 does not draw a face's appearance transparency (task 101 spike, off-screen images; check in Inventor's window). Is solid red enough, or make the whole part see-through while the window is open, or draw the preview with client graphics? Default: solid red
 - Question 12 in spec 09: should a counterbored blind tapped hole's thread and drill depths be measured from the bottom of the counterbore?
 - Question 11 in spec 09: Inventor's Hole preselects unused centre points one by one; AWB Hole skips a sketch any feature consumes. Per-point wanted?
 - Question 9 in spec 09: where a dowel hole's counterbore or countersink sizes come from. Default: the same size's Counterbore or Countersink row, as for tapped holes; or seat columns of its own on the Dowel tab
@@ -94,6 +95,8 @@ Small things noticed while building. None is urgent. The parent turns these into
 - A finish list saved by Excel as plain "CSV" (not "CSV UTF-8") is in the Windows code page, so a non-ASCII character in a print note would read as a replacement character. Whoever reads the file (task 075) could fall back to the ANSI code page when the bytes are not valid UTF-8. (task 068)
 
 **AWB Hole**
+- Preview red (task 101 review): `HoleSession.ClearPaint` sets `_paint` to null even if `Abort` throws; the paint transaction could then stay open and the red be committed on OK. Treat a failed clear as fatal for OK (cancel or refuse). Comments in `HoleSession`, `HolePreviewWriter` and Core's `HolePreviewAppearance` still say "translucent". The legacy `Face.SetRenderStyle` with an opacity was not tried for question 13
+- Redo of an AWB Hole (task 101 spike): `RedoTransaction` after one Undo did not bring the hole back; check Ctrl+Y in Inventor
 - Depth expressions (task 100): an expression changed in Inventor's Parameters dialog after OK is not seen by Edit, which opens an AWB hole on its stored expression; task 092's stored-versus-applied comparison could compare the depth expressions too
 - Seats on tapped and dowel holes (task 099 review): the same-size match is within 0.0001, so 0.312 in one tab and 0.3125 in another give no seat (a per-unit tolerance would be kinder); two Clearance sizes with one nominal (`#5` and `1/8`, both 0.125 in) would both be offered; switching Standard from a seated AWB Clearance to AWB Dowel goes to the first dowel size, not the nearest. The window mockup (102) could put Fastener type under Size, since for tapped and dowel holes its list follows the size
 - Aidan's own hole workbook has no "Blind depth multiplier" row on its Settings tab (added to the starter in task 097); without it 2 is used. Copy the row across to change it. Aidan may prefer the name "Blind depth (x D)" to match its neighbours (the reader would then accept both)
