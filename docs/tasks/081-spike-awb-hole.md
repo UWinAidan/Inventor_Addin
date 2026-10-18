@@ -73,6 +73,8 @@ Record which is smooth enough, how Undo history looks afterwards, and whether th
 
 ## Results
 
+Note (task 095): a hole made with `_CreateTapInfo` has no pitch, so Inventor draws no thread texture on it. Tapped holes are now made with `CreateTapInfo`, then given the workbook's tap drill through `TapInfo.MinorDiameterMin` and `TapDrillDiameter`.
+
 Note (task 093): `SetCBore` and `SetCSink` change a hole's seat type only; on a hole that already has that seat they change nothing. A seat is resized through `CBoreDiameter`, `CBoreDepth`, `CSinkDiameter` and `CSinkAngle`.
 
 

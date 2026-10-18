@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using Inventor;
 using InventorAddin.Core.Holes;
 using InventorAddin.Core.Logging;
@@ -12,7 +11,7 @@ namespace InventorAddin.Holes
     /// Turns Core's <see cref="HoleGeometry"/> into a real Inventor <see cref="HoleFeature"/>, and changes one in place
     /// (spec 09; spike 081 Results 1 and Recommendations 1 to 3). It copies values and decides nothing: every size,
     /// seat and bottom comes from the geometry. Lengths go to Inventor in centimetres and angles in radians; the tap
-    /// drill goes to <c>_CreateTapInfo</c> in the thread table's units, as the geometry carries it.
+    /// drill goes to the hole's tap info in the thread table's units, as the geometry carries it (task 095).
     /// </summary>
     /// <remarks>
     /// Nothing here opens a transaction: the preview session (task 089) runs each call inside its own inner
@@ -48,7 +47,7 @@ namespace InventorAddin.Holes
             HoleFeature hole;
             try
             {
-                hole = Add(doc.ComponentDefinition.Features.HoleFeatures, geometry, centres, endFace, notes, log);
+                hole = Add(doc, geometry, centres, endFace, notes, log);
             }
             catch (Exception ex)
             {
@@ -61,9 +60,9 @@ namespace InventorAddin.Holes
 
         /// <summary>
         /// Changes <paramref name="hole"/> in place to <paramref name="geometry"/>: centres, diameter, depth,
-        /// termination, seat and drill point. A change between tapped and untapped, or of the thread, cannot be made
-        /// in place (spike 081: a tapped hole's tap drill is set only when it is created), so the feature is made
-        /// again in the same place in the browser; the result then carries the new feature.
+        /// termination, seat and drill point. A change between tapped and untapped, or of the thread or its tap
+        /// drill, is not made in place, so the feature is made again in the same place in the browser; the result
+        /// then carries the new feature.
         /// </summary>
         public static HoleWriteResult Change(
             PartDocument doc, HoleFeature hole, HoleGeometry geometry, ObjectCollection centres, Face? endFace, ILog log)
@@ -157,59 +156,46 @@ namespace InventorAddin.Holes
         // ---- create ----
 
         private static HoleFeature Add(
-            HoleFeatures features, HoleGeometry geometry, ObjectCollection centres, Face? endFace, List<string> notes, ILog log)
+            PartDocument doc, HoleGeometry geometry, ObjectCollection centres, Face? endFace, List<string> notes, ILog log)
         {
+            HoleFeatures features = doc.ComponentDefinition.Features.HoleFeatures;
             if (geometry.Thread is not { } thread)
                 return AddWith(features, features.CreateSketchPlacementDefinition(centres), geometry.HoleDiameterCm, geometry, endFace);
 
-            // The hidden _CreateTapInfo models the workbook's tap drill (spike 081). If this Inventor lacks it or
-            // refuses it, fall back to CreateTapInfo, which models the thread's minor diameter, and say so.
-            string step = "_CreateTapInfo";
+            // Inventor's own tap info, so the hole shows its thread in the model (task 095: a hole made with the
+            // hidden _CreateTapInfo has no pitch and shows none). The workbook's tap drill is written afterwards.
+            object tapInfo = thread.FullDepth
+                ? features.CreateTapInfo(true, thread.ThreadType, thread.Designation, thread.Class, true)
+                : features.CreateTapInfo(true, thread.ThreadType, thread.Designation, thread.Class, false, thread.ThreadDepthCm);
+            HoleFeature hole = AddWith(features, features.CreateSketchPlacementDefinition(centres), tapInfo, geometry, endFace);
+            ComSafe.Run(() => doc.Update());
+            SetTapDrill(hole, thread, notes, log);
+            return hole;
+        }
+
+        /// <summary>
+        /// Models the workbook's tap drill on a tapped hole (task 095). With the document's Tapped Hole Diameter at
+        /// its default, Minor, Inventor models the hole at <c>MinorDiameterMin</c>; at Tap Drill, at
+        /// <c>TapDrillDiameter</c>. Both are set, in the thread table's units, so either setting models the
+        /// workbook's tap drill, and the hole keeps its pitch and so its thread in the model. Neither can be set on
+        /// a tap info before the hole is made. If Inventor refuses, the hole stays at the thread's minor diameter and
+        /// the result says so.
+        /// </summary>
+        private static void SetTapDrill(HoleFeature hole, HoleThread thread, List<string> notes, ILog log)
+        {
             try
             {
-                object tapDrillInfo = CreateTapDrillTapInfo(features, thread);
-                step = "adding the hole with the tap drill thread";
-                return AddWith(features, features.CreateSketchPlacementDefinition(centres), tapDrillInfo, geometry, endFace);
+                var tap = (HoleTapInfo)hole.TapInfo;
+                tap.MinorDiameterMin = thread.TapDrillInTableUnits;
+                tap.TapDrillDiameter = thread.TapDrillInTableUnits;
+                hole.TapInfo = tap;
             }
             catch (Exception ex)
             {
                 string note = HoleFeatureMessages.TapDrillFallback(thread.Designation, ex.Message);
                 notes.Add(note);
-                log.Warn(LogPrefix + $"{step} failed ({ex.GetType().Name}: {ex.Message}); falling back to CreateTapInfo. {note}");
+                log.Warn(LogPrefix + $"setting the tap drill failed ({ex.GetType().Name}: {ex.Message}). {note}");
             }
-
-            object tapInfo = thread.FullDepth
-                ? features.CreateTapInfo(true, thread.ThreadType, thread.Designation, thread.Class, true)
-                : features.CreateTapInfo(true, thread.ThreadType, thread.Designation, thread.Class, false, thread.ThreadDepthCm);
-            return AddWith(features, features.CreateSketchPlacementDefinition(centres), tapInfo, geometry, endFace);
-        }
-
-        /// <summary>
-        /// Kept in its own method so that a later Inventor without the hidden member fails here, with an exception
-        /// the caller catches, and not when the caller is compiled.
-        /// </summary>
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        private static object CreateTapDrillTapInfo(HoleFeatures features, HoleThread thread)
-        {
-            bool metric = thread.TableUnits == HoleUnits.Metric;
-            return features._CreateTapInfo(
-                metric,
-                true,
-                true,
-                HoleThreadNames.NominalSize(thread.Designation, thread.TableUnits),
-                thread.Designation,
-                thread.Class,
-                ModelDiameterFromThreadEnum.kThreadTapDrillDiameter,
-                thread.FullDepth,
-                thread.ThreadType,
-                thread.FullDepth ? Type.Missing : thread.ThreadDepthCm,
-                Type.Missing,
-                Type.Missing,
-                Type.Missing,
-                Type.Missing,
-                Type.Missing,
-                Type.Missing,
-                thread.TapDrillInTableUnits);
         }
 
         private static HoleFeature AddWith(
@@ -349,8 +335,8 @@ namespace InventorAddin.Holes
 
         /// <summary>
         /// True when the hole cannot be changed in place into <paramref name="g"/>: tapped to untapped or back, or a
-        /// tapped hole whose thread, full-depth setting or modelled diameter differs (spike 081: a tapped hole gets
-        /// the workbook's tap drill only when it is created).
+        /// tapped hole whose thread, full-depth setting or tap drill differs, or one made before task 095 that shows
+        /// no thread.
         /// </summary>
         private static bool NeedsRecreate(HoleFeature hole, HoleGeometry g)
         {
@@ -366,10 +352,11 @@ namespace InventorAddin.Holes
                 || !Same(ComSafe.Get(() => tap.ThreadType), thread.ThreadType)
                 || !Same(ComSafe.Get(() => tap.Class), thread.Class)
                 || ComSafe.Get(() => (bool?)tap.FullTapDepth) != thread.FullDepth
-                || ComSafe.Get(() => (ModelDiameterFromThreadEnum?)tap._DiameterInModel)
-                    != ModelDiameterFromThreadEnum.kThreadTapDrillDiameter
+                // No pitch: made by the hidden _CreateTapInfo before task 095, so it shows no thread. Made again.
+                || ComSafe.Get(() => (double?)tap.Pitch) == null
                 // A tap drill changed in the workbook; a value that cannot be read is not a change.
-                || HoleThreadNames.TapDrillMatches(ComSafe.Get(() => tap.TapDrillDiameter), thread) == false;
+                || HoleThreadNames.TapDrillMatches(ComSafe.Get(() => tap.TapDrillDiameter), thread) == false
+                || HoleThreadNames.TapDrillMatches(ComSafe.Get(() => tap.MinorDiameterMin), thread) == false;
         }
 
         /// <summary>
@@ -400,7 +387,7 @@ namespace InventorAddin.Holes
             try
             {
                 old.Delete(true, true, true);
-                hole = Add(def.Features.HoleFeatures, g, centres, endFace, notes, log);
+                hole = Add(doc, g, centres, endFace, notes, log);
             }
             catch (Exception ex)
             {

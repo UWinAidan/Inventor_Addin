@@ -59,7 +59,8 @@ public sealed record HoleDrillPoint(string Name, double? AngleDeg)
 /// <param name="Class">The thread class: <c>6H</c>, <c>2B</c>.</param>
 /// <param name="TapDrillInTableUnits">
 /// The tap drill in the thread table's units, millimetres for metric and inches for imperial, as a number: the way
-/// Inventor's <c>_CreateTapInfo</c> takes it (spike 081). Not centimetres.
+/// Inventor's <c>HoleTapInfo.TapDrillDiameter</c> and <c>MinorDiameterMin</c> take it (spike 081, task 095). Not
+/// centimetres.
 /// </param>
 /// <param name="TableUnits">The thread table's units: Metric (mm) or Imperial (inches).</param>
 /// <param name="FullDepth">True when the thread runs the full depth of the hole (Through All and To a face).</param>

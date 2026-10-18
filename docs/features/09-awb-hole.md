@@ -65,7 +65,7 @@ Hole types and seats stay as Inventor's. A dowel or precision hole is the Cleara
 
 ## Tapped holes
 
-- The standard tap drill from the Tapped tab, modelled at that diameter (spike 081: Inventor otherwise models the thread's minor diameter). The thread is named as Inventor's thread table names it: the pitch is added to a metric size (`M6` with pitch 1 is `M6x1`), and number sizes drop the `#` (`#10-32 UNF` is `10-32 UNF`).
+- The standard tap drill from the Tapped tab, modelled at that diameter (spike 081: Inventor otherwise models the thread's minor diameter), with the thread showing in the model like an Inventor tapped hole (task 095). The thread is named as Inventor's thread table names it: the pitch is added to a metric size (`M6` with pitch 1 is `M6x1`), and number sizes drop the `#` (`#10-32 UNF` is `10-32 UNF`).
 - **Default thread depth 1.5 x D and drill depth thread depth + 0.5 x D**, the multipliers from the Settings tab. Both are editable per hole in the window.
 - The Tapped tab's "Default thread depth" and "Default drill depth" columns are formulas over the same Settings values. Default: the add-in uses the value in the cell, so a depth Aidan types over a formula is honoured; it works the depth out from Settings when the cell is blank.
 

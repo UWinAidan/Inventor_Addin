@@ -38,11 +38,11 @@ public static class HoleFeatureMessages
     public const string NoCentres = "Pick at least one hole centre.";
 
     /// <summary>
-    /// The hidden <c>_CreateTapInfo</c> failed, so the hole was made with Inventor's own tap drill (spike 081:
-    /// Inventor then models the thread's minor diameter).
+    /// Inventor refused the workbook's tap drill on a tapped hole (task 095), so the hole stays at the thread's minor
+    /// diameter.
     /// </summary>
     /// <param name="designation">The thread, as Inventor names it.</param>
-    /// <param name="reason">Why <c>_CreateTapInfo</c> failed, or null.</param>
+    /// <param name="reason">Why Inventor refused it, or null.</param>
     public static string TapDrillFallback(string designation, string? reason)
     {
         var why = (reason ?? "").Trim().TrimEnd('.');
