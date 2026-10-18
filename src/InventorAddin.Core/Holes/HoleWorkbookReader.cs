@@ -39,6 +39,9 @@ public static class HoleWorkbookReader
     public const string NormalFitColourSetting = "Normal fit colour";
     public const string SlipFitColourSetting = "Slip fit colour";
 
+    /// <summary>Optional: a workbook without the row (made before task 097) reads with the starter value, unreported.</summary>
+    public const string BlindDepthSetting = "Blind depth multiplier";
+
     // Shared data-tab headers.
     public const string UnitsColumn = "Units";
     public const string SizeColumn = "Size";
@@ -477,6 +480,13 @@ public static class HoleWorkbookReader
         var drill = drillReader?.NonNegative(ValueColumn) ?? starter.DrillExtraDepthMultiplier;
         drill = Use(drillReader, DrillExtraDepthSetting, drill, starter.DrillExtraDepthMultiplier, "0.5");
 
+        // The blind depth multiplier is newer than the rest, so a missing row is not reported.
+        var blindReader = rowsByName.TryGetValue(BlindDepthSetting, out var blindRow)
+            ? new RowReader(sheet, blindRow, columns)
+            : null;
+        var blind = blindReader?.Positive(ValueColumn) ?? HoleSettings.StarterBlindDepthMultiplier;
+        blind = Use(blindReader, BlindDepthSetting, blind, HoleSettings.StarterBlindDepthMultiplier, "2");
+
         HoleColour Colour(string name, HoleColour fallback)
         {
             var starterText = $"{fallback.R}, {fallback.G}, {fallback.B}";
@@ -493,7 +503,10 @@ public static class HoleWorkbookReader
             drill,
             Colour(PressFitColourSetting, starter.PressFitColour),
             Colour(NormalFitColourSetting, starter.NormalFitColour),
-            Colour(SlipFitColourSetting, starter.SlipFitColour));
+            Colour(SlipFitColourSetting, starter.SlipFitColour))
+        {
+            BlindDepthMultiplier = blind,
+        };
     }
 
     /// <summary>Reads the cells of one row by header, collecting what is wrong instead of throwing.</summary>

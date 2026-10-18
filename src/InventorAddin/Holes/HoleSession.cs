@@ -5,6 +5,7 @@ using Inventor;
 using InventorAddin.Core.Holes;
 using InventorAddin.Core.Logging;
 using InventorAddin.Core.Ribbon;
+using InventorAddin.Core.Settings;
 using InventorAddin.Core.ViewModels;
 
 namespace InventorAddin.Holes
@@ -193,6 +194,7 @@ namespace InventorAddin.Holes
                 _outer = null;
                 _log.Info(LogPrefix + $"{(_edit ? "changed" : "made")} {ComSafe.Get(() => hole.Name)} " +
                           $"at {_picks.Count} centre(s).");
+                RememberDepth(build.Resolved);
                 Finish(kept: true, HoleSessionEndReason.Ok);
                 return true;
             }
@@ -201,6 +203,35 @@ namespace InventorAddin.Holes
                 _log.Error(LogPrefix + "OK failed; the part is put back as it was.", ex);
                 Cancel(HoleSessionEndReason.Failed);
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// Keeps the depth of a blind clearance or dowel hole kept with OK as the last depth of its units, in the
+        /// settings file, so the next blind hole starts at it, also after a restart (task 097). A failure to save is
+        /// logged; the hole is kept either way.
+        /// </summary>
+        private void RememberDepth(HoleSpec kept)
+        {
+            try
+            {
+                AddinSettings? updated = HoleLastDepths.Remember(AddinServices.Settings, kept);
+                if (updated == null)
+                    return;
+
+                string? folder = AddinServices.DataFolder;
+                if (folder == null)
+                {
+                    _log.Warn(LogPrefix + "the hole depth is not remembered: the add-in has no data folder.");
+                    return;
+                }
+
+                new SettingsStore(folder).Save(updated);
+                AddinServices.UpdateSettings(updated);
+            }
+            catch (Exception ex)
+            {
+                _log.Error(LogPrefix + "saving the hole depth to the settings file failed.", ex);
             }
         }
 

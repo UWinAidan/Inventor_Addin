@@ -372,6 +372,8 @@ public sealed class SettingsStoreTests : IDisposable
             s => s with { FinishListPath = @"D:\finishes.csv" },
             s => s with { HoleWorkbookPath = @"D:\AWB_Holes.xlsx" },
             s => s with { UseInventorHoleCommand = true },
+            s => s with { LastBlindDepthMm = 12m },
+            s => s with { LastBlindDepthIn = 0.5m },
             s => s with { PreferredMaterials = new[] { "Test Steel" } },
         };
         var settableProperties = typeof(AddinSettings).GetProperties().Count(p => p.CanWrite);
@@ -555,6 +557,53 @@ public sealed class SettingsStoreTests : IDisposable
         var result = store.Load();
         Assert.Empty(result.Warnings);
         Assert.Equal(original, result.Settings);
+    }
+
+    // ---- Last blind hole depths (task 097) ----
+
+    [Fact]
+    public void Save_WritesLastBlindDepthsInCamelCase_ThenRoundTrips()
+    {
+        var store = new SettingsStore(_folder);
+        var original = new AddinSettings { LastBlindDepthMm = 12.5m, LastBlindDepthIn = 0.375m };
+
+        store.Save(original);
+
+        var json = JsonNode.Parse(File.ReadAllText(SettingsPath))!.AsObject();
+        Assert.Equal(12.5m, json["lastBlindDepthMm"]!.GetValue<decimal>());
+        Assert.Equal(0.375m, json["lastBlindDepthIn"]!.GetValue<decimal>());
+
+        var result = store.Load();
+        Assert.Empty(result.Warnings);
+        Assert.Equal(original, result.Settings);
+    }
+
+    [Fact]
+    public void Load_FileWrittenBeforeLastBlindDepths_LoadsThemAsNone()
+    {
+        WriteSettingsFile("""
+            {
+              "schemaVersion": 1,
+              "holeWorkbookPath": "D:\\Holes.xlsx"
+            }
+            """);
+
+        var result = new SettingsStore(_folder).Load();
+
+        Assert.Empty(result.Warnings);
+        Assert.Null(result.Settings.LastBlindDepthMm);
+        Assert.Null(result.Settings.LastBlindDepthIn);
+    }
+
+    [Fact]
+    public void LastBlindDepths_NotGreaterThanZero_AreStoredAsNone()
+    {
+        WriteSettingsFile("{ \"lastBlindDepthMm\": 0, \"lastBlindDepthIn\": -1 }");
+
+        var result = new SettingsStore(_folder).Load();
+
+        Assert.Empty(result.Warnings);
+        Assert.Equal(new AddinSettings(), result.Settings);
     }
 
     [Fact]

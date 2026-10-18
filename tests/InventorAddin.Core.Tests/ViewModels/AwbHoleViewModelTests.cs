@@ -540,6 +540,9 @@ public sealed class AwbHoleViewModelTests
         var vm = NewHole();
         vm.CentreCount = 1;
         vm.Termination = HoleTermination.Distance;
+        Assert.True(vm.CanOk);
+
+        vm.DepthText = "";
 
         Assert.Equal("Enter a depth greater than zero.", vm.DepthProblem);
         Assert.Null(vm.SizeProblem);
@@ -801,6 +804,177 @@ public sealed class AwbHoleViewModelTests
         Assert.Empty(vm.SizeOptions);
         Assert.NotNull(vm.SizeProblem);
         Assert.False(vm.CanOk);
+    }
+
+    // ---- The blind depth a new hole starts at (task 097) ----
+
+    private static AwbHoleViewModel NewHoleWith(HoleLastDepths lastDepths, HoleWorkbook? workbook = null) =>
+        new(workbook ?? Workbook, PartName, null, lastDepths);
+
+    [Fact]
+    public void BlindClearance_WithNoDepthUsedYet_StartsAtTwiceTheNominal_AndCanOk()
+    {
+        var vm = NewHole();
+        vm.CentreCount = 1;
+
+        vm.Termination = HoleTermination.Distance;
+
+        Assert.Equal(6m, vm.Depth);
+        Assert.Equal("6", vm.DepthText);
+        Assert.Equal(6m, vm.Spec.Depth);
+        Assert.Null(vm.DepthProblem);
+        Assert.True(vm.CanOk);
+    }
+
+    [Fact]
+    public void BlindDowel_StartsAtTwiceTheNominal()
+    {
+        var vm = NewHole();
+        vm.Standard = HoleStandards.DowelStandard;
+        vm.Size = "5 mm";
+
+        vm.Termination = HoleTermination.Distance;
+
+        Assert.Equal(10m, vm.Depth);
+    }
+
+    [Fact]
+    public void BlindCounterbore_TakesItsClearanceRowsNominal()
+    {
+        var vm = NewHole();
+        vm.Seat = HoleSeat.Counterbore;
+        vm.Size = "T5";
+
+        vm.Termination = HoleTermination.Distance;
+
+        Assert.Equal(10m, vm.Depth);
+    }
+
+    [Fact]
+    public void BlindDepth_UsesTheWorkbooksMultiplier_RoundedToThreeDecimals()
+    {
+        var starter = AwbHoleTestWorkbook.Create();
+        var workbook = starter with { Settings = starter.Settings with { BlindDepthMultiplier = 1.2345m } };
+        var vm = NewHole(workbook);
+
+        vm.Termination = HoleTermination.Distance;
+
+        Assert.Equal(3.704m, vm.Depth);
+    }
+
+    [Fact]
+    public void BlindDepth_StartsAtTheLastDepthUsed_InEachUnits()
+    {
+        var vm = NewHoleWith(new HoleLastDepths(20m, 0.75m));
+
+        vm.Termination = HoleTermination.Distance;
+        Assert.Equal(20m, vm.Depth);
+
+        vm.Units = HoleUnits.Imperial;
+        Assert.Equal(0.75m, vm.Depth);
+    }
+
+    [Fact]
+    public void BlindDepth_WithALastDepthInTheOtherUnitsOnly_UsesTheMultiplierHere()
+    {
+        var vm = NewHoleWith(new HoleLastDepths(null, 0.75m));
+
+        vm.Termination = HoleTermination.Distance;
+        Assert.Equal(6m, vm.Depth);
+
+        vm.Units = HoleUnits.Imperial;
+        Assert.Equal(0.75m, vm.Depth);
+    }
+
+    [Fact]
+    public void AnUntypedDepth_FollowsTheSizeAndUnits()
+    {
+        var vm = NewHole();
+        vm.Termination = HoleTermination.Distance;
+        Assert.Equal(6m, vm.Depth);
+
+        vm.Size = "T5";
+        Assert.Equal(10m, vm.Depth);
+
+        vm.Units = HoleUnits.Imperial;
+        Assert.Equal("#5", vm.Size);
+        Assert.Equal(0.4m, vm.Depth);
+    }
+
+    [Fact]
+    public void ATypedDepth_IsKept_WhenTheSizeOrUnitsChange()
+    {
+        var vm = NewHoleWith(new HoleLastDepths(20m, 0.75m));
+        vm.Termination = HoleTermination.Distance;
+
+        vm.DepthText = "7";
+        vm.Size = "T5";
+        Assert.Equal(7m, vm.Depth);
+
+        vm.Termination = HoleTermination.ThroughAll;
+        vm.Termination = HoleTermination.Distance;
+        Assert.Equal(7m, vm.Depth);
+
+        vm.Units = HoleUnits.Imperial;
+        Assert.Equal(0.2756m, vm.Depth);
+    }
+
+    [Fact]
+    public void AnEmptiedDepthBox_DisablesOk_UntilTheNextChangeTheRuleFollows()
+    {
+        var vm = NewHole();
+        vm.CentreCount = 1;
+        vm.Termination = HoleTermination.Distance;
+
+        vm.DepthText = "";
+        Assert.Null(vm.Depth);
+        Assert.False(vm.CanOk);
+
+        vm.Flip = true;
+        Assert.Null(vm.Depth);
+        Assert.False(vm.CanOk);
+
+        vm.Size = "T5";
+        Assert.Equal(10m, vm.Depth);
+        Assert.True(vm.CanOk);
+    }
+
+    [Fact]
+    public void ATappedHole_KeepsTheTappedRowsDepths()
+    {
+        var vm = NewHoleWith(new HoleLastDepths(20m, null));
+        vm.Type = HoleStandards.TappedType;
+        vm.Size = "M5";
+
+        vm.Termination = HoleTermination.Distance;
+
+        Assert.Null(vm.Spec.Depth);
+        Assert.Equal(7.5m, vm.ThreadDepth);
+        Assert.Equal(10m, vm.DrillDepth);
+    }
+
+    [Fact]
+    public void AnEditedHole_KeepsItsOwnDepth()
+    {
+        var spec = MetricSpec(HoleKind.Clearance, "T3") with { Termination = HoleTermination.Distance, Depth = 12m };
+
+        var vm = AwbHoleViewModel.ForEdit(Workbook, PartName, spec, null, new HoleLastDepths(20m, null));
+        Assert.Equal(12m, vm.Depth);
+        Assert.Equal(12m, vm.Spec.Depth);
+
+        vm.Size = "T5";
+        Assert.Equal(12m, vm.Depth);
+    }
+
+    [Fact]
+    public void AnEditedThroughHole_MadeBlind_StartsAtTheLastDepthUsed()
+    {
+        var spec = MetricSpec(HoleKind.Clearance, "T3");
+
+        var vm = AwbHoleViewModel.ForEdit(Workbook, PartName, spec, null, new HoleLastDepths(20m, null));
+        vm.Termination = HoleTermination.Distance;
+
+        Assert.Equal(20m, vm.Depth);
     }
 
     [Fact]

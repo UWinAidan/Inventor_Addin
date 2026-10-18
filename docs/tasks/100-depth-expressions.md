@@ -28,6 +28,8 @@ Aidan, 090 check: the depth boxes (Depth, Thread depth, Drill depth) accept Inve
 
 ## Notes for the implementer
 
+- `HoleLastDepths.Remember` (task 097) takes `HoleSpec.Depth`; pass the expression's value so the setting stays a number.
+
 - Check `UnitsOfMeasure` members (`IsExpressionValid`, `GetValueFromExpression`, `GetStringFromValue`, `kDefaultDisplayLengthUnits`) against the interop by reflection, and use the part document's own `UnitsOfMeasure` so its parameters resolve. You may test with an invisible Inventor in a console app (task 093's notes).
 
 ## Verification

@@ -188,6 +188,16 @@ public sealed record HoleSettings(
         new HoleColour(40, 100, 220),
         new HoleColour(40, 170, 70));
 
+    /// <summary>The starter "Blind depth multiplier" (spec 09 question 7, Aidan): 2 x D.</summary>
+    public const decimal StarterBlindDepthMultiplier = 2m;
+
+    /// <summary>
+    /// "Blind depth multiplier": a new blind clearance or dowel hole starts at this x the nominal diameter when no
+    /// depth has been used in its units yet (spec 09, "Blind holes"). Added after the other settings, so a workbook
+    /// without the row reads with the starter value and no problem.
+    /// </summary>
+    public decimal BlindDepthMultiplier { get; init; } = StarterBlindDepthMultiplier;
+
     /// <summary>The fit colour for a precision fit.</summary>
     public HoleColour FitColour(PrecisionFit fit) => fit switch
     {
@@ -204,4 +214,11 @@ public sealed record HoleSettings(
     /// <summary>The default drill depth: <c>round(thread depth + nominal x drill multiplier, 3)</c>.</summary>
     public decimal DefaultDrillDepth(decimal nominal, decimal threadDepth) =>
         Math.Round(threadDepth + (nominal * DrillExtraDepthMultiplier), 3, MidpointRounding.AwayFromZero);
+
+    /// <summary>
+    /// The first depth of a blind clearance or dowel hole: <c>round(nominal x blind multiplier, 3)</c>, rounded as the
+    /// thread depth is.
+    /// </summary>
+    public decimal DefaultBlindDepth(decimal nominal) =>
+        Math.Round(nominal * BlindDepthMultiplier, 3, MidpointRounding.AwayFromZero);
 }

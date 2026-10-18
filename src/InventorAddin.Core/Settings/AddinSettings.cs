@@ -147,6 +147,29 @@ public sealed record AddinSettings
     public bool UseInventorHoleCommand { get; set; }
 
     /// <summary>
+    /// The depth, in mm, of the last blind clearance or dowel hole kept with OK in Metric (spec 09, "Blind holes";
+    /// task 097). A new blind hole in Metric starts at it. Not shown in the Settings window. Null until a hole is made;
+    /// a value that is not greater than zero is stored as null. Changed through
+    /// <see cref="Holes.HoleLastDepths.Remember"/>.
+    /// </summary>
+    public decimal? LastBlindDepthMm
+    {
+        get => _lastBlindDepthMm;
+        set => _lastBlindDepthMm = value is > 0 ? value : null;
+    }
+
+    private decimal? _lastBlindDepthMm;
+
+    /// <summary>As <see cref="LastBlindDepthMm"/>, in inches, for Imperial.</summary>
+    public decimal? LastBlindDepthIn
+    {
+        get => _lastBlindDepthIn;
+        set => _lastBlindDepthIn = value is > 0 ? value : null;
+    }
+
+    private decimal? _lastBlindDepthIn;
+
+    /// <summary>
     /// Display names of the materials starred as preferred in the Material and Finish window (spec 03, question 11).
     /// Not shown in the Settings window. Empty by default; a null list is stored as empty and null entries are
     /// dropped. The list is copied when set. Changed through <see cref="Materials.LibraryPaths.TogglePreferred"/>.
@@ -177,6 +200,8 @@ public sealed record AddinSettings
         && FinishListPath == other.FinishListPath
         && HoleWorkbookPath == other.HoleWorkbookPath
         && UseInventorHoleCommand == other.UseInventorHoleCommand
+        && LastBlindDepthMm == other.LastBlindDepthMm
+        && LastBlindDepthIn == other.LastBlindDepthIn
         && PreferredMaterials.SequenceEqual(other.PreferredMaterials, StringComparer.Ordinal);
 
     public override int GetHashCode()
@@ -195,6 +220,8 @@ public sealed record AddinSettings
         hash.Add(FinishListPath, StringComparer.Ordinal);
         hash.Add(HoleWorkbookPath, StringComparer.Ordinal);
         hash.Add(UseInventorHoleCommand);
+        hash.Add(LastBlindDepthMm);
+        hash.Add(LastBlindDepthIn);
         foreach (var material in PreferredMaterials)
             hash.Add(material, StringComparer.Ordinal);
         return hash.ToHashCode();

@@ -171,6 +171,59 @@ public sealed class HoleWorkbookReaderTests
             result.Problems.Select(p => p.ToString()));
     }
 
+    // ---- Blind depth multiplier (task 097) ----
+
+    private static object?[][] SettingsWithBlind(object? value) => SettingsRows(
+        ["Default units", "Imperial"],
+        ["Thread depth (x D)", 2],
+        ["Drill extra depth (x D)", 0.25m],
+        ["Blind depth multiplier", value, "Blind holes start at this x D."],
+        ["Press fit colour", "Red", "", 201, 11, 12],
+        ["Normal fit colour", "Blue", "", 13, 14, 202],
+        ["Slip fit colour", "Green", "", 15, 203, 16]);
+
+    [Fact]
+    public void Settings_BlindDepthMultiplier_IsRead()
+    {
+        var result = ReadWith("Settings", SettingsWithBlind(3.5m));
+
+        Assert.False(result.HasProblems, Problems(result));
+        Assert.Equal(3.5m, result.Workbook.Settings.BlindDepthMultiplier);
+    }
+
+    [Fact]
+    public void Settings_WithoutTheBlindDepthRow_ReadWithNoProblem_AndTheStarterValue()
+    {
+        // The invented workbook, like a copy made before task 097, has no Blind depth multiplier row.
+        var result = Read(Tabs());
+
+        Assert.False(result.HasProblems, Problems(result));
+        Assert.Equal(2m, result.Workbook.Settings.BlindDepthMultiplier);
+        Assert.Equal(HoleSettings.StarterBlindDepthMultiplier, HoleSettings.Starter.BlindDepthMultiplier);
+    }
+
+    [Theory]
+    [InlineData("deep", "Value \"deep\" is not a number greater than 0, for example 6.4")]
+    [InlineData(0, "Value \"0\" is not a number greater than 0, for example 6.4")]
+    [InlineData(null, "Value is blank")]
+    public void Settings_BadBlindDepthMultiplier_IsReported_AndTakesTheStarterValue(object? value, string why)
+    {
+        var result = ReadWith("Settings", SettingsWithBlind(value));
+
+        Assert.Equal(2m, result.Workbook.Settings.BlindDepthMultiplier);
+        Assert.Equal(
+            [$"Settings tab, row 7: Blind depth multiplier: {why}; 2 is used."],
+            result.Problems.Select(p => p.ToString()));
+    }
+
+    [Fact]
+    public void DefaultBlindDepth_IsMultiplierTimesNominal_RoundedAsTheThreadDepthIs()
+    {
+        Assert.Equal(12m, HoleSettings.Starter.DefaultBlindDepth(6m));
+        Assert.Equal(0.38m, HoleSettings.Starter.DefaultBlindDepth(0.19m));
+        Assert.Equal(3.704m, (HoleSettings.Starter with { BlindDepthMultiplier = 1.2345m }).DefaultBlindDepth(3m));
+    }
+
     [Fact]
     public void Settings_MissingTab_UsesTheStarterSettings()
     {
@@ -573,5 +626,20 @@ public sealed class HoleWorkbookReaderTests
         Assert.Equal(HoleSettings.Starter, wb.Settings);
         Assert.Equal(["118 deg", "90 deg", "Flat"], wb.DrillPoints.Select(d => d.Name));
         Assert.True(wb.DrillPoints[2].IsFlat);
+    }
+
+    [Fact]
+    public void StarterWorkbook_HasTheBlindDepthMultiplierRow_AfterTheDrillExtraDepth()
+    {
+        using var stream = File.OpenRead(RepoWorkbookPath());
+        var sheet = XlsxPackage.Read(stream).Sheet(HoleWorkbookReader.SettingsTab)!;
+
+        Assert.Equal(HoleWorkbookReader.DrillExtraDepthSetting, sheet.Text(6, 1));
+        Assert.Equal(HoleWorkbookReader.BlindDepthSetting, sheet.Text(7, 1));
+        Assert.Equal("2", sheet.Text(7, 2));
+        Assert.NotEqual("", sheet.Text(7, 3));
+        Assert.Equal(HoleWorkbookReader.PressFitColourSetting, sheet.Text(8, 1));
+        Assert.Equal(HoleWorkbookReader.SlipFitColourSetting, sheet.Text(10, 1));
+        Assert.Equal(2m, HoleWorkbookReader.Read(RepoWorkbookPath()).Workbook.Settings.BlindDepthMultiplier);
     }
 }

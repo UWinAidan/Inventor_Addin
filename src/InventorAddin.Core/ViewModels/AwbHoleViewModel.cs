@@ -41,6 +41,13 @@ public sealed record HoleFitOption(string Value, string Text, string? Swatch)
 /// (spike 081 round 5: a seat is kept unless the user changes the type).
 /// </para>
 /// <para>
+/// A blind clearance or dowel hole whose depth was not typed in this window starts at the last depth used in its units
+/// (<see cref="HoleLastDepths"/>), else at the Settings tab's "Blind depth multiplier" x the size's nominal diameter
+/// (spec 09 question 7), and follows that rule when it becomes blind or its size or units change. A depth typed in this
+/// window, or an edited hole's own depth, is kept (and converted when the units change). Emptying the depth box leaves
+/// it empty, so OK is disabled, until the next change the rule follows.
+/// </para>
+/// <para>
 /// A choice that is not in the workbook, or is hidden, is kept and listed while the fields above it are unchanged, so
 /// an edited hole shows exactly what it was made with; <see cref="HoleRules"/> reports a size that is not in the
 /// workbook beside the Size field.
@@ -133,6 +140,7 @@ public sealed class AwbHoleViewModel : ObservableObject
 
     private readonly HoleWorkbook _workbook;
     private readonly string _partName;
+    private readonly HoleLastDepths _lastDepths;
 
     // The fields, in window order.
     private HoleUnits _units;
@@ -166,6 +174,11 @@ public sealed class AwbHoleViewModel : ObservableObject
     private ListContext? _depthsContext;
     private HoleUnits _depthUnits;
 
+    // The blind depth: whether the user typed it in this window (or it is the edited hole's own), and what the rule's
+    // depth was last worked out for.
+    private bool _depthKept;
+    private ListContext? _blindDepthContext;
+
     private int _centreCount;
     private bool _canPickCentres = true;
 
@@ -191,12 +204,14 @@ public sealed class AwbHoleViewModel : ObservableObject
         HoleSpec? editSpec,
         bool madeByInventor,
         IEnumerable<string>? inventorHoleNotes,
-        IEnumerable<HoleWorkbookProblem>? problems)
+        IEnumerable<HoleWorkbookProblem>? problems,
+        HoleLastDepths? lastDepths)
     {
         ArgumentNullException.ThrowIfNull(workbook);
 
         _workbook = workbook;
         _partName = (partName ?? "").Trim();
+        _lastDepths = lastDepths ?? HoleLastDepths.None;
         IsEdit = editSpec is not null;
         IsInventorHole = madeByInventor;
         InventorHoleNotes = (inventorHoleNotes ?? [])
@@ -229,6 +244,7 @@ public sealed class AwbHoleViewModel : ObservableObject
             _drillDepth = spec.DrillDepth;
             _termination = spec.Termination;
             _depth = spec.Depth;
+            _depthKept = spec.Depth is not null;
             _drillPoint = spec.DrillPoint;
             _flip = spec.Flip;
             _depthUnits = _units;
@@ -252,8 +268,13 @@ public sealed class AwbHoleViewModel : ObservableObject
     /// <param name="workbook">The hole workbook as read (task 082).</param>
     /// <param name="partName">The part's file name, for the header subline.</param>
     /// <param name="problems">The workbook's problems; the status line counts them at open, not as an error.</param>
-    public AwbHoleViewModel(HoleWorkbook workbook, string partName, IEnumerable<HoleWorkbookProblem>? problems = null)
-        : this(workbook, partName, null, false, null, problems)
+    /// <param name="lastDepths">The last blind depth used in each units; a blind hole starts at it.</param>
+    public AwbHoleViewModel(
+        HoleWorkbook workbook,
+        string partName,
+        IEnumerable<HoleWorkbookProblem>? problems = null,
+        HoleLastDepths? lastDepths = null)
+        : this(workbook, partName, null, false, null, problems, lastDepths)
     {
     }
 
@@ -262,10 +283,14 @@ public sealed class AwbHoleViewModel : ObservableObject
     /// first preview (spike 081 round 5).
     /// </summary>
     public static AwbHoleViewModel ForEdit(
-        HoleWorkbook workbook, string partName, HoleSpec spec, IEnumerable<HoleWorkbookProblem>? problems = null)
+        HoleWorkbook workbook,
+        string partName,
+        HoleSpec spec,
+        IEnumerable<HoleWorkbookProblem>? problems = null,
+        HoleLastDepths? lastDepths = null)
     {
         ArgumentNullException.ThrowIfNull(spec);
-        return new AwbHoleViewModel(workbook, partName, spec, false, null, problems);
+        return new AwbHoleViewModel(workbook, partName, spec, false, null, problems, lastDepths);
     }
 
     /// <summary>
@@ -279,10 +304,11 @@ public sealed class AwbHoleViewModel : ObservableObject
         string partName,
         HoleSpec closestSpec,
         IEnumerable<string>? notes = null,
-        IEnumerable<HoleWorkbookProblem>? problems = null)
+        IEnumerable<HoleWorkbookProblem>? problems = null,
+        HoleLastDepths? lastDepths = null)
     {
         ArgumentNullException.ThrowIfNull(closestSpec);
-        return new AwbHoleViewModel(workbook, partName, closestSpec, true, notes, problems);
+        return new AwbHoleViewModel(workbook, partName, closestSpec, true, notes, problems, lastDepths);
     }
 
     /// <summary>
@@ -294,12 +320,13 @@ public sealed class AwbHoleViewModel : ObservableObject
         HoleWorkbook workbook,
         string partName,
         HoleReadBackResult readBack,
-        IEnumerable<HoleWorkbookProblem>? problems = null)
+        IEnumerable<HoleWorkbookProblem>? problems = null,
+        HoleLastDepths? lastDepths = null)
     {
         ArgumentNullException.ThrowIfNull(readBack);
         return readBack.IsInventorHole
-            ? ForInventorHole(workbook, partName, readBack.Spec, readBack.Notes, problems)
-            : ForEdit(workbook, partName, readBack.Spec, problems);
+            ? ForInventorHole(workbook, partName, readBack.Spec, readBack.Notes, problems, lastDepths)
+            : ForEdit(workbook, partName, readBack.Spec, problems, lastDepths);
     }
 
     /// <summary>
@@ -561,12 +588,17 @@ public sealed class AwbHoleViewModel : ObservableObject
 
     /// <summary>
     /// Clearance and dowel holes ending at a distance: the depth, in the units' length; converted when the units
-    /// change, and kept while the hole is through. Null until the user enters one.
+    /// change, and kept while the hole is through. Starts at the last depth used, else the blind depth multiplier x D
+    /// (see the remarks). A number set here is kept; null empties it until the next change the rule follows.
     /// </summary>
     public decimal? Depth
     {
         get => _depth;
-        set => Change(() => Set(ref _depth, value, nameof(Depth)));
+        set => Change(() =>
+        {
+            _depthKept = value is not null;
+            Set(ref _depth, value, nameof(Depth));
+        });
     }
 
     // The depth boxes. The window binds these texts, not the numbers, so text that is not a number is kept in the box
@@ -988,7 +1020,7 @@ public sealed class AwbHoleViewModel : ObservableObject
             Set(ref _drillDepth, null, nameof(DrillDepth));
         }
 
-        // Depth: kept, and converted when the units change.
+        // Depth: converted when the units change; kept when typed, else the blind depth rule.
         if (_depthUnits != _units)
         {
             if (_depth is { } depth)
@@ -997,6 +1029,22 @@ public sealed class AwbHoleViewModel : ObservableObject
             }
 
             _depthUnits = _units;
+        }
+
+        if (kind != HoleKind.Tapped && IsBlind)
+        {
+            var blindContext = new ListContext(_units, kind, HoleSeat.None, null, null, _size);
+            if (!keepExact && !_depthKept && blindContext != _blindDepthContext
+                && DefaultBlindDepth(kind) is { } defaultDepth)
+            {
+                Set(ref _depth, defaultDepth, nameof(Depth));
+            }
+
+            _blindDepthContext = blindContext;
+        }
+        else
+        {
+            _blindDepthContext = null;
         }
 
         // Drill point: its list depends on nothing above it, so a choice not in the workbook is always kept.
@@ -1058,25 +1106,39 @@ public sealed class AwbHoleViewModel : ObservableObject
     };
 
     /// <summary>A size's nominal diameter in centimetres; a seated size takes its Clearance row's. Null when not found.</summary>
-    private double? NominalCm(ListContext context, string? size)
+    private double? NominalCm(ListContext context, string? size) =>
+        Nominal(context.Units, context.Kind, size) is { } n ? HoleRules.ToCm(n, context.Units) : null;
+
+    /// <summary>
+    /// A size's nominal diameter in the units' length; a seated size takes its Clearance row's. Null when not found.
+    /// </summary>
+    private decimal? Nominal(HoleUnits units, HoleKind kind, string? size)
     {
         if (string.IsNullOrWhiteSpace(size))
         {
             return null;
         }
 
-        decimal? nominal = context.Kind switch
+        return kind switch
         {
             HoleKind.Tapped => _workbook.Tapped
-                .FirstOrDefault(r => r.Units == context.Units && SameText(r.Thread, size))?.Nominal,
+                .FirstOrDefault(r => r.Units == units && SameText(r.Thread, size))?.Nominal,
             HoleKind.Dowel => _workbook.Dowel
-                .FirstOrDefault(r => r.Units == context.Units && SameText(r.Size, size))?.Nominal,
+                .FirstOrDefault(r => r.Units == units && SameText(r.Size, size))?.Nominal,
             _ => _workbook.Clearance
-                .FirstOrDefault(r => r.Units == context.Units && SameText(r.Size, size))?.Nominal,
+                .FirstOrDefault(r => r.Units == units && SameText(r.Size, size))?.Nominal,
         };
-
-        return nominal is { } n ? HoleRules.ToCm(n, context.Units) : null;
     }
+
+    /// <summary>
+    /// The depth a blind clearance or dowel hole starts at: the last depth used in the units, else the blind depth
+    /// multiplier x the size's nominal diameter. Null when neither is known.
+    /// </summary>
+    private decimal? DefaultBlindDepth(HoleKind kind) =>
+        _lastDepths.For(_units)
+        ?? (Nominal(_units, kind, _size) is { } nominal && nominal > 0
+            ? _workbook.Settings.DefaultBlindDepth(nominal)
+            : null);
 
     /// <summary>The size in the new list whose nominal is nearest the old size's; null when either is unknown.</summary>
     private string? Nearest(ListContext previous, string? previousSize, ListContext context)
