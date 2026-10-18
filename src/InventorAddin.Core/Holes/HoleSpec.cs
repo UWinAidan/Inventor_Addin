@@ -80,14 +80,17 @@ public static class HoleStandards
 /// </summary>
 /// <param name="Units">Metric or Imperial; picks the workbook rows.</param>
 /// <param name="Kind">Clearance, Tapped or Dowel.</param>
-/// <param name="Seat">None, Counterbore or Countersink. Dowel holes have no seat.</param>
+/// <param name="Seat">
+/// None, Counterbore or Countersink, for every kind (spec 09, "Types and seats"). A tapped or dowel hole's seat comes
+/// from the Counterbore or Countersink row of the same size (<see cref="HoleRules.SameSizeCounterbores"/>; task 099).
+/// </param>
 /// <param name="Size">
 /// The size key: the Size of a Clearance, Counterbore, Countersink or Dowel row, or the Thread of a Tapped row
 /// (as written in the workbook, <c>M6</c>, <c>#10-32 UNF</c>).
 /// </param>
 /// <param name="Fastener">
-/// Seated clearance holes: the Screw of the Counterbore or Countersink row (<c>SHCS</c>). Null takes the first row
-/// of the size, in workbook order.
+/// Seated holes: the Screw of the Counterbore or Countersink row (<c>SHCS</c>). Null takes the first row of the size
+/// (for a tapped or dowel hole, the first row of the same size), in workbook order.
 /// </param>
 /// <param name="ClearanceFit">Clearance holes with no seat: the Clearance column used. Seated holes take the row's Hole fit.</param>
 /// <param name="PrecisionFit">Dowel holes: Slip, Normal or Press.</param>
@@ -134,10 +137,9 @@ public sealed record HoleSpec(
     /// </summary>
     public HoleSpec Normalised()
     {
-        var seated = Kind == HoleKind.Clearance && Seat != HoleSeat.None;
+        var seated = Seat != HoleSeat.None;
         return this with
         {
-            Seat = Kind == HoleKind.Dowel ? HoleSeat.None : Seat,
             Size = Size.Trim(),
             Fastener = seated ? Fastener?.Trim() : null,
             ClearanceFit = Kind == HoleKind.Clearance && Seat == HoleSeat.None ? ClearanceFit : ClearanceFit.Normal,

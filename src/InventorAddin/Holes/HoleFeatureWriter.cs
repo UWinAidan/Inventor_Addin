@@ -14,6 +14,10 @@ namespace InventorAddin.Holes
     /// drill goes to the hole's tap info in the thread table's units, as the geometry carries it (task 095).
     /// </summary>
     /// <remarks>
+    /// A tapped hole takes its seat the same way as any other: the <c>AddCBore...</c> and <c>AddCSink...</c> methods
+    /// take the tap info in place of the diameter, and <c>SetCBore</c>, <c>SetCSink</c> and <c>SetDrilled</c> change
+    /// the seat of a tapped hole in place, keeping its thread and tap drill (task 099 spike, Inventor 2026). A dowel's
+    /// seat faces are among <see cref="HoleFeature.Faces"/>, so <see cref="HoleFitWriter"/> colours them too.
     /// Nothing here opens a transaction: the preview session (task 089) runs each call inside its own inner
     /// transaction and aborts it when the result is a refusal. After every create or change the document is
     /// updated and the hole's health and face count are checked, since a hole pointing the wrong way cuts nothing

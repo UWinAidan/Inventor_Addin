@@ -32,6 +32,10 @@ public sealed class HoleStoredDataTests
         Dowel() with { Tolerance = "Test bore", Termination = HoleTermination.Distance, Depth = 14m },
         Dowel() with { PrecisionFit = PrecisionFit.Press, Flip = true },
         Dowel("1/7\"") with { Units = HoleUnits.Imperial, PrecisionFit = PrecisionFit.Slip },
+        Tapped() with { Seat = HoleSeat.Counterbore, Fastener = "TLOW" },
+        Tapped() with { Seat = HoleSeat.Countersink, Termination = HoleTermination.ThroughAll },
+        Dowel("5 mm") with { Seat = HoleSeat.Counterbore, Termination = HoleTermination.Distance, Depth = 14m },
+        Dowel("5 mm") with { Seat = HoleSeat.Countersink, PrecisionFit = PrecisionFit.Press },
     };
 
     [Theory]
@@ -217,6 +221,8 @@ public sealed class HoleStoredDataTests
         { Clearance() with { Seat = HoleSeat.Counterbore }, HoleStoredData.FastenerName },
         { Clearance() with { Seat = HoleSeat.Countersink, Fastener = " " }, HoleStoredData.FastenerName },
         { Dowel(), HoleStoredData.ToleranceName },
+        { Tapped() with { Seat = HoleSeat.Counterbore }, HoleStoredData.FastenerName },
+        { Dowel("5 mm") with { Seat = HoleSeat.Countersink, Tolerance = "Test bore" }, HoleStoredData.FastenerName },
         { Clearance() with { Termination = HoleTermination.Distance }, HoleStoredData.DepthName },
         { Clearance(" "), HoleStoredData.SizeName },
     };
@@ -232,10 +238,35 @@ public sealed class HoleStoredDataTests
     }
 
     [Fact]
+    public void ASeatedTappedHole_StoresItsSeatAndFastener()
+    {
+        var attributes = Stored(Tapped() with { Seat = HoleSeat.Counterbore }).ToAttributes();
+
+        Assert.Contains(attributes, a => a.Name == HoleStoredData.SeatName && Equals(a.Value, "Counterbore"));
+        Assert.Contains(attributes, a => a.Name == HoleStoredData.FastenerName && Equals(a.Value, "TCAP"));
+    }
+
+    [Fact]
+    public void ASeatedDowel_WithoutItsFastener_CannotBeRead()
+    {
+        var attributes = Stored(Dowel("5 mm") with { Seat = HoleSeat.Counterbore }).ToAttributes()
+            .Where(a => a.Name != HoleStoredData.FastenerName);
+
+        var read = HoleStoredData.Read(attributes);
+
+        Assert.False(read.Succeeded);
+        Assert.Contains(HoleStoredData.FastenerName, read.Message);
+    }
+
+    [Fact]
     public void ToAttributes_ResolvedSpec_ReadsBack()
     {
         // The same specs once HoleRules has filled in the defaults.
-        foreach (var spec in new[] { Clearance() with { Seat = HoleSeat.Counterbore }, Dowel() })
+        foreach (var spec in new[]
+                 {
+                     Clearance() with { Seat = HoleSeat.Counterbore }, Dowel(), Tapped() with { Seat = HoleSeat.Countersink },
+                     Dowel("5 mm") with { Seat = HoleSeat.Counterbore },
+                 })
         {
             Assert.True(HoleStoredData.Read(Stored(spec).ToAttributes()).Succeeded);
         }

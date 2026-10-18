@@ -109,7 +109,9 @@ public sealed record HoleToleranceOption(string Value, string Text, string? Deta
 /// drill point (the first such row in workbook order, <see cref="HoleRules.FindTolerance"/> and
 /// <see cref="HoleRules.FindDrillPoint"/>), and the Tapped row's depths for a tapped hole. A Units switch keeps the size
 /// with the nearest nominal diameter in the other units, else the first. Changing the Type puts the seat back to None
-/// (spike 081 round 5: a seat is kept unless the user changes the type).
+/// (spike 081 round 5: a seat is kept unless the user changes the type). A tapped or dowel hole's Seat and Fastener type
+/// lists follow its Size instead (task 099): the seats and Screw values of the Counterbore and Countersink rows of the
+/// same size (<see cref="HoleRules.SameSizeCounterbores"/>).
 /// </para>
 /// <para>
 /// A blind clearance or dowel hole whose depth was not typed in this window starts at the last depth used in its units
@@ -206,8 +208,6 @@ public sealed class AwbHoleViewModel : ObservableObject
         new(HoleSeat.Counterbore, CounterboreText),
         new(HoleSeat.Countersink, CountersinkText),
     ];
-
-    private static readonly IReadOnlyList<HoleOption<HoleSeat>> NoSeat = [new(HoleSeat.None, NoneText)];
 
     private readonly HoleWorkbook _workbook;
     private readonly string _partName;
@@ -496,7 +496,10 @@ public sealed class AwbHoleViewModel : ObservableObject
         }
     }
 
-    /// <summary>The seats for the standard: None, Counterbore, Countersink; None only for a dowel hole.</summary>
+    /// <summary>
+    /// The seats: None, Counterbore, Countersink for a clearance hole; for a tapped or dowel hole, None and the seats
+    /// with a row of the same size in their tab, and the seat already chosen (task 099).
+    /// </summary>
     public IReadOnlyList<HoleOption<HoleSeat>> SeatOptions => _seatOptions;
 
     public HoleSeat Seat
@@ -535,10 +538,13 @@ public sealed class AwbHoleViewModel : ObservableObject
     /// <summary>The kind the Type and Standard give.</summary>
     public HoleKind Kind => HoleStandards.KindFor(_standard) ?? HoleKind.Clearance;
 
-    /// <summary>The Screw values of the seat's tab for the units, in workbook order; empty unless the hole is seated.</summary>
+    /// <summary>
+    /// The Screw values of the seat's tab for the units, in workbook order (for a tapped or dowel hole, of the rows of
+    /// the same size); empty unless the hole is seated.
+    /// </summary>
     public IReadOnlyList<HoleOption<string>> FastenerOptions => _fastenerOptions;
 
-    public bool ShowsFastener => IsSeatedClearance;
+    public bool ShowsFastener => _seat != HoleSeat.None;
 
     public string? Fastener
     {
@@ -929,8 +935,6 @@ public sealed class AwbHoleViewModel : ObservableObject
 
     private bool IsBlind => _termination == HoleTermination.Distance;
 
-    private bool IsSeatedClearance => Kind == HoleKind.Clearance && _seat != HoleSeat.None;
-
     private readonly record struct ListContext(
         HoleUnits Units, HoleKind Kind, HoleSeat Seat, string? Fastener, string? Fit, string? Size);
 
@@ -996,46 +1000,22 @@ public sealed class AwbHoleViewModel : ObservableObject
         Set(ref _standard, Find(_standardOptions, _standard) ?? _standardOptions[0].Value, nameof(Standard));
         var kind = Kind;
 
-        // Seat.
-        SetList(ref _seatOptions, (kind == HoleKind.Dowel ? NoSeat : AllSeats).ToList(), nameof(SeatOptions));
-        if (!_seatOptions.Any(o => o.Value == _seat))
+        // Seat, Fastener type and Size. A clearance hole's sizes depend on its seat and fastener; a tapped or dowel
+        // hole's seats and fasteners depend on its size, which comes from its own tab (task 099).
+        if (kind == HoleKind.Clearance)
         {
-            Set(ref _seat, HoleSeat.None, nameof(Seat));
-        }
-
-        var seated = kind == HoleKind.Clearance && _seat != HoleSeat.None;
-
-        // Fastener type.
-        var fastenerContext = new ListContext(_units, kind, _seat, null, null, null);
-        var keepFastener = keepExact || fastenerContext == _fastenerContext;
-        _fastenerContext = fastenerContext;
-        if (seated)
-        {
-            var screws = _seat == HoleSeat.Counterbore
-                ? _workbook.Counterbore.Where(r => r.Units == _units).Select(r => (r.Screw, r.Hidden))
-                : _workbook.Countersink.Where(r => r.Units == _units).Select(r => (r.Screw, r.Hidden));
-            SetList(ref _fastenerOptions, Options(screws, keepFastener ? _fastener : null), nameof(FastenerOptions));
-            Set(ref _fastener, Find(_fastenerOptions, _fastener) ?? FirstOf(_fastenerOptions), nameof(Fastener));
+            RefreshSeats(kind);
+            RefreshFasteners(kind, keepExact);
+            RefreshSizes(kind, keepExact);
         }
         else
         {
-            SetList(ref _fastenerOptions, [], nameof(FastenerOptions));
-            Set(ref _fastener, null, nameof(Fastener));
+            RefreshSizes(kind, keepExact);
+            RefreshSeats(kind);
+            RefreshFasteners(kind, keepExact);
         }
 
-        // Size.
-        var previousSizeContext = _sizeContext;
-        var sizeContext = new ListContext(_units, kind, _seat, _fastener, null, null);
-        var keepSize = keepExact || sizeContext == previousSizeContext;
-        _sizeContext = sizeContext;
-        SetList(ref _sizeOptions, Options(SizeRows(sizeContext), keepSize ? _size : null), nameof(SizeOptions));
-        var size = Find(_sizeOptions, _size);
-        if (size is null && previousSizeContext is { } previous && previous.Units != _units)
-        {
-            size = Nearest(previous, _size, sizeContext);
-        }
-
-        Set(ref _size, size ?? FirstOf(_sizeOptions), nameof(Size));
+        var seated = kind == HoleKind.Clearance && _seat != HoleSeat.None;
 
         // Fit.
         var fits = kind switch
@@ -1147,6 +1127,96 @@ public sealed class AwbHoleViewModel : ObservableObject
             Set(ref _drillPoint, null, nameof(DrillPoint));
         }
     }
+
+    /// <summary>
+    /// The seats: all three for a clearance hole. A tapped or dowel hole lists None, each seat whose tab has a shown
+    /// row of the same size (<see cref="HoleRules.SameSizeCounterbores"/>), and the seat already chosen, which
+    /// <see cref="HoleRules"/> then says cannot be kept when its tab has no row of the size.
+    /// </summary>
+    private void RefreshSeats(HoleKind kind)
+    {
+        List<HoleOption<HoleSeat>> seats;
+        if (kind == HoleKind.Clearance)
+        {
+            seats = AllSeats.ToList();
+        }
+        else
+        {
+            var nominal = HoleRules.SeatNominal(_workbook, _units, kind, _size);
+            seats = AllSeats
+                .Where(o => o.Value == HoleSeat.None || o.Value == _seat
+                    || (nominal is { } n && SameSizeSeatRows(o.Value, n).Any(r => !r.Hidden)))
+                .ToList();
+        }
+
+        SetList(ref _seatOptions, seats, nameof(SeatOptions));
+        if (!_seatOptions.Any(o => o.Value == _seat))
+        {
+            Set(ref _seat, HoleSeat.None, nameof(Seat));
+        }
+    }
+
+    /// <summary>
+    /// The Fastener type list: the Screw values of the seat's tab for the units (a clearance hole), or of its rows of
+    /// the same size (a tapped or dowel hole); empty with no seat.
+    /// </summary>
+    private void RefreshFasteners(HoleKind kind, bool keepExact)
+    {
+        var fastenerContext = new ListContext(
+            _units, kind, _seat, null, null, kind == HoleKind.Clearance ? null : _size);
+        var keepFastener = keepExact || fastenerContext == _fastenerContext;
+        _fastenerContext = fastenerContext;
+        if (_seat == HoleSeat.None)
+        {
+            SetList(ref _fastenerOptions, [], nameof(FastenerOptions));
+            Set(ref _fastener, null, nameof(Fastener));
+            return;
+        }
+
+        IEnumerable<(string Screw, bool Hidden)> screws;
+        if (kind == HoleKind.Clearance)
+        {
+            screws = _seat == HoleSeat.Counterbore
+                ? _workbook.Counterbore.Where(r => r.Units == _units).Select(r => (r.Screw, r.Hidden))
+                : _workbook.Countersink.Where(r => r.Units == _units).Select(r => (r.Screw, r.Hidden));
+        }
+        else
+        {
+            screws = HoleRules.SeatNominal(_workbook, _units, kind, _size) is { } nominal
+                ? SameSizeSeatRows(_seat, nominal)
+                : [];
+        }
+
+        SetList(ref _fastenerOptions, Options(screws, keepFastener ? _fastener : null), nameof(FastenerOptions));
+        Set(ref _fastener, Find(_fastenerOptions, _fastener) ?? FirstOf(_fastenerOptions), nameof(Fastener));
+    }
+
+    /// <summary>The size list for the kind (and a clearance hole's seat and fastener); a units switch keeps the nearest.</summary>
+    private void RefreshSizes(HoleKind kind, bool keepExact)
+    {
+        var previousSizeContext = _sizeContext;
+        var sizeContext = kind == HoleKind.Clearance
+            ? new ListContext(_units, kind, _seat, _fastener, null, null)
+            : new ListContext(_units, kind, HoleSeat.None, null, null, null);
+        var keepSize = keepExact || sizeContext == previousSizeContext;
+        _sizeContext = sizeContext;
+        SetList(ref _sizeOptions, Options(SizeRows(sizeContext), keepSize ? _size : null), nameof(SizeOptions));
+        var size = Find(_sizeOptions, _size);
+        if (size is null && previousSizeContext is { } previous && previous.Units != _units)
+        {
+            size = Nearest(previous, _size, sizeContext);
+        }
+
+        Set(ref _size, size ?? FirstOf(_sizeOptions), nameof(Size));
+    }
+
+    /// <summary>The Screw and hidden flag of the seat tab's rows of the same size as <paramref name="nominal"/>.</summary>
+    private IEnumerable<(string Screw, bool Hidden)> SameSizeSeatRows(HoleSeat seat, decimal nominal) => seat switch
+    {
+        HoleSeat.Counterbore => HoleRules.SameSizeCounterbores(_workbook, _units, nominal).Select(r => (r.Screw, r.Hidden)),
+        HoleSeat.Countersink => HoleRules.SameSizeCountersinks(_workbook, _units, nominal).Select(r => (r.Screw, r.Hidden)),
+        _ => [],
+    };
 
     /// <summary>
     /// The options from workbook rows: shown rows, each key once (the first spelling), in workbook order. The

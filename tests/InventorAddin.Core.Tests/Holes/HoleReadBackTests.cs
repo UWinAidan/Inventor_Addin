@@ -56,6 +56,11 @@ public sealed class HoleReadBackTests
         Dowel() with { Tolerance = "Test bore", Termination = HoleTermination.Distance, Depth = 14m },
         Dowel() with { PrecisionFit = PrecisionFit.Press, Flip = true },
         Dowel("1/7\"") with { Units = HoleUnits.Imperial, PrecisionFit = PrecisionFit.Slip },
+        Tapped() with { Seat = HoleSeat.Counterbore, Fastener = "TLOW" },
+        Tapped() with { Seat = HoleSeat.Countersink, Termination = HoleTermination.ThroughAll },
+        Tapped("#7-36 UNF") with { Units = HoleUnits.Imperial, Seat = HoleSeat.Counterbore },
+        Dowel("5 mm") with { Seat = HoleSeat.Counterbore, Fastener = "TLOW", Termination = HoleTermination.Distance, Depth = 14m },
+        Dowel("5 mm") with { Seat = HoleSeat.Countersink, PrecisionFit = PrecisionFit.Press },
     };
 
     [Theory]
@@ -198,14 +203,58 @@ public sealed class HoleReadBackTests
     }
 
     [Fact]
-    public void TappedHoleWithASeat_KeepsTheSeat()
+    public void TappedHoleWithASeatNotInTheWorkbook_KeepsTheSeat_AndTakesTheFirstRowOfTheSameSize_WithANote()
     {
-        var facts = FactsOf(Build(Tapped()).Geometry!) with { Seat = HoleSeat.Counterbore };
+        var facts = FactsOf(Build(Tapped()).Geometry!) with
+        {
+            Seat = HoleSeat.Counterbore,
+            CounterboreDiameterCm = 0.92,
+            CounterboreDepthCm = 0.5,
+        };
 
         var result = HoleReadBack.Read(null, facts, Workbook, HoleUnits.Metric);
 
         Assert.Equal(HoleSeat.Counterbore, result.Spec.Seat);
         Assert.Equal("M5", result.Spec.Size);
+        Assert.Equal("TCAP", result.Spec.Fastener);
+        Assert.Equal(
+            "No Counterbore row the size of M5 matches the hole's counterbore; the first, TCAP, is picked.",
+            Assert.Single(result.Notes));
+    }
+
+    [Fact]
+    public void TappedHoleWithASeat_WithNoRowOfTheSameSize_KeepsTheSeatWithoutAFastener()
+    {
+        var workbook = Workbook with { Countersink = [] };
+        var facts = FactsOf(Build(Tapped() with { Seat = HoleSeat.Countersink }).Geometry!);
+
+        var result = HoleReadBack.Read(null, facts, workbook, HoleUnits.Metric);
+
+        Assert.Equal(HoleSeat.Countersink, result.Spec.Seat);
+        Assert.Null(result.Spec.Fastener);
+        Assert.Empty(result.Notes);
+        Assert.Contains(HoleRules.Build(result.Spec, workbook, 1).Problems, p => p.Field == HoleField.Seat);
+    }
+
+    [Fact]
+    public void SeatedHoleWithATolerance_IsASeatedDowel()
+    {
+        var facts = FactsOf(Build(Dowel("5 mm") with { Seat = HoleSeat.Counterbore }).Geometry!);
+
+        var result = HoleReadBack.Read(null, facts, Workbook, HoleUnits.Metric);
+
+        Assert.Equal(HoleKind.Dowel, result.Spec.Kind);
+        Assert.Equal(HoleSeat.Counterbore, result.Spec.Seat);
+        Assert.Equal("5 mm", result.Spec.Size);
+        Assert.Equal("TCAP", result.Spec.Fastener);
+        Assert.Equal("Test location", result.Spec.Tolerance);
+
+        // Without the tolerance it is a counterbored clearance hole.
+        var clearance = HoleReadBack.Read(
+            null, facts with { ToleranceIsoCode = null, ToleranceUpperCm = null, ToleranceLowerCm = null }, Workbook,
+            HoleUnits.Metric);
+        Assert.Equal(HoleKind.Clearance, clearance.Spec.Kind);
+        Assert.Equal(HoleSeat.Counterbore, clearance.Spec.Seat);
     }
 
     [Fact]

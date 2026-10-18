@@ -38,6 +38,7 @@ internal static class HoleTestWorkbook
             new DowelRow(6, HoleUnits.Metric, "18 mm", 18m, false),
             new DowelRow(7, HoleUnits.Imperial, "1/7\"", 0.143m, false),
             new DowelRow(8, HoleUnits.Metric, "900 mm", 900m, false),
+            new DowelRow(9, HoleUnits.Metric, "5 mm", 5m, false),
         ],
         PrecisionTolerances:
         [

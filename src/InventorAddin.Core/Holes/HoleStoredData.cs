@@ -287,7 +287,7 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
         }
 
         Require(!string.IsNullOrWhiteSpace(spec.Size), SizeName);
-        if (spec.Kind == HoleKind.Clearance && spec.Seat != HoleSeat.None)
+        if (spec.Seat != HoleSeat.None)
         {
             Require(!string.IsNullOrWhiteSpace(spec.Fastener), FastenerName);
         }
@@ -318,7 +318,8 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
             var seat = RequiredEnum<HoleSeat>(SeatName);
             var termination = RequiredEnum<HoleTermination>(TerminationName);
             var blind = termination == HoleTermination.Distance;
-            var seated = kind == HoleKind.Clearance && seat != HoleSeat.None;
+            // Any seated hole stores its fastener: a tapped or dowel hole's seat row too (task 099).
+            var seated = seat != HoleSeat.None;
 
             var spec = new HoleSpec(
                 RequiredEnum<HoleUnits>(UnitsName),

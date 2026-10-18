@@ -25,6 +25,10 @@ Aidan, 090 check: the window should be closer to Inventor's Hole panel. Before a
 - The other fields kept compact: Units, Standard, Fastener type, Size, Fit with its colour, Tolerance (task 098's text), the depth boxes (with an expression shown, task 100), Flip, Centres.
 - A short note under the image naming each choice that is ours to make, so Aidan can comment on each.
 
+## Notes from earlier tasks
+
+- For tapped and dowel holes the Fastener type list depends on the size (task 099): consider putting Fastener type under Size.
+
 ## Acceptance criteria
 
 - [ ] The image is readable at 100 percent and shows every field the window has after 101.

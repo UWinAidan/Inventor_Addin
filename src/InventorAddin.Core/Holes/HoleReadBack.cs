@@ -145,13 +145,15 @@ public static class HoleReadBack
                 notes.Add(HoleFeatureMessages.SpotFaceNotOffered);
             }
 
+            // A seated hole with a tolerance on its diameter is read as a seated dowel first (task 099).
             var spec = facts.Tapped
                 ? Tapped(seat, termination)
                 : seat switch
                 {
+                    HoleSeat.None => DowelOrClearance(termination),
+                    _ when facts.HasTolerance && Dowel(termination, seat) is { } dowel => dowel,
                     HoleSeat.Counterbore => Counterbore(termination),
-                    HoleSeat.Countersink => Countersink(termination),
-                    _ => DowelOrClearance(termination),
+                    _ => Countersink(termination),
                 };
 
             spec = spec with { Flip = facts.Flip };
@@ -196,6 +198,7 @@ public static class HoleReadBack
             return Blank(units, HoleKind.Tapped, seat, termination) with
             {
                 Size = row?.Thread ?? "",
+                Fastener = SameSizeFastener(seat, units, row?.Thread, row?.Nominal),
                 // A hole that is not blind has no depths in Inventor; take the row's defaults, as HoleRules does.
                 ThreadDepth = blind && facts.ThreadDepthCm is { } thread ? FromCm(thread, units) : row?.ThreadDepth,
                 DrillDepth = blind && facts.DepthCm is { } drill ? FromCm(drill, units) : row?.DrillDepth,
@@ -204,7 +207,7 @@ public static class HoleReadBack
 
         private HoleSpec DowelOrClearance(HoleTermination termination)
         {
-            if (facts.HasTolerance && Dowel(termination) is { } dowel)
+            if (facts.HasTolerance && Dowel(termination, HoleSeat.None) is { } dowel)
             {
                 return dowel;
             }
@@ -249,7 +252,7 @@ public static class HoleReadBack
             };
         }
 
-        private HoleSpec? Dowel(HoleTermination termination)
+        private HoleSpec? Dowel(HoleTermination termination, HoleSeat seat)
         {
             foreach (var units in UnitsOrder)
             {
@@ -265,9 +268,10 @@ public static class HoleReadBack
                     notes.Add("The hole's tolerance is not in the Precision Tol tab; the default tolerance is picked.");
                 }
 
-                return Blank(units, HoleKind.Dowel, HoleSeat.None, termination) with
+                return Blank(units, HoleKind.Dowel, seat, termination) with
                 {
                     Size = row.Size,
+                    Fastener = SameSizeFastener(seat, units, row.Size, row.Nominal),
                     PrecisionFit = tolerance?.Fit ?? PrecisionFit.Normal,
                     Tolerance = tolerance?.Name,
                 };
@@ -344,6 +348,44 @@ public static class HoleReadBack
                 Size = row?.Size ?? "",
                 Fastener = row?.Screw,
             };
+        }
+
+        /// <summary>
+        /// The fastener of a tapped or dowel hole's seat (task 099): the Screw of the Counterbore or Countersink row of
+        /// the same size whose seat matches the hole's. When none matches, a note says so and the first row of the same
+        /// size is picked; with no row of the same size, null (the window says why the seat cannot be kept).
+        /// </summary>
+        private string? SameSizeFastener(HoleSeat seat, HoleUnits units, string? size, decimal? nominal)
+        {
+            if (seat == HoleSeat.None || nominal is not { } n)
+            {
+                return null;
+            }
+
+            string? match;
+            string? first;
+            if (seat == HoleSeat.Counterbore)
+            {
+                var rows = HoleRules.SameSizeCounterbores(workbook, units, n);
+                match = rows.FirstOrDefault(r => Same(facts.CounterboreDiameterCm, r.CboreDiameter, units)
+                    && Same(facts.CounterboreDepthCm, r.CboreDepth, units))?.Screw;
+                first = rows.FirstOrDefault()?.Screw;
+            }
+            else
+            {
+                var rows = HoleRules.SameSizeCountersinks(workbook, units, n);
+                match = rows.FirstOrDefault(r => Same(facts.CountersinkDiameterCm, r.CsinkDiameter, units)
+                    && SameAngle(facts.CountersinkAngleDeg, r.AngleDeg))?.Screw;
+                first = rows.FirstOrDefault()?.Screw;
+            }
+
+            if (match is null && first is not null)
+            {
+                var tab = seat == HoleSeat.Counterbore ? HoleWorkbookReader.CounterboreTab : HoleWorkbookReader.CountersinkTab;
+                notes.Add($"No {tab} row the size of {size} matches the hole's {tab.ToLowerInvariant()}; the first, {first}, is picked.");
+            }
+
+            return match ?? first;
         }
 
         private bool ThroughHoleMatches(HoleUnits units, string size, ClearanceFit fit) =>

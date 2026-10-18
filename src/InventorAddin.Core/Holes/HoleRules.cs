@@ -100,6 +100,72 @@ public static class HoleRules
         return shown.FirstOrDefault(r => r.IsDefault) ?? shown.FirstOrDefault();
     }
 
+    /// <summary>
+    /// Two nominal diameters closer than this, in their rows' units, are the same size when a seat row is matched to a
+    /// thread or dowel (task 099).
+    /// </summary>
+    public const decimal SameNominalTolerance = 0.0001m;
+
+    /// <summary>
+    /// The nominal diameter a tapped or dowel hole's seat is matched by (task 099): the Tapped row's Nominal for a
+    /// thread, the Dowel row's for a dowel. Null for a clearance hole, or when the size is not in the tab. Hidden rows
+    /// are found.
+    /// </summary>
+    public static decimal? SeatNominal(HoleWorkbook workbook, HoleUnits units, HoleKind kind, string? size)
+    {
+        ArgumentNullException.ThrowIfNull(workbook);
+
+        if (string.IsNullOrWhiteSpace(size))
+        {
+            return null;
+        }
+
+        return kind switch
+        {
+            HoleKind.Tapped => workbook.Tapped.FirstOrDefault(r => r.Units == units && Same(r.Thread, size))?.Nominal,
+            HoleKind.Dowel => workbook.Dowel.FirstOrDefault(r => r.Units == units && Same(r.Size, size))?.Nominal,
+            _ => null,
+        };
+    }
+
+    /// <summary>
+    /// True when a Counterbore or Countersink row's Size is "the same size" as <paramref name="nominal"/> (spec 09,
+    /// "Types and seats", Default): the Size has a Clearance row in the same units with the same nominal diameter.
+    /// Hidden Clearance rows count.
+    /// </summary>
+    public static bool IsSameSize(HoleWorkbook workbook, HoleUnits units, string seatSize, decimal nominal)
+    {
+        ArgumentNullException.ThrowIfNull(workbook);
+
+        return workbook.Clearance.Any(c => c.Units == units
+            && Same(c.Size, seatSize)
+            && Math.Abs(c.Nominal - nominal) < SameNominalTolerance);
+    }
+
+    /// <summary>
+    /// The Counterbore rows of the same size as a thread or dowel of <paramref name="nominal"/> (see
+    /// <see cref="IsSameSize"/>), in workbook order, hidden rows included. <c>M6</c> and a 6 mm dowel take the
+    /// <c>M6</c> rows.
+    /// </summary>
+    public static IReadOnlyList<CounterboreRow> SameSizeCounterbores(HoleWorkbook workbook, HoleUnits units, decimal nominal)
+    {
+        ArgumentNullException.ThrowIfNull(workbook);
+        return workbook.Counterbore
+            .Where(r => r.Units == units && IsSameSize(workbook, units, r.Size, nominal))
+            .ToList()
+            .AsReadOnly();
+    }
+
+    /// <summary>The Countersink rows of the same size, as <see cref="SameSizeCounterbores"/>.</summary>
+    public static IReadOnlyList<CountersinkRow> SameSizeCountersinks(HoleWorkbook workbook, HoleUnits units, decimal nominal)
+    {
+        ArgumentNullException.ThrowIfNull(workbook);
+        return workbook.Countersink
+            .Where(r => r.Units == units && IsSameSize(workbook, units, r.Size, nominal))
+            .ToList()
+            .AsReadOnly();
+    }
+
     /// <summary>A length in a row's units, in centimetres: millimetres divided by 10, inches times 2.54.</summary>
     public static double ToCm(decimal value, HoleUnits units) =>
         (double)(units == HoleUnits.Metric ? value / 10m : value * 2.54m);
@@ -125,6 +191,9 @@ public static class HoleRules
 
         // Everything below is in the spec's units until the geometry is made.
         private decimal? _holeDiameter;
+
+        // What a seat must be wider than: the thread's nominal for a tapped hole (task 099), else the hole diameter.
+        private decimal? _seatBound;
         private decimal? _depth;
         private decimal? _cboreDiameter;
         private decimal? _cboreDepth;
@@ -303,16 +372,73 @@ public static class HoleRules
             ThroughHole(tab, row.Size, row.Screw, row.HoleFit);
         }
 
-        private void BuildTapped()
+        /// <summary>
+        /// The seat of a tapped or dowel hole: the Counterbore or Countersink row of the same size as the thread's or
+        /// dowel's <paramref name="nominal"/> (spec 09 questions 6 and 9; task 099), picked by fastener, else the first.
+        /// </summary>
+        private void BuildSeatOfSameSize(decimal nominal)
         {
-            if (spec.Seat != HoleSeat.None)
+            if (spec.Seat == HoleSeat.None)
             {
-                // Spec 09 lets a tapped hole have a seat but does not say where its sizes come from (open question 6).
-                Problem(
-                    HoleField.Seat,
-                    "A counterbore or countersink on a tapped hole is not available yet. Set Seat to None.");
+                return;
             }
 
+            _seatBound = nominal;
+            if (spec.Seat == HoleSeat.Counterbore)
+            {
+                var row = PickSameSize(
+                    SameSizeCounterbores(workbook, Units, nominal), r => r.Screw, HoleWorkbookReader.CounterboreTab, nominal);
+                if (row is not null)
+                {
+                    _resolved = _resolved with { Fastener = row.Screw };
+                    _cboreDiameter = row.CboreDiameter;
+                    _cboreDepth = row.CboreDepth;
+                }
+            }
+            else
+            {
+                var row = PickSameSize(
+                    SameSizeCountersinks(workbook, Units, nominal), r => r.Screw, HoleWorkbookReader.CountersinkTab, nominal);
+                if (row is not null)
+                {
+                    _resolved = _resolved with { Fastener = row.Screw };
+                    _csinkDiameter = row.CsinkDiameter;
+                    _csinkAngleDeg = row.AngleDeg;
+                }
+            }
+        }
+
+        private T? PickSameSize<T>(IReadOnlyList<T> rows, Func<T, string> screw, string tab, decimal nominal)
+            where T : class
+        {
+            var size = spec.Size.Trim();
+            if (rows.Count == 0)
+            {
+                Problem(
+                    HoleField.Seat,
+                    $"No {tab} row is the size of {size} (a Clearance size with nominal {Length(nominal, Units)}) " +
+                    $"for {UnitsText} holes, so it cannot have a {tab.ToLowerInvariant()}. Set Seat to None.");
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(spec.Fastener))
+            {
+                return rows[0];
+            }
+
+            var row = rows.FirstOrDefault(r => Same(screw(r), spec.Fastener));
+            if (row is null)
+            {
+                Problem(
+                    HoleField.Fastener,
+                    $"The {tab} tab has no {spec.Fastener.Trim()} row the size of {size} for {UnitsText} holes.");
+            }
+
+            return row;
+        }
+
+        private void BuildTapped()
+        {
             var row = FindRow(workbook.Tapped, r => r.Units, r => r.Thread, spec.Size);
             if (row is null)
             {
@@ -349,6 +475,8 @@ public static class HoleRules
                 row.Units,
                 FullDepth: !spec.IsBlind,
                 ToCm(threadDepth, Units));
+
+            BuildSeatOfSameSize(row.Nominal);
         }
 
         private void BuildDowel()
@@ -361,6 +489,7 @@ public static class HoleRules
             else
             {
                 _holeDiameter = row.Nominal;
+                BuildSeatOfSameSize(row.Nominal);
             }
 
             _colour = workbook.Settings.FitColour(spec.PrecisionFit);
@@ -439,6 +568,11 @@ public static class HoleRules
             _drillPoint = new HoleDrillPoint(row.Name, (double?)row.AngleDeg);
         }
 
+        /// <summary>What the seat must be wider than, for a message: the thread and its nominal, or the hole.</summary>
+        private string SeatBoundText(decimal value) => spec.Kind == HoleKind.Tapped && _seatBound is not null
+            ? $"The thread {spec.Size.Trim()} ({Length(value, Units)})"
+            : $"The hole ({Length(value, Units)})";
+
         private void CheckSizes()
         {
             if (_holeDiameter is { } diameter && diameter <= 0)
@@ -447,14 +581,13 @@ public static class HoleRules
                 return;
             }
 
-            if (_cboreDiameter is { } cboreDiameter && _holeDiameter is { } hole)
+            if (_cboreDiameter is { } cboreDiameter && (_seatBound ?? _holeDiameter) is { } hole)
             {
                 if (hole >= cboreDiameter)
                 {
                     Problem(
                         HoleField.Size,
-                        $"The hole ({Length(hole, Units)}) is not smaller than its counterbore " +
-                        $"({Length(cboreDiameter, Units)}).");
+                        $"{SeatBoundText(hole)} is not smaller than its counterbore ({Length(cboreDiameter, Units)}).");
                 }
             }
 
@@ -473,12 +606,12 @@ public static class HoleRules
                 }
             }
 
-            if (_csinkDiameter is { } csinkDiameter && _holeDiameter is { } through && through >= csinkDiameter)
+            if (_csinkDiameter is { } csinkDiameter && (_seatBound ?? _holeDiameter) is { } through
+                && through >= csinkDiameter)
             {
                 Problem(
                     HoleField.Size,
-                    $"The hole ({Length(through, Units)}) is not smaller than its countersink " +
-                    $"({Length(csinkDiameter, Units)}).");
+                    $"{SeatBoundText(through)} is not smaller than its countersink ({Length(csinkDiameter, Units)}).");
             }
 
             if (_csinkAngleDeg is { } angle && angle is <= 0 or >= 180)
@@ -490,7 +623,8 @@ public static class HoleRules
                 && _holeDiameter is { } sinkHole && sinkHole > 0 && sinkHole < sinkDiameter
                 && _depth is { } blindDepth && blindDepth > 0)
             {
-                // The cone's depth from the countersink diameter down to the hole diameter.
+                // The cone's depth from the countersink diameter down to the modelled hole diameter (the tap drill for a
+                // tapped hole, as the task 099 spike measured it).
                 var halfAngleRad = (double)csinkAngle / 2 * Math.PI / 180;
                 var csinkDepth = (double)(sinkDiameter - sinkHole) / 2 / Math.Tan(halfAngleRad);
                 if (csinkDepth >= (double)blindDepth)

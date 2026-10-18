@@ -357,12 +357,153 @@ public sealed class HoleRulesTests
         Assert.Contains(result.Problems, p => p.Field == HoleField.ThreadDepth);
     }
 
-    [Theory]
-    [InlineData(HoleSeat.Counterbore)]
-    [InlineData(HoleSeat.Countersink)]
-    public void Tapped_WithASeat_IsNotAvailableYet(HoleSeat seat)
+    // ---- Seats on tapped and dowel holes (task 099) ----
+
+    [Fact]
+    public void SameSizeSeatRows_AreTheRowsWhoseSizeHasAClearanceRowOfTheNominal()
     {
-        OneProblem(Tapped() with { Seat = seat }, HoleField.Seat);
+        Assert.Equal(["TCAP", "TLOW"], HoleRules.SameSizeCounterbores(Workbook, HoleUnits.Metric, 5m).Select(r => r.Screw));
+        Assert.Equal(["TFLAT"], HoleRules.SameSizeCountersinks(Workbook, HoleUnits.Metric, 5m).Select(r => r.Screw));
+        Assert.Equal(["#7"], HoleRules.SameSizeCounterbores(Workbook, HoleUnits.Imperial, 0.15m).Select(r => r.Size));
+        Assert.Empty(HoleRules.SameSizeCounterbores(Workbook, HoleUnits.Imperial, 5m));
+        Assert.Empty(HoleRules.SameSizeCounterbores(Workbook, HoleUnits.Metric, 7m));
+
+        // TNONE has no Clearance row, so it is never the same size.
+        Assert.DoesNotContain(
+            HoleRules.SameSizeCounterbores(Workbook, HoleUnits.Metric, 6m), r => r.Size == "TNONE");
+    }
+
+    [Fact]
+    public void SameSize_MatchesTheNominalWithinTheTolerance_AndCountsHiddenClearanceRows()
+    {
+        Assert.True(HoleRules.IsSameSize(Workbook, HoleUnits.Metric, " t5 ", 5.00005m));
+        Assert.False(HoleRules.IsSameSize(Workbook, HoleUnits.Metric, "T5", 5.001m));
+        Assert.True(HoleRules.IsSameSize(Workbook, HoleUnits.Metric, "T9", 9m));
+    }
+
+    [Fact]
+    public void SeatNominal_IsTheThreadsOrTheDowelsNominal()
+    {
+        Assert.Equal(5m, HoleRules.SeatNominal(Workbook, HoleUnits.Metric, HoleKind.Tapped, " m5 "));
+        Assert.Equal(7m, HoleRules.SeatNominal(Workbook, HoleUnits.Metric, HoleKind.Dowel, "7 mm"));
+        Assert.Null(HoleRules.SeatNominal(Workbook, HoleUnits.Metric, HoleKind.Clearance, "T5"));
+        Assert.Null(HoleRules.SeatNominal(Workbook, HoleUnits.Metric, HoleKind.Tapped, "M99"));
+        Assert.Null(HoleRules.SeatNominal(Workbook, HoleUnits.Metric, HoleKind.Dowel, null));
+    }
+
+    [Fact]
+    public void Tapped_WithACounterbore_TakesTheFirstRowOfTheSameSize_AndKeepsTheThread()
+    {
+        var result = HoleRules.Build(Tapped() with { Seat = HoleSeat.Counterbore }, Workbook, 1);
+        Assert.True(result.Succeeded, string.Join(" | ", result.Problems));
+
+        var geometry = result.Geometry!;
+        Assert.Equal(HoleKind.Tapped, geometry.Kind);
+        Assert.Equal(HoleSeat.Counterbore, geometry.Seat);
+        Assert.Equal(0.95, geometry.CounterboreDiameterCm!.Value, 12);
+        Assert.Equal(0.52, geometry.CounterboreDepthCm!.Value, 12);
+        Assert.Equal(0.42, geometry.HoleDiameterCm, 12);           // the tap drill, as without a seat
+        Assert.Equal("M5x0.8", geometry.Thread!.Designation);
+        Assert.False(geometry.Thread.FullDepth);
+        Assert.Equal(1.0, geometry.DepthCm!.Value, 12);
+        Assert.Null(geometry.FitColour);
+        Assert.Equal("TCAP", result.Resolved.Fastener);
+    }
+
+    [Fact]
+    public void Tapped_FastenerPicksTheRowOfTheSameSize()
+    {
+        var geometry = Built(Tapped() with { Seat = HoleSeat.Counterbore, Fastener = " tlow " });
+
+        Assert.Equal(0.85, geometry.CounterboreDiameterCm!.Value, 12);
+        Assert.Equal(0.31, geometry.CounterboreDepthCm!.Value, 12);
+    }
+
+    [Fact]
+    public void Tapped_WithACountersink_ThroughAll_IsFullDepth()
+    {
+        var geometry = Built(Tapped() with { Seat = HoleSeat.Countersink, Termination = HoleTermination.ThroughAll });
+
+        Assert.Equal(HoleSeat.Countersink, geometry.Seat);
+        Assert.Equal(1.04, geometry.CountersinkDiameterCm!.Value, 12);
+        Assert.Equal(90.0, geometry.CountersinkAngleDeg);
+        Assert.True(geometry.Thread!.FullDepth);
+        Assert.Null(geometry.DepthCm);
+    }
+
+    [Fact]
+    public void ImperialTapped_UsesTheRowsOfTheSameNumberSize()
+    {
+        var geometry = Built(Tapped("#7-36 UNF") with { Units = HoleUnits.Imperial, Seat = HoleSeat.Counterbore });
+
+        Assert.Equal(0.28 * 2.54, geometry.CounterboreDiameterCm!.Value, 12);
+        Assert.Equal(0.16 * 2.54, geometry.CounterboreDepthCm!.Value, 12);
+        Assert.Equal("7-36 UNF", geometry.Thread!.Designation);
+    }
+
+    [Theory]
+    [InlineData(HoleKind.Tapped, "M7")]
+    [InlineData(HoleKind.Dowel, "7 mm")]
+    public void ASizeWithNoSeatRowOfTheSameSize_SaysWhyTheSeatCannotBeKept(HoleKind kind, string size)
+    {
+        var workbook = Workbook with
+        {
+            Tapped = [.. Workbook.Tapped, new TappedRow(9, HoleUnits.Metric, "M7", 7m, 1m, 6m, "6H", 10.5m, 14m, false)],
+        };
+        var spec = (kind == HoleKind.Tapped ? Tapped(size) : Dowel(size)) with { Seat = HoleSeat.Countersink };
+
+        var result = HoleRules.Build(spec, workbook, 1);
+
+        Assert.False(result.Succeeded);
+        var problem = Assert.Single(result.Problems);
+        Assert.Equal(HoleField.Seat, problem.Field);
+        Assert.Contains(size, problem.Message);
+        Assert.Contains("Countersink", problem.Message);
+        Assert.Contains("7 mm", problem.Message);
+        Assert.Contains("Set Seat to None", problem.Message);
+    }
+
+    [Fact]
+    public void Tapped_UnknownFastenerOfTheSameSize_IsAProblem()
+    {
+        var problem = OneProblem(Tapped() with { Seat = HoleSeat.Counterbore, Fastener = "TNOPE" }, HoleField.Fastener);
+
+        Assert.Contains("TNOPE", problem.Message);
+        Assert.Contains("M5", problem.Message);
+    }
+
+    [Fact]
+    public void Tapped_SeatNotWiderThanTheThreadsNominal_IsAProblem_EvenWhenWiderThanTheTapDrill()
+    {
+        // 4.8 mm is wider than the 4.2 mm tap drill, but not than the 5 mm thread.
+        var workbook = Workbook with
+        {
+            Counterbore = [new CounterboreRow(5, HoleUnits.Metric, "T5", "TCAP", 4.8m, 2m, ClearanceFit.Normal, false)],
+        };
+
+        var result = HoleRules.Build(Tapped() with { Seat = HoleSeat.Counterbore }, workbook, 1);
+
+        var problem = Assert.Single(result.Problems);
+        Assert.Equal(HoleField.Size, problem.Field);
+        Assert.Equal("The thread M5 (5 mm) is not smaller than its counterbore (4.8 mm).", problem.Message);
+    }
+
+    [Fact]
+    public void Tapped_CounterboreNotShallowerThanTheDrillDepth_IsAProblem()
+    {
+        var problem = OneProblem(
+            Tapped() with { Seat = HoleSeat.Counterbore, ThreadDepth = 4m, DrillDepth = 5m }, HoleField.Depth);
+
+        Assert.Contains("5.2 mm", problem.Message);
+        Assert.Contains("5 mm", problem.Message);
+    }
+
+    [Fact]
+    public void Tapped_CountersinkDepth_IsFromTheTapDrill()
+    {
+        // (10.4 - 4.2) / 2 / tan 45 = 3.1 mm of cone.
+        Built(Tapped() with { Seat = HoleSeat.Countersink, ThreadDepth = 3m, DrillDepth = 3.2m });
+        OneProblem(Tapped() with { Seat = HoleSeat.Countersink, ThreadDepth = 3m, DrillDepth = 3.1m }, HoleField.Depth);
     }
 
     // ---- Dowel ----
@@ -452,12 +593,50 @@ public sealed class HoleRulesTests
     }
 
     [Fact]
-    public void Dowel_HasNoSeat()
+    public void Dowel_WithACounterbore_KeepsItsNominalToleranceAndColour()
     {
-        var result = HoleRules.Build(Dowel() with { Seat = HoleSeat.Counterbore }, Workbook, 1);
+        var result = HoleRules.Build(Dowel("5 mm") with { Seat = HoleSeat.Counterbore }, Workbook, 1);
+        Assert.True(result.Succeeded, string.Join(" | ", result.Problems));
 
-        Assert.Equal(HoleSeat.None, result.Geometry!.Seat);
-        Assert.Null(result.Geometry.CounterboreDiameterCm);
+        var geometry = result.Geometry!;
+        Assert.Equal(HoleKind.Dowel, geometry.Kind);
+        Assert.Equal(HoleSeat.Counterbore, geometry.Seat);
+        Assert.Equal(0.5, geometry.HoleDiameterCm, 12);
+        Assert.Equal(0.95, geometry.CounterboreDiameterCm!.Value, 12);
+        Assert.Equal("G7", geometry.Tolerance!.IsoCode);
+        Assert.Equal(HoleSettings.Starter.NormalFitColour, geometry.FitColour);
+        Assert.Equal("TCAP", result.Resolved.Fastener);
+        Assert.Equal("Test location", result.Resolved.Tolerance);
+    }
+
+    [Fact]
+    public void Dowel_WithACountersink()
+    {
+        var geometry = Built(Dowel("5 mm") with { Seat = HoleSeat.Countersink, PrecisionFit = PrecisionFit.Press });
+
+        Assert.Equal(1.04, geometry.CountersinkDiameterCm!.Value, 12);
+        Assert.Equal(HoleSettings.Starter.PressFitColour, geometry.FitColour);
+        Assert.False(geometry.Tolerance!.IsIso);
+    }
+
+    [Fact]
+    public void Dowel_BlindNotDeeperThanItsCounterbore_IsAProblem()
+    {
+        OneProblem(
+            Dowel("5 mm") with { Seat = HoleSeat.Counterbore, Termination = HoleTermination.Distance, Depth = 5.2m },
+            HoleField.Depth);
+    }
+
+    [Fact]
+    public void Normalised_KeepsTheSeatAndFastenerOfATappedOrDowelHole()
+    {
+        var tapped = (Tapped() with { Seat = HoleSeat.Counterbore, Fastener = " TLOW " }).Normalised();
+        var dowel = (Dowel() with { Seat = HoleSeat.Countersink, Fastener = "TFLAT" }).Normalised();
+        var unseated = (Dowel() with { Fastener = "TFLAT" }).Normalised();
+
+        Assert.Equal((HoleSeat.Counterbore, "TLOW"), (tapped.Seat, tapped.Fastener));
+        Assert.Equal((HoleSeat.Countersink, "TFLAT"), (dowel.Seat, dowel.Fastener));
+        Assert.Null(unseated.Fastener);
     }
 
     // ---- General checks ----

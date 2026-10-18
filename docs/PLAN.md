@@ -315,7 +315,7 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 - [x] 096 Removing a dowel's colour resets every face
 - [x] 097 Blind holes start at the last depth used, or 2 x D
 - [x] 098 Tolerance list shows the limits for the size
-- [ ] 099 Counterbore and countersink on tapped and dowel holes
+- [x] 099 Counterbore and countersink on tapped and dowel holes
 - [ ] 100 Depth boxes take Inventor parameters and expressions
 - [ ] 101 Preview holes in translucent red
 - [ ] 102 AWB Hole window redesign: mockup for Aidan
