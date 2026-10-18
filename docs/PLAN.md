@@ -283,6 +283,19 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 | 090 | windows build | 085, 087, 089 | 086 |
 | 091 | windows build | 086, 090 | 092 |
 | 092 | windows build | 090 | 091 |
+| 093 | windows build | 090 | 094, 096, 098 |
+| 094 | windows build | 090 | 093, 096, 098 |
+| 095 | windows build, own invisible Inventor | 090 | none |
+| 096 | windows build | 090 | 093, 094, 098 |
+| 097 | windows build | 090 | 093 to 096 |
+| 098 | windows build | 090 | 093 to 096 |
+| 099 | windows build | 093, 098 | 096 |
+| 100 | windows build | 097, 099 | none |
+| 101 | windows build | 096, 099 | none |
+| 102 | image only | 098, 099, 100 | 091, 092 |
+| 103 | **windows** (spike with Aidan) | 090 | 102 |
+| 104 | windows build | 102 approved by Aidan, 101 | 105 |
+| 105 | windows build | 103, 092 | 104 |
 
 - [x] 081 Spike: AWB Hole through the Inventor API (Windows)
 - [x] 082 Hole workbook: reader and models (Core)
@@ -296,8 +309,21 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 - [x] 090 AWB Hole window and command
 - [ ] 091 AWB Hole replaces Inventor's Hole and its H shortcut
 - [ ] 092 Edit Feature and double-click open AWB Hole; re-apply offer
+- [ ] 093 Counterbore and countersink follow a size change
+- [ ] 094 The hole's sketch is consumed under it after OK
+- [ ] 095 Tapped holes show their thread in the model
+- [ ] 096 Removing a dowel's colour resets every face
+- [ ] 097 Blind holes start at the last depth used, or 2 x D
+- [ ] 098 Tolerance list shows the limits for the size
+- [ ] 099 Counterbore and countersink on tapped and dowel holes
+- [ ] 100 Depth boxes take Inventor parameters and expressions
+- [ ] 101 Preview holes in translucent red
+- [ ] 102 AWB Hole window redesign: mockup for Aidan
+- [ ] 103 Spike: AWB Hole in a part edited in place in an assembly (with Aidan)
+- [ ] 104 AWB Hole window redesign
+- [ ] 105 AWB Hole in a part edited in place
 
-**Order.** 082 and 083, 084, 085, 086 and 087 alongside, then 088, 089, 090, then 091 and 092. Aidan checks after 090 (making and editing holes) and again after 092.
+**Order.** 082 and 083, 084, 085, 086 and 087 alongside, then 088, 089, 090. Aidan checked 090 on 2026-10-18; his three bugs and seven requests became tasks 093 to 105 (Aidan, 2026-10-18). Then: 093 to 101 one after another (fixes, then answers and requests), 091, 092, then 102 (mockup). Aidan then checks 091 to 101, approves or changes the mockup, and runs spike 103 with the parent session. Then 104 and 105, and a last check.
 
 Not in part 1: AWB Hole on the Sheet Metal and Flat Pattern tabs (they keep Inventor's Hole), holes placed without a sketch, and Standard and Fastener type beyond spec 09's defaults (questions 2 and 3).
 

@@ -2,11 +2,11 @@
 
 Everything that needs doing and is not already a task in `docs/PLAN.md`. Kept current by the parent session: items are added when they come up and removed when they are done or turned into a task. Where the project stands is in `STATUS.md`; why things are the way they are is in `DECISIONS.md`.
 
-Last updated: 2026-10-17
+Last updated: 2026-10-18
 
 ## Next up
 
-1. M4 part 1: tasks 082 to 090 are done on branch `claude/m4-hole-generator`. Aidan checks making holes in Inventor (below), then 091 and 092 run.
+1. M4 part 1: Aidan checked 090 on 2026-10-18; his bugs and requests are tasks 093 to 105 in `docs/PLAN.md`. Running 093 to 101, 091, 092 and 102 (the window mockup) on branch `claude/m4-hole-generator`; then Aidan checks, approves the mockup, and runs spike 103 (in-place edit) with the parent session.
 2. Ribbon icon colours: Aidan picks option A, B or C from `docs/ui-mockups/ribbon-icons-colour-options.png` on branch `claude/ribbon-icon-colour`; then build it.
 3. Aidan finishes the remaining Part Properties checks below.
 
@@ -22,7 +22,7 @@ Last updated: 2026-10-17
 
 **M2 run 1** (037, 038, 039, 042): Aidan reported on 2026-10-17 that the remaining checks passed.
 
-**M4 part 1, after 090** (making holes): close Inventor, run `dotnet build InventorAddin.slnx -tl:off` on `claude/m4-hole-generator` (this also replaces the spike build), and follow steps 1 to 21 and 25 of the checklist in `docs/tasks/090-awb-hole-window-command.md` (steps 22 to 24, editing, wait for 092). Step 4 (AWB Hole pressed again while its window is open) and steps 17a to 17c (keys typed in the window) test behaviour nobody has confirmed yet.
+**M4 part 1, 090** was checked on 2026-10-18: steps 1 to 4a, 6, 7, 10, 12 to 21 and 25 passed (step 5 skipped). Steps 8 and 11 and the tapped thread display failed, now tasks 093 to 095; step 4b and Aidan's other requests are tasks 096 to 105. Steps 22 to 24 (editing) wait for 092.
 
 From Part Properties (task 019):
 
@@ -45,9 +45,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - The finish appearances are spike 067's suggestions for now; Aidan edits `libraries/finishes.csv` if he wants others
 
 **AWB Hole (spec 09), not blocking**
-- Question 6 in spec 09: where a tapped hole's counterbore or countersink sizes come from. Until answered, a seat on a tapped hole is refused with a message. One option: the Counterbore or Countersink row of the same nominal size
-- Question 7 in spec 09: a default depth for a blind clearance or dowel hole (now blank until typed)
-- Question 8 in spec 09: removing a dowel's colour resets only faces with an AWB fit colour, or every face
+- Question 9 in spec 09: where a dowel hole's counterbore or countersink sizes come from. Default: the same size's Counterbore or Countersink row, as for tapped holes; or seat columns of its own on the Dowel tab
 
 **Hole table (spec 04), blocks the wizard half of M4**
 - What makes a hole "precision"
