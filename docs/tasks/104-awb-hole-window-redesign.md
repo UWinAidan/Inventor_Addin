@@ -15,6 +15,10 @@ Build the AWB Hole window as Aidan approved it in task 102's mockup: compact, ic
 
 - Written in full once Aidan has approved the mockup, with his comments. Expected: Core, a hole diagram model (outline, dimension lines, labels and values from the view-model, in diagram units), with tests; the add-in, the window's XAML, the icon buttons and their icons, and a control that draws the diagram model in the shared theme's brushes.
 
+## Notes from earlier tasks
+
+- Task 098's Tolerance item template hides the row name in the closed box with a `ComboBoxItem` ancestor binding that fails on purpose (a harmless binding trace). A `SelectionBoxItemTemplate` or a template selector in `UI/Theme` would be cleaner; check the closed box is wide enough for `G7  +0.016 / +0.004`.
+
 ## Acceptance criteria
 
 - To be written from the approved mockup.

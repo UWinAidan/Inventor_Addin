@@ -152,12 +152,38 @@
                                        Target="{Binding ElementName=ToleranceBox}"
                                        Visibility="{Binding ShowsTolerance, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
                         <StackPanel>
+                            <!--
+                                Each entry is a HoleToleranceOption: the tolerance at the chosen size, and the Precision Tol
+                                row's name beside it in the muted style (task 098). The closed dropdown uses the same
+                                template, outside any ComboBoxItem, so the name is collapsed there and only the tolerance
+                                shows. TextSearch keys on the tolerance text, as the closed box reads.
+                            -->
                             <ComboBox x:Name="ToleranceBox"
                                       IsEditable="False"
+                                      TextSearch.TextPath="Text"
                                       ItemsSource="{Binding ToleranceOptions, Mode=OneWay}"
-                                      DisplayMemberPath="Text"
                                       SelectedValuePath="Value"
-                                      SelectedValue="{Binding Tolerance, Mode=TwoWay}" />
+                                      SelectedValue="{Binding Tolerance, Mode=TwoWay}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:HoleToleranceOption}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding Text, Mode=OneWay}" />
+                                            <TextBlock x:Name="Detail"
+                                                       Style="{DynamicResource SideNoteText}"
+                                                       Text="{Binding Detail, Mode=OneWay}" />
+                                        </StackPanel>
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding Detail, Mode=OneWay}" Value="{x:Null}">
+                                                <Setter TargetName="Detail" Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ComboBoxItem}}, FallbackValue={x:Null}}"
+                                                         Value="{x:Null}">
+                                                <Setter TargetName="Detail" Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
                             <TextBlock Style="{DynamicResource ErrorStatusText}"
                                        Text="{Binding ToleranceProblem, Mode=OneWay}"
                                        Visibility="{Binding ToleranceProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />

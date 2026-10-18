@@ -14,6 +14,9 @@ public sealed class AwbHoleViewModelTests
     private static List<string> Values<T>(IEnumerable<HoleOption<T>> options) =>
         options.Select(o => o.Text).ToList();
 
+    private static List<string> ToleranceNames(IEnumerable<HoleToleranceOption> options) =>
+        options.Select(o => o.Value).ToList();
+
     private sealed class Counter
     {
         public int Previews { get; private set; }
@@ -216,7 +219,7 @@ public sealed class AwbHoleViewModelTests
         vm.Standard = HoleStandards.DowelStandard;
 
         Assert.True(vm.ShowsTolerance);
-        Assert.Equal(["N bore", "N loc", "N second"], Values(vm.ToleranceOptions));
+        Assert.Equal(["N bore", "N loc", "N second"], ToleranceNames(vm.ToleranceOptions));
         Assert.Equal("N loc", vm.Tolerance);
     }
 
@@ -227,7 +230,7 @@ public sealed class AwbHoleViewModelTests
         vm.Standard = HoleStandards.DowelStandard;
 
         vm.Fit = "Press";
-        Assert.Equal(["P press"], Values(vm.ToleranceOptions));
+        Assert.Equal(["P press"], ToleranceNames(vm.ToleranceOptions));
         Assert.Equal("P press", vm.Tolerance);
 
         vm.Fit = "Normal";
@@ -981,5 +984,149 @@ public sealed class AwbHoleViewModelTests
     public void SwatchOf_WritesHexRgb()
     {
         Assert.Equal("#0A10FF", HoleFitOption.SwatchOf(new HoleColour(10, 16, 255)));
+    }
+
+    // ---- The Tolerance list shows the limits for the size (task 098) ----
+
+    private static HoleToleranceOption ToleranceOption(AwbHoleViewModel vm, string name) =>
+        vm.ToleranceOptions.Single(o => o.Value == name);
+
+    private static AwbHoleViewModel Dowel(string size, HoleWorkbook? workbook = null)
+    {
+        var vm = NewHole(workbook);
+        vm.Standard = HoleStandards.DowelStandard;
+        vm.Size = size;
+        return vm;
+    }
+
+    [Fact]
+    public void ToleranceList_IsoRows_ShowTheCodeAndItsLimitsAtTheSize_WithTheNameAsSecondaryText()
+    {
+        var vm = Dowel("5 mm");
+
+        Assert.Equal(new HoleToleranceOption("N bore", "H7  +0.012 / 0", "N bore"), ToleranceOption(vm, "N bore"));
+        Assert.Equal(new HoleToleranceOption("N loc", "G7  +0.016 / +0.004", "N loc"), ToleranceOption(vm, "N loc"));
+        Assert.Equal(new HoleToleranceOption("N second", "H8  +0.018 / 0", "N second"), ToleranceOption(vm, "N second"));
+    }
+
+    [Fact]
+    public void ToleranceList_SixMillimetreH7_ReadsAsTheSpecSays()
+    {
+        var workbook = Workbook with
+        {
+            Dowel = [new DowelRow(5, HoleUnits.Metric, "6 mm", 6m, false), new DowelRow(6, HoleUnits.Metric, "10 mm", 10m, false)],
+        };
+        var vm = Dowel("6 mm", workbook);
+
+        Assert.Equal("H7  +0.012 / 0", ToleranceOption(vm, "N bore").Text);
+
+        vm.Size = "10 mm";
+
+        Assert.Equal("H7  +0.015 / 0", ToleranceOption(vm, "N bore").Text);
+    }
+
+    [Fact]
+    public void ToleranceList_LimitsRows_ShowTheirUpperAndLower()
+    {
+        var vm = Dowel("5 mm");
+
+        vm.Fit = "Press";
+        Assert.Equal(new HoleToleranceOption("P press", "0 / -0.010", "P press"), ToleranceOption(vm, "P press"));
+
+        vm.Fit = "Slip";
+        Assert.Equal(new HoleToleranceOption("S slip", "+0.010 / 0", "S slip"), ToleranceOption(vm, "S slip"));
+    }
+
+    [Fact]
+    public void ToleranceList_FollowsTheSize_AndKeepsTheSelection()
+    {
+        var vm = Dowel("5 mm");
+        vm.Tolerance = "N bore";
+        var counter = new Counter(vm);
+
+        vm.Size = "3 mm";
+
+        Assert.Equal("H7  +0.010 / 0", ToleranceOption(vm, "N bore").Text);
+        Assert.Equal("G7  +0.012 / +0.002", ToleranceOption(vm, "N loc").Text);
+        Assert.Equal("N bore", vm.Tolerance);
+        Assert.Contains(nameof(AwbHoleViewModel.ToleranceOptions), counter.Changed);
+    }
+
+    [Fact]
+    public void ToleranceList_FollowsTheFit_AndTheUnits_InInchesToFourDecimals()
+    {
+        var vm = Dowel("3 mm");
+        vm.Fit = "Slip";
+        Assert.Equal(["S slip"], ToleranceNames(vm.ToleranceOptions));
+
+        vm.Fit = "Normal";
+        vm.Units = HoleUnits.Imperial;
+
+        // 1/8" is 3.175 mm: H7 there is +12 um, 0.000472 in.
+        Assert.Equal("1/8\"", vm.Size);
+        Assert.Equal(new HoleToleranceOption("IN bore", "H7  +0.0005 / 0", "IN bore"), ToleranceOption(vm, "IN bore"));
+    }
+
+    [Fact]
+    public void ToleranceList_ASizeOutsideIso286_ShowsTheCodeAndSaysSo_AndTheRuleStillFlagsIt()
+    {
+        var workbook = Workbook with { Dowel = [new DowelRow(5, HoleUnits.Metric, "600 mm", 600m, false)] };
+        var vm = Dowel("600 mm", workbook);
+        vm.Tolerance = "N bore";
+
+        Assert.Equal("H7  not in ISO 286", ToleranceOption(vm, "N bore").Text);
+        Assert.Equal("N bore", vm.Tolerance);
+        Assert.NotNull(vm.ToleranceProblem);
+        Assert.False(vm.BuildResult.Succeeded);
+    }
+
+    [Fact]
+    public void ToleranceList_AKeptToleranceNotInTheWorkbook_ShowsItsNameOnly()
+    {
+        var spec = MetricSpec(HoleKind.Dowel, "5 mm") with { PrecisionFit = PrecisionFit.Normal, Tolerance = "Gone" };
+
+        var vm = AwbHoleViewModel.ForEdit(Workbook, PartName, spec);
+
+        Assert.Equal(new HoleToleranceOption("Gone", "Gone", null), ToleranceOption(vm, "Gone"));
+        Assert.Equal("Gone", vm.Tolerance);
+    }
+
+    [Fact]
+    public void ToleranceText_ARowWithoutLimitsOrCode_ShowsItsName_AndNoSecondaryText()
+    {
+        var workbook = Workbook with
+        {
+            PrecisionTolerances =
+            [
+                new PrecisionToleranceRow(5, HoleUnits.Metric, PrecisionFit.Normal, "Bare", ToleranceKind.Limits, null, null, null, true, ""),
+            ],
+        };
+        var vm = Dowel("5 mm", workbook);
+
+        Assert.Equal(new HoleToleranceOption("Bare", "Bare", null), ToleranceOption(vm, "Bare"));
+    }
+
+    [Fact]
+    public void ToleranceText_AnIsoRowWithNoKnownSize_ShowsTheCode()
+    {
+        var row = new PrecisionToleranceRow(5, HoleUnits.Metric, PrecisionFit.Normal, "Bore", ToleranceKind.Iso, " H7 ", null, null, true, "");
+
+        Assert.Equal("H7", HoleToleranceOption.TextFor(row, null));
+    }
+
+    [Theory]
+    [InlineData("0.012", HoleUnits.Metric, "+0.012")]
+    [InlineData("-0.02", HoleUnits.Metric, "-0.020")]
+    [InlineData("0", HoleUnits.Metric, "0")]
+    [InlineData("0.0004", HoleUnits.Metric, "0")]
+    [InlineData("0.0005", HoleUnits.Metric, "+0.001")]
+    [InlineData("0.0005", HoleUnits.Imperial, "+0.0005")]
+    [InlineData("-0.00004", HoleUnits.Imperial, "0")]
+    [InlineData("-0.001", HoleUnits.Imperial, "-0.0010")]
+    public void FormatLimit_SignsEveryNonZeroLimit_AndWritesZeroAsZero(string value, HoleUnits units, string expected)
+    {
+        Assert.Equal(
+            expected,
+            HoleToleranceOption.FormatLimit(decimal.Parse(value, System.Globalization.CultureInfo.InvariantCulture), units));
     }
 }

@@ -24,6 +24,77 @@ public sealed record HoleFitOption(string Value, string Text, string? Swatch)
 }
 
 /// <summary>
+/// One entry of the Tolerance dropdown (task 098): the Precision Tol row's name as the value, the tolerance at the
+/// chosen size as the main text (<c>H7  +0.012 / 0</c>, or a Limits row's <c>0 / -0.020</c>), and the row's name as
+/// secondary text when it differs from the main text (else null). The closed dropdown shows the main text only.
+/// </summary>
+public sealed record HoleToleranceOption(string Value, string Text, string? Detail)
+{
+    /// <summary>After the code of an ISO row whose size ISO 286 does not cover.</summary>
+    public const string NotInIso286Text = "not in ISO 286";
+
+    /// <summary>
+    /// The main text for a Precision Tol row at a size: an ISO row's code and its limits from <see cref="Iso286"/>
+    /// (only the code when the size is not known, the code and <see cref="NotInIso286Text"/> when ISO 286 does not
+    /// give limits); a Limits row's Upper and Lower. A row with neither a code nor both limits shows its name.
+    /// </summary>
+    /// <param name="nominal">The size's nominal diameter in the row's units, or null when it is not known.</param>
+    public static string TextFor(PrecisionToleranceRow row, decimal? nominal)
+    {
+        ArgumentNullException.ThrowIfNull(row);
+
+        var name = (row.Name ?? "").Trim();
+        if (row.Kind == ToleranceKind.Limits)
+        {
+            return row.Upper is { } upper && row.Lower is { } lower
+                ? LimitsText(upper, lower, row.Units)
+                : name;
+        }
+
+        var code = (row.IsoCode ?? "").Trim();
+        if (code.Length == 0)
+        {
+            return name;
+        }
+
+        if (nominal is not { } size)
+        {
+            return code;
+        }
+
+        var limits = Iso286.HoleLimits(HoleRules.IsoNominalMm(size, row.Units), code);
+        if (!limits.Succeeded)
+        {
+            return $"{code}  {NotInIso286Text}";
+        }
+
+        var upperValue = row.Units == HoleUnits.Imperial ? limits.UpperUm / 25400m : limits.UpperUm / 1000m;
+        var lowerValue = row.Units == HoleUnits.Imperial ? limits.LowerUm / 25400m : limits.LowerUm / 1000m;
+        return $"{code}  {LimitsText(upperValue, lowerValue, row.Units)}";
+    }
+
+    /// <summary>Upper and lower limits as <c>+0.012 / 0</c>, in the units' length (see <see cref="FormatLimit"/>).</summary>
+    public static string LimitsText(decimal upper, decimal lower, HoleUnits units) =>
+        $"{FormatLimit(upper, units)} / {FormatLimit(lower, units)}";
+
+    /// <summary>
+    /// One limit: mm to 3 decimals, inches to 4, with a plus or minus sign; a limit that rounds to zero is <c>0</c>.
+    /// </summary>
+    public static string FormatLimit(decimal value, HoleUnits units)
+    {
+        var decimals = units == HoleUnits.Imperial ? 4 : 3;
+        var rounded = Math.Round(value, decimals, MidpointRounding.AwayFromZero);
+        if (rounded == 0m)
+        {
+            return "0";
+        }
+
+        var text = Math.Abs(rounded).ToString(decimals == 4 ? "0.0000" : "0.000", CultureInfo.InvariantCulture);
+        return (rounded > 0m ? "+" : "-") + text;
+    }
+}
+
+/// <summary>
 /// View-model for the AWB Hole window (spec 09, "The window" and "Types and seats"). It holds the fields in the
 /// window's order, the options each lists, the checks from <see cref="HoleRules"/>, the <see cref="HoleGeometry"/>
 /// the add-in previews, OK and Cancel, and the status line. The add-in sets <see cref="CentreCount"/> as centres are
@@ -164,7 +235,7 @@ public sealed class AwbHoleViewModel : ObservableObject
     private IReadOnlyList<HoleOption<string>> _fastenerOptions = [];
     private IReadOnlyList<HoleOption<string>> _sizeOptions = [];
     private IReadOnlyList<HoleFitOption> _fitOptions = [];
-    private IReadOnlyList<HoleOption<string>> _toleranceOptions = [];
+    private IReadOnlyList<HoleToleranceOption> _toleranceOptions = [];
     private IReadOnlyList<HoleOption<string>> _drillPointOptions = [];
 
     // What each list was last built for: a choice not in the workbook is kept only while this is unchanged.
@@ -513,15 +584,27 @@ public sealed class AwbHoleViewModel : ObservableObject
     /// <summary>The selected fit's name beside its swatch, for example <c>Press fit</c>; null unless coloured.</summary>
     public string? FitColourText => ShowsFitColour && _fit is { } fit ? fit + " fit" : null;
 
-    /// <summary>The Precision Tol rows for the units and fit; empty unless the hole is a dowel.</summary>
-    public IReadOnlyList<HoleOption<string>> ToleranceOptions => _toleranceOptions;
+    /// <summary>
+    /// The Precision Tol rows for the units and fit, each with its tolerance at the chosen size (task 098); empty unless
+    /// the hole is a dowel. Rebuilt when the size, units or fit change; the selection is kept.
+    /// </summary>
+    public IReadOnlyList<HoleToleranceOption> ToleranceOptions => _toleranceOptions;
 
     public bool ShowsTolerance => Kind == HoleKind.Dowel;
 
     public string? Tolerance
     {
         get => _tolerance;
-        set => SetFromList(_toleranceOptions, value, nameof(Tolerance), v => Set(ref _tolerance, v, nameof(Tolerance)));
+        set
+        {
+            if (_toleranceOptions.FirstOrDefault(o => SameText(o.Value, value)) is not { } found)
+            {
+                OnPropertyChanged();
+                return;
+            }
+
+            Change(() => Set(ref _tolerance, found.Value, nameof(Tolerance)));
+        }
     }
 
     /// <summary>True for a tapped hole ending at a distance; through holes are threaded the full depth.</summary>
@@ -978,13 +1061,14 @@ public sealed class AwbHoleViewModel : ObservableObject
             var toleranceContext = new ListContext(_units, kind, HoleSeat.None, null, _fit, null);
             var keepTolerance = keepExact || toleranceContext == _toleranceContext;
             _toleranceContext = toleranceContext;
-            var rows = _workbook.PrecisionTolerances
-                .Where(r => r.Units == _units && r.Fit == precisionFit)
-                .Select(r => (r.Name, Hidden: false));
-            SetList(ref _toleranceOptions, Options(rows, keepTolerance ? _tolerance : null), nameof(ToleranceOptions));
+            var rows = _workbook.PrecisionTolerances.Where(r => r.Units == _units && r.Fit == precisionFit);
+            SetList(
+                ref _toleranceOptions,
+                ToleranceOptionsFor(rows, keepTolerance ? _tolerance : null, Nominal(_units, kind, _size)),
+                nameof(ToleranceOptions));
             Set(
                 ref _tolerance,
-                Find(_toleranceOptions, _tolerance)
+                _toleranceOptions.FirstOrDefault(o => SameText(o.Value, _tolerance))?.Value
                     ?? HoleRules.FindTolerance(_workbook, _units, precisionFit, null)?.Name.Trim(),
                 nameof(Tolerance));
         }
@@ -1086,6 +1170,35 @@ public sealed class AwbHoleViewModel : ObservableObject
         if (!string.IsNullOrWhiteSpace(keep) && !options.Any(o => SameText(o.Value, keep)))
         {
             options.Add(new HoleOption<string>(keep.Trim(), keep.Trim()));
+        }
+
+        return options;
+    }
+
+    /// <summary>
+    /// The Tolerance options from Precision Tol rows, as <see cref="Options"/> builds them (each name once, the first
+    /// row wins, in workbook order, <paramref name="keep"/> last when the workbook does not have it), each with its
+    /// tolerance at <paramref name="nominal"/> as the main text and its name as secondary text when that differs.
+    /// </summary>
+    private static List<HoleToleranceOption> ToleranceOptionsFor(
+        IEnumerable<PrecisionToleranceRow> rows, string? keep, decimal? nominal)
+    {
+        var options = new List<HoleToleranceOption>();
+        foreach (var row in rows)
+        {
+            var name = (row.Name ?? "").Trim();
+            if (name.Length == 0 || options.Any(o => SameText(o.Value, name)))
+            {
+                continue;
+            }
+
+            var text = HoleToleranceOption.TextFor(row, nominal);
+            options.Add(new HoleToleranceOption(name, text, SameText(text, name) ? null : name));
+        }
+
+        if (!string.IsNullOrWhiteSpace(keep) && !options.Any(o => SameText(o.Value, keep)))
+        {
+            options.Add(new HoleToleranceOption(keep.Trim(), keep.Trim(), null));
         }
 
         return options;
