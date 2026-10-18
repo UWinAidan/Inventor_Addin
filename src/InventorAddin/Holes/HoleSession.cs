@@ -48,8 +48,12 @@ namespace InventorAddin.Holes
         private readonly bool _edit;
         private readonly HoleCentrePicks<SketchPoint, PlanarSketch> _picks;
 
-        // Each sketch the session showed, with whether it was visible when the window opened.
-        private readonly List<(PlanarSketch Sketch, bool WasVisible)> _shownSketches = new List<(PlanarSketch, bool)>();
+        // Each sketch the session showed, with whether it was visible and shared when the window opened (task 094).
+        private readonly List<(PlanarSketch Sketch, bool WasVisible, bool WasShared)> _shownSketches =
+            new List<(PlanarSketch, bool, bool)>();
+
+        // How a new hole's sketch was chosen, for the start log line: selected, of the selected points, or newest.
+        private string? _defaultSketchFrom;
 
         private Transaction? _outer;
         private HoleFeature? _hole;
@@ -260,7 +264,8 @@ namespace InventorAddin.Holes
             Highlight();
 
             _log.Info(LogPrefix + $"{(_edit ? $"editing {_holeName}" : "new hole")}: " +
-                      $"{_picks.Count} centre(s) from sketch {SketchName(_picks.Sketch) ?? "none"}.");
+                      $"{_picks.Count} centre(s) from sketch {SketchName(_picks.Sketch) ?? "none"}" +
+                      (_picks.Sketch == null ? "" : SketchStateText(_picks.Sketch)) + ".");
 
             // An edited hole is left as it is until the window changes; OK brings it up to date.
             if (!_edit)
@@ -269,7 +274,7 @@ namespace InventorAddin.Holes
 
         /// <summary>
         /// A new hole's centres, as Inventor's Hole picks them: the selected sketch, else the sketch of the selected
-        /// points, else the newest visible sketch with hole-centre points; all its hole centres.
+        /// points, else the newest visible unconsumed sketch with hole-centre points; all its hole centres.
         /// </summary>
         private void StartDefaultPicks()
         {
@@ -288,6 +293,10 @@ namespace InventorAddin.Holes
             }
 
             PlanarSketch? chosen = HoleSessionRules.DefaultSketch(selectedSketch, sketchOfPoint, SketchesNewestFirst());
+            _defaultSketchFrom = chosen == null ? null
+                : ReferenceEquals(chosen, selectedSketch) ? "selected"
+                : ReferenceEquals(chosen, sketchOfPoint) ? "of the selected points"
+                : "newest visible unconsumed";
             var centres = new List<SketchPoint>();
             if (chosen != null)
             {
@@ -301,7 +310,7 @@ namespace InventorAddin.Holes
             _picks.Start(chosen, centres);
         }
 
-        private IEnumerable<(PlanarSketch, Func<bool>, Func<bool>)> SketchesNewestFirst()
+        private IEnumerable<(PlanarSketch, Func<bool>, Func<bool>, Func<bool>)> SketchesNewestFirst()
         {
             PlanarSketches sketches = _doc.ComponentDefinition.Sketches;
             int count = ComSafe.Get(() => sketches.Count);
@@ -311,7 +320,11 @@ namespace InventorAddin.Holes
                 PlanarSketch? sketch = ComSafe.Get(() => sketches[index]);
                 if (sketch == null)
                     continue;
-                yield return (sketch, () => ComSafe.Get(() => sketch.Visible), () => HasHoleCentres(sketch));
+                yield return (
+                    sketch,
+                    () => ComSafe.Get(() => sketch.Visible),
+                    () => ComSafe.Get(() => sketch.Consumed),
+                    () => HasHoleCentres(sketch));
             }
         }
 
@@ -714,24 +727,54 @@ namespace InventorAddin.Holes
         private void ShowSketch(PlanarSketch sketch)
         {
             if (!_shownSketches.Exists(s => SameSketch(s.Sketch, sketch)))
-                _shownSketches.Add((sketch, ComSafe.Get(() => sketch.Visible)));
+                _shownSketches.Add((sketch, ComSafe.Get(() => sketch.Visible), ComSafe.Get(() => sketch.Shared)));
             if (!ComSafe.Get(() => sketch.Visible))
                 ComSafe.Run(() => sketch.Visible = true);
         }
 
         /// <summary>
-        /// Puts every sketch the session showed back as it was; a kept new hole's own sketch ends hidden, as Inventor
-        /// leaves it.
+        /// Puts every sketch the session showed back as it was; a kept new hole's own sketch ends hidden under the
+        /// hole, as Inventor leaves it. Showing a consumed sketch does not share it (task 094's spike), but a hole on a
+        /// sketch another feature already consumes does, and removing that hole again leaves it shared: such a sketch
+        /// is set back to not shared, which Inventor refuses while two features use it.
         /// </summary>
         private void RestoreSketches(bool kept)
         {
-            foreach ((PlanarSketch sketch, bool wasVisible) in _shownSketches)
+            foreach ((PlanarSketch sketch, bool wasVisible, bool wasShared) in _shownSketches)
             {
+                if (HoleSessionRules.UnshareAfter(wasShared, ComSafe.Get(() => sketch.Shared)))
+                {
+                    ComSafe.Run(() => sketch.Shared = false);
+                    if (ComSafe.Get(() => sketch.Shared))
+                        _log.Info(LogPrefix + $"{SketchName(sketch)} stays shared: more than one feature uses it.");
+                }
+
                 bool holeSketch = _picks.Sketch != null && SameSketch(sketch, _picks.Sketch);
-                bool visible = HoleSessionRules.SketchVisibleAfter(!_edit && holeSketch, kept, wasVisible);
+                bool sharedAfter = ComSafe.Get(() => sketch.Shared);
+                bool visible = HoleSessionRules.SketchVisibleAfter(!_edit && holeSketch, kept, wasVisible, sharedAfter);
                 if (ComSafe.Get(() => sketch.Visible) != visible)
                     ComSafe.Run(() => sketch.Visible = visible);
             }
+        }
+
+        /// <summary>
+        /// The start log line's note on the sketch: how it was chosen, and whether it was hidden, consumed or shared
+        /// before the session showed it.
+        /// </summary>
+        private string SketchStateText(PlanarSketch sketch)
+        {
+            var notes = new List<string>();
+            if (_defaultSketchFrom != null)
+                notes.Add(_defaultSketchFrom);
+            int shown = _shownSketches.FindIndex(s => SameSketch(s.Sketch, sketch));
+            bool wasVisible = shown >= 0 ? _shownSketches[shown].WasVisible : ComSafe.Get(() => sketch.Visible);
+            bool wasShared = shown >= 0 ? _shownSketches[shown].WasShared : ComSafe.Get(() => sketch.Shared);
+            notes.Add(wasVisible ? "visible" : "hidden");
+            if (ComSafe.Get(() => sketch.Consumed))
+                notes.Add("consumed");
+            if (wasShared)
+                notes.Add("shared");
+            return " (" + string.Join(", ", notes) + ")";
         }
 
         private void Highlight()

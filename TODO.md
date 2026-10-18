@@ -45,6 +45,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - The finish appearances are spike 067's suggestions for now; Aidan edits `libraries/finishes.csv` if he wants others
 
 **AWB Hole (spec 09), not blocking**
+- Question 11 in spec 09: Inventor's Hole preselects unused centre points one by one; AWB Hole skips a sketch any feature consumes. Per-point wanted?
 - Question 9 in spec 09: where a dowel hole's counterbore or countersink sizes come from. Default: the same size's Counterbore or Countersink row, as for tapped holes; or seat columns of its own on the Dowel tab
 
 **Hole table (spec 04), blocks the wizard half of M4**
@@ -92,6 +93,7 @@ Small things noticed while building. None is urgent. The parent turns these into
 - A finish list saved by Excel as plain "CSV" (not "CSV UTF-8") is in the Windows code page, so a non-ASCII character in a print note would read as a replacement character. Whoever reads the file (task 075) could fall back to the ANSI code page when the bytes are not valid UTF-8. (task 068)
 
 **AWB Hole**
+- In the 090 check two AWB Holes in a row started on the same sketch seconds apart; task 094's start log line says how the sketch was chosen. If it says "newest visible unconsumed" right after an OK, the sketch is not ending hidden in the visible UI: a new bug (task 094)
 - In `HoleFeatureWriter.Change` the seat is ordered against the hole diameter only; a Distance counterbore made deeper while the hole is made shallower in one step (or the reverse) is not ordered against the depth. Not reached with workbook rows; fix if "Inventor refused the change" shows in the log for it (task 093)
 - ISO 286 tables (task 083) were typed from the standard's values and checked from memory by the reviewer, not against a copy of ISO 286-2; worth a spot-check, mainly sizes over 250 mm. K9 to K11 over 3 mm and N9 to N11 up to 1 mm are refused (readings of the standard's footnotes). JS7 to JS11 round an odd IT value down before halving, as ISO 286-2 prints it; if the Precision Tol tab ever holds a JS code, compare one odd-IT size with Inventor's own fit. (task 083)
 

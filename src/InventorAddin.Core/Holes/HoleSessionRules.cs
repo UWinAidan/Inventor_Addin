@@ -48,27 +48,43 @@ public static class HoleSessionRules
 
     /// <summary>
     /// Whether a sketch is visible when the session ends. A new hole's sketch ends hidden when the hole is kept, as
-    /// Inventor leaves a sketch its hole consumed; otherwise (Cancel, or an edit) it goes back as it was.
+    /// Inventor leaves a sketch its hole consumed; otherwise (Cancel, an edit, or a sketch that is shared at the end)
+    /// it goes back as it was. Inventor does not hide a shared sketch when a feature consumes it (task 094).
     /// </summary>
     /// <param name="newHole">The session made a new hole (not an edit).</param>
     /// <param name="kept">The session ended with OK.</param>
     /// <param name="wasVisible">Whether the sketch was visible when the window opened.</param>
-    public static bool SketchVisibleAfter(bool newHole, bool kept, bool wasVisible) => !(newHole && kept) && wasVisible;
+    /// <param name="sharedAfter">Whether the sketch is shared once the session has put it back (see
+    /// <see cref="UnshareAfter"/>): it was shared before, or another feature uses it too.</param>
+    public static bool SketchVisibleAfter(bool newHole, bool kept, bool wasVisible, bool sharedAfter = false) =>
+        !(newHole && kept && !sharedAfter) && wasVisible;
+
+    /// <summary>
+    /// Whether the session sets a sketch back to not shared when it ends (task 094): the sketch is shared now but was
+    /// not when the window opened. Inventor shares a sketch once a second feature consumes it (an AWB hole on a sketch
+    /// another hole already uses), and leaves it shared when that second hole is removed again; with one feature left
+    /// it can be unshared, with two Inventor refuses and the sketch stays shared, as with Inventor's Hole. A sketch
+    /// shared before the window opened stays shared. After Cancel the session's transaction has already put it back.
+    /// </summary>
+    /// <param name="wasShared">Whether the sketch was shared when the window opened.</param>
+    /// <param name="isShared">Whether it is shared now.</param>
+    public static bool UnshareAfter(bool wasShared, bool isShared) => isShared && !wasShared;
 
     /// <summary>
     /// The sketch whose hole centres a new hole starts with, as Inventor's Hole picks it: the sketch the user
     /// selected, else the sketch of the points the user selected, else the newest visible sketch with hole-centre
-    /// points. Null when there is none.
+    /// points that no feature consumes yet (task 094: Inventor's Hole preselects only unused centres, and a hole on a
+    /// consumed sketch shares it). A selection wins even when its sketch is consumed. Null when there is none.
     /// </summary>
     /// <param name="selectedSketch">The first selected sketch, or null.</param>
     /// <param name="sketchOfSelectedPoint">The sketch of the first selected sketch point, or null.</param>
-    /// <param name="sketchesNewestFirst">The part's sketches, newest first, with whether each is visible and has a
-    /// point marked as a hole centre. Read only as far as the first that qualifies, so the add-in can work the flags
-    /// out lazily.</param>
+    /// <param name="sketchesNewestFirst">The part's sketches, newest first, with whether each is visible, is consumed
+    /// by a feature, and has a point marked as a hole centre. Read only as far as the first that qualifies, and each
+    /// flag only when the ones before it pass, so the add-in can work the flags out lazily.</param>
     public static TSketch? DefaultSketch<TSketch>(
         TSketch? selectedSketch,
         TSketch? sketchOfSelectedPoint,
-        IEnumerable<(TSketch Sketch, Func<bool> Visible, Func<bool> HasHoleCentres)> sketchesNewestFirst)
+        IEnumerable<(TSketch Sketch, Func<bool> Visible, Func<bool> Consumed, Func<bool> HasHoleCentres)> sketchesNewestFirst)
         where TSketch : class
     {
         ArgumentNullException.ThrowIfNull(sketchesNewestFirst);
@@ -83,9 +99,9 @@ public static class HoleSessionRules
             return sketchOfSelectedPoint;
         }
 
-        foreach (var (sketch, visible, hasHoleCentres) in sketchesNewestFirst)
+        foreach (var (sketch, visible, consumed, hasHoleCentres) in sketchesNewestFirst)
         {
-            if (visible() && hasHoleCentres())
+            if (visible() && !consumed() && hasHoleCentres())
             {
                 return sketch;
             }

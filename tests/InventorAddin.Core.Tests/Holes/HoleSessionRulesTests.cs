@@ -46,8 +46,34 @@ public sealed class HoleSessionRulesTests
         Assert.Equal(expected, HoleSessionRules.SketchVisibleAfter(newHole, kept, wasVisible));
     }
 
-    private static (Sketch, Func<bool>, Func<bool>) Entry(Sketch sketch, bool visible, bool hasHoleCentres) =>
-        (sketch, () => visible, () => hasHoleCentres);
+    [Theory]
+    // A sketch shared at the end keeps its visibility, also for a kept new hole (task 094).
+    [InlineData(true, true, true, true)]
+    [InlineData(true, true, false, false)]
+    [InlineData(true, false, true, true)]
+    [InlineData(false, true, true, true)]
+    [InlineData(false, true, false, false)]
+    public void SketchVisibleAfter_ASharedSketchKeepsItsVisibility(bool newHole, bool kept, bool wasVisible, bool expected)
+    {
+        Assert.Equal(expected, HoleSessionRules.SketchVisibleAfter(newHole, kept, wasVisible, sharedAfter: true));
+    }
+
+    [Theory]
+    // Shared by the session (a second feature consumed it): set back to not shared.
+    [InlineData(false, true, true)]
+    // Shared before the window opened: stays shared.
+    [InlineData(true, true, false)]
+    // Not shared now: nothing to do.
+    [InlineData(false, false, false)]
+    [InlineData(true, false, false)]
+    public void UnshareAfter(bool wasShared, bool isShared, bool expected)
+    {
+        Assert.Equal(expected, HoleSessionRules.UnshareAfter(wasShared, isShared));
+    }
+
+    private static (Sketch, Func<bool>, Func<bool>, Func<bool>) Entry(
+        Sketch sketch, bool visible, bool hasHoleCentres, bool consumed = false) =>
+        (sketch, () => visible, () => consumed, () => hasHoleCentres);
 
     [Fact]
     public void DefaultSketch_TheSelectedSketchFirst()
@@ -85,8 +111,8 @@ public sealed class HoleSessionRulesTests
     public void DefaultSketch_StopsAtTheFirstThatQualifies()
     {
         var read = new List<string>();
-        (Sketch, Func<bool>, Func<bool>) Logged(string name) =>
-            (new Sketch(name), () => { read.Add(name); return true; }, () => true);
+        (Sketch, Func<bool>, Func<bool>, Func<bool>) Logged(string name) =>
+            (new Sketch(name), () => { read.Add(name); return true; }, () => false, () => true);
 
         HoleSessionRules.DefaultSketch<Sketch>(null, null, [Logged("newest"), Logged("older")]);
 
@@ -100,6 +126,58 @@ public sealed class HoleSessionRulesTests
 
         Assert.Null(HoleSessionRules.DefaultSketch<Sketch>(null, null, sketches));
         Assert.Null(HoleSessionRules.DefaultSketch<Sketch>(null, null, []));
+    }
+
+    [Fact]
+    public void DefaultSketch_SkipsAConsumedSketch()
+    {
+        var unused = new Sketch("unused");
+        var sketches = new[]
+        {
+            Entry(new Sketch("consumed"), true, true, consumed: true),
+            Entry(unused, true, true),
+        };
+
+        Assert.Same(unused, HoleSessionRules.DefaultSketch<Sketch>(null, null, sketches));
+    }
+
+    [Fact]
+    public void DefaultSketch_NoneWhenEverySketchIsConsumed()
+    {
+        var sketches = new[]
+        {
+            Entry(new Sketch("newer"), true, true, consumed: true),
+            Entry(new Sketch("older"), true, true, consumed: true),
+        };
+
+        Assert.Null(HoleSessionRules.DefaultSketch<Sketch>(null, null, sketches));
+    }
+
+    [Fact]
+    public void DefaultSketch_ASelectedConsumedSketchStillWins()
+    {
+        var selected = new Sketch("selected, consumed");
+        var ofPoint = new Sketch("of a selected point, consumed");
+        var sketches = new[] { Entry(new Sketch("unused"), true, true) };
+
+        Assert.Same(selected, HoleSessionRules.DefaultSketch(selected, null, sketches));
+        Assert.Same(ofPoint, HoleSessionRules.DefaultSketch(null, ofPoint, sketches));
+    }
+
+    [Fact]
+    public void DefaultSketch_ConsumedIsNotReadForAHiddenSketch()
+    {
+        var read = new List<string>();
+        var hidden = new Sketch("hidden");
+        var shown = new Sketch("shown");
+        (Sketch, Func<bool>, Func<bool>, Func<bool>)[] sketches =
+        [
+            (hidden, () => false, () => { read.Add("hidden"); return false; }, () => true),
+            (shown, () => true, () => { read.Add("shown"); return false; }, () => true),
+        ];
+
+        Assert.Same(shown, HoleSessionRules.DefaultSketch<Sketch>(null, null, sketches));
+        Assert.Equal(["shown"], read);
     }
 
     [Theory]
