@@ -59,6 +59,10 @@ namespace InventorAddin.Holes
         private HoleFeature? _hole;
         private string? _holeName;
 
+        // What an edited hole was when the window opened, for the face reset on OK (task 096).
+        private readonly HoleKind _openedKind;
+        private readonly bool _openedFitColoured;
+
         // What the hole in the model was last made from: OK keeps it only when it is what the window shows.
         private HoleSpec? _appliedSpec;
         private int _centresVersion;
@@ -94,6 +98,8 @@ namespace InventorAddin.Holes
             _edit = existing != null;
             _hole = existing;
             _holeName = existing == null ? null : ComSafe.Get(() => existing.Name);
+            _openedKind = viewModel.Spec.Kind;
+            _openedFitColoured = existing != null && HoleFeatureReader.IsColoured(existing);
             _picks = new HoleCentrePicks<SketchPoint, PlanarSketch>(_edit, SamePoint, SameSketch);
         }
 
@@ -168,7 +174,9 @@ namespace InventorAddin.Holes
                 Transaction step = StartStep();
                 try
                 {
-                    HoleFitWriter.Finish(_doc, hole, build, _log);
+                    bool resetFaces = HoleSessionRules.ResetsFaceAppearances(
+                        _edit, _openedKind, _openedFitColoured, build.Resolved.Kind);
+                    HoleFitWriter.Finish(_doc, hole, build, resetFaces, _log);
                     step.End();
                 }
                 catch (Exception ex)

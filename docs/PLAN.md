@@ -312,7 +312,7 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 - [x] 093 Counterbore and countersink follow a size change
 - [x] 094 The hole's sketch is consumed under it after OK
 - [x] 095 Tapped holes show their thread in the model
-- [ ] 096 Removing a dowel's colour resets every face
+- [x] 096 Removing a dowel's colour resets every face
 - [ ] 097 Blind holes start at the last depth used, or 2 x D
 - [ ] 098 Tolerance list shows the limits for the size
 - [ ] 099 Counterbore and countersink on tapped and dowel holes

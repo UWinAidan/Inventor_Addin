@@ -25,6 +25,11 @@ Aidan, 090 check: while the window is open the preview holes are translucent red
 - [ ] Unconfirmed members (the opacity asset value's name, for example `generic_transparency`, and whether Inventor draws a face appearance's transparency in shaded views) are tried with an invisible Inventor in a console app first (task 093's notes) and listed.
 - [ ] `dotnet test tests/InventorAddin.Core.Tests` passes; `dotnet build InventorAddin.slnx -p:DeployToInventor=false` builds
 
+## Notes for the implementer
+
+- Task 096's `HoleSessionRules.ResetsFaceAppearances` relies on fit colours being applied only on OK (`Finish`), never during the preview. The preview red changes that: make sure the red never counts as a fit colour, and that every face's colour on OK follows 096's rule plus the preview reset (task 096 review).
+- `HoleFitWriter.RemoveColour` writes every face with no guard; if a face refuses, OK fails as a whole. Consider `ComSafe.Run` per face if the preview reset hits that (task 096 review).
+
 ## Verification
 
 Filled in by the implementer.

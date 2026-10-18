@@ -71,6 +71,30 @@ public sealed class HoleSessionRulesTests
         Assert.Equal(expected, HoleSessionRules.UnshareAfter(wasShared, isShared));
     }
 
+    [Theory]
+    // A dowel kept as another kind: every face goes back to the part's appearance.
+    [InlineData(true, HoleKind.Dowel, true, HoleKind.Clearance, true)]
+    [InlineData(true, HoleKind.Dowel, true, HoleKind.Tapped, true)]
+    // Stored as a dowel but no fit colour left on a face: still a dowel that stops being one.
+    [InlineData(true, HoleKind.Dowel, false, HoleKind.Clearance, true)]
+    // Not stored as a dowel, but a face carries a fit colour: treated as a dowel.
+    [InlineData(true, HoleKind.Clearance, true, HoleKind.Tapped, true)]
+    // Still a dowel: the fit colour is applied instead.
+    [InlineData(true, HoleKind.Dowel, true, HoleKind.Dowel, false)]
+    // Never a dowel: colours the user set are kept.
+    [InlineData(true, HoleKind.Clearance, false, HoleKind.Clearance, false)]
+    [InlineData(true, HoleKind.Clearance, false, HoleKind.Tapped, false)]
+    [InlineData(true, HoleKind.Tapped, false, HoleKind.Clearance, false)]
+    [InlineData(true, HoleKind.Clearance, false, HoleKind.Dowel, false)]
+    // A new hole has nothing to reset.
+    [InlineData(false, HoleKind.Dowel, false, HoleKind.Clearance, false)]
+    [InlineData(false, HoleKind.Clearance, false, HoleKind.Tapped, false)]
+    public void ResetsFaceAppearances(
+        bool edit, HoleKind openedKind, bool openedFitColoured, HoleKind keptKind, bool expected)
+    {
+        Assert.Equal(expected, HoleSessionRules.ResetsFaceAppearances(edit, openedKind, openedFitColoured, keptKind));
+    }
+
     private static (Sketch, Func<bool>, Func<bool>, Func<bool>) Entry(
         Sketch sketch, bool visible, bool hasHoleCentres, bool consumed = false) =>
         (sketch, () => visible, () => consumed, () => hasHoleCentres);

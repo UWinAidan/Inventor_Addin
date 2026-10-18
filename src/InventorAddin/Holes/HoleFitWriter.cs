@@ -9,8 +9,9 @@ namespace InventorAddin.Holes
     /// <summary>
     /// The dowel and precision parts of an AWB hole (spec 09, "Dowel and precision holes"; spike 081 sections 4 and 5
     /// and round 5): the tolerance on the hole diameter, the fit colour on every face, and the stored data, applied
-    /// together on OK or removed together when a dowel becomes another kind. Nothing here opens a transaction; a
-    /// failure throws, so the caller can abort.
+    /// together on OK or removed together when a dowel becomes another kind. Which holes have their faces put back to
+    /// the part's appearance is <see cref="HoleSessionRules.ResetsFaceAppearances"/>'s decision. Nothing here opens a
+    /// transaction; a failure throws, so the caller can abort.
     /// </summary>
     public static class HoleFitWriter
     {
@@ -18,11 +19,14 @@ namespace InventorAddin.Holes
 
         /// <summary>
         /// Applies what the add-in leaves on a hole when it is kept (task 089, OK): for a dowel the tolerance and the
-        /// fit colour, for any other kind no dowel tolerance, colour or data; then the stored data for
+        /// fit colour, for any other kind no dowel tolerance or data; then the stored data for
         /// <paramref name="build"/>'s resolved spec and the state applied.
         /// </summary>
         /// <param name="build">A successful <see cref="HoleRules.Build"/> result for the hole.</param>
-        public static void Finish(PartDocument doc, HoleFeature hole, HoleBuildResult build, ILog log)
+        /// <param name="resetFaces">The hole was a dowel or precision hole and is kept as another kind
+        /// (<see cref="HoleSessionRules.ResetsFaceAppearances"/>): every face goes back to the part's appearance
+        /// (task 096). Ignored when the hole is kept as a dowel.</param>
+        public static void Finish(PartDocument doc, HoleFeature hole, HoleBuildResult build, bool resetFaces, ILog log)
         {
             if (doc == null)
                 throw new ArgumentNullException(nameof(doc));
@@ -39,7 +43,7 @@ namespace InventorAddin.Holes
             }
             else
             {
-                RemoveDowel(hole, log);
+                RemoveDowel(hole, resetFaces, log);
             }
 
             HoleStoredDataStore.Write(hole, new HoleStoredData(build.Resolved, HoleAppliedState.From(geometry)));
@@ -82,8 +86,8 @@ namespace InventorAddin.Holes
         }
 
         /// <summary>
-        /// Takes the fit colour off the hole's faces: each face that carries one of the fit appearances goes back to
-        /// the part's appearance (spike 081 round 5). Other appearances a user set are left.
+        /// Puts every face of the hole, the bottom included, back to the part's appearance, whatever appearance it had
+        /// (task 096; spec 09 question 8, Aidan): the fit colour and any colour a user set on a face.
         /// </summary>
         public static void RemoveColour(HoleFeature hole)
         {
@@ -91,18 +95,15 @@ namespace InventorAddin.Holes
                 throw new ArgumentNullException(nameof(hole));
 
             foreach (Face face in hole.Faces)
-            {
-                string? name = ComSafe.Get(() => face.Appearance.DisplayName);
-                if (HoleFitAppearances.IsFitAppearance(name))
-                    face.AppearanceSourceType = AppearanceSourceTypeEnum.kPartAppearance;
-            }
+                face.AppearanceSourceType = AppearanceSourceTypeEnum.kPartAppearance;
         }
 
         /// <summary>
-        /// Removes everything dowel from a hole (spec 09; spike 081 round 5): the tolerance, the fit colour on every
-        /// face and the <c>AWB_Hole</c> attribute set.
+        /// Removes everything dowel from a hole (spec 09; spike 081 round 5): the tolerance and the <c>AWB_Hole</c>
+        /// attribute set, and, when <paramref name="resetFaces"/>, the colour on every face (<see cref="RemoveColour"/>).
+        /// A hole that never was a dowel is passed false, so the colours a user set on its faces are kept.
         /// </summary>
-        public static void RemoveDowel(HoleFeature hole, ILog log)
+        public static void RemoveDowel(HoleFeature hole, bool resetFaces, ILog log)
         {
             if (hole == null)
                 throw new ArgumentNullException(nameof(hole));
@@ -111,9 +112,11 @@ namespace InventorAddin.Holes
             // A tapped hole's diameter may have no tolerance to reset.
             if (!ComSafe.Get(() => hole.Tapped))
                 ApplyTolerance(hole, null);
-            RemoveColour(hole);
+            if (resetFaces)
+                RemoveColour(hole);
             HoleStoredDataStore.Delete(hole);
-            log.Info(LogPrefix + $"dowel tolerance, colour and data removed from {ComSafe.Get(() => hole.Name)}.");
+            if (resetFaces)
+                log.Info(LogPrefix + $"dowel tolerance and data removed from {ComSafe.Get(() => hole.Name)}; every face is back to the part's appearance.");
         }
 
         /// <summary>

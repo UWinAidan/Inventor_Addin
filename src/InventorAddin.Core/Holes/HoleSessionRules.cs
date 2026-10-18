@@ -71,6 +71,20 @@ public static class HoleSessionRules
     public static bool UnshareAfter(bool wasShared, bool isShared) => isShared && !wasShared;
 
     /// <summary>
+    /// Whether OK puts every face of the hole back to the part's appearance (task 096; spec 09 question 8, Aidan): only
+    /// when an edited hole was a dowel or precision hole when the window opened and is kept as another kind. The
+    /// reset covers every face, whatever appearance it had. A hole that never was a dowel keeps the colours a user put
+    /// on its faces, and a new hole has nothing to reset.
+    /// </summary>
+    /// <param name="edit">The session edits an existing hole.</param>
+    /// <param name="openedKind">The kind the window opened with: from the hole's stored data, or read back from its
+    /// geometry for a hole made by Inventor's Hole.</param>
+    /// <param name="openedFitColoured">A face of the hole carried a fit appearance when the window opened.</param>
+    /// <param name="keptKind">The kind the hole is kept as.</param>
+    public static bool ResetsFaceAppearances(bool edit, HoleKind openedKind, bool openedFitColoured, HoleKind keptKind) =>
+        edit && (openedKind == HoleKind.Dowel || openedFitColoured) && keptKind != HoleKind.Dowel;
+
+    /// <summary>
     /// The sketch whose hole centres a new hole starts with, as Inventor's Hole picks it: the sketch the user
     /// selected, else the sketch of the points the user selected, else the newest visible sketch with hole-centre
     /// points that no feature consumes yet (task 094: Inventor's Hole preselects only unused centres, and a hole on a
