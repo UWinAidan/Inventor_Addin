@@ -106,7 +106,8 @@ public sealed class WindowXamlRulesTests
     /// body scrolls while the header and buttons stay visible. So every window's root is a Grid in the DialogContent
     /// style, its body is a ScrollViewer in the DialogBody style on a star-sized row, and the header and footer are
     /// outside that ScrollViewer. WindowHost caps the height. A resizable window (Settings, task 079) uses the
-    /// ResizableDialogContent style, which widens with the window.
+    /// ResizableDialogContent style, which widens with the window; the 360-wide AWB Hole window (task 104) uses
+    /// CompactDialogContent.
     /// </summary>
     [Fact]
     public void EveryWindow_ScrollsItsBody_AndKeepsHeaderAndFooterOutside()
@@ -120,9 +121,9 @@ public sealed class WindowXamlRulesTests
             var doc = XDocument.Load(file.FullPath, LoadOptions.SetLineInfo);
             var root = doc.Root!.Elements().Where(e => !e.Name.LocalName.Contains('.')).ToList();
             if (root.Count != 1 || root[0].Name.LocalName != "Grid"
-                || DynamicKeyOf(root[0].Attribute("Style")?.Value) is not ("DialogContent" or "ResizableDialogContent"))
+                || DynamicKeyOf(root[0].Attribute("Style")?.Value) is not ("DialogContent" or "ResizableDialogContent" or "CompactDialogContent"))
             {
-                failures.Add($"{file.RelativePath}: the window's content must be one Grid in the DialogContent (or ResizableDialogContent) style.");
+                failures.Add($"{file.RelativePath}: the window's content must be one Grid in the DialogContent (or ResizableDialogContent or CompactDialogContent) style.");
                 continue;
             }
 

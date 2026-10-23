@@ -64,7 +64,8 @@ namespace InventorAddin.UI
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
             Loaded -= OnLoaded;
-            UnitsBox.Focus();
+            if (!UnitsList.FocusChosen())
+                UnitsList.Focus();
         }
 
         private void OnSessionEnded(object? sender, HoleSessionEndedEventArgs e)

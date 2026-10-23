@@ -4,10 +4,16 @@ using InventorAddin.Core.Holes;
 namespace InventorAddin.Core.ViewModels;
 
 /// <summary>
-/// One entry of an AWB Hole dropdown: the value the view-model takes and the text the window shows. Bind the
-/// dropdown's items to the options and its selected value (<c>SelectedValuePath="Value"</c>) to the field.
+/// One entry of an AWB Hole dropdown or icon row: the value the view-model takes and the text the window shows. Bind
+/// the list's items to the options and its selected value (<c>SelectedValuePath="Value"</c>) to the field. A choice
+/// shown as an icon button (Type, Seat, Termination, Drill point; task 104) names its icon in <see cref="Icon"/>
+/// (<see cref="HoleIcons"/>); the text is its tooltip and its name for screen readers.
 /// </summary>
-public sealed record HoleOption<T>(T Value, string Text);
+public sealed record HoleOption<T>(T Value, string Text)
+{
+    /// <summary>The <see cref="HoleIcons"/> name the icon button shows, or null for a choice shown as text.</summary>
+    public string? Icon { get; init; }
+}
 
 /// <summary>
 /// One entry of the Fit dropdown: the fit's name and, for dowel and precision holes, its colour from the workbook's
@@ -172,23 +178,23 @@ public sealed class AwbHoleViewModel : ObservableObject
 
     public static IReadOnlyList<HoleOption<string>> TypeOptions { get; } =
     [
-        new(HoleStandards.ClearanceType, HoleStandards.ClearanceType),
-        new(HoleStandards.TappedType, HoleStandards.TappedType),
+        new(HoleStandards.ClearanceType, HoleStandards.ClearanceType) { Icon = HoleIcons.Clearance },
+        new(HoleStandards.TappedType, HoleStandards.TappedType) { Icon = HoleIcons.Tapped },
     ];
 
     // Termination To needs the end face picked, which the window cannot do yet (task 090): To is listed only for an
     // edited hole that already ends at a face, so the window shows what the hole is.
     private static readonly IReadOnlyList<HoleOption<HoleTermination>> PickableTerminations =
     [
-        new(HoleTermination.Distance, DistanceText),
-        new(HoleTermination.ThroughAll, ThroughAllText),
+        new(HoleTermination.Distance, DistanceText) { Icon = HoleIcons.Distance },
+        new(HoleTermination.ThroughAll, ThroughAllText) { Icon = HoleIcons.ThroughAll },
     ];
 
     private static readonly IReadOnlyList<HoleOption<HoleTermination>> TerminationsWithTo =
     [
-        new(HoleTermination.Distance, DistanceText),
-        new(HoleTermination.ThroughAll, ThroughAllText),
-        new(HoleTermination.ToFace, ToText),
+        new(HoleTermination.Distance, DistanceText) { Icon = HoleIcons.Distance },
+        new(HoleTermination.ThroughAll, ThroughAllText) { Icon = HoleIcons.ThroughAll },
+        new(HoleTermination.ToFace, ToText) { Icon = HoleIcons.ToFace },
     ];
 
     /// <summary>The window says this under Termination while an edited hole still ends at a face.</summary>
@@ -217,9 +223,9 @@ public sealed class AwbHoleViewModel : ObservableObject
 
     private static readonly IReadOnlyList<HoleOption<HoleSeat>> AllSeats =
     [
-        new(HoleSeat.None, NoneText),
-        new(HoleSeat.Counterbore, CounterboreText),
-        new(HoleSeat.Countersink, CountersinkText),
+        new(HoleSeat.None, NoneText) { Icon = HoleIcons.SeatNone },
+        new(HoleSeat.Counterbore, CounterboreText) { Icon = HoleIcons.Counterbore },
+        new(HoleSeat.Countersink, CountersinkText) { Icon = HoleIcons.Countersink },
     ];
 
     private readonly HoleWorkbook _workbook;
@@ -275,6 +281,11 @@ public sealed class AwbHoleViewModel : ObservableObject
 
     private int _centreCount;
     private bool _canPickCentres = true;
+
+    // The diagram (task 104): drawn from the fields after every change; whether it is open is the add-in's to keep.
+    private HoleDiagramInput _diagramInput = new();
+    private HoleDiagram? _diagram;
+    private bool _isDiagramExpanded = true;
 
     // Depth box text that is not a number, by field, and Inventor's reason when it gave one; cleared by every change
     // that reaches the fields.
@@ -373,6 +384,7 @@ public sealed class AwbHoleViewModel : ObservableObject
         _statusNotes = _openStatusNotes;
 
         (_spec, _build, _checks) = Evaluate();
+        _diagramInput = BuildDiagramInput();
         _lastRaisedSpec = _spec;
     }
 
@@ -880,6 +892,21 @@ public sealed class AwbHoleViewModel : ObservableObject
         set => SetText(HoleField.CountersinkAngle, value, nameof(CountersinkAngleText), v => CountersinkAngle = v);
     }
 
+    // What an expression comes to (task 104; mockup choice 6): after the unit of a depth box holding an expression, in
+    // muted text, for example "= 31 mm". Null for a plain number, an empty box and text Inventor cannot read.
+
+    /// <summary>The value of the depth box's expression, <c>= 31 mm</c>; null unless the box holds one.</summary>
+    public string? DepthValueText => ValueTextOf(HoleField.Depth, _depth);
+
+    /// <summary>The value of the thread depth box's expression; null unless the box holds one.</summary>
+    public string? ThreadDepthValueText => ValueTextOf(HoleField.ThreadDepth, _threadDepth);
+
+    /// <summary>The value of the drill depth box's expression; null unless the box holds one.</summary>
+    public string? DrillDepthValueText => ValueTextOf(HoleField.DrillDepth, _drillDepth);
+
+    /// <summary>The value of a dowel's counterbore depth box's expression; null unless the box holds one.</summary>
+    public string? CounterboreDepthValueText => ValueTextOf(HoleField.CounterboreDepth, _cboreDepth);
+
     /// <summary>
     /// True while a depth box holds text that is not a number, or an expression Inventor cannot read as a length; OK is
     /// disabled until it is fixed.
@@ -902,6 +929,30 @@ public sealed class AwbHoleViewModel : ObservableObject
     {
         get => _flip;
         set => Change(() => Set(ref _flip, value, nameof(Flip)));
+    }
+
+    // The diagram (task 104).
+
+    /// <summary>The values the diagram is drawn from, in the window's units, as they stand after the last change.</summary>
+    public HoleDiagramInput DiagramInput => _diagramInput;
+
+    /// <summary>
+    /// The diagram of the hole as the fields stand (<see cref="HoleDiagram.Draw"/>), in a box of
+    /// <see cref="HoleDiagram.DefaultWidth"/> by <see cref="HoleDiagram.DefaultHeight"/>. Redrawn on every change.
+    /// </summary>
+    public HoleDiagram Diagram => _diagram ??= HoleDiagram.Draw(_diagramInput);
+
+    /// <summary>The line the collapsed diagram shows (<see cref="HoleDiagram.Summary"/>).</summary>
+    public string DiagramSummary => HoleDiagram.Summary(_diagramInput);
+
+    /// <summary>
+    /// Whether the diagram is open. True to start; the add-in sets it from the settings before the window shows and
+    /// keeps it when it changes (<see cref="HoleDiagramState"/>). Not a field of the hole: it raises no preview.
+    /// </summary>
+    public bool IsDiagramExpanded
+    {
+        get => _isDiagramExpanded;
+        set => SetProperty(ref _isDiagramExpanded, value);
     }
 
     // What the add-in uses.
@@ -1326,7 +1377,10 @@ public sealed class AwbHoleViewModel : ObservableObject
         if (IsBlind)
         {
             var points = _workbook.DrillPoints.Select(r => (r.Name, r.Hidden));
-            SetList(ref _drillPointOptions, Options(points, _drillPoint), nameof(DrillPointOptions));
+            SetList(
+                ref _drillPointOptions,
+                Options(points, _drillPoint).Select(o => o with { Icon = DrillPointIcon(o.Value) }).ToList(),
+                nameof(DrillPointOptions));
             Set(
                 ref _drillPoint,
                 Find(_drillPointOptions, _drillPoint) ?? HoleRules.FindDrillPoint(_workbook, null)?.Name.Trim(),
@@ -1337,6 +1391,32 @@ public sealed class AwbHoleViewModel : ObservableObject
             SetList(ref _drillPointOptions, [], nameof(DrillPointOptions));
             Set(ref _drillPoint, null, nameof(DrillPoint));
         }
+    }
+
+    /// <summary>
+    /// A drill point's icon from its row's angle. A choice the workbook does not have (an edited hole's) is read from
+    /// its name: a number at its start is the angle, else <c>Flat</c> in it is a flat bottom; anything else shows the
+    /// 118 deg point.
+    /// </summary>
+    private string DrillPointIcon(string name) => HoleIcons.ForDrillPoint(DrillPointAngle(name));
+
+    /// <summary>The angle of the drill point <paramref name="name"/> (see <see cref="DrillPointIcon"/>); null for flat.</summary>
+    private decimal? DrillPointAngle(string? name)
+    {
+        var text = (name ?? "").Trim();
+        var row = _workbook.DrillPoints.FirstOrDefault(r => SameText(r.Name, text));
+        if (row is not null)
+        {
+            return row.AngleDeg;
+        }
+
+        var digits = new string(text.TakeWhile(c => char.IsDigit(c) || c == '.').ToArray());
+        if (decimal.TryParse(digits, NumberStyles.Float, CultureInfo.InvariantCulture, out var angle) && angle > 0)
+        {
+            return angle;
+        }
+
+        return text.Contains("flat", StringComparison.OrdinalIgnoreCase) ? null : 118m;
     }
 
     private void SetDowelSeat(HoleDowelSeat seat)
@@ -1635,12 +1715,16 @@ public sealed class AwbHoleViewModel : ObservableObject
         nameof(ShowsCounterboreSizes), nameof(ShowsCountersinkSizes), nameof(CounterboreDiameterText),
         nameof(CounterboreDepthText), nameof(CountersinkDiameterText), nameof(CountersinkAngleText),
         nameof(CounterboreDiameterProblem), nameof(CounterboreDepthProblem), nameof(CountersinkDiameterProblem),
-        nameof(CountersinkAngleProblem),
+        nameof(CountersinkAngleProblem), nameof(DepthValueText), nameof(ThreadDepthValueText),
+        nameof(DrillDepthValueText), nameof(CounterboreDepthValueText), nameof(DiagramInput), nameof(Diagram),
+        nameof(DiagramSummary),
     ];
 
     private void Reevaluate()
     {
         (_spec, _build, _checks) = Evaluate();
+        _diagramInput = BuildDiagramInput();
+        _diagram = null;
         foreach (var name in DerivedProperties)
         {
             OnPropertyChanged(name);
@@ -1648,6 +1732,84 @@ public sealed class AwbHoleViewModel : ObservableObject
 
         OkCommand.RaiseCanExecuteChanged();
     }
+
+    /// <summary>
+    /// The diagram's values from the fields: the hole and seat sizes as the hole is built when it builds (a clearance
+    /// hole's diameter depends on its fit and seat), else from the workbook row; a dowel's seat from its boxes; the
+    /// depths as they stand, marked when typed as expressions; a dowel's tolerance as its ISO code or its limits.
+    /// </summary>
+    private HoleDiagramInput BuildDiagramInput()
+    {
+        var kind = Kind;
+        var geometry = _build.Geometry;
+        decimal? Length(double? cm) => cm is { } c && double.IsFinite(c) ? HoleReadBack.FromCm(c, _units) : null;
+
+        var tapped = kind == HoleKind.Tapped ? TappedRow() : null;
+        var holeDiameter = geometry is not null
+            ? Length(geometry.HoleDiameterCm)
+            : kind == HoleKind.Tapped ? tapped?.TapDrill : Nominal(_units, kind, _size);
+
+        decimal? cboreDiameter, cboreDepth, csinkDiameter, csinkAngle;
+        if (kind == HoleKind.Dowel)
+        {
+            (cboreDiameter, cboreDepth, csinkDiameter, csinkAngle) = (_cboreDiameter, _cboreDepth, _csinkDiameter, _csinkAngle);
+        }
+        else
+        {
+            cboreDiameter = Length(geometry?.CounterboreDiameterCm);
+            cboreDepth = Length(geometry?.CounterboreDepthCm);
+            csinkDiameter = Length(geometry?.CountersinkDiameterCm);
+            csinkAngle = geometry?.CountersinkAngleDeg is { } angle && double.IsFinite(angle)
+                ? Math.Round((decimal)angle, 4)
+                : null;
+        }
+
+        string? tolerance = null;
+        if (kind == HoleKind.Dowel && Enum.TryParse<PrecisionFit>(_fit, out var fit)
+            && _workbook.PrecisionTolerances.FirstOrDefault(
+                r => r.Units == _units && r.Fit == fit && SameText(r.Name, _tolerance)) is { } row)
+        {
+            tolerance = row.Kind == ToleranceKind.Limits
+                ? row.Upper is { } upper && row.Lower is { } lower
+                    ? HoleToleranceOption.LimitsText(upper, lower, row.Units)
+                    : null
+                : string.IsNullOrWhiteSpace(row.IsoCode) ? null : row.IsoCode.Trim();
+        }
+
+        var depthField = kind == HoleKind.Tapped ? HoleField.DrillDepth : HoleField.Depth;
+        var depth = kind == HoleKind.Tapped ? _drillDepth : _depth;
+        return new HoleDiagramInput
+        {
+            Units = _units,
+            Kind = kind,
+            Seat = _seat,
+            Termination = _termination,
+            HoleDiameter = holeDiameter,
+            Tolerance = tolerance,
+            Depth = depth,
+            DepthIsExpression = ExpressionOf(depthField, depth) is not null,
+            PointAngleDeg = DrillPointAngle(_drillPoint),
+            CounterboreDiameter = cboreDiameter,
+            CounterboreDepth = cboreDepth,
+            CounterboreDepthIsExpression =
+                kind == HoleKind.Dowel && ExpressionOf(HoleField.CounterboreDepth, _cboreDepth) is not null,
+            CountersinkDiameter = csinkDiameter,
+            CountersinkAngleDeg = csinkAngle,
+            ThreadName = kind == HoleKind.Tapped ? geometry?.Thread?.Designation ?? _size : null,
+            ThreadDiameter = tapped?.Nominal,
+            ThreadDepth = kind == HoleKind.Tapped ? _threadDepth : null,
+            ThreadDepthIsExpression = kind == HoleKind.Tapped && ExpressionOf(HoleField.ThreadDepth, _threadDepth) is not null,
+        };
+    }
+
+    /// <summary>
+    /// <c>= value unit</c> for a box holding an expression Inventor read, the value as the diagram shows lengths; null
+    /// for a plain number, an empty box, or text that is not a length.
+    /// </summary>
+    private string? ValueTextOf(HoleField field, decimal? value) =>
+        !_invalidText.ContainsKey(field) && value is { } v && ExpressionOf(field, value) is not null
+            ? $"= {HoleDiagram.FormatLength(v, _units)} {LengthUnitText}"
+            : null;
 
     private void SetStatus(string text, bool isError, IReadOnlyList<string> notes)
     {
@@ -1750,6 +1912,7 @@ public sealed class AwbHoleViewModel : ObservableObject
 
                     OnPropertyChanged(textProperty);
                     OnPropertyChanged(ProblemPropertyOf(field));
+                    OnPropertyChanged(ValueTextPropertyOf(field));
                     OnPropertyChanged(nameof(HasTextThatIsNotANumber));
                     OnPropertyChanged(nameof(CanOk));
                     OkCommand.RaiseCanExecuteChanged();
@@ -1799,6 +1962,14 @@ public sealed class AwbHoleViewModel : ObservableObject
     /// <summary>The boxes that take Inventor expressions: the depths (task 100) and a dowel's counterbore depth (task 106).</summary>
     private static bool TakesExpressions(HoleField field) =>
         field is HoleField.ThreadDepth or HoleField.DrillDepth or HoleField.Depth or HoleField.CounterboreDepth;
+
+    private static string ValueTextPropertyOf(HoleField field) => field switch
+    {
+        HoleField.ThreadDepth => nameof(ThreadDepthValueText),
+        HoleField.DrillDepth => nameof(DrillDepthValueText),
+        HoleField.CounterboreDepth => nameof(CounterboreDepthValueText),
+        _ => nameof(DepthValueText),
+    };
 
     private static string ProblemPropertyOf(HoleField field) => field switch
     {

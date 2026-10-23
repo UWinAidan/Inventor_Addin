@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using Inventor;
 using InventorAddin.Core.Holes;
 using InventorAddin.Core.Logging;
 using InventorAddin.Core.Models;
 using InventorAddin.Core.Ribbon;
+using InventorAddin.Core.Settings;
 using InventorAddin.Core.ViewModels;
 using InventorAddin.Holes;
 using InventorAddin.UI;
@@ -232,6 +234,10 @@ namespace InventorAddin.Commands
                     read.Workbook, partName, readBack, read.Problems, lastDepths, expressionChecker, lastDowelSeats);
             }
 
+            // The diagram opens as it was left (task 104), and is remembered whenever it is opened or collapsed.
+            viewModel.IsDiagramExpanded = HoleDiagramState.IsExpanded(AddinServices.Settings);
+            viewModel.PropertyChanged += OnViewModelPropertyChanged;
+
             // The session previews a new hole at once; if it cannot start, it has put everything back and throws.
             HoleSession session = HoleSession.Start(InventorHost.App, doc, viewModel, hole, log);
 
@@ -257,8 +263,44 @@ namespace InventorAddin.Commands
             if (sender is AwbHoleWindow window)
             {
                 window.Closed -= OnWindowClosed;
+                if (window.DataContext is AwbHoleViewModel viewModel)
+                    viewModel.PropertyChanged -= OnViewModelPropertyChanged;
                 if (ReferenceEquals(_window, window))
                     _window = null;
+            }
+        }
+
+        private static void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(AwbHoleViewModel.IsDiagramExpanded) && sender is AwbHoleViewModel viewModel)
+                RememberDiagramState(viewModel.IsDiagramExpanded);
+        }
+
+        /// <summary>
+        /// Keeps whether the diagram is open in the settings file (task 104), so the next window, also after a restart,
+        /// opens it the same way. A failure to save is logged; the window carries on either way.
+        /// </summary>
+        private static void RememberDiagramState(bool expanded)
+        {
+            try
+            {
+                AddinSettings? updated = HoleDiagramState.Remember(AddinServices.Settings, expanded);
+                if (updated == null)
+                    return;
+
+                AddinServices.UpdateSettings(updated);
+                string? folder = AddinServices.DataFolder;
+                if (folder == null)
+                {
+                    AddinServices.Log.Warn(LogPrefix + "the diagram's state is kept for this session only: the add-in has no data folder.");
+                    return;
+                }
+
+                new SettingsStore(folder).Save(updated);
+            }
+            catch (Exception ex)
+            {
+                AddinServices.Log.Error(LogPrefix + "saving the diagram's state to the settings file failed.", ex);
             }
         }
 

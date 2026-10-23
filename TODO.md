@@ -6,7 +6,7 @@ Last updated: 2026-10-23
 
 ## Next up
 
-1. M4 part 1: Aidan checked 090 on 2026-10-18; his bugs and requests are tasks 093 to 105 in `docs/PLAN.md`. 093 to 102 and 106 are done on branch `claude/m4-hole-generator`; Aidan approved the mockup with changes on 2026-10-23. Running 104 (window redesign), 091 and 092; then Aidan checks 091 to 106 and runs spike 103 (in-place edit) with the parent session.
+1. M4 part 1: Aidan checked 090 on 2026-10-18; his bugs and requests are tasks 093 to 105 in `docs/PLAN.md`. 093 to 102, 104 and 106 are done on branch `claude/m4-hole-generator`; Aidan approved the mockup with changes on 2026-10-23. Running 091 and 092; then Aidan checks 091 to 106 and runs spike 103 (in-place edit) with the parent session.
 2. Ribbon icon colours: Aidan picks option A, B or C from `docs/ui-mockups/ribbon-icons-colour-options.png` on branch `claude/ribbon-icon-colour`; then build it.
 3. Aidan finishes the remaining Part Properties checks below.
 
@@ -47,6 +47,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 **AWB Hole (spec 09), not blocking**
 - Question 12 in spec 09: should a counterbored blind tapped hole's thread and drill depths be measured from the bottom of the counterbore?
 - Question 11 in spec 09: Inventor's Hole preselects unused centre points one by one; AWB Hole skips a sketch any feature consumes. Per-point wanted?
+- Question 15 in spec 09: the redesigned window still scrolls for blind clearance and tapped holes at 150 percent on 1080p (by about 85 to 100 with the diagram collapsed). Accept it (Default), or one line for the centres and/or Units in the header?
 - Question 14 in spec 09: a dowel seat's last values are remembered per units and dowel size (Default); or one set per units, like the blind depth
 
 **Hole table (spec 04), blocks the wizard half of M4**
@@ -94,6 +95,7 @@ Small things noticed while building. None is urgent. The parent turns these into
 - A finish list saved by Excel as plain "CSV" (not "CSV UTF-8") is in the Windows code page, so a non-ASCII character in a print note would read as a replacement character. Whoever reads the file (task 075) could fall back to the ANSI code page when the bytes are not valid UTF-8. (task 068)
 
 **AWB Hole**
+- Window redesign (task 104): the Tolerance closed box still hides the row name with a deliberately failing `ComboBoxItem` ancestor binding (a template selector in `UI/Theme` would be cleaner). A hole ending at a face is drawn as a through hole in the diagram. The diagram frame has no fill (the mockup's panel colour is not a spec 08 token). A test that every `HoleIcons.All` name has a `HoleIcon.{name}.Material` key in `Styles.xaml` would catch a blank button. Clearance and Seat None icons look alike (different rows). Arrow keys in an icon row rebuild the preview on every press; check it is not sluggish on a heavy part
 - Dowel seats (task 106): task 092's stored-versus-applied comparison ignores a dowel's seat sizes, so a seat changed in Inventor's own Hole dialog is not offered for re-applying and Edit opens on the stored sizes. The Dowel tab's autofilter still covers A:D only (widening it changes `xl/workbook.xml`'s `_FilterDatabase` too). A non-number in one of the optional seat columns drops the whole Dowel row; dropping only that value would be kinder. A wrong-type `lastDowelSeatsMm`/`In` value in a hand-edited settings.json makes the whole file fail to load, like other typed settings. Check in Inventor that a counterbore depth expression (`d0/8`) keeps the seat parametric (106 checklist step 4)
 - Preview red (task 101 review): `HoleSession.ClearPaint` sets `_paint` to null even if `Abort` throws; the paint transaction could then stay open and the red be committed on OK. Treat a failed clear as fatal for OK (cancel or refuse). Comments in `HoleSession`, `HolePreviewWriter` and Core's `HolePreviewAppearance` still say "translucent". The legacy `Face.SetRenderStyle` with an opacity was not tried for question 13
 - Redo of an AWB Hole (task 101 spike): `RedoTransaction` after one Undo did not bring the hole back; check Ctrl+Y in Inventor

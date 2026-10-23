@@ -198,6 +198,13 @@ public sealed record AddinSettings
     private IReadOnlyDictionary<string, HoleDowelSeat> _lastDowelSeatsIn = DowelSeatMap(null);
 
     /// <summary>
+    /// Whether the AWB Hole window's diagram is open (task 104; mockup choice 12): true, the default, shows it; false
+    /// shows only its header line with a summary. Remembered across windows and restarts. Not shown in the Settings
+    /// window. Changed through <see cref="HoleDiagramState.Remember"/>.
+    /// </summary>
+    public bool HoleDiagramExpanded { get; set; } = true;
+
+    /// <summary>
     /// A copy of a dowel seat map as the settings keep it: keys trimmed and matched ignoring case (the first wins),
     /// blank keys and null entries dropped; empty for null.
     /// </summary>
@@ -255,6 +262,7 @@ public sealed record AddinSettings
         && LastBlindDepthIn == other.LastBlindDepthIn
         && SameDowelSeats(LastDowelSeatsMm, other.LastDowelSeatsMm)
         && SameDowelSeats(LastDowelSeatsIn, other.LastDowelSeatsIn)
+        && HoleDiagramExpanded == other.HoleDiagramExpanded
         && PreferredMaterials.SequenceEqual(other.PreferredMaterials, StringComparer.Ordinal);
 
     public override int GetHashCode()
@@ -277,6 +285,7 @@ public sealed record AddinSettings
         hash.Add(LastBlindDepthIn);
         hash.Add(LastDowelSeatsMm.Count);
         hash.Add(LastDowelSeatsIn.Count);
+        hash.Add(HoleDiagramExpanded);
         foreach (var material in PreferredMaterials)
             hash.Add(material, StringComparer.Ordinal);
         return hash.ToHashCode();

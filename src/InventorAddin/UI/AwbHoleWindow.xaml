@@ -12,34 +12,41 @@
         referred to with DynamicResource. SizeToContent and ResizeMode are repeated from the DialogWindow style so the
         window still sizes to its content if the shared styles fail to load.
 
-        Spec 09, "The window" (task 090). Modeless: it stays open while the user picks hole centres in the model, and
-        the HoleSession (task 089) keeps the real hole in step with it. Fields in the spec's order: Units, Type, Seat,
-        Standard, Fastener type, Size, Fit, Tolerance, then Thread depth, Drill depth, Termination, Depth, Drill point,
-        Direction. A field that does not apply is not shown. Each field's problem from HoleRules is shown under it in
-        the error style. Under the fields, the picked centres. Footer: the status line (the workbook's problems at open,
-        Inventor's refusal of a change, or the add-in's notes on the hole as made; its tooltip lists every note); OK and
-        Cancel.
+        Spec 09, "The window" (task 090), laid out as Aidan approved the task 102 mockup on 2026-10-23 (task 104;
+        docs/ui-mockups/awb-hole-window.png): 360 wide (CompactDialogContent). Modeless: it stays open while the user
+        picks hole centres in the model, and the HoleSession (task 089) keeps the real hole in step with it.
 
-        Dropdowns bind SelectedValue (SelectedValuePath="Value") to the field; when a dropdown's items change it may
-        write null, which the view-model ignores. Depth boxes bind the view-model's text properties, updated when the
-        box loses focus (or on Enter), so a preview is not made for every key.
+        Body, top to bottom: the note for a hole made by Inventor's Hole command; Units, a two-part toggle; section Hole:
+        Type and Seat as icon buttons with the chosen name after them, the diagram (collapsible, remembered by the
+        add-in), Standard, Size, Fastener type (seated clearance and tapped holes) or a dowel's seat boxes, Fit with its
+        colour on the same row, Tolerance; section Depth and direction: Termination as icon buttons, Thread depth and
+        Drill depth (blind tapped) or Depth, Drill point as icon buttons, Flip; section Centres. A field that does not
+        apply is not shown. Each field's problem from HoleRules is shown under it in the error style. The body scrolls
+        when the window is capped at the screen's height; the header and the footer (status line, OK, Cancel) stay put,
+        with a line above the footer.
+
+        Dropdowns and icon rows bind SelectedValue (SelectedValuePath="Value") to the field; when their items change they
+        may write null, which the view-model ignores. Depth boxes bind the view-model's text properties, updated when the
+        box loses focus (or on Enter), so a preview is not made for every key; a box holding an expression shows what it
+        comes to after the unit.
 
         Keyboard: Enter commits the box being typed in and does OK when OK is enabled (code-behind; OK is not IsDefault,
-        so Enter cannot press it twice). Esc is Cancel (IsCancel). Access keys: U units, Y type, E seat, S standard,
-        F fastener type, C counterbore diameter, B counterbore depth, K countersink diameter, A countersink angle (a dowel's
-        seat, task 106), Z size, I fit, T tolerance, H thread depth, D drill depth, R termination, P depth, O drill point,
-        L flip.
+        so Enter cannot press it twice). Esc is Cancel (IsCancel). Tab moves into an icon row at its chosen button and
+        out again; the arrow keys or Space choose. Access keys: U units, Y type, E seat, S standard, Z size, F fastener
+        type, A counterbore diameter, B counterbore depth, K countersink diameter, G countersink angle (a dowel's seat,
+        task 106), I fit, T tolerance, R termination, H thread depth, D drill depth, P depth, O drill point, L flip.
     -->
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="VisibleWhenTrue" />
         <controls:VisibleWhenTextConverter x:Key="VisibleWhenText" />
     </Window.Resources>
 
-    <Grid Style="{DynamicResource DialogContent}">
+    <Grid Style="{DynamicResource CompactDialogContent}">
         <!-- Header, body, footer. The body row is star-sized, so it scrolls when the window is capped at the screen's height. -->
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
@@ -65,36 +72,64 @@
                     </StackPanel>
                 </controls:FormSection>
 
+                <!-- Units on its own row above the sections (mockup choice 1). -->
+                <controls:FormSection>
+                    <controls:FieldRow Label="_Units" Target="{Binding ElementName=UnitsList}">
+                        <controls:ChoiceList x:Name="UnitsList"
+                                             Style="{DynamicResource SegmentedChoiceList}"
+                                             AutomationProperties.Name="Units"
+                                             ItemsSource="{x:Static vm:AwbHoleViewModel.UnitsOptions}"
+                                             SelectedValuePath="Value"
+                                             SelectedValue="{Binding Units, Mode=TwoWay}" />
+                    </controls:FieldRow>
+                </controls:FormSection>
+
                 <controls:FormSection Heading="Hole">
-                    <controls:FieldRow Label="_Units" Target="{Binding ElementName=UnitsBox}">
-                        <ComboBox x:Name="UnitsBox"
-                                  IsEditable="False"
-                                  ItemsSource="{x:Static vm:AwbHoleViewModel.UnitsOptions}"
-                                  DisplayMemberPath="Text"
-                                  SelectedValuePath="Value"
-                                  SelectedValue="{Binding Units, Mode=TwoWay}" />
+                    <!-- Icon buttons with the chosen name after them in muted text (mockup choice 2). -->
+                    <controls:FieldRow Label="T_ype" Target="{Binding ElementName=TypeList}">
+                        <DockPanel>
+                            <controls:ChoiceList x:Name="TypeList"
+                                                 DockPanel.Dock="Left"
+                                                 Style="{DynamicResource IconChoiceList}"
+                                                 AutomationProperties.Name="Type"
+                                                 ItemsSource="{x:Static vm:AwbHoleViewModel.TypeOptions}"
+                                                 SelectedValuePath="Value"
+                                                 SelectedValue="{Binding Type, Mode=TwoWay}" />
+                            <TextBlock Style="{DynamicResource ChoiceNameText}"
+                                       Text="{Binding SelectedItem.Text, ElementName=TypeList, Mode=OneWay}" />
+                        </DockPanel>
                     </controls:FieldRow>
-                    <controls:FieldRow Label="T_ype" Target="{Binding ElementName=TypeBox}">
-                        <ComboBox x:Name="TypeBox"
-                                  IsEditable="False"
-                                  ItemsSource="{x:Static vm:AwbHoleViewModel.TypeOptions}"
-                                  DisplayMemberPath="Text"
-                                  SelectedValuePath="Value"
-                                  SelectedValue="{Binding Type, Mode=TwoWay}" />
-                    </controls:FieldRow>
-                    <controls:FieldRow Label="S_eat" Target="{Binding ElementName=SeatBox}">
+                    <controls:FieldRow Label="S_eat" Target="{Binding ElementName=SeatList}">
                         <StackPanel>
-                            <ComboBox x:Name="SeatBox"
-                                      IsEditable="False"
-                                      ItemsSource="{Binding SeatOptions, Mode=OneWay}"
-                                      DisplayMemberPath="Text"
-                                      SelectedValuePath="Value"
-                                      SelectedValue="{Binding Seat, Mode=TwoWay}" />
+                            <DockPanel>
+                                <controls:ChoiceList x:Name="SeatList"
+                                                     DockPanel.Dock="Left"
+                                                     Style="{DynamicResource IconChoiceList}"
+                                                     AutomationProperties.Name="Seat"
+                                                     ItemsSource="{Binding SeatOptions, Mode=OneWay}"
+                                                     SelectedValuePath="Value"
+                                                     SelectedValue="{Binding Seat, Mode=TwoWay}" />
+                                <TextBlock Style="{DynamicResource ChoiceNameText}"
+                                           Text="{Binding SelectedItem.Text, ElementName=SeatList, Mode=OneWay}" />
+                            </DockPanel>
                             <TextBlock Style="{DynamicResource ErrorStatusText}"
                                        Text="{Binding SeatProblem, Mode=OneWay}"
                                        Visibility="{Binding SeatProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
                         </StackPanel>
                     </controls:FieldRow>
+
+                    <!--
+                        The diagram (mockup choices 3 and 12): drawn from the view-model's diagram model on every change,
+                        in the theme's colours. Its header collapses it to a one-line summary; the add-in remembers which.
+                    -->
+                    <controls:CollapsibleSection x:Name="DiagramSection"
+                                                 Style="{DynamicResource DiagramSection}"
+                                                 Heading="Diagram"
+                                                 Summary="{Binding DiagramSummary, Mode=OneWay}"
+                                                 IsExpanded="{Binding IsDiagramExpanded, Mode=TwoWay}">
+                        <controls:HoleDiagramView Diagram="{Binding Diagram, Mode=OneWay}" />
+                    </controls:CollapsibleSection>
+
                     <controls:FieldRow Label="_Standard" Target="{Binding ElementName=StandardBox}">
                         <ComboBox x:Name="StandardBox"
                                   IsEditable="False"
@@ -103,6 +138,20 @@
                                   SelectedValuePath="Value"
                                   SelectedValue="{Binding Standard, Mode=TwoWay}" />
                     </controls:FieldRow>
+                    <controls:FieldRow Label="Si_ze" Target="{Binding ElementName=SizeBox}">
+                        <StackPanel>
+                            <ComboBox x:Name="SizeBox"
+                                      IsEditable="False"
+                                      ItemsSource="{Binding SizeOptions, Mode=OneWay}"
+                                      DisplayMemberPath="Text"
+                                      SelectedValuePath="Value"
+                                      SelectedValue="{Binding Size, Mode=TwoWay}" />
+                            <TextBlock Style="{DynamicResource ErrorStatusText}"
+                                       Text="{Binding SizeProblem, Mode=OneWay}"
+                                       Visibility="{Binding SizeProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
+                        </StackPanel>
+                    </controls:FieldRow>
+                    <!-- Under Size, for a seated clearance or tapped hole only (mockup choice 4). -->
                     <controls:FieldRow Label="_Fastener type"
                                        Target="{Binding ElementName=FastenerBox}"
                                        Visibility="{Binding ShowsFastener, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
@@ -119,17 +168,17 @@
                         </StackPanel>
                     </controls:FieldRow>
                     <!--
-                        A dowel's seat follows no fastener (task 106): its sizes are typed here instead of Fastener type.
-                        The counterbore depth takes Inventor expressions like Depth; the diameters and the angle take
-                        numbers. Task 104 moves these into the redesigned window.
+                        A dowel's seat follows no fastener (task 106; mockup choices 14 and 15): its sizes are typed here
+                        instead of Fastener type. The counterbore depth takes Inventor expressions like Depth; the
+                        diameters and the angle take numbers. The labels follow the Dowel tab's column names.
                     -->
-                    <controls:FieldRow Label="_Counterbore diameter"
+                    <controls:FieldRow Label="Cbore di_a"
                                        Target="{Binding ElementName=CounterboreDiameterBox}"
                                        Visibility="{Binding ShowsCounterboreSizes, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <TextBox x:Name="CounterboreDiameterBox"
-                                         Style="{DynamicResource NarrowTextBox}"
+                                         Style="{DynamicResource DepthTextBox}"
                                          Text="{Binding CounterboreDiameterText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
                                 <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding LengthUnitText, Mode=OneWay}" />
                             </StackPanel>
@@ -138,28 +187,31 @@
                                        Visibility="{Binding CounterboreDiameterProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
                         </StackPanel>
                     </controls:FieldRow>
-                    <controls:FieldRow Label="Counter_bore depth"
+                    <controls:FieldRow Label="C_bore depth"
                                        Target="{Binding ElementName=CounterboreDepthBox}"
                                        Visibility="{Binding ShowsCounterboreSizes, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <TextBox x:Name="CounterboreDepthBox"
-                                         Style="{DynamicResource NarrowTextBox}"
+                                         Style="{DynamicResource DepthTextBox}"
                                          Text="{Binding CounterboreDepthText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
                                 <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding LengthUnitText, Mode=OneWay}" />
+                                <TextBlock Style="{DynamicResource ExpressionValueText}"
+                                           Text="{Binding CounterboreDepthValueText, Mode=OneWay}"
+                                           Visibility="{Binding CounterboreDepthValueText, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
                             </StackPanel>
                             <TextBlock Style="{DynamicResource ErrorStatusText}"
                                        Text="{Binding CounterboreDepthProblem, Mode=OneWay}"
                                        Visibility="{Binding CounterboreDepthProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
                         </StackPanel>
                     </controls:FieldRow>
-                    <controls:FieldRow Label="Countersin_k diameter"
+                    <controls:FieldRow Label="Csin_k dia"
                                        Target="{Binding ElementName=CountersinkDiameterBox}"
                                        Visibility="{Binding ShowsCountersinkSizes, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <TextBox x:Name="CountersinkDiameterBox"
-                                         Style="{DynamicResource NarrowTextBox}"
+                                         Style="{DynamicResource DepthTextBox}"
                                          Text="{Binding CountersinkDiameterText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
                                 <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding LengthUnitText, Mode=OneWay}" />
                             </StackPanel>
@@ -168,13 +220,13 @@
                                        Visibility="{Binding CountersinkDiameterProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
                         </StackPanel>
                     </controls:FieldRow>
-                    <controls:FieldRow Label="Countersink _angle"
+                    <controls:FieldRow Label="Csink an_gle"
                                        Target="{Binding ElementName=CountersinkAngleBox}"
                                        Visibility="{Binding ShowsCountersinkSizes, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <TextBox x:Name="CountersinkAngleBox"
-                                         Style="{DynamicResource NarrowTextBox}"
+                                         Style="{DynamicResource DepthTextBox}"
                                          Text="{Binding CountersinkAngleText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
                                 <TextBlock Style="{DynamicResource SideNoteText}" Text="{x:Static vm:AwbHoleViewModel.AngleUnitText}" />
                             </StackPanel>
@@ -183,25 +235,13 @@
                                        Visibility="{Binding CountersinkAngleProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
                         </StackPanel>
                     </controls:FieldRow>
-                    <controls:FieldRow Label="Si_ze" Target="{Binding ElementName=SizeBox}">
-                        <StackPanel>
-                            <ComboBox x:Name="SizeBox"
-                                      IsEditable="False"
-                                      ItemsSource="{Binding SizeOptions, Mode=OneWay}"
-                                      DisplayMemberPath="Text"
-                                      SelectedValuePath="Value"
-                                      SelectedValue="{Binding Size, Mode=TwoWay}" />
-                            <TextBlock Style="{DynamicResource ErrorStatusText}"
-                                       Text="{Binding SizeProblem, Mode=OneWay}"
-                                       Visibility="{Binding SizeProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
-                        </StackPanel>
-                    </controls:FieldRow>
-                    <!-- A dowel's fit colours its faces: the colour from the workbook and its name beside the dropdown's row. -->
+                    <!-- A dowel's fit colours its faces: the colour from the workbook and its name on Fit's row (mockup choice 5). -->
                     <controls:FieldRow Label="F_it"
                                        Target="{Binding ElementName=FitBox}"
                                        Visibility="{Binding ShowsFit, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
-                        <StackPanel>
+                        <StackPanel Orientation="Horizontal">
                             <ComboBox x:Name="FitBox"
+                                      Style="{DynamicResource ShortComboBox}"
                                       IsEditable="False"
                                       ItemsSource="{Binding FitOptions, Mode=OneWay}"
                                       DisplayMemberPath="Text"
@@ -209,7 +249,7 @@
                                       SelectedValue="{Binding Fit, Mode=TwoWay}" />
                             <StackPanel Orientation="Horizontal"
                                         Visibility="{Binding ShowsFitColour, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
-                                <controls:ColourSwatch Colour="{Binding FitSwatch, Mode=OneWay}" />
+                                <controls:ColourSwatch Style="{DynamicResource SideColourSwatch}" Colour="{Binding FitSwatch, Mode=OneWay}" />
                                 <TextBlock Style="{DynamicResource MutedText}" Text="{Binding FitColourText, Mode=OneWay}" />
                             </StackPanel>
                         </StackPanel>
@@ -258,15 +298,38 @@
                 </controls:FormSection>
 
                 <controls:FormSection Heading="Depth and direction">
+                    <!-- Distance and Through All; To only for an edited hole that already ends at a face, with a note (mockup choice 11). -->
+                    <controls:FieldRow Label="Te_rmination" Target="{Binding ElementName=TerminationList}">
+                        <StackPanel>
+                            <DockPanel>
+                                <controls:ChoiceList x:Name="TerminationList"
+                                                     DockPanel.Dock="Left"
+                                                     Style="{DynamicResource IconChoiceList}"
+                                                     AutomationProperties.Name="Termination"
+                                                     ItemsSource="{Binding TerminationOptions, Mode=OneTime}"
+                                                     SelectedValuePath="Value"
+                                                     SelectedValue="{Binding Termination, Mode=TwoWay}" />
+                                <TextBlock Style="{DynamicResource ChoiceNameText}"
+                                           Text="{Binding SelectedItem.Text, ElementName=TerminationList, Mode=OneWay}" />
+                            </DockPanel>
+                            <TextBlock Style="{DynamicResource MutedText}"
+                                       Text="{Binding TerminationNote, Mode=OneWay}"
+                                       Visibility="{Binding TerminationNote, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
+                        </StackPanel>
+                    </controls:FieldRow>
+                    <!-- A blind tapped hole: Thread depth and Drill depth in place of Depth (mockup choice 10). -->
                     <controls:FieldRow Label="T_hread depth"
                                        Target="{Binding ElementName=ThreadDepthBox}"
                                        Visibility="{Binding ShowsThreadDepths, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <TextBox x:Name="ThreadDepthBox"
-                                         Style="{DynamicResource NarrowTextBox}"
+                                         Style="{DynamicResource DepthTextBox}"
                                          Text="{Binding ThreadDepthText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
                                 <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding LengthUnitText, Mode=OneWay}" />
+                                <TextBlock Style="{DynamicResource ExpressionValueText}"
+                                           Text="{Binding ThreadDepthValueText, Mode=OneWay}"
+                                           Visibility="{Binding ThreadDepthValueText, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
                             </StackPanel>
                             <TextBlock Style="{DynamicResource ErrorStatusText}"
                                        Text="{Binding ThreadDepthProblem, Mode=OneWay}"
@@ -279,38 +342,31 @@
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <TextBox x:Name="DrillDepthBox"
-                                         Style="{DynamicResource NarrowTextBox}"
+                                         Style="{DynamicResource DepthTextBox}"
                                          Text="{Binding DrillDepthText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
                                 <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding LengthUnitText, Mode=OneWay}" />
+                                <TextBlock Style="{DynamicResource ExpressionValueText}"
+                                           Text="{Binding DrillDepthValueText, Mode=OneWay}"
+                                           Visibility="{Binding DrillDepthValueText, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
                             </StackPanel>
                             <TextBlock Style="{DynamicResource ErrorStatusText}"
                                        Text="{Binding DrillDepthProblem, Mode=OneWay}"
                                        Visibility="{Binding DrillDepthProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
                         </StackPanel>
                     </controls:FieldRow>
-                    <!-- Distance and Through All; To only for an edited hole that already ends at a face, with a note. -->
-                    <controls:FieldRow Label="Te_rmination" Target="{Binding ElementName=TerminationBox}">
-                        <StackPanel>
-                            <ComboBox x:Name="TerminationBox"
-                                      IsEditable="False"
-                                      ItemsSource="{Binding TerminationOptions, Mode=OneTime}"
-                                      DisplayMemberPath="Text"
-                                      SelectedValuePath="Value"
-                                      SelectedValue="{Binding Termination, Mode=TwoWay}" />
-                            <TextBlock Style="{DynamicResource MutedText}"
-                                       Text="{Binding TerminationNote, Mode=OneWay}"
-                                       Visibility="{Binding TerminationNote, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
-                        </StackPanel>
-                    </controls:FieldRow>
+                    <!-- Depth shows what an expression comes to after its unit, "= 31 mm" (mockup choice 6). -->
                     <controls:FieldRow Label="De_pth"
                                        Target="{Binding ElementName=DepthBox}"
                                        Visibility="{Binding ShowsDepth, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <TextBox x:Name="DepthBox"
-                                         Style="{DynamicResource NarrowTextBox}"
+                                         Style="{DynamicResource DepthTextBox}"
                                          Text="{Binding DepthText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
                                 <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding LengthUnitText, Mode=OneWay}" />
+                                <TextBlock Style="{DynamicResource ExpressionValueText}"
+                                           Text="{Binding DepthValueText, Mode=OneWay}"
+                                           Visibility="{Binding DepthValueText, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
                             </StackPanel>
                             <TextBlock Style="{DynamicResource ErrorStatusText}"
                                        Text="{Binding DepthProblem, Mode=OneWay}"
@@ -318,15 +374,20 @@
                         </StackPanel>
                     </controls:FieldRow>
                     <controls:FieldRow Label="Drill p_oint"
-                                       Target="{Binding ElementName=DrillPointBox}"
+                                       Target="{Binding ElementName=DrillPointList}"
                                        Visibility="{Binding ShowsDrillPoint, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
                         <StackPanel>
-                            <ComboBox x:Name="DrillPointBox"
-                                      IsEditable="False"
-                                      ItemsSource="{Binding DrillPointOptions, Mode=OneWay}"
-                                      DisplayMemberPath="Text"
-                                      SelectedValuePath="Value"
-                                      SelectedValue="{Binding DrillPoint, Mode=TwoWay}" />
+                            <DockPanel>
+                                <controls:ChoiceList x:Name="DrillPointList"
+                                                     DockPanel.Dock="Left"
+                                                     Style="{DynamicResource IconChoiceList}"
+                                                     AutomationProperties.Name="Drill point"
+                                                     ItemsSource="{Binding DrillPointOptions, Mode=OneWay}"
+                                                     SelectedValuePath="Value"
+                                                     SelectedValue="{Binding DrillPoint, Mode=TwoWay}" />
+                                <TextBlock Style="{DynamicResource ChoiceNameText}"
+                                           Text="{Binding SelectedItem.Text, ElementName=DrillPointList, Mode=OneWay}" />
+                            </DockPanel>
                             <TextBlock Style="{DynamicResource ErrorStatusText}"
                                        Text="{Binding DrillPointProblem, Mode=OneWay}"
                                        Visibility="{Binding DrillPointProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
@@ -355,12 +416,15 @@
             </StackPanel>
         </ScrollViewer>
 
+        <!-- A line across the window above the footer, so the scrolled body has a visible edge (mockup choice 13). -->
+        <Border Grid.Row="2" Style="{DynamicResource FooterDivider}" />
+
         <!--
             Status line and buttons in one row. Cancel and closing the window put the part back as it was (the session's
             Cancel); OK keeps the hole as one Undo step and closes the window, or keeps it open with the reason in the
             status line when the hole in the model is not what the window shows.
         -->
-        <controls:DialogFooter Grid.Row="2"
+        <controls:DialogFooter Grid.Row="3"
                                Status="{Binding StatusText, Mode=OneWay}"
                                IsError="{Binding StatusIsError, Mode=OneWay}"
                                StatusToolTip="{Binding StatusDetails, Mode=OneWay}">

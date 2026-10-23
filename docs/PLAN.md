@@ -321,7 +321,7 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 - [x] 101 Preview holes in translucent red (solid red; see spec 09 question 13)
 - [x] 102 AWB Hole window redesign: mockup for Aidan (approved 2026-10-23 with changes; revised)
 - [ ] 103 Spike: AWB Hole in a part edited in place in an assembly (with Aidan)
-- [ ] 104 AWB Hole window redesign
+- [x] 104 AWB Hole window redesign
 - [ ] 105 AWB Hole in a part edited in place
 - [x] 106 Dowel seats sized in the window
 

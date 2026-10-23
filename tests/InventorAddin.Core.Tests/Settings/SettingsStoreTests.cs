@@ -377,6 +377,7 @@ public sealed class SettingsStoreTests : IDisposable
             s => s with { LastBlindDepthIn = 0.5m },
             s => s with { LastDowelSeatsMm = new Dictionary<string, HoleDowelSeat> { ["6 mm"] = new(7m, 3m, null, null) } },
             s => s with { LastDowelSeatsIn = new Dictionary<string, HoleDowelSeat> { ["1/4\""] = new(null, null, 0.3m, 90m) } },
+            s => s with { HoleDiagramExpanded = false },
             s => s with { PreferredMaterials = new[] { "Test Steel" } },
         };
         var settableProperties = typeof(AddinSettings).GetProperties().Count(p => p.CanWrite);
@@ -607,6 +608,42 @@ public sealed class SettingsStoreTests : IDisposable
 
         Assert.Empty(result.Warnings);
         Assert.Equal(new AddinSettings(), result.Settings);
+    }
+
+    // ---- The AWB Hole diagram's state (task 104) ----
+
+    [Fact]
+    public void Save_WritesHoleDiagramExpandedInCamelCase_ThenRoundTrips()
+    {
+        var store = new SettingsStore(_folder);
+        var original = new AddinSettings { HoleDiagramExpanded = false };
+
+        store.Save(original);
+
+        var json = JsonNode.Parse(File.ReadAllText(SettingsPath))!.AsObject();
+        Assert.False(json["holeDiagramExpanded"]!.GetValue<bool>());
+
+        var result = store.Load();
+        Assert.Empty(result.Warnings);
+        Assert.Equal(original, result.Settings);
+        Assert.False(result.Settings.HoleDiagramExpanded);
+    }
+
+    [Fact]
+    public void Load_FileWrittenBeforeHoleDiagramState_LoadsItExpanded()
+    {
+        WriteSettingsFile("""
+            {
+              "schemaVersion": 1,
+              "holeWorkbookPath": "D:\\Holes.xlsx",
+              "lastBlindDepthMm": 12
+            }
+            """);
+
+        var result = new SettingsStore(_folder).Load();
+
+        Assert.Empty(result.Warnings);
+        Assert.True(result.Settings.HoleDiagramExpanded);
     }
 
     // ---- Last dowel seats (task 106) ----
