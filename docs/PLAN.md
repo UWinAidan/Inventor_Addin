@@ -308,7 +308,7 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 - [x] 088 Hole feature in Inventor: create, change, tolerance, colour, stored data, read back
 - [x] 089 Hole centre picking and the live preview session
 - [x] 090 AWB Hole window and command
-- [ ] 091 AWB Hole replaces Inventor's Hole and its H shortcut
+- [x] 091 AWB Hole replaces Inventor's Hole and its H shortcut
 - [ ] 092 Edit Feature and double-click open AWB Hole; re-apply offer
 - [x] 093 Counterbore and countersink follow a size change
 - [x] 094 The hole's sketch is consumed under it after OK

@@ -15,7 +15,8 @@ namespace InventorAddin.UI
     /// </summary>
     /// <remarks>
     /// Settings and Inventor's theme (for the icons) are read once, when the add-in starts. A changed setting or theme
-    /// takes effect at the next start.
+    /// takes effect at the next start, except "Use Inventor's Hole command", which <see cref="HoleCommandTakeover"/>
+    /// applies when Settings is saved.
     /// </remarks>
     public sealed class RibbonSetup : IDisposable
     {
@@ -32,6 +33,9 @@ namespace InventorAddin.UI
 
         // Commands that failed to register, so their layout entries are skipped with a warning that says why.
         private readonly HashSet<string> _failedCommands = new(StringComparer.Ordinal);
+
+        // AWB Hole in place of Inventor's Hole (task 091); null when AWB Hole failed to register.
+        private HoleCommandTakeover? _holeTakeover;
 
         public RibbonSetup(Application app, string clientId, AddinSettings settings, ILog log)
         {
@@ -94,6 +98,31 @@ namespace InventorAddin.UI
                 {
                     _log.Error($"Could not build the {environment.RibbonName()} ribbon. The other ribbons are still built.", ex);
                 }
+            }
+
+            StartHoleTakeover();
+        }
+
+        /// <summary>
+        /// AWB Hole replaces Inventor's Hole on the 3D Model tab, or not, as the settings say (task 091). Without AWB
+        /// Hole's definition, Inventor's Hole is left as it is.
+        /// </summary>
+        private void StartHoleTakeover()
+        {
+            if (!_commandsByName.TryGetValue(CommandNames.AwbHole, out AddinCommand? awbHole) || awbHole.Definition == null)
+            {
+                _log.Warn($"Command {CommandNames.AwbHole} is not registered, so Inventor's Hole is not replaced on the 3D Model tab.");
+                return;
+            }
+
+            try
+            {
+                _holeTakeover = new HoleCommandTakeover(_app, awbHole.Definition, _log);
+                _holeTakeover.Start(_settings);
+            }
+            catch (Exception ex)
+            {
+                _log.Error("Hole takeover: starting failed; Inventor's Hole is left as it is.", ex);
             }
         }
 
@@ -217,6 +246,10 @@ namespace InventorAddin.UI
 
         public void Dispose()
         {
+            // Inventor's Hole and H are given back before the commands are released.
+            _holeTakeover?.Dispose();
+            _holeTakeover = null;
+
             foreach (var c in _commands)
                 c.Dispose();
             _commands.Clear();

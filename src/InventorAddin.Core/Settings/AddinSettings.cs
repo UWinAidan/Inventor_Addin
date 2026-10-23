@@ -145,7 +145,7 @@ public sealed record AddinSettings
 
     /// <summary>
     /// "Use Inventor's Hole command" (spec 09, "Settings"): on gives Inventor's Hole button and H shortcut back; off,
-    /// the default, gives them to AWB Hole. Only stored here; task 091 acts on it.
+    /// the default, gives them to AWB Hole. <see cref="Holes.HoleTakeoverRules"/> decides what that sets (task 091).
     /// </summary>
     public bool UseInventorHoleCommand { get; set; }
 
