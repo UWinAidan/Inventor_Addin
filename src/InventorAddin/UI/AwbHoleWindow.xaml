@@ -26,7 +26,8 @@
 
         Keyboard: Enter commits the box being typed in and does OK when OK is enabled (code-behind; OK is not IsDefault,
         so Enter cannot press it twice). Esc is Cancel (IsCancel). Access keys: U units, Y type, E seat, S standard,
-        F fastener type, Z size, I fit, T tolerance, H thread depth, D drill depth, R termination, P depth, O drill point,
+        F fastener type, C counterbore diameter, B counterbore depth, K countersink diameter, A countersink angle (a dowel's
+        seat, task 106), Z size, I fit, T tolerance, H thread depth, D drill depth, R termination, P depth, O drill point,
         L flip.
     -->
     <Window.Resources>
@@ -115,6 +116,71 @@
                             <TextBlock Style="{DynamicResource ErrorStatusText}"
                                        Text="{Binding FastenerProblem, Mode=OneWay}"
                                        Visibility="{Binding FastenerProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
+                        </StackPanel>
+                    </controls:FieldRow>
+                    <!--
+                        A dowel's seat follows no fastener (task 106): its sizes are typed here instead of Fastener type.
+                        The counterbore depth takes Inventor expressions like Depth; the diameters and the angle take
+                        numbers. Task 104 moves these into the redesigned window.
+                    -->
+                    <controls:FieldRow Label="_Counterbore diameter"
+                                       Target="{Binding ElementName=CounterboreDiameterBox}"
+                                       Visibility="{Binding ShowsCounterboreSizes, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBox x:Name="CounterboreDiameterBox"
+                                         Style="{DynamicResource NarrowTextBox}"
+                                         Text="{Binding CounterboreDiameterText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding LengthUnitText, Mode=OneWay}" />
+                            </StackPanel>
+                            <TextBlock Style="{DynamicResource ErrorStatusText}"
+                                       Text="{Binding CounterboreDiameterProblem, Mode=OneWay}"
+                                       Visibility="{Binding CounterboreDiameterProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
+                        </StackPanel>
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="Counter_bore depth"
+                                       Target="{Binding ElementName=CounterboreDepthBox}"
+                                       Visibility="{Binding ShowsCounterboreSizes, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBox x:Name="CounterboreDepthBox"
+                                         Style="{DynamicResource NarrowTextBox}"
+                                         Text="{Binding CounterboreDepthText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding LengthUnitText, Mode=OneWay}" />
+                            </StackPanel>
+                            <TextBlock Style="{DynamicResource ErrorStatusText}"
+                                       Text="{Binding CounterboreDepthProblem, Mode=OneWay}"
+                                       Visibility="{Binding CounterboreDepthProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
+                        </StackPanel>
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="Countersin_k diameter"
+                                       Target="{Binding ElementName=CountersinkDiameterBox}"
+                                       Visibility="{Binding ShowsCountersinkSizes, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBox x:Name="CountersinkDiameterBox"
+                                         Style="{DynamicResource NarrowTextBox}"
+                                         Text="{Binding CountersinkDiameterText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding LengthUnitText, Mode=OneWay}" />
+                            </StackPanel>
+                            <TextBlock Style="{DynamicResource ErrorStatusText}"
+                                       Text="{Binding CountersinkDiameterProblem, Mode=OneWay}"
+                                       Visibility="{Binding CountersinkDiameterProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
+                        </StackPanel>
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="Countersink _angle"
+                                       Target="{Binding ElementName=CountersinkAngleBox}"
+                                       Visibility="{Binding ShowsCountersinkSizes, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBox x:Name="CountersinkAngleBox"
+                                         Style="{DynamicResource NarrowTextBox}"
+                                         Text="{Binding CountersinkAngleText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                <TextBlock Style="{DynamicResource SideNoteText}" Text="{x:Static vm:AwbHoleViewModel.AngleUnitText}" />
+                            </StackPanel>
+                            <TextBlock Style="{DynamicResource ErrorStatusText}"
+                                       Text="{Binding CountersinkAngleProblem, Mode=OneWay}"
+                                       Visibility="{Binding CountersinkAngleProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
                         </StackPanel>
                     </controls:FieldRow>
                     <controls:FieldRow Label="Si_ze" Target="{Binding ElementName=SizeBox}">

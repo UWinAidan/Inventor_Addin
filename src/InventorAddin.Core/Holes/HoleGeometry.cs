@@ -49,7 +49,15 @@ public sealed record HoleGeometry(
     public string? DepthExpression { get; init; }
 
     /// <summary>
-    /// The units a number with no unit in <see cref="DepthExpression"/> or <see cref="HoleThread.ThreadDepthExpression"/>
+    /// The Inventor expression a dowel's counterbore depth comes from, when it was typed as one (task 106): written into
+    /// the hole's counterbore depth parameter after <see cref="CounterboreDepthCm"/>, so the seat stays parametric.
+    /// Null for a plain number and for any other seat.
+    /// </summary>
+    public string? CounterboreDepthExpression { get; init; }
+
+    /// <summary>
+    /// The units a number with no unit in <see cref="DepthExpression"/>, <see cref="CounterboreDepthExpression"/> or
+    /// <see cref="HoleThread.ThreadDepthExpression"/>
     /// is in: the window's. The add-in gives a parameter that takes an expression this length unit
     /// (<see cref="HoleExpressions.UnitName"/>), so Inventor reads the expression as the window did.
     /// </summary>

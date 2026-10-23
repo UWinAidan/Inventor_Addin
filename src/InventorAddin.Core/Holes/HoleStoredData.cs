@@ -144,7 +144,10 @@ public sealed record HoleStoredDataReadResult(HoleStoredData? Data, string Messa
 /// <see cref="ToAttributes"/> and read back with <see cref="Read"/>. Enums are stored as their names, lengths as
 /// doubles in the spec's units, flags as integers 0 or 1. A depth typed as an Inventor expression stores its text too
 /// (<see cref="DepthExpressionName"/> and the like, task 100), beside the value it came to; data written before
-/// task 100 has none, and reads as plain numbers, so the version is unchanged.
+/// task 100 has none, and reads as plain numbers, so the version is unchanged. A dowel's seat stores its own sizes
+/// (<see cref="CboreDiameterName"/> and the like, task 106) and no fastener; a dowel stored before task 106 has a
+/// fastener and no seat sizes, and reads with the sizes null, which <see cref="HoleReadBack"/> fills from the hole, so
+/// the version is unchanged again.
 /// </summary>
 public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
 {
@@ -172,6 +175,11 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
     public const string DrillDepthExpressionName = "DrillDepthExpression";
     public const string DepthExpressionName = "DepthExpression";
     public const string FlipName = "Flip";
+    public const string CboreDiameterName = "CboreDiameter";
+    public const string CboreDepthName = "CboreDepth";
+    public const string CboreDepthExpressionName = "CboreDepthExpression";
+    public const string CsinkDiameterName = "CsinkDiameter";
+    public const string CsinkAngleName = "CsinkAngleDeg";
     public const string AppliedDiameterName = "AppliedDiameterCm";
     public const string AppliedIsoCodeName = "AppliedToleranceIsoCode";
     public const string AppliedUpperName = "AppliedToleranceUpperCm";
@@ -235,6 +243,11 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
         AddText(ThreadDepthExpressionName, spec.ThreadDepthExpression);
         AddText(DrillDepthExpressionName, spec.DrillDepthExpression);
         AddText(DepthExpressionName, spec.DepthExpression);
+        AddNumber(CboreDiameterName, spec.CboreDiameter);
+        AddNumber(CboreDepthName, spec.CboreDepth);
+        AddText(CboreDepthExpressionName, spec.CboreDepthExpression);
+        AddNumber(CsinkDiameterName, spec.CsinkDiameter);
+        AddNumber(CsinkAngleName, spec.CsinkAngleDeg);
 
         attributes.Add(new HoleAttribute(AppliedDiameterName, Applied.HoleDiameterCm));
         AddText(AppliedIsoCodeName, Applied.ToleranceIsoCode);
@@ -295,7 +308,21 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
         }
 
         Require(!string.IsNullOrWhiteSpace(spec.Size), SizeName);
-        if (spec.Seat != HoleSeat.None)
+        if (spec.Kind == HoleKind.Dowel)
+        {
+            // A dowel's seat follows no fastener; it has its own sizes (task 106).
+            if (spec.Seat == HoleSeat.Counterbore)
+            {
+                Require(spec.CboreDiameter is not null, CboreDiameterName);
+                Require(spec.CboreDepth is not null, CboreDepthName);
+            }
+            else if (spec.Seat == HoleSeat.Countersink)
+            {
+                Require(spec.CsinkDiameter is not null, CsinkDiameterName);
+                Require(spec.CsinkAngleDeg is not null, CsinkAngleName);
+            }
+        }
+        else if (spec.Seat != HoleSeat.None)
         {
             Require(!string.IsNullOrWhiteSpace(spec.Fastener), FastenerName);
         }
@@ -326,8 +353,12 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
             var seat = RequiredEnum<HoleSeat>(SeatName);
             var termination = RequiredEnum<HoleTermination>(TerminationName);
             var blind = termination == HoleTermination.Distance;
-            // Any seated hole stores its fastener: a tapped or dowel hole's seat row too (task 099).
-            var seated = seat != HoleSeat.None;
+            // A seated clearance or tapped hole stores its fastener (a tapped hole's seat row too, task 099). A dowel's
+            // seat has its own sizes instead (task 106); one stored before that has neither, and its sizes read as null.
+            var dowel = kind == HoleKind.Dowel;
+            var seated = seat != HoleSeat.None && !dowel;
+            var dowelCbore = dowel && seat == HoleSeat.Counterbore;
+            var dowelCsink = dowel && seat == HoleSeat.Countersink;
 
             var spec = new HoleSpec(
                 RequiredEnum<HoleUnits>(UnitsName),
@@ -350,6 +381,11 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
                 ThreadDepthExpression = kind == HoleKind.Tapped ? OptionalText(ThreadDepthExpressionName) : null,
                 DrillDepthExpression = kind == HoleKind.Tapped ? OptionalText(DrillDepthExpressionName) : null,
                 DepthExpression = blind && kind != HoleKind.Tapped ? OptionalText(DepthExpressionName) : null,
+                CboreDiameter = dowelCbore ? OptionalDecimal(CboreDiameterName) : null,
+                CboreDepth = dowelCbore ? OptionalDecimal(CboreDepthName) : null,
+                CboreDepthExpression = dowelCbore ? OptionalText(CboreDepthExpressionName) : null,
+                CsinkDiameter = dowelCsink ? OptionalDecimal(CsinkDiameterName) : null,
+                CsinkAngleDeg = dowelCsink ? OptionalDecimal(CsinkAngleName) : null,
             };
 
             var applied = new HoleAppliedState(

@@ -6,12 +6,20 @@ Last updated: 2026-10-23
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-10-23. Branch `claude/m4-hole-generator`; task 102 committed on top of 101 (reviewer PASS).
-- Task 102: mockup `docs/ui-mockups/awb-hole-window.png`, source `awb-hole-window.html` beside it (render command in its top comment), 11 numbered choices in `docs/ui-mockups/README.md`. Waiting for Aidan's comments; task 104 does not start until he approves.
-- Aidan, 2026-10-23: the preview stays solid red by default for now (spec 09 question 13).
-- Build and tests: 3382 Core tests pass. 093 to 101 not yet run in Inventor.
-- Next steps, per `docs/PLAN.md`: 091 (takeover of Hole and H), 092 (Edit Feature and double-click). Aidan comments on the mockup, runs the checklists of 093 to 101, and spike 103 with the parent session.
-- Gotchas: `GetValueFromExpression` and some other calls throw "Unspecified error" with no reason; abort a nested transaction before its parent (the reverse throws); Python heredocs in Git Bash can break backslash-n escapes, so write scripts to the scratchpad; `AwbHoleTestWorkbook` hides M4, use M3 or M5.
+- Updated: 2026-10-23 13:28. Branch `claude/m4-hole-generator`, latest commit `2c99181` (task 102: Mockup revised after Aidan's comments).
+- Goal: run M4 part 1 per `docs/WORKFLOW.md`: mockup 102, then Aidan's changes, then 106, 104, 091, 092.
+- Done this session:
+  - Task 102 mockup committed (`ccae5a4`), then revised after Aidan's comments (`2c99181`): `docs/ui-mockups/awb-hole-window.html` (source; render command in its top comment), `.png`, `README.md` (choices 1 to 11 approved, 12 to 15 new).
+  - Plan commit `dc20443`: Aidan's decisions in `DECISIONS.md` (2026-10-23 rows: solid red preview for now, mockup approved, fit 720-tall screen, distinct icons, dowel seats); spec 09 updated (question 9 answered, new question 14); new task `docs/tasks/106-dowel-seat-sizes.md`; `docs/tasks/104-awb-hole-window-redesign.md` written in full (depends on 106); `docs/PLAN.md` table and list.
+- Current state: Core tests 3382 passed (last run during 102, before 106). Nothing from 093 to 102 run in Inventor yet.
+- In progress: task 106 handed to an implementer subagent (Windows build); not yet reviewed or committed. If this session ends, check `git status` for its uncommitted changes, then run the reviewer on `docs/tasks/106-dowel-seat-sizes.md` before committing.
+- Next steps:
+  1. Finish 106: reviewer, then commit `task 106: Dowel seats sized in the window`, copy follow-ups to `TODO.md`.
+  2. Task 104 (window redesign) from the revised mockup: port the icon paths (M/H/V/L/Z in a 20x20 box) and `holeProfile()` from the HTML into Core.
+  3. Tasks 091 then 092.
+  4. Then update STATUS/TODO, push, and open the PR per WORKFLOW (Aidan checks 091 to 106, runs spike 103).
+- Gotchas: `cat > file` with no heredoc in Git Bash waits on stdin and hangs; write scripts with the Write tool into the scratchpad. String replacements in TODO.md can miss because of near-identical wording; grep first. `GetValueFromExpression` throws "Unspecified error" with no reason; abort a nested transaction before its parent.
+- Read first: `docs/WORKFLOW.md`, `docs/PLAN.md` (M4 part 1), spec `docs/features/09-awb-hole.md`, task files 104 and 106.
 
 ## Big items
 

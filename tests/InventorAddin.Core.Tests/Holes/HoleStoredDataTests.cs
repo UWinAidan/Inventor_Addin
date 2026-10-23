@@ -34,8 +34,10 @@ public sealed class HoleStoredDataTests
         Dowel("1/7\"") with { Units = HoleUnits.Imperial, PrecisionFit = PrecisionFit.Slip },
         Tapped() with { Seat = HoleSeat.Counterbore, Fastener = "TLOW" },
         Tapped() with { Seat = HoleSeat.Countersink, Termination = HoleTermination.ThroughAll },
-        Dowel("5 mm") with { Seat = HoleSeat.Counterbore, Termination = HoleTermination.Distance, Depth = 14m },
-        Dowel("5 mm") with { Seat = HoleSeat.Countersink, PrecisionFit = PrecisionFit.Press },
+        CboredDowel() with { Termination = HoleTermination.Distance, Depth = 14m },
+        CboredDowel() with { CboreDiameter = 7.25m, CboreDepth = 1.5m, CboreDepthExpression = "d0 / 4" },
+        CsunkDowel() with { PrecisionFit = PrecisionFit.Press },
+        CsunkDowel() with { CsinkDiameter = 6.1m, CsinkAngleDeg = 120m },
     };
 
     [Theory]
@@ -222,7 +224,10 @@ public sealed class HoleStoredDataTests
         { Clearance() with { Seat = HoleSeat.Countersink, Fastener = " " }, HoleStoredData.FastenerName },
         { Dowel(), HoleStoredData.ToleranceName },
         { Tapped() with { Seat = HoleSeat.Counterbore }, HoleStoredData.FastenerName },
-        { Dowel("5 mm") with { Seat = HoleSeat.Countersink, Tolerance = "Test bore" }, HoleStoredData.FastenerName },
+        { CsunkDowel() with { CsinkDiameter = null, Tolerance = "Test bore" }, HoleStoredData.CsinkDiameterName },
+        { CsunkDowel() with { CsinkAngleDeg = null, Tolerance = "Test bore" }, HoleStoredData.CsinkAngleName },
+        { CboredDowel() with { CboreDiameter = null, Tolerance = "Test bore" }, HoleStoredData.CboreDiameterName },
+        { CboredDowel() with { CboreDepth = null, Tolerance = "Test bore" }, HoleStoredData.CboreDepthName },
         { Clearance() with { Termination = HoleTermination.Distance }, HoleStoredData.DepthName },
         { Clearance(" "), HoleStoredData.SizeName },
     };
@@ -247,15 +252,54 @@ public sealed class HoleStoredDataTests
     }
 
     [Fact]
-    public void ASeatedDowel_WithoutItsFastener_CannotBeRead()
+    public void ASeatedDowel_StoresItsOwnSeatSizes_AndNoFastener()
     {
-        var attributes = Stored(Dowel("5 mm") with { Seat = HoleSeat.Counterbore }).ToAttributes()
-            .Where(a => a.Name != HoleStoredData.FastenerName);
+        var attributes = Stored(CboredDowel() with { CboreDiameter = 7.25m, CboreDepthExpression = "d0 / 4" })
+            .ToAttributes();
+        var byName = attributes.ToDictionary(a => a.Name, a => a.Value);
+
+        Assert.Equal(7.25, byName[HoleStoredData.CboreDiameterName]);
+        Assert.Equal(5.2, byName[HoleStoredData.CboreDepthName]);
+        Assert.Equal("d0 / 4", byName[HoleStoredData.CboreDepthExpressionName]);
+        Assert.False(byName.ContainsKey(HoleStoredData.FastenerName));
+        Assert.False(byName.ContainsKey(HoleStoredData.CsinkDiameterName));
+        Assert.False(byName.ContainsKey(HoleStoredData.CsinkAngleName));
+
+        var sink = Stored(CsunkDowel()).ToAttributes().ToDictionary(a => a.Name, a => a.Value);
+        Assert.Equal(10.4, sink[HoleStoredData.CsinkDiameterName]);
+        Assert.Equal(90.0, sink[HoleStoredData.CsinkAngleName]);
+        Assert.False(sink.ContainsKey(HoleStoredData.CboreDiameterName));
+    }
+
+    [Fact]
+    public void ASeatedDowelStoredBeforeTask106_ReadsWithItsSeatSizesNull()
+    {
+        // Version 1 data from task 099: a fastener from the same-size row, no seat sizes.
+        var attributes = Stored(CboredDowel()).ToAttributes()
+            .Where(a => a.Name is not HoleStoredData.CboreDiameterName and not HoleStoredData.CboreDepthName)
+            .Append(new HoleAttribute(HoleStoredData.FastenerName, "TCAP"));
 
         var read = HoleStoredData.Read(attributes);
 
-        Assert.False(read.Succeeded);
-        Assert.Contains(HoleStoredData.FastenerName, read.Message);
+        Assert.True(read.Succeeded, read.Message);
+        Assert.Equal(HoleSeat.Counterbore, read.Data!.Spec.Seat);
+        Assert.Null(read.Data.Spec.CboreDiameter);
+        Assert.Null(read.Data.Spec.CboreDepth);
+        Assert.Null(read.Data.Spec.Normalised().Fastener);
+    }
+
+    [Fact]
+    public void SeatSizes_OfAnotherKindOrSeat_AreNotRead()
+    {
+        var attributes = Stored(Tapped() with { Seat = HoleSeat.Counterbore }).ToAttributes()
+            .Append(new HoleAttribute(HoleStoredData.CboreDiameterName, 9.0))
+            .Append(new HoleAttribute(HoleStoredData.CsinkDiameterName, 9.0));
+
+        var read = HoleStoredData.Read(attributes);
+
+        Assert.True(read.Succeeded, read.Message);
+        Assert.Null(read.Data!.Spec.CboreDiameter);
+        Assert.Null(read.Data.Spec.CsinkDiameter);
     }
 
     [Fact]
@@ -265,7 +309,7 @@ public sealed class HoleStoredDataTests
         foreach (var spec in new[]
                  {
                      Clearance() with { Seat = HoleSeat.Counterbore }, Dowel(), Tapped() with { Seat = HoleSeat.Countersink },
-                     Dowel("5 mm") with { Seat = HoleSeat.Counterbore },
+                     CboredDowel(), CsunkDowel(),
                  })
         {
             Assert.True(HoleStoredData.Read(Stored(spec).ToAttributes()).Succeeded);

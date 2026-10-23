@@ -14,6 +14,18 @@ public enum HoleField
     ThreadDepth,
     DrillDepth,
     DrillPoint,
+
+    /// <summary>A dowel's counterbore diameter box (task 106).</summary>
+    CounterboreDiameter,
+
+    /// <summary>A dowel's counterbore depth box (task 106).</summary>
+    CounterboreDepth,
+
+    /// <summary>A dowel's countersink diameter box (task 106).</summary>
+    CountersinkDiameter,
+
+    /// <summary>A dowel's countersink angle box (task 106).</summary>
+    CountersinkAngle,
 }
 
 /// <summary>One reason a hole cannot be built, with the message the window shows.</summary>
@@ -166,6 +178,34 @@ public static class HoleRules
             .AsReadOnly();
     }
 
+    /// <summary>
+    /// Where a dowel's seat boxes start from the workbook (spec 09, "Dowel and precision holes"; task 106), value by
+    /// value: the Dowel row's <c>Cbore dia</c>, <c>Cbore depth</c>, <c>Csink dia</c> and <c>Csink angle</c>, and for a
+    /// blank cell or a workbook without the column, the Counterbore or Countersink row of the same size (the first shown
+    /// one, else the first). A value neither gives is null. All null when the size is not in the Dowel tab. The last
+    /// values used come before these; the view-model puts them first (<see cref="HoleLastDowelSeats"/>).
+    /// </summary>
+    public static HoleDowelSeat DowelSeatStart(HoleWorkbook workbook, HoleUnits units, string? size)
+    {
+        ArgumentNullException.ThrowIfNull(workbook);
+
+        if (string.IsNullOrWhiteSpace(size)
+            || workbook.Dowel.FirstOrDefault(r => r.Units == units && Same(r.Size, size)) is not { } row)
+        {
+            return HoleDowelSeat.Empty;
+        }
+
+        var cbores = SameSizeCounterbores(workbook, units, row.Nominal);
+        var cbore = cbores.FirstOrDefault(r => !r.Hidden) ?? cbores.FirstOrDefault();
+        var csinks = SameSizeCountersinks(workbook, units, row.Nominal);
+        var csink = csinks.FirstOrDefault(r => !r.Hidden) ?? csinks.FirstOrDefault();
+        return new HoleDowelSeat(
+            row.CboreDiameter ?? cbore?.CboreDiameter,
+            row.CboreDepth ?? cbore?.CboreDepth,
+            row.CsinkDiameter ?? csink?.CsinkDiameter,
+            row.CsinkAngleDeg ?? csink?.AngleDeg);
+    }
+
     /// <summary>A length in a row's units, in centimetres: millimetres divided by 10, inches times 2.54.</summary>
     public static double ToCm(decimal value, HoleUnits units) =>
         (double)(units == HoleUnits.Metric ? value / 10m : value * 2.54m);
@@ -278,6 +318,9 @@ public static class HoleRules
                 // Checks above use the depths' values; the expressions go to Inventor as they were typed (task 100).
                 DepthExpression = spec.IsBlind
                     ? spec.Kind == HoleKind.Tapped ? spec.DrillDepthExpression : spec.DepthExpression
+                    : null,
+                CounterboreDepthExpression = spec.Kind == HoleKind.Dowel && spec.Seat == HoleSeat.Counterbore
+                    ? spec.CboreDepthExpression
                     : null,
                 ExpressionUnits = Units,
             };
@@ -444,6 +487,48 @@ public static class HoleRules
             return row;
         }
 
+        /// <summary>
+        /// A dowel's seat (spec 09 question 9; task 106): its own values from the spec, which follow no fastener, so no
+        /// Counterbore or Countersink row is used. A value left empty is asked for under its box.
+        /// </summary>
+        private void BuildDowelSeat(decimal nominal)
+        {
+            if (spec.Seat == HoleSeat.None)
+            {
+                return;
+            }
+
+            _seatBound = nominal;
+            if (spec.Seat == HoleSeat.Counterbore)
+            {
+                _cboreDiameter = spec.CboreDiameter;
+                _cboreDepth = spec.CboreDepth;
+                if (_cboreDiameter is null)
+                {
+                    Problem(HoleField.CounterboreDiameter, "Enter a counterbore diameter.");
+                }
+
+                if (_cboreDepth is null)
+                {
+                    Problem(HoleField.CounterboreDepth, "Enter a counterbore depth.");
+                }
+            }
+            else
+            {
+                _csinkDiameter = spec.CsinkDiameter;
+                _csinkAngleDeg = spec.CsinkAngleDeg;
+                if (_csinkDiameter is null)
+                {
+                    Problem(HoleField.CountersinkDiameter, "Enter a countersink diameter.");
+                }
+
+                if (_csinkAngleDeg is null)
+                {
+                    Problem(HoleField.CountersinkAngle, "Enter a countersink angle.");
+                }
+            }
+        }
+
         private void BuildTapped()
         {
             var row = FindRow(workbook.Tapped, r => r.Units, r => r.Thread, spec.Size);
@@ -499,7 +584,7 @@ public static class HoleRules
             else
             {
                 _holeDiameter = row.Nominal;
-                BuildSeatOfSameSize(row.Nominal);
+                BuildDowelSeat(row.Nominal);
             }
 
             _colour = workbook.Settings.FitColour(spec.PrecisionFit);
@@ -585,6 +670,8 @@ public static class HoleRules
 
         private void CheckSizes()
         {
+            // A dowel's seat is typed in its own boxes (task 106); other seats come from the Size's rows.
+            var dowel = spec.Kind == HoleKind.Dowel;
             if (_holeDiameter is { } diameter && diameter <= 0)
             {
                 Problem(HoleField.Size, $"The hole diameter for {spec.Size.Trim()} is not greater than zero.");
@@ -596,7 +683,7 @@ public static class HoleRules
                 if (hole >= cboreDiameter)
                 {
                     Problem(
-                        HoleField.Size,
+                        dowel ? HoleField.CounterboreDiameter : HoleField.Size,
                         $"{SeatBoundText(hole)} is not smaller than its counterbore ({Length(cboreDiameter, Units)}).");
                 }
             }
@@ -605,7 +692,9 @@ public static class HoleRules
             {
                 if (cboreDepth <= 0)
                 {
-                    Problem(HoleField.Size, "The counterbore depth is not greater than zero.");
+                    Problem(
+                        dowel ? HoleField.CounterboreDepth : HoleField.Size,
+                        "The counterbore depth is not greater than zero.");
                 }
                 else if (_depth is { } depth && depth > 0 && cboreDepth >= depth)
                 {
@@ -620,13 +709,15 @@ public static class HoleRules
                 && through >= csinkDiameter)
             {
                 Problem(
-                    HoleField.Size,
+                    dowel ? HoleField.CountersinkDiameter : HoleField.Size,
                     $"{SeatBoundText(through)} is not smaller than its countersink ({Length(csinkDiameter, Units)}).");
             }
 
             if (_csinkAngleDeg is { } angle && angle is <= 0 or >= 180)
             {
-                Problem(HoleField.Size, $"The countersink angle ({angle} deg) is not between 0 and 180 degrees.");
+                Problem(
+                    dowel ? HoleField.CountersinkAngle : HoleField.Size,
+                    $"The countersink angle ({angle} deg) is not between 0 and 180 degrees.");
             }
             else if (_csinkAngleDeg is { } csinkAngle
                 && _csinkDiameter is { } sinkDiameter

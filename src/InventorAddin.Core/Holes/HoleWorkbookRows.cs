@@ -141,8 +141,27 @@ public sealed record TappedRow(
     }
 }
 
-/// <summary>A Dowel tab row: a nominal size offered for dowel and precision holes.</summary>
-public sealed record DowelRow(int Row, HoleUnits Units, string Size, decimal Nominal, bool Hidden);
+/// <summary>
+/// A Dowel tab row: a nominal size offered for dowel and precision holes, and where a seat on it starts (spec 09,
+/// "Dowel and precision holes"; task 106). The seat values are the optional <c>Cbore dia</c>, <c>Cbore depth</c>,
+/// <c>Csink dia</c> and <c>Csink angle</c> columns, in the row's units (the angle in degrees); null when the workbook
+/// has no such column or the cell is blank, and the seat then starts from the same-size Counterbore or Countersink row
+/// (<see cref="HoleRules.DowelSeatStart"/>).
+/// </summary>
+public sealed record DowelRow(int Row, HoleUnits Units, string Size, decimal Nominal, bool Hidden)
+{
+    /// <summary>The counterbore diameter a seat on this dowel starts at, or null.</summary>
+    public decimal? CboreDiameter { get; init; }
+
+    /// <summary>The counterbore depth a seat on this dowel starts at, or null.</summary>
+    public decimal? CboreDepth { get; init; }
+
+    /// <summary>The countersink diameter a seat on this dowel starts at, or null.</summary>
+    public decimal? CsinkDiameter { get; init; }
+
+    /// <summary>The countersink's included angle a seat on this dowel starts at, in degrees, or null.</summary>
+    public decimal? CsinkAngleDeg { get; init; }
+}
 
 /// <summary>
 /// A Precision Tol row. For <see cref="ToleranceKind.Iso"/> rows <see cref="IsoCode"/> is set and the limits are

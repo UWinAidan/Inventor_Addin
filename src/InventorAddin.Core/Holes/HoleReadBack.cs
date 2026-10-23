@@ -54,6 +54,12 @@ public sealed record InventorHoleFacts(
 
     /// <summary>Blind holes: the depth parameter's expression when other parameters drive it; null when it is a plain length.</summary>
     public string? DepthExpression { get; init; }
+
+    /// <summary>
+    /// Counterbore seats: the counterbore depth parameter's expression when other parameters drive it (task 106); null
+    /// when it is a plain length.
+    /// </summary>
+    public string? CounterboreDepthExpression { get; init; }
 }
 
 /// <summary>Where the spec of a hole read back came from.</summary>
@@ -105,7 +111,7 @@ public static class HoleReadBack
 
         if (stored?.Data is { } data)
         {
-            return new HoleReadBackResult(data.Spec, HoleSource.Awb, data, []);
+            return new HoleReadBackResult(WithDowelSeatFromHole(data.Spec, facts), HoleSource.Awb, data, []);
         }
 
         var notes = new List<string>();
@@ -117,6 +123,45 @@ public static class HoleReadBack
         var spec = new Matcher(facts, workbook, defaultUnits, notes).Spec();
         return new HoleReadBackResult(spec, HoleSource.Inventor, null, notes.AsReadOnly());
     }
+
+    /// <summary>
+    /// A seated dowel's spec with every seat size it does not store taken from the hole (task 106): a dowel stored before
+    /// its seat had its own sizes took them from a same-size row, and opens on the sizes the hole has. The counterbore
+    /// depth's expression comes with its depth. Any other spec is returned as it is.
+    /// </summary>
+    public static HoleSpec WithDowelSeatFromHole(HoleSpec spec, InventorHoleFacts facts)
+    {
+        ArgumentNullException.ThrowIfNull(spec);
+        ArgumentNullException.ThrowIfNull(facts);
+
+        if (spec.Kind != HoleKind.Dowel || spec.Seat == HoleSeat.None)
+        {
+            return spec;
+        }
+
+        var units = spec.Units;
+        var filled = spec.Seat == HoleSeat.Counterbore
+            ? spec with
+            {
+                CboreDiameter = spec.CboreDiameter ?? Length(facts.CounterboreDiameterCm, units),
+                CboreDepth = spec.CboreDepth ?? Length(facts.CounterboreDepthCm, units),
+                CboreDepthExpression = spec.CboreDepth is null && facts.CounterboreDepthCm is not null
+                    ? facts.CounterboreDepthExpression
+                    : spec.CboreDepthExpression,
+            }
+            : spec with
+            {
+                CsinkDiameter = spec.CsinkDiameter ?? Length(facts.CountersinkDiameterCm, units),
+                CsinkAngleDeg = spec.CsinkAngleDeg ?? Angle(facts.CountersinkAngleDeg),
+            };
+        return filled.Normalised();
+    }
+
+    private static decimal? Length(double? cm, HoleUnits units) => cm is { } c ? FromCm(c, units) : null;
+
+    /// <summary>An angle in degrees as the window shows it, to 4 decimals.</summary>
+    private static decimal? Angle(double? degrees) =>
+        degrees is { } d && double.IsFinite(d) ? Math.Round((decimal)d, 4) : null;
 
     /// <summary>A length in centimetres in a row's units: millimetres to 4 decimals, inches to 5.</summary>
     public static decimal FromCm(double cm, HoleUnits units) => units == HoleUnits.Metric
@@ -280,13 +325,15 @@ public static class HoleReadBack
                     notes.Add("The hole's tolerance is not in the Precision Tol tab; the default tolerance is picked.");
                 }
 
-                return Blank(units, HoleKind.Dowel, seat, termination) with
-                {
-                    Size = row.Size,
-                    Fastener = SameSizeFastener(seat, units, row.Size, row.Nominal),
-                    PrecisionFit = tolerance?.Fit ?? PrecisionFit.Normal,
-                    Tolerance = tolerance?.Name,
-                };
+                // A dowel's seat is its own (task 106): the hole's sizes, not a same-size row's.
+                return WithDowelSeatFromHole(
+                    Blank(units, HoleKind.Dowel, seat, termination) with
+                    {
+                        Size = row.Size,
+                        PrecisionFit = tolerance?.Fit ?? PrecisionFit.Normal,
+                        Tolerance = tolerance?.Name,
+                    },
+                    facts);
             }
 
             return null;
@@ -363,7 +410,7 @@ public static class HoleReadBack
         }
 
         /// <summary>
-        /// The fastener of a tapped or dowel hole's seat (task 099): the Screw of the Counterbore or Countersink row of
+        /// The fastener of a tapped hole's seat (task 099): the Screw of the Counterbore or Countersink row of
         /// the same size whose seat matches the hole's. When none matches, a note says so and the first row of the same
         /// size is picked; with no row of the same size, null (the window says why the seat cannot be kept).
         /// </summary>

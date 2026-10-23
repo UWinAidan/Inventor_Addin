@@ -59,8 +59,10 @@ public sealed class HoleReadBackTests
         Tapped() with { Seat = HoleSeat.Counterbore, Fastener = "TLOW" },
         Tapped() with { Seat = HoleSeat.Countersink, Termination = HoleTermination.ThroughAll },
         Tapped("#7-36 UNF") with { Units = HoleUnits.Imperial, Seat = HoleSeat.Counterbore },
-        Dowel("5 mm") with { Seat = HoleSeat.Counterbore, Fastener = "TLOW", Termination = HoleTermination.Distance, Depth = 14m },
-        Dowel("5 mm") with { Seat = HoleSeat.Countersink, PrecisionFit = PrecisionFit.Press },
+        CboredDowel() with { Termination = HoleTermination.Distance, Depth = 14m },
+        CboredDowel() with { CboreDiameter = 7.25m, CboreDepth = 1.5m },
+        CsunkDowel() with { PrecisionFit = PrecisionFit.Press },
+        CsunkDowel() with { CsinkDiameter = 6.1m, CsinkAngleDeg = 120m },
     };
 
     [Theory]
@@ -239,14 +241,15 @@ public sealed class HoleReadBackTests
     [Fact]
     public void SeatedHoleWithATolerance_IsASeatedDowel()
     {
-        var facts = FactsOf(Build(Dowel("5 mm") with { Seat = HoleSeat.Counterbore }).Geometry!);
+        var facts = FactsOf(Build(CboredDowel()).Geometry!);
 
         var result = HoleReadBack.Read(null, facts, Workbook, HoleUnits.Metric);
 
         Assert.Equal(HoleKind.Dowel, result.Spec.Kind);
         Assert.Equal(HoleSeat.Counterbore, result.Spec.Seat);
         Assert.Equal("5 mm", result.Spec.Size);
-        Assert.Equal("TCAP", result.Spec.Fastener);
+        Assert.Null(result.Spec.Fastener);
+        Assert.Equal((9.5m, 5.2m), (result.Spec.CboreDiameter, result.Spec.CboreDepth));
         Assert.Equal("Test location", result.Spec.Tolerance);
 
         // Without the tolerance it is a counterbored clearance hole.
@@ -255,6 +258,65 @@ public sealed class HoleReadBackTests
             HoleUnits.Metric);
         Assert.Equal(HoleKind.Clearance, clearance.Spec.Kind);
         Assert.Equal(HoleSeat.Counterbore, clearance.Spec.Seat);
+    }
+
+    [Fact]
+    public void SeatedDowel_FromGeometry_OpensOnItsOwnSeat_WithItsDepthExpression()
+    {
+        var facts = FactsOf(Build(CboredDowel() with { CboreDiameter = 7.25m, CboreDepth = 1.5m }).Geometry!)
+            with { CounterboreDepthExpression = "d0 / 4" };
+
+        var result = HoleReadBack.Read(null, facts, Workbook, HoleUnits.Metric);
+
+        Assert.Equal((7.25m, 1.5m, "d0 / 4"), (result.Spec.CboreDiameter, result.Spec.CboreDepth, result.Spec.CboreDepthExpression));
+        Assert.Empty(result.Notes);
+    }
+
+    [Fact]
+    public void SeatedDowelStoredBeforeTask106_OpensOnTheSeatTheHoleHas()
+    {
+        // Stored by task 099: a fastener and no seat sizes. The hole's own counterbore is read in.
+        var built = Build(CboredDowel() with { CboreDiameter = 8.5m, CboreDepth = 3.1m });
+        var attributes = new HoleStoredData(built.Resolved, HoleAppliedState.From(built.Geometry!)).ToAttributes()
+            .Where(a => a.Name is not HoleStoredData.CboreDiameterName and not HoleStoredData.CboreDepthName)
+            .Append(new HoleAttribute(HoleStoredData.FastenerName, "TLOW"));
+        var facts = FactsOf(built.Geometry!) with { CounterboreDepthExpression = "d1" };
+
+        var result = HoleReadBack.Read(HoleStoredData.Read(attributes), facts, Workbook, HoleUnits.Metric);
+
+        Assert.Equal(HoleSource.Awb, result.Source);
+        Assert.Null(result.Spec.Fastener);
+        Assert.Equal((8.5m, 3.1m, "d1"), (result.Spec.CboreDiameter, result.Spec.CboreDepth, result.Spec.CboreDepthExpression));
+        Assert.Equal(built.Geometry, Build(result.Spec).Geometry! with { CounterboreDepthExpression = null });
+    }
+
+    [Fact]
+    public void SeatedDowelStored_KeepsItsStoredSeat_OverTheHoles()
+    {
+        var built = Build(CsunkDowel() with { CsinkDiameter = 6.1m, CsinkAngleDeg = 120m });
+        var read = HoleStoredData.Read(new HoleStoredData(built.Resolved, HoleAppliedState.From(built.Geometry!)).ToAttributes());
+        var facts = FactsOf(built.Geometry!) with { CountersinkDiameterCm = 0.9, CountersinkAngleDeg = 82 };
+
+        var result = HoleReadBack.Read(read, facts, Workbook, HoleUnits.Metric);
+
+        Assert.Equal((6.1m, 120m), (result.Spec.CsinkDiameter, result.Spec.CsinkAngleDeg));
+    }
+
+    [Fact]
+    public void WithDowelSeatFromHole_LeavesOtherSpecsAsTheyAre()
+    {
+        var facts = PlainFacts(0.5) with { CounterboreDiameterCm = 0.9, CounterboreDepthCm = 0.3 };
+        var tapped = Tapped() with { Seat = HoleSeat.Counterbore, Fastener = "TCAP" };
+        var unseated = Dowel();
+
+        Assert.Same(tapped, HoleReadBack.WithDowelSeatFromHole(tapped, facts));
+        Assert.Same(unseated, HoleReadBack.WithDowelSeatFromHole(unseated, facts));
+
+        // Imperial lengths come back in inches; an angle to 4 decimals.
+        var imperial = HoleReadBack.WithDowelSeatFromHole(
+            Dowel("1/7\"") with { Units = HoleUnits.Imperial, Seat = HoleSeat.Countersink },
+            facts with { CountersinkDiameterCm = 0.635, CountersinkAngleDeg = 82.000001 });
+        Assert.Equal((0.25m, 82m), (imperial.CsinkDiameter, imperial.CsinkAngleDeg));
     }
 
     [Fact]

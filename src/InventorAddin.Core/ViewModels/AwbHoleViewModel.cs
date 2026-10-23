@@ -109,9 +109,19 @@ public sealed record HoleToleranceOption(string Value, string Text, string? Deta
 /// drill point (the first such row in workbook order, <see cref="HoleRules.FindTolerance"/> and
 /// <see cref="HoleRules.FindDrillPoint"/>), and the Tapped row's depths for a tapped hole. A Units switch keeps the size
 /// with the nearest nominal diameter in the other units, else the first. Changing the Type puts the seat back to None
-/// (spike 081 round 5: a seat is kept unless the user changes the type). A tapped or dowel hole's Seat and Fastener type
-/// lists follow its Size instead (task 099): the seats and Screw values of the Counterbore and Countersink rows of the
-/// same size (<see cref="HoleRules.SameSizeCounterbores"/>).
+/// (spike 081 round 5: a seat is kept unless the user changes the type). A tapped hole's Seat and Fastener type lists
+/// follow its Size instead (task 099): the seats and Screw values of the Counterbore and Countersink rows of the same
+/// size (<see cref="HoleRules.SameSizeCounterbores"/>).
+/// </para>
+/// <para>
+/// A dowel hole lists every seat and has no Fastener type; its seat is sized in its own boxes (spec 09, "Dowel and
+/// precision holes"; task 106): the counterbore diameter and depth, or the countersink diameter and angle. When the
+/// window opens on a dowel, and whenever its units or size change, the boxes take that size's start values: the last
+/// values kept with OK for the units and size (<see cref="HoleLastDowelSeats"/>), else the Dowel row's seat columns or
+/// the same-size Counterbore or Countersink row (<see cref="HoleRules.DowelSeatStart"/>), value by value, else empty,
+/// which <see cref="HoleRules"/> asks to be filled. A value typed in the window is kept while the units and size stay,
+/// also across a change of seat; an edited dowel opens on its own values. Leaving AWB Dowel drops them. The counterbore
+/// depth takes Inventor expressions like the depth; the diameters and the angle take numbers.
 /// </para>
 /// <para>
 /// A blind clearance or dowel hole whose depth was not typed in this window starts at the last depth used in its units
@@ -195,6 +205,9 @@ public sealed class AwbHoleViewModel : ObservableObject
     /// <summary>Beside a depth box whose text is not a number.</summary>
     public const string NotANumberText = "Enter a number.";
 
+    /// <summary>Beside the countersink angle box.</summary>
+    public const string AngleUnitText = "deg";
+
     /// <summary>The message when the command is started in a document that is not a part.</summary>
     public const string WrongDocumentText = CommandName + " works in part files. Open a part and try again.";
 
@@ -212,6 +225,7 @@ public sealed class AwbHoleViewModel : ObservableObject
     private readonly HoleWorkbook _workbook;
     private readonly string _partName;
     private readonly HoleLastDepths _lastDepths;
+    private readonly HoleLastDowelSeats _lastDowelSeats;
     private readonly IHoleExpressionChecker? _expressionChecker;
 
     // The fields, in window order.
@@ -229,6 +243,14 @@ public sealed class AwbHoleViewModel : ObservableObject
     private decimal? _depth;
     private string? _drillPoint;
     private bool _flip;
+
+    // A dowel's seat sizes (task 106), in the units' length (the angle in degrees), and the units and size they were
+    // started for.
+    private decimal? _cboreDiameter;
+    private decimal? _cboreDepth;
+    private decimal? _csinkDiameter;
+    private decimal? _csinkAngle;
+    private ListContext? _dowelSeatContext;
 
     // The lists that depend on other fields.
     private IReadOnlyList<HoleOption<HoleSeat>> _seatOptions = AllSeats;
@@ -284,13 +306,15 @@ public sealed class AwbHoleViewModel : ObservableObject
         IEnumerable<string>? inventorHoleNotes,
         IEnumerable<HoleWorkbookProblem>? problems,
         HoleLastDepths? lastDepths,
-        IHoleExpressionChecker? expressionChecker)
+        IHoleExpressionChecker? expressionChecker,
+        HoleLastDowelSeats? lastDowelSeats)
     {
         ArgumentNullException.ThrowIfNull(workbook);
 
         _workbook = workbook;
         _partName = (partName ?? "").Trim();
         _lastDepths = lastDepths ?? HoleLastDepths.None;
+        _lastDowelSeats = lastDowelSeats ?? HoleLastDowelSeats.None;
         _expressionChecker = expressionChecker;
         IsEdit = editSpec is not null;
         IsInventorHole = madeByInventor;
@@ -327,10 +351,15 @@ public sealed class AwbHoleViewModel : ObservableObject
             _depthKept = spec.Depth is not null;
             _drillPoint = spec.DrillPoint;
             _flip = spec.Flip;
+            _cboreDiameter = spec.CboreDiameter;
+            _cboreDepth = spec.CboreDepth;
+            _csinkDiameter = spec.CsinkDiameter;
+            _csinkAngle = spec.CsinkAngleDeg;
             _depthUnits = _units;
             OpenExpression(HoleField.ThreadDepth, spec.ThreadDepthExpression, ref _threadDepth);
             OpenExpression(HoleField.DrillDepth, spec.DrillDepthExpression, ref _drillDepth);
             OpenExpression(HoleField.Depth, spec.DepthExpression, ref _depth);
+            OpenExpression(HoleField.CounterboreDepth, spec.CboreDepthExpression, ref _cboreDepth);
             Refresh(keepExact: true);
         }
 
@@ -355,13 +384,15 @@ public sealed class AwbHoleViewModel : ObservableObject
     /// <param name="expressionChecker">
     /// Reads depth text that is not a plain number as Inventor does (task 100); without one, such text is refused.
     /// </param>
+    /// <param name="lastDowelSeats">The last dowel seat used for each units and size; a dowel's seat starts at it.</param>
     public AwbHoleViewModel(
         HoleWorkbook workbook,
         string partName,
         IEnumerable<HoleWorkbookProblem>? problems = null,
         HoleLastDepths? lastDepths = null,
-        IHoleExpressionChecker? expressionChecker = null)
-        : this(workbook, partName, null, false, null, problems, lastDepths, expressionChecker)
+        IHoleExpressionChecker? expressionChecker = null,
+        HoleLastDowelSeats? lastDowelSeats = null)
+        : this(workbook, partName, null, false, null, problems, lastDepths, expressionChecker, lastDowelSeats)
     {
     }
 
@@ -375,10 +406,12 @@ public sealed class AwbHoleViewModel : ObservableObject
         HoleSpec spec,
         IEnumerable<HoleWorkbookProblem>? problems = null,
         HoleLastDepths? lastDepths = null,
-        IHoleExpressionChecker? expressionChecker = null)
+        IHoleExpressionChecker? expressionChecker = null,
+        HoleLastDowelSeats? lastDowelSeats = null)
     {
         ArgumentNullException.ThrowIfNull(spec);
-        return new AwbHoleViewModel(workbook, partName, spec, false, null, problems, lastDepths, expressionChecker);
+        return new AwbHoleViewModel(
+            workbook, partName, spec, false, null, problems, lastDepths, expressionChecker, lastDowelSeats);
     }
 
     /// <summary>
@@ -394,11 +427,12 @@ public sealed class AwbHoleViewModel : ObservableObject
         IEnumerable<string>? notes = null,
         IEnumerable<HoleWorkbookProblem>? problems = null,
         HoleLastDepths? lastDepths = null,
-        IHoleExpressionChecker? expressionChecker = null)
+        IHoleExpressionChecker? expressionChecker = null,
+        HoleLastDowelSeats? lastDowelSeats = null)
     {
         ArgumentNullException.ThrowIfNull(closestSpec);
         return new AwbHoleViewModel(
-            workbook, partName, closestSpec, true, notes, problems, lastDepths, expressionChecker);
+            workbook, partName, closestSpec, true, notes, problems, lastDepths, expressionChecker, lastDowelSeats);
     }
 
     /// <summary>
@@ -412,13 +446,15 @@ public sealed class AwbHoleViewModel : ObservableObject
         HoleReadBackResult readBack,
         IEnumerable<HoleWorkbookProblem>? problems = null,
         HoleLastDepths? lastDepths = null,
-        IHoleExpressionChecker? expressionChecker = null)
+        IHoleExpressionChecker? expressionChecker = null,
+        HoleLastDowelSeats? lastDowelSeats = null)
     {
         ArgumentNullException.ThrowIfNull(readBack);
         return readBack.IsInventorHole
             ? ForInventorHole(
-                workbook, partName, readBack.Spec, readBack.Notes, problems, lastDepths, expressionChecker)
-            : ForEdit(workbook, partName, readBack.Spec, problems, lastDepths, expressionChecker);
+                workbook, partName, readBack.Spec, readBack.Notes, problems, lastDepths, expressionChecker,
+                lastDowelSeats)
+            : ForEdit(workbook, partName, readBack.Spec, problems, lastDepths, expressionChecker, lastDowelSeats);
     }
 
     /// <summary>
@@ -518,7 +554,7 @@ public sealed class AwbHoleViewModel : ObservableObject
     }
 
     /// <summary>
-    /// The seats: None, Counterbore, Countersink for a clearance hole; for a tapped or dowel hole, None and the seats
+    /// The seats: None, Counterbore, Countersink for a clearance or dowel hole; for a tapped hole, None and the seats
     /// with a row of the same size in their tab, and the seat already chosen (task 099).
     /// </summary>
     public IReadOnlyList<HoleOption<HoleSeat>> SeatOptions => _seatOptions;
@@ -560,17 +596,90 @@ public sealed class AwbHoleViewModel : ObservableObject
     public HoleKind Kind => HoleStandards.KindFor(_standard) ?? HoleKind.Clearance;
 
     /// <summary>
-    /// The Screw values of the seat's tab for the units, in workbook order (for a tapped or dowel hole, of the rows of
-    /// the same size); empty unless the hole is seated.
+    /// The Screw values of the seat's tab for the units, in workbook order (for a tapped hole, of the rows of the same
+    /// size); empty unless the hole is seated, and for a dowel, whose seat follows no fastener (task 106).
     /// </summary>
     public IReadOnlyList<HoleOption<string>> FastenerOptions => _fastenerOptions;
 
-    public bool ShowsFastener => _seat != HoleSeat.None;
+    /// <summary>True for a seated clearance or tapped hole; never for a dowel (task 106).</summary>
+    public bool ShowsFastener => _seat != HoleSeat.None && Kind != HoleKind.Dowel;
 
     public string? Fastener
     {
         get => _fastener;
         set => SetFromList(_fastenerOptions, value, nameof(Fastener), v => Set(ref _fastener, v, nameof(Fastener)));
+    }
+
+    // A dowel's seat sizes (task 106). The window binds the text properties further down.
+
+    /// <summary>True for a dowel with a counterbore: its diameter and depth boxes show.</summary>
+    public bool ShowsCounterboreSizes => Kind == HoleKind.Dowel && _seat == HoleSeat.Counterbore;
+
+    /// <summary>True for a dowel with a countersink: its diameter and angle boxes show.</summary>
+    public bool ShowsCountersinkSizes => Kind == HoleKind.Dowel && _seat == HoleSeat.Countersink;
+
+    /// <summary>A dowel's counterbore diameter, in the units' length. Null empties the box.</summary>
+    public decimal? CounterboreDiameter
+    {
+        get => _cboreDiameter;
+        set
+        {
+            if (Kind != HoleKind.Dowel)
+            {
+                OnPropertyChanged();
+                return;
+            }
+
+            Change(() => Set(ref _cboreDiameter, value, nameof(CounterboreDiameter)));
+        }
+    }
+
+    /// <summary>A dowel's counterbore depth, in the units' length. Null empties the box.</summary>
+    public decimal? CounterboreDepth
+    {
+        get => _cboreDepth;
+        set
+        {
+            if (Kind != HoleKind.Dowel)
+            {
+                OnPropertyChanged();
+                return;
+            }
+
+            Change(() => Set(ref _cboreDepth, value, nameof(CounterboreDepth)));
+        }
+    }
+
+    /// <summary>A dowel's countersink diameter, in the units' length. Null empties the box.</summary>
+    public decimal? CountersinkDiameter
+    {
+        get => _csinkDiameter;
+        set
+        {
+            if (Kind != HoleKind.Dowel)
+            {
+                OnPropertyChanged();
+                return;
+            }
+
+            Change(() => Set(ref _csinkDiameter, value, nameof(CountersinkDiameter)));
+        }
+    }
+
+    /// <summary>A dowel's countersink included angle, in degrees. Null empties the box.</summary>
+    public decimal? CountersinkAngle
+    {
+        get => _csinkAngle;
+        set
+        {
+            if (Kind != HoleKind.Dowel)
+            {
+                OnPropertyChanged();
+                return;
+            }
+
+            Change(() => Set(ref _csinkAngle, value, nameof(CountersinkAngle)));
+        }
     }
 
     /// <summary>The sizes of the tab for the kind, seat, fastener and units, in workbook order.</summary>
@@ -741,6 +850,36 @@ public sealed class AwbHoleViewModel : ObservableObject
         set => SetText(HoleField.Depth, value, nameof(DepthText), v => Depth = v);
     }
 
+    /// <summary><see cref="CounterboreDiameter"/> as text: a number in the units' length; blank empties it.</summary>
+    public string CounterboreDiameterText
+    {
+        get => TextOf(HoleField.CounterboreDiameter, _cboreDiameter);
+        set => SetText(HoleField.CounterboreDiameter, value, nameof(CounterboreDiameterText), v => CounterboreDiameter = v);
+    }
+
+    /// <summary>
+    /// <see cref="CounterboreDepth"/> as text: a number, or an Inventor expression as the depth takes; blank empties it.
+    /// </summary>
+    public string CounterboreDepthText
+    {
+        get => TextOf(HoleField.CounterboreDepth, _cboreDepth);
+        set => SetText(HoleField.CounterboreDepth, value, nameof(CounterboreDepthText), v => CounterboreDepth = v);
+    }
+
+    /// <summary><see cref="CountersinkDiameter"/> as text: a number in the units' length; blank empties it.</summary>
+    public string CountersinkDiameterText
+    {
+        get => TextOf(HoleField.CountersinkDiameter, _csinkDiameter);
+        set => SetText(HoleField.CountersinkDiameter, value, nameof(CountersinkDiameterText), v => CountersinkDiameter = v);
+    }
+
+    /// <summary><see cref="CountersinkAngle"/> as text: a number of degrees; blank empties it.</summary>
+    public string CountersinkAngleText
+    {
+        get => TextOf(HoleField.CountersinkAngle, _csinkAngle);
+        set => SetText(HoleField.CountersinkAngle, value, nameof(CountersinkAngleText), v => CountersinkAngle = v);
+    }
+
     /// <summary>
     /// True while a depth box holds text that is not a number, or an expression Inventor cannot read as a length; OK is
     /// disabled until it is fixed.
@@ -851,6 +990,22 @@ public sealed class AwbHoleViewModel : ObservableObject
     public string? DepthProblem => NotANumber(HoleField.Depth) ?? ProblemFor(HoleField.Depth);
 
     public string? DrillPointProblem => ProblemFor(HoleField.DrillPoint);
+
+    /// <summary>Why the box's text is not a number while it is not one, else the field's checks.</summary>
+    public string? CounterboreDiameterProblem =>
+        NotANumber(HoleField.CounterboreDiameter) ?? ProblemFor(HoleField.CounterboreDiameter);
+
+    /// <summary>Why the box's text is not a length while it is not one, else the field's checks.</summary>
+    public string? CounterboreDepthProblem =>
+        NotANumber(HoleField.CounterboreDepth) ?? ProblemFor(HoleField.CounterboreDepth);
+
+    /// <summary>Why the box's text is not a number while it is not one, else the field's checks.</summary>
+    public string? CountersinkDiameterProblem =>
+        NotANumber(HoleField.CountersinkDiameter) ?? ProblemFor(HoleField.CountersinkDiameter);
+
+    /// <summary>Why the box's text is not a number while it is not one, else the field's checks.</summary>
+    public string? CountersinkAngleProblem =>
+        NotANumber(HoleField.CountersinkAngle) ?? ProblemFor(HoleField.CountersinkAngle);
 
     /// <summary>
     /// True when the spec builds, at least one centre is picked, and every depth box holds a number (or is blank).
@@ -1112,6 +1267,34 @@ public sealed class AwbHoleViewModel : ObservableObject
             Set(ref _drillDepth, null, nameof(DrillDepth));
         }
 
+        // A dowel's seat sizes: the size's start values when the units or size change, else kept (task 106).
+        if (kind == HoleKind.Dowel)
+        {
+            var seatContext = new ListContext(_units, kind, HoleSeat.None, null, null, _size);
+            var start = _lastDowelSeats.For(_units, _size).Or(HoleRules.DowelSeatStart(_workbook, _units, _size));
+            if (keepExact)
+            {
+                // An edited dowel keeps its own values; the seat it does not have starts as a new one would.
+                Set(ref _cboreDiameter, _cboreDiameter ?? start.CboreDiameter, nameof(CounterboreDiameter));
+                Set(ref _cboreDepth, _cboreDepth ?? start.CboreDepth, nameof(CounterboreDepth));
+                Set(ref _csinkDiameter, _csinkDiameter ?? start.CsinkDiameter, nameof(CountersinkDiameter));
+                Set(ref _csinkAngle, _csinkAngle ?? start.CsinkAngleDeg, nameof(CountersinkAngle));
+            }
+            else if (seatContext != _dowelSeatContext)
+            {
+                _expressions.Remove(HoleField.CounterboreDepth);
+                SetDowelSeat(start);
+            }
+
+            _dowelSeatContext = seatContext;
+        }
+        else
+        {
+            _dowelSeatContext = null;
+            _expressions.Remove(HoleField.CounterboreDepth);
+            SetDowelSeat(HoleDowelSeat.Empty);
+        }
+
         // Depth: converted when the units change; kept when typed, else the blind depth rule.
         if (_depthUnits != _units)
         {
@@ -1156,15 +1339,24 @@ public sealed class AwbHoleViewModel : ObservableObject
         }
     }
 
+    private void SetDowelSeat(HoleDowelSeat seat)
+    {
+        Set(ref _cboreDiameter, seat.CboreDiameter, nameof(CounterboreDiameter));
+        Set(ref _cboreDepth, seat.CboreDepth, nameof(CounterboreDepth));
+        Set(ref _csinkDiameter, seat.CsinkDiameter, nameof(CountersinkDiameter));
+        Set(ref _csinkAngle, seat.CsinkAngleDeg, nameof(CountersinkAngle));
+    }
+
     /// <summary>
-    /// The seats: all three for a clearance hole. A tapped or dowel hole lists None, each seat whose tab has a shown
-    /// row of the same size (<see cref="HoleRules.SameSizeCounterbores"/>), and the seat already chosen, which
-    /// <see cref="HoleRules"/> then says cannot be kept when its tab has no row of the size.
+    /// The seats: all three for a clearance hole, and for a dowel, whose seat is sized in the window (task 106). A
+    /// tapped hole lists None, each seat whose tab has a shown row of the same size
+    /// (<see cref="HoleRules.SameSizeCounterbores"/>), and the seat already chosen, which <see cref="HoleRules"/> then
+    /// says cannot be kept when its tab has no row of the size.
     /// </summary>
     private void RefreshSeats(HoleKind kind)
     {
         List<HoleOption<HoleSeat>> seats;
-        if (kind == HoleKind.Clearance)
+        if (kind != HoleKind.Tapped)
         {
             seats = AllSeats.ToList();
         }
@@ -1186,7 +1378,7 @@ public sealed class AwbHoleViewModel : ObservableObject
 
     /// <summary>
     /// The Fastener type list: the Screw values of the seat's tab for the units (a clearance hole), or of its rows of
-    /// the same size (a tapped or dowel hole); empty with no seat.
+    /// the same size (a tapped hole); empty with no seat, and for a dowel (task 106).
     /// </summary>
     private void RefreshFasteners(HoleKind kind, bool keepExact)
     {
@@ -1194,7 +1386,7 @@ public sealed class AwbHoleViewModel : ObservableObject
             _units, kind, _seat, null, null, kind == HoleKind.Clearance ? null : _size);
         var keepFastener = keepExact || fastenerContext == _fastenerContext;
         _fastenerContext = fastenerContext;
-        if (_seat == HoleSeat.None)
+        if (_seat == HoleSeat.None || kind == HoleKind.Dowel)
         {
             SetList(ref _fastenerOptions, [], nameof(FastenerOptions));
             Set(ref _fastener, null, nameof(Fastener));
@@ -1417,6 +1609,11 @@ public sealed class AwbHoleViewModel : ObservableObject
             ThreadDepthExpression = ExpressionOf(HoleField.ThreadDepth, _threadDepth),
             DrillDepthExpression = ExpressionOf(HoleField.DrillDepth, _drillDepth),
             DepthExpression = ExpressionOf(HoleField.Depth, _depth),
+            CboreDiameter = _cboreDiameter,
+            CboreDepth = _cboreDepth,
+            CboreDepthExpression = ExpressionOf(HoleField.CounterboreDepth, _cboreDepth),
+            CsinkDiameter = _csinkDiameter,
+            CsinkAngleDeg = _csinkAngle,
         }.Normalised();
 
         var build = HoleRules.Build(spec, _workbook, Math.Max(1, _centreCount));
@@ -1435,6 +1632,10 @@ public sealed class AwbHoleViewModel : ObservableObject
         nameof(ToleranceProblem), nameof(ThreadDepthProblem), nameof(DrillDepthProblem), nameof(DepthProblem),
         nameof(DrillPointProblem), nameof(CanOk), nameof(ThreadDepthText), nameof(DrillDepthText), nameof(DepthText),
         nameof(HasTextThatIsNotANumber), nameof(LengthUnitText), nameof(TerminationNote), nameof(CentresText),
+        nameof(ShowsCounterboreSizes), nameof(ShowsCountersinkSizes), nameof(CounterboreDiameterText),
+        nameof(CounterboreDepthText), nameof(CountersinkDiameterText), nameof(CountersinkAngleText),
+        nameof(CounterboreDiameterProblem), nameof(CounterboreDepthProblem), nameof(CountersinkDiameterProblem),
+        nameof(CountersinkAngleProblem),
     ];
 
     private void Reevaluate()
@@ -1534,7 +1735,10 @@ public sealed class AwbHoleViewModel : ObservableObject
             }
             else
             {
-                var check = _expressionChecker?.Check(trimmed, _units) ?? HoleExpressionCheck.Invalid();
+                // The diameters and the angle take numbers only (task 106); the depths take expressions too.
+                var check = TakesExpressions(field)
+                    ? _expressionChecker?.Check(trimmed, _units) ?? HoleExpressionCheck.Invalid()
+                    : HoleExpressionCheck.Invalid();
                 if (check is not { IsValid: true, ValueCm: { } cm })
                 {
                     _invalidText[field] = raw;
@@ -1589,13 +1793,21 @@ public sealed class AwbHoleViewModel : ObservableObject
     private string? NotANumber(HoleField field) =>
         !_invalidText.ContainsKey(field) ? null
         : _invalidReason.TryGetValue(field, out var reason) ? reason
-        : _expressionChecker is null ? NotANumberText
+        : _expressionChecker is null || !TakesExpressions(field) ? NotANumberText
         : HoleExpressions.NotALengthText;
+
+    /// <summary>The boxes that take Inventor expressions: the depths (task 100) and a dowel's counterbore depth (task 106).</summary>
+    private static bool TakesExpressions(HoleField field) =>
+        field is HoleField.ThreadDepth or HoleField.DrillDepth or HoleField.Depth or HoleField.CounterboreDepth;
 
     private static string ProblemPropertyOf(HoleField field) => field switch
     {
         HoleField.ThreadDepth => nameof(ThreadDepthProblem),
         HoleField.DrillDepth => nameof(DrillDepthProblem),
+        HoleField.CounterboreDiameter => nameof(CounterboreDiameterProblem),
+        HoleField.CounterboreDepth => nameof(CounterboreDepthProblem),
+        HoleField.CountersinkDiameter => nameof(CountersinkDiameterProblem),
+        HoleField.CountersinkAngle => nameof(CountersinkAngleProblem),
         _ => nameof(DepthProblem),
     };
 

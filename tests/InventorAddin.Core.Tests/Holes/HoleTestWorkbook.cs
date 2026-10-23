@@ -68,4 +68,20 @@ internal static class HoleTestWorkbook
         Kind = HoleKind.Dowel,
         Size = size,
     };
+
+    /// <summary>A dowel with its own counterbore (task 106), sized as the T5 TCAP row so 5 mm reads back the same.</summary>
+    public static HoleSpec CboredDowel(string size = "5 mm") => Dowel(size) with
+    {
+        Seat = HoleSeat.Counterbore,
+        CboreDiameter = 9.5m,
+        CboreDepth = 5.2m,
+    };
+
+    /// <summary>A dowel with its own countersink (task 106), sized as the T5 TFLAT row.</summary>
+    public static HoleSpec CsunkDowel(string size = "5 mm") => Dowel(size) with
+    {
+        Seat = HoleSeat.Countersink,
+        CsinkDiameter = 10.4m,
+        CsinkAngleDeg = 90m,
+    };
 }

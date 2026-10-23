@@ -73,6 +73,17 @@ public static class HoleWorkbookReader
     public const string LowerColumn = "Lower";
     public const string DrillPointNameColumn = "Name";
 
+    /// <summary>
+    /// The Dowel tab's optional seat columns (task 106), after its required ones: where a dowel's counterbore or
+    /// countersink starts. A workbook without them reads with no problem; <see cref="CboreDiaColumn"/>,
+    /// <see cref="CboreDepthColumn"/> and <see cref="CsinkDiaColumn"/> are the same headers as on the seat tabs.
+    /// </summary>
+    public const string CsinkAngleColumn = "Csink angle";
+
+    /// <summary>The Dowel tab's optional seat columns, in the starter workbook's order.</summary>
+    public static IReadOnlyList<string> DowelSeatHeaders { get; } =
+        [CboreDiaColumn, CboreDepthColumn, CsinkDiaColumn, CsinkAngleColumn];
+
     /// <summary>The headers each data tab must have, in the starter workbook's order.</summary>
     public static IReadOnlyDictionary<string, IReadOnlyList<string>> Headers { get; } =
         new Dictionary<string, IReadOnlyList<string>>
@@ -332,7 +343,21 @@ public static class HoleWorkbookReader
         var size = r.Required(SizeColumn);
         var nominal = r.Positive(NominalColumn);
         var hidden = r.Hidden();
-        return r.Ok ? new DowelRow(r.Row, units, size, nominal, hidden) : null;
+
+        // The seat columns are optional: a missing column or a blank cell is null (task 106).
+        var cboreDiameter = r.OptionalPositive(CboreDiaColumn);
+        var cboreDepth = r.OptionalPositive(CboreDepthColumn);
+        var csinkDiameter = r.OptionalPositive(CsinkDiaColumn);
+        var csinkAngle = r.Angle(CsinkAngleColumn, required: false);
+        return r.Ok
+            ? new DowelRow(r.Row, units, size, nominal, hidden)
+            {
+                CboreDiameter = cboreDiameter,
+                CboreDepth = cboreDepth,
+                CsinkDiameter = csinkDiameter,
+                CsinkAngleDeg = csinkAngle,
+            }
+            : null;
     }
 
     private static PrecisionToleranceRow? ReadPrecisionTolerance(RowReader r)

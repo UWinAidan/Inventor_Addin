@@ -87,6 +87,8 @@ namespace InventorAddin.Holes
             {
                 ThreadDepthExpression = tap == null || fullThread || !blind ? null : Expression(() => tap.ThreadDepth),
                 DepthExpression = blind ? Expression(() => ((DistanceExtent)hole.Extent).Distance) : null,
+                // A dowel's counterbore depth may be an expression (task 106); read for any counterbore.
+                CounterboreDepthExpression = seat == HoleSeat.Counterbore ? Expression(() => hole.CBoreDepth) : null,
             };
         }
 

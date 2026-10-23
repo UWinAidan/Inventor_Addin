@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using InventorAddin.Core.Holes;
 using InventorAddin.Core.Settings;
 
 namespace InventorAddin.Core.Tests.Settings;
@@ -374,6 +375,8 @@ public sealed class SettingsStoreTests : IDisposable
             s => s with { UseInventorHoleCommand = true },
             s => s with { LastBlindDepthMm = 12m },
             s => s with { LastBlindDepthIn = 0.5m },
+            s => s with { LastDowelSeatsMm = new Dictionary<string, HoleDowelSeat> { ["6 mm"] = new(7m, 3m, null, null) } },
+            s => s with { LastDowelSeatsIn = new Dictionary<string, HoleDowelSeat> { ["1/4\""] = new(null, null, 0.3m, 90m) } },
             s => s with { PreferredMaterials = new[] { "Test Steel" } },
         };
         var settableProperties = typeof(AddinSettings).GetProperties().Count(p => p.CanWrite);
@@ -604,6 +607,82 @@ public sealed class SettingsStoreTests : IDisposable
 
         Assert.Empty(result.Warnings);
         Assert.Equal(new AddinSettings(), result.Settings);
+    }
+
+    // ---- Last dowel seats (task 106) ----
+
+    [Fact]
+    public void Save_WritesLastDowelSeats_KeyedBySize_LeavingOutUnknownValues_ThenRoundTrips()
+    {
+        var store = new SettingsStore(_folder);
+        var original = new AddinSettings
+        {
+            LastDowelSeatsMm = new Dictionary<string, HoleDowelSeat>
+            {
+                ["6 mm"] = new(7.5m, 3m, null, null),
+                ["8 mm"] = new(9m, 4m, 9.5m, 100m),
+            },
+            LastDowelSeatsIn = new Dictionary<string, HoleDowelSeat> { ["1/4\""] = new(null, null, 0.29m, 90m) },
+        };
+
+        store.Save(original);
+
+        var json = JsonNode.Parse(File.ReadAllText(SettingsPath))!.AsObject();
+        var six = json["lastDowelSeatsMm"]!["6 mm"]!.AsObject();
+        Assert.Equal(7.5m, six["cboreDiameter"]!.GetValue<decimal>());
+        Assert.Equal(3m, six["cboreDepth"]!.GetValue<decimal>());
+        Assert.False(six.ContainsKey("csinkDiameter"));
+        Assert.False(six.ContainsKey("isEmpty"));
+        Assert.Equal(90m, json["lastDowelSeatsIn"]!["1/4\""]!["csinkAngleDeg"]!.GetValue<decimal>());
+
+        var result = store.Load();
+        Assert.Empty(result.Warnings);
+        Assert.Equal(original, result.Settings);
+        Assert.Equal(new HoleDowelSeat(9m, 4m, 9.5m, 100m), result.Settings.LastDowelSeatsMm["8 MM"]);
+    }
+
+    [Fact]
+    public void Load_FileWrittenBeforeLastDowelSeats_LoadsThemAsEmpty()
+    {
+        WriteSettingsFile("{ \"schemaVersion\": 1, \"lastBlindDepthMm\": 12 }");
+
+        var result = new SettingsStore(_folder).Load();
+
+        Assert.Empty(result.Warnings);
+        Assert.Empty(result.Settings.LastDowelSeatsMm);
+        Assert.Empty(result.Settings.LastDowelSeatsIn);
+    }
+
+    [Fact]
+    public void Load_LastDowelSeats_NullMapsEntriesAndMissingValues_AreTolerated()
+    {
+        WriteSettingsFile("""
+            {
+              "lastDowelSeatsMm": { "6 mm": null, " ": { "cboreDiameter": 7 }, "8 mm": { "cboreDiameter": 9 }, "8 MM": { "cboreDiameter": 1 } },
+              "lastDowelSeatsIn": null
+            }
+            """);
+
+        var result = new SettingsStore(_folder).Load();
+
+        Assert.Empty(result.Warnings);
+        var seat = Assert.Single(result.Settings.LastDowelSeatsMm);
+        Assert.Equal("8 mm", seat.Key);
+        Assert.Equal(new HoleDowelSeat(9m, null, null, null), seat.Value);
+        Assert.Empty(result.Settings.LastDowelSeatsIn);
+    }
+
+    [Fact]
+    public void LastDowelSeats_AreCopiedWhenSet()
+    {
+        var map = new Dictionary<string, HoleDowelSeat> { ["6 mm"] = new(7m, 3m, null, null) };
+        var settings = new AddinSettings { LastDowelSeatsMm = map };
+
+        map["8 mm"] = new(9m, 4m, null, null);
+
+        Assert.Single(settings.LastDowelSeatsMm);
+        Assert.Equal(settings, new AddinSettings { LastDowelSeatsMm = new Dictionary<string, HoleDowelSeat> { ["6 mm"] = new(7m, 3m, null, null) } });
+        Assert.NotEqual(settings, new AddinSettings { LastDowelSeatsMm = new Dictionary<string, HoleDowelSeat> { ["6 mm"] = new(7m, 2m, null, null) } });
     }
 
     [Fact]

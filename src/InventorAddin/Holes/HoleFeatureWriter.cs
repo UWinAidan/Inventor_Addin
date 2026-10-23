@@ -284,7 +284,13 @@ namespace InventorAddin.Holes
                     if (current == HoleTypeEnum.kCounterBoreHole)
                     {
                         SetParameter(hole.CBoreDiameter, Required(g.CounterboreDiameterCm), HoleStateComparison.LengthToleranceCm);
-                        SetParameter(hole.CBoreDepth, Required(g.CounterboreDepthCm), HoleStateComparison.LengthToleranceCm);
+                        // A depth that was an expression and is now a plain number is written even when its value
+                        // is the same, so the expression goes (task 106); a new expression is written afterwards. Dowels
+                        // only: a clearance or tapped counterbore keeps an expression set in Inventor, as before.
+                        SetParameter(
+                            hole.CBoreDepth, Required(g.CounterboreDepthCm), HoleStateComparison.LengthToleranceCm,
+                            force: g.Kind == HoleKind.Dowel && g.CounterboreDepthExpression == null
+                                && ComSafe.Get(() => hole.CBoreDepth.DrivenBy.Count > 0));
                     }
                     else
                     {
@@ -309,11 +315,14 @@ namespace InventorAddin.Holes
             }
         }
 
-        /// <summary>Writes <paramref name="value"/> (centimetres or radians) unless the parameter already has it.</summary>
-        private static void SetParameter(Parameter parameter, double value, double tolerance)
+        /// <summary>
+        /// Writes <paramref name="value"/> (centimetres or radians) unless the parameter already has it, or always when
+        /// <paramref name="force"/> is set.
+        /// </summary>
+        private static void SetParameter(Parameter parameter, double value, double tolerance, bool force = false)
         {
             double? now = ComSafe.Get(() => (double?)(double)parameter.Value);
-            if (now is { } v && Math.Abs(v - value) < tolerance)
+            if (!force && now is { } v && Math.Abs(v - value) < tolerance)
                 return;
             parameter.Value = value;
         }
@@ -352,14 +361,18 @@ namespace InventorAddin.Holes
         /// number with no unit in the expression reads as the window read it (spike 100). A depth typed as a plain
         /// number is left as the value in centimetres written above: writing a value replaces an earlier expression
         /// (spike 100), and it keeps the hole's parameters in the units they were in. Inventor refuses an expression
-        /// that refers to the hole's own parameters; that throws, and the caller refuses the change.
+        /// that refers to the hole's own parameters; that throws, and the caller refuses the change. A dowel's
+        /// counterbore depth typed as an expression (task 106) is written the same way, whatever the termination.
         /// </summary>
         private static void WriteExpressions(HoleFeature hole, HoleGeometry g)
         {
+            string unit = HoleExpressions.UnitName(g.ExpressionUnits);
+            if (g.Seat == HoleSeat.Counterbore && g.CounterboreDepthExpression is { } cboreExpression)
+                WriteExpression(hole.CBoreDepth, cboreExpression, unit);
+
             if (g.Termination != HoleTermination.Distance)
                 return;
 
-            string unit = HoleExpressions.UnitName(g.ExpressionUnits);
             if (g.Thread is { FullDepth: false, ThreadDepthExpression: { } threadExpression }
                 && ComSafe.Get(() => hole.TapInfo) is HoleTapInfo tap)
                 WriteExpression(tap.ThreadDepth, threadExpression, unit);

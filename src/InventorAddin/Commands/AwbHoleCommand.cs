@@ -214,10 +214,12 @@ namespace InventorAddin.Commands
             string partName = FileName(doc);
             AwbHoleViewModel viewModel;
             HoleLastDepths lastDepths = HoleLastDepths.From(AddinServices.Settings);
+            HoleLastDowelSeats lastDowelSeats = HoleLastDowelSeats.From(AddinServices.Settings);
             var expressionChecker = new HoleExpressionChecker(doc);
             if (hole == null)
             {
-                viewModel = new AwbHoleViewModel(read.Workbook, partName, read.Problems, lastDepths, expressionChecker);
+                viewModel = new AwbHoleViewModel(
+                    read.Workbook, partName, read.Problems, lastDepths, expressionChecker, lastDowelSeats);
             }
             else
             {
@@ -227,7 +229,7 @@ namespace InventorAddin.Commands
                 foreach (string warning in warnings)
                     log.Warn(LogPrefix + warning);
                 viewModel = AwbHoleViewModel.ForReadBack(
-                    read.Workbook, partName, readBack, read.Problems, lastDepths, expressionChecker);
+                    read.Workbook, partName, readBack, read.Problems, lastDepths, expressionChecker, lastDowelSeats);
             }
 
             // The session previews a new hole at once; if it cannot start, it has put everything back and throws.

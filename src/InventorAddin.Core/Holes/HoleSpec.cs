@@ -81,16 +81,18 @@ public static class HoleStandards
 /// <param name="Units">Metric or Imperial; picks the workbook rows.</param>
 /// <param name="Kind">Clearance, Tapped or Dowel.</param>
 /// <param name="Seat">
-/// None, Counterbore or Countersink, for every kind (spec 09, "Types and seats"). A tapped or dowel hole's seat comes
-/// from the Counterbore or Countersink row of the same size (<see cref="HoleRules.SameSizeCounterbores"/>; task 099).
+/// None, Counterbore or Countersink, for every kind (spec 09, "Types and seats"). A tapped hole's seat comes from the
+/// Counterbore or Countersink row of the same size (<see cref="HoleRules.SameSizeCounterbores"/>; task 099); a dowel's
+/// from its own <see cref="CboreDiameter"/>, <see cref="CboreDepth"/>, <see cref="CsinkDiameter"/> and
+/// <see cref="CsinkAngleDeg"/> (task 106).
 /// </param>
 /// <param name="Size">
 /// The size key: the Size of a Clearance, Counterbore, Countersink or Dowel row, or the Thread of a Tapped row
 /// (as written in the workbook, <c>M6</c>, <c>#10-32 UNF</c>).
 /// </param>
 /// <param name="Fastener">
-/// Seated holes: the Screw of the Counterbore or Countersink row (<c>SHCS</c>). Null takes the first row of the size
-/// (for a tapped or dowel hole, the first row of the same size), in workbook order.
+/// Seated clearance and tapped holes: the Screw of the Counterbore or Countersink row (<c>SHCS</c>). Null takes the
+/// first row of the size (for a tapped hole, the first row of the same size), in workbook order. Not used for a dowel.
 /// </param>
 /// <param name="ClearanceFit">Clearance holes with no seat: the Clearance column used. Seated holes take the row's Hole fit.</param>
 /// <param name="PrecisionFit">Dowel holes: Slip, Normal or Press.</param>
@@ -143,23 +145,51 @@ public sealed record HoleSpec(
     /// <summary>Clearance and dowel holes: the expression <see cref="Depth"/> came from, or null for a plain number.</summary>
     public string? DepthExpression { get; init; }
 
+    // A dowel's seat (spec 09, "Dowel and precision holes"; task 106): sized in the window, not from a Counterbore or
+    // Countersink row, so a dowel has no Fastener. In the spec's units; the angle in degrees. Null leaves the box empty,
+    // and HoleRules asks for a value.
+
+    /// <summary>Dowel holes with a counterbore: its diameter.</summary>
+    public decimal? CboreDiameter { get; init; }
+
+    /// <summary>Dowel holes with a counterbore: its depth.</summary>
+    public decimal? CboreDepth { get; init; }
+
+    /// <summary>Dowel holes with a counterbore: the expression <see cref="CboreDepth"/> came from, or null for a number.</summary>
+    public string? CboreDepthExpression { get; init; }
+
+    /// <summary>Dowel holes with a countersink: its diameter.</summary>
+    public decimal? CsinkDiameter { get; init; }
+
+    /// <summary>Dowel holes with a countersink: its included angle, in degrees.</summary>
+    public decimal? CsinkAngleDeg { get; init; }
+
     /// <summary>True when the hole ends at a distance and so has a bottom.</summary>
     public bool IsBlind => Termination == HoleTermination.Distance;
 
     /// <summary>
     /// The same spec with every choice that does not apply to its kind, seat and termination put back to its default
     /// (null, or Normal for the fits), so two specs that build the same hole compare equal. A depth's expression is
-    /// trimmed, and goes with its depth: null when the depth is. This is what <see cref="HoleStoredData"/> stores.
+    /// trimmed, and goes with its depth: null when the depth is. A dowel has no fastener; its own seat values apply only
+    /// to its seat (task 106). This is what <see cref="HoleStoredData"/> stores.
     /// </summary>
     public HoleSpec Normalised()
     {
         var seated = Seat != HoleSeat.None;
         var tapped = Kind == HoleKind.Tapped;
+        var dowel = Kind == HoleKind.Dowel;
+        var dowelCbore = dowel && Seat == HoleSeat.Counterbore;
+        var dowelCsink = dowel && Seat == HoleSeat.Countersink;
         var depthApplies = IsBlind && !tapped;
         return this with
         {
             Size = Size.Trim(),
-            Fastener = seated ? Fastener?.Trim() : null,
+            Fastener = seated && !dowel ? Fastener?.Trim() : null,
+            CboreDiameter = dowelCbore ? CboreDiameter : null,
+            CboreDepth = dowelCbore ? CboreDepth : null,
+            CboreDepthExpression = dowelCbore && CboreDepth is not null ? HoleExpressions.Clean(CboreDepthExpression) : null,
+            CsinkDiameter = dowelCsink ? CsinkDiameter : null,
+            CsinkAngleDeg = dowelCsink ? CsinkAngleDeg : null,
             ClearanceFit = Kind == HoleKind.Clearance && Seat == HoleSeat.None ? ClearanceFit : ClearanceFit.Normal,
             PrecisionFit = Kind == HoleKind.Dowel ? PrecisionFit : PrecisionFit.Normal,
             Tolerance = Kind == HoleKind.Dowel ? Tolerance?.Trim() : null,

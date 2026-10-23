@@ -642,4 +642,129 @@ public sealed class HoleWorkbookReaderTests
         Assert.Equal(HoleWorkbookReader.SlipFitColourSetting, sheet.Text(10, 1));
         Assert.Equal(2m, HoleWorkbookReader.Read(RepoWorkbookPath()).Workbook.Settings.BlindDepthMultiplier);
     }
+
+    // ---- The Dowel tab's seat columns (task 106) ----
+
+    [Fact]
+    public void Dowel_WithoutTheSeatColumns_ReadsWithNoProblem_AndNoSeatValues()
+    {
+        var result = Read(Tabs());
+
+        Assert.False(result.HasProblems, Problems(result));
+        var row = result.Workbook.Dowel[0];
+        Assert.Null(row.CboreDiameter);
+        Assert.Null(row.CboreDepth);
+        Assert.Null(row.CsinkDiameter);
+        Assert.Null(row.CsinkAngleDeg);
+    }
+
+    [Fact]
+    public void Dowel_SeatColumns_AreRead_InAnyOrder_ABlankCellIsNull()
+    {
+        var result = ReadWith("Dowel", Tab("Dowel sizes",
+            ["Units", "Size", "Nominal", "Show", "Csink angle", "Cbore dia", "Cbore depth", "Csink dia"],
+            ["Metric", "7 mm", 7, "Y", 100, 8.5m, "3", 8.2m],
+            ["Metric", "9 mm", 9, "Y", null, 10.5m, null, null]));
+
+        Assert.False(result.HasProblems, Problems(result));
+        Assert.Equal(
+            new DowelRow(5, HoleUnits.Metric, "7 mm", 7m, false)
+            {
+                CboreDiameter = 8.5m, CboreDepth = 3m, CsinkDiameter = 8.2m, CsinkAngleDeg = 100m,
+            },
+            result.Workbook.Dowel[0]);
+        Assert.Equal(
+            new DowelRow(6, HoleUnits.Metric, "9 mm", 9m, false) { CboreDiameter = 10.5m },
+            result.Workbook.Dowel[1]);
+    }
+
+    [Fact]
+    public void Dowel_SomeSeatColumnsOnly_ReadWithNoProblem()
+    {
+        var result = ReadWith("Dowel", Tab("Dowel sizes",
+            ["Units", "Size", "Nominal", "Show", "Cbore dia"],
+            ["Metric", "7 mm", 7, "Y", 8.5m]));
+
+        Assert.False(result.HasProblems, Problems(result));
+        Assert.Equal(8.5m, result.Workbook.Dowel[0].CboreDiameter);
+        Assert.Null(result.Workbook.Dowel[0].CsinkAngleDeg);
+    }
+
+    [Theory]
+    [InlineData("Cbore dia", "wide")]
+    [InlineData("Cbore depth", "0")]
+    [InlineData("Csink dia", "-2")]
+    [InlineData("Csink angle", "180")]
+    [InlineData("Csink angle", "steep")]
+    public void Dowel_BadSeatValue_IsAProblemNamingTabRowAndHeader_AndTheRowIsLeftOut(string header, string value)
+    {
+        string?[] headers = ["Units", "Size", "Nominal", "Show", "Cbore dia", "Cbore depth", "Csink dia", "Csink angle"];
+        object?[] good = ["Metric", "8 mm", 8, "Y", 9m, 2m, 9m, 90];
+        object?[] bad = ["Metric", "7 mm", 7, "Y", 8m, 2m, 8m, 90];
+        bad[Array.IndexOf(headers, header)] = value;
+
+        var result = ReadWith("Dowel", Tab("Dowel sizes", headers, bad, good));
+
+        var problem = Assert.Single(result.Problems);
+        Assert.Equal("Dowel", problem.Tab);
+        Assert.Equal(5, problem.Row);
+        Assert.Contains(header, problem.Message);
+        Assert.Contains(value, problem.Message);
+        Assert.Contains("row left out", problem.Message);
+        Assert.Equal(["8 mm"], result.Workbook.Dowel.Select(d => d.Size));
+    }
+
+    [Fact]
+    public void StarterWorkbook_DowelTab_HasTheSeatColumns_WithAValueOnEveryRow()
+    {
+        using var stream = File.OpenRead(RepoWorkbookPath());
+        var sheet = XlsxPackage.Read(stream).Sheet(HoleWorkbookReader.DowelTab)!;
+        Assert.Equal(
+            ["Units", "Size", "Nominal", "Show", .. HoleWorkbookReader.DowelSeatHeaders],
+            Enumerable.Range(1, 8).Select(c => sheet.Text(HoleWorkbookReader.HeaderRow, c)));
+
+        var wb = HoleWorkbookReader.Read(RepoWorkbookPath()).Workbook;
+        Assert.NotEmpty(wb.Dowel);
+        foreach (var row in wb.Dowel)
+        {
+            Assert.True(row.CboreDiameter > row.Nominal, $"{row.Size}: Cbore dia");
+            Assert.True(row.CboreDepth > 0, $"{row.Size}: Cbore depth");
+            Assert.True(row.CsinkDiameter > row.Nominal, $"{row.Size}: Csink dia");
+            Assert.Equal(90m, row.CsinkAngleDeg);
+        }
+
+        // Every starter dowel seat builds, blind at the starter depth too.
+        foreach (var row in wb.Dowel)
+        {
+            var seat = HoleRules.DowelSeatStart(wb, row.Units, row.Size);
+            var dowel = HoleSpec.ClearanceHole(row.Units, row.Size) with
+            {
+                Kind = HoleKind.Dowel,
+                Termination = HoleTermination.Distance,
+                Depth = wb.Settings.DefaultBlindDepth(row.Nominal),
+            };
+            foreach (var spec in new[]
+                     {
+                         dowel with { Seat = HoleSeat.Counterbore, CboreDiameter = seat.CboreDiameter, CboreDepth = seat.CboreDepth },
+                         dowel with { Seat = HoleSeat.Countersink, CsinkDiameter = seat.CsinkDiameter, CsinkAngleDeg = seat.CsinkAngleDeg },
+                     })
+            {
+                var built = HoleRules.Build(spec, wb, 1);
+                Assert.True(built.Succeeded, $"{row.Size} {spec.Seat}: {string.Join(" | ", built.Problems)}");
+            }
+        }
+    }
+
+    [Fact]
+    public void StarterWorkbook_HowToEdit_MentionsTheDowelSeatColumns()
+    {
+        using var stream = File.OpenRead(RepoWorkbookPath());
+        var sheet = XlsxPackage.Read(stream).Sheet("How to edit")!;
+
+        var line = Enumerable.Range(1, sheet.LastRow).Select(r => sheet.Text(r, 1)).Single(t => t.StartsWith("Dowel:"));
+        foreach (var header in HoleWorkbookReader.DowelSeatHeaders)
+        {
+            Assert.Contains(header, line);
+        }
+    }
 }

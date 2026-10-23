@@ -221,22 +221,22 @@ namespace InventorAddin.Holes
         }
 
         /// <summary>
-        /// Keeps the depth of a blind clearance or dowel hole kept with OK as the last depth of its units, in the
-        /// settings file, so the next blind hole starts at it, also after a restart (task 097). A failure to save is
-        /// logged; the hole is kept either way.
+        /// Keeps the depth of a blind clearance or dowel hole kept with OK as the last depth of its units (task 097),
+        /// and a dowel's seat as the last seat of its units and size (task 106), in the settings file, so the next
+        /// hole starts at them, also after a restart. A failure to save is logged; the hole is kept either way.
         /// </summary>
         private void RememberDepth(HoleSpec kept)
         {
             try
             {
-                AddinSettings? updated = HoleLastDepths.Remember(AddinServices.Settings, kept);
+                AddinSettings? updated = HoleLastDowelSeats.RememberKept(AddinServices.Settings, kept);
                 if (updated == null)
                     return;
 
                 string? folder = AddinServices.DataFolder;
                 if (folder == null)
                 {
-                    _log.Warn(LogPrefix + "the hole depth is not remembered: the add-in has no data folder.");
+                    _log.Warn(LogPrefix + "the hole depth and seat are not remembered: the add-in has no data folder.");
                     return;
                 }
 
@@ -245,7 +245,7 @@ namespace InventorAddin.Holes
             }
             catch (Exception ex)
             {
-                _log.Error(LogPrefix + "saving the hole depth to the settings file failed.", ex);
+                _log.Error(LogPrefix + "saving the hole depth and seat to the settings file failed.", ex);
             }
         }
 
