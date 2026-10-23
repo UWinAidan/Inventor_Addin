@@ -35,6 +35,15 @@ Aidan, 090 check: the window should be closer to Inventor's Hole panel. Before a
 - [ ] Nothing in it is copied from Inventor's or anyone's screenshots or icons; `ADDIN_PICS/` is not used.
 - [ ] Aidan has approved it or asked for changes before task 104 starts.
 
+## Revision after Aidan's comments (2026-10-23)
+
+Aidan approved choices 1 to 11 as shown, the 360 width and the `= 31 mm` value. Before task 104 the mockup and README change:
+
+- **A. Fits the screen** at 150 percent scale on 1080p (working area about 690 tall): the diagram smaller (no taller than about 160) and collapsible, with a collapse control on its header (show it expanded in the main window and collapsed in one extra small view, or say so in the README); the body scrolls with a themed scroll bar; the header and the footer with OK and Cancel always visible. Draw the main window at that height, with the body scrolled to show it does.
+- **B. Clearly different icons:** Termination Distance must not look like Drill point 118 deg (for example a blind hole with a depth arrow and a flat stop for Distance, against a cone tip close-up for the drill points); 118 deg and 90 deg at clearly different cone angles; Tapped with visible thread lines, Clearance plain; To distinct from both.
+- **C. Dowel seats** (task 106): the main window is a dowel with a counterbore, so Fastener type goes and editable Counterbore diameter and Counterbore depth boxes appear (the depth able to show an expression and its value); add a small panel for a countersunk dowel's Countersink diameter and angle boxes. Update the diagram values to match.
+- README: update choices 2, 3, 4 and add the new ones, mark choices 1 to 11 as approved (Aidan, 2026-10-23), and say which parts are new since then.
+
 ## Verification
 
 Filled in by the implementer.
@@ -46,9 +55,11 @@ Filled in by the implementer.
 - **Not compiled:** nothing under `src/` changed.
 - **Inventor API members not confirmed:** none used.
 - **Preview:** the README says the 3D preview stays solid red (Aidan, this session; spec 09 question 13).
+- **Revision after Aidan's comments (2026-10-23):** rewrote `awb-hole-window.html` and re-rendered the PNG (headless Edge, 1340 by 1110, scale 1); viewed it at 100 percent and checked the icons at 3x zoom. A: the window drawn 690 tall twice (body scrolled to the top, then to the bottom) with a fixed header and footer (divider above the footer) and the themed scroll bar; the diagram is 160 tall with its header and collapsible, shown open in the windows and collapsed in its own panel. B: every icon redrawn (Tapped with saw-tooth walls, Distance a narrow flat-stopped hole with a depth dimension beside it, drill points as bottom close-ups with 118 shallow and 90 steep, To ending on a thick face line); material fill raised to 45 percent so the shaded parts read. C: Fastener type replaced by Cbore dia and Cbore depth (`0.25*d0+1.5`, `= 6.5 mm`) in the main window, a countersunk dowel panel with Csink dia and Csink angle, Fastener type shown in the counterbored clearance panel, and the diagram values updated to match. README: choices 1 to 11 marked approved, choices 2, 3 and 4 marked changed, new choices 12 to 15 added; green badges in the image mark the new ones. The icon paths use only M/H/V/L/Z, and the diagram's mm geometry (`holeProfile`) is separate from its drawing, for task 104. Access keys for the new boxes: A, B (counterbore), K, G (countersink); none clash with the window's keys. `src/`, STATUS, TODO, DECISIONS, PLAN and the spec unchanged.
 - **Manual check for Aidan:** open `docs/ui-mockups/awb-hole-window.png` (or the HTML in a browser) at 100 percent and comment on choices 1 to 11 in the README by number. The task's last acceptance box (approval before 104) is his.
 
 ## Follow-ups
 
-- Window width: spec 08's 100-wide label column makes the window about 360 wide, a little wider than Inventor's Hole panel. If Aidan wants it narrower, a smaller label column for this window only is a change to spec 08's rule; record it there if so (README note at the end of the entry).
-- The `= 31 mm` value beside a depth expression (choice 6) needs the view-model to expose the evaluated depth as text; task 104 should add it if Aidan approves.
+- ~~Window width~~: settled, Aidan kept 360 (2026-10-23).
+- ~~The `= 31 mm` value~~: approved (2026-10-23); task 104's scope already has it on the view-model.
+- The collapsed diagram's summary line ("⌀6 H7, 31 deep, counterbore ⌀11 by 6.5") is a wording default for task 104's diagram model; Aidan has not seen it before this revision.
