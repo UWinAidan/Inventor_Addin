@@ -24,6 +24,8 @@ Last updated: 2026-10-23
 
 **M4 part 1, 090** was checked on 2026-10-18: steps 1 to 4a, 6, 7, 10, 12 to 21 and 25 passed (step 5 skipped). Steps 8 and 11 and the tapped thread display failed, now tasks 093 to 095; step 4b and Aidan's other requests are tasks 096 to 105. Steps 22 to 24 (editing) wait for 092.
 
+**M4 part 1, 091 to 106** (not 103, 105): built on `claude/m4-hole-generator`, compiled on Windows, not yet run in Inventor. The combined checklist is in the pull request and in each task file's Verification section.
+
 From Part Properties (task 019):
 
 Confirmed so far: the window opens on an assembly, pre-fills Designer, Detailer and part type A, writes Description, Designer and Cost correctly, one Undo reverts an Apply, and the blank Part type entry can be clicked.

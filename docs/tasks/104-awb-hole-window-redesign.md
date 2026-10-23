@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 1
 - **Feature spec:** `docs/features/09-awb-hole.md` ("The window"); `docs/features/08-window-style.md`
-- **Status:** todo
+- **Status:** done (common holes still scroll at 150 percent; spec 09 question 15)
 - **Depends on:** 102 (approved by Aidan 2026-10-23, with changes), 101, 106
 - **Needs:** windows build
 - **Parallel-safe with:** 105

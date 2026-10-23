@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 1
 - **Feature spec:** `docs/features/09-awb-hole.md` ("The window"); `docs/features/08-window-style.md`
-- **Status:** done (mockup made; Aidan approves it or asks for changes before 104)
+- **Status:** done (approved by Aidan 2026-10-23 with changes; revised)
 - **Depends on:** 098, 099, 100 (so the mockup shows the fields as they now are)
 - **Needs:** cloud or windows (an image only)
 - **Parallel-safe with:** 091, 092
