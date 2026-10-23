@@ -2,11 +2,11 @@
 
 Everything that needs doing and is not already a task in `docs/PLAN.md`. Kept current by the parent session: items are added when they come up and removed when they are done or turned into a task. Where the project stands is in `STATUS.md`; why things are the way they are is in `DECISIONS.md`.
 
-Last updated: 2026-10-18
+Last updated: 2026-10-23
 
 ## Next up
 
-1. M4 part 1: Aidan checked 090 on 2026-10-18; his bugs and requests are tasks 093 to 105 in `docs/PLAN.md`. Running 093 to 101, 091, 092 and 102 (the window mockup) on branch `claude/m4-hole-generator`; then Aidan checks, approves the mockup, and runs spike 103 (in-place edit) with the parent session.
+1. M4 part 1: Aidan checked 090 on 2026-10-18; his bugs and requests are tasks 093 to 105 in `docs/PLAN.md`. 093 to 102 are done on branch `claude/m4-hole-generator`; 091 and 092 are still to run. Aidan comments on the mockup `docs/ui-mockups/awb-hole-window.png` (choices 1 to 11 in `docs/ui-mockups/README.md`) before task 104, checks 093 to 101, and runs spike 103 (in-place edit) with the parent session.
 2. Ribbon icon colours: Aidan picks option A, B or C from `docs/ui-mockups/ribbon-icons-colour-options.png` on branch `claude/ribbon-icon-colour`; then build it.
 3. Aidan finishes the remaining Part Properties checks below.
 
@@ -45,7 +45,6 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - The finish appearances are spike 067's suggestions for now; Aidan edits `libraries/finishes.csv` if he wants others
 
 **AWB Hole (spec 09), not blocking**
-- Question 13 in spec 09: the preview red is drawn opaque, since Inventor 2026 does not draw a face's appearance transparency (task 101 spike, off-screen images; check in Inventor's window). Is solid red enough, or make the whole part see-through while the window is open, or draw the preview with client graphics? Default: solid red
 - Question 12 in spec 09: should a counterbored blind tapped hole's thread and drill depths be measured from the bottom of the counterbore?
 - Question 11 in spec 09: Inventor's Hole preselects unused centre points one by one; AWB Hole skips a sketch any feature consumes. Per-point wanted?
 - Question 9 in spec 09: where a dowel hole's counterbore or countersink sizes come from. Default: the same size's Counterbore or Countersink row, as for tapped holes; or seat columns of its own on the Dowel tab
@@ -95,6 +94,7 @@ Small things noticed while building. None is urgent. The parent turns these into
 - A finish list saved by Excel as plain "CSV" (not "CSV UTF-8") is in the Windows code page, so a non-ASCII character in a print note would read as a replacement character. Whoever reads the file (task 075) could fall back to the ANSI code page when the bytes are not valid UTF-8. (task 068)
 
 **AWB Hole**
+- Window mockup (task 102): spec 08's 100-wide label column makes the window about 360 wide, a little wider than Inventor's Hole panel; a narrower label column for this window would be an exception to spec 08. The `= 31 mm` beside a depth expression (choice 6) needs the view-model to expose the evaluated depth as text; task 104 adds it if Aidan approves
 - Preview red (task 101 review): `HoleSession.ClearPaint` sets `_paint` to null even if `Abort` throws; the paint transaction could then stay open and the red be committed on OK. Treat a failed clear as fatal for OK (cancel or refuse). Comments in `HoleSession`, `HolePreviewWriter` and Core's `HolePreviewAppearance` still say "translucent". The legacy `Face.SetRenderStyle` with an opacity was not tried for question 13
 - Redo of an AWB Hole (task 101 spike): `RedoTransaction` after one Undo did not bring the hole back; check Ctrl+Y in Inventor
 - Depth expressions (task 100): an expression changed in Inventor's Parameters dialog after OK is not seen by Edit, which opens an AWB hole on its stored expression; task 092's stored-versus-applied comparison could compare the depth expressions too

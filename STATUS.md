@@ -2,14 +2,15 @@
 
 Where each big item stands. One line per item, kept current by the parent session. For the order of work and the task lists see `docs/PLAN.md`; for what needs doing next see `TODO.md`.
 
-Last updated: 2026-10-18
+Last updated: 2026-10-23
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-10-18. Branch `claude/m4-hole-generator`; task 101 committed on top of task 100 (reviewer PASS).
-- Task 101: the preview hole is painted red in its own transaction nested in the session's (`Holes/HolePreviewWriter.cs`, `HoleSession`), aborted before every other change, OK and Cancel. Spike 101 (scratchpad of session db5df2bc, `Spike101/Program.cs`) found Inventor 2026 draws a face's `generic_transparency` opaque, so the red is solid: criterion 1 open, spec 09 question 13 for Aidan.
-- Build and tests: `dotnet build InventorAddin.slnx -p:DeployToInventor=false` built; 3382 Core tests pass. Not run in Inventor.
-- Next steps, per `docs/PLAN.md`: 091 (takeover of Hole and H), 092 (Edit Feature and double-click), then 102 (mockup). Aidan runs the checklists of 093 to 101 and answers question 13.
+- Updated: 2026-10-23. Branch `claude/m4-hole-generator`; task 102 committed on top of 101 (reviewer PASS).
+- Task 102: mockup `docs/ui-mockups/awb-hole-window.png`, source `awb-hole-window.html` beside it (render command in its top comment), 11 numbered choices in `docs/ui-mockups/README.md`. Waiting for Aidan's comments; task 104 does not start until he approves.
+- Aidan, 2026-10-23: the preview stays solid red by default for now (spec 09 question 13).
+- Build and tests: 3382 Core tests pass. 093 to 101 not yet run in Inventor.
+- Next steps, per `docs/PLAN.md`: 091 (takeover of Hole and H), 092 (Edit Feature and double-click). Aidan comments on the mockup, runs the checklists of 093 to 101, and spike 103 with the parent session.
 - Gotchas: `GetValueFromExpression` and some other calls throw "Unspecified error" with no reason; abort a nested transaction before its parent (the reverse throws); Python heredocs in Git Bash can break backslash-n escapes, so write scripts to the scratchpad; `AwbHoleTestWorkbook` hides M4, use M3 or M5.
 
 ## Big items
@@ -41,5 +42,5 @@ States used: Not started, Planned, In progress, Built (merged, not tested in Inv
 
 ## Numbers
 
-- Tasks finished: 90 (001 to 090), plus 093 to 101 on branch `claude/m4-hole-generator`
+- Tasks finished: 90 (001 to 090), plus 093 to 102 on branch `claude/m4-hole-generator`
 - Core tests: 2650 after task 080; they run in the cloud and on Windows with `dotnet test tests/InventorAddin.Core.Tests`
