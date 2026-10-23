@@ -101,4 +101,26 @@ public sealed class HoleStateComparisonTests
 
         Assert.Equal(IsoDowel, HoleAppliedState.From(geometry));
     }
+
+    [Fact]
+    public void AnImperialHole_IsDescribedInInches()
+    {
+        var stored = new HoleAppliedState(0.635, null, 0.00127, 0, true);
+        var current = stored with { HoleDiameterCm = 1.27, ToleranceUpperCm = 0.00254 };
+
+        var match = HoleStateComparison.Compare(stored, current, HoleUnits.Imperial);
+
+        Assert.Equal(
+            ["The hole diameter is 0.5 in; AWB Hole made it 0.25 in.", "The tolerance is +0.001/0 in; AWB Hole set +0.0005/0 in."],
+            match.Differences);
+    }
+
+    [Theory]
+    [InlineData(1.25, HoleUnits.Metric, "12.5 mm")]
+    [InlineData(1.27, HoleUnits.Imperial, "0.5 in")]
+    [InlineData(0.123456, HoleUnits.Metric, "1.2346 mm")]
+    public void LengthText_WritesTheUnitsLength(double cm, HoleUnits units, string expected)
+    {
+        Assert.Equal(expected, HoleStateComparison.LengthText(cm, units));
+    }
 }

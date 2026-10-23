@@ -230,14 +230,24 @@ public enum HolePickingStop
 /// </remarks>
 public sealed class HolePickingWatch
 {
-    private readonly string _ownCommand;
+    private readonly string[] _ownCommands;
     private string? _lastStarted;
 
     /// <param name="ownCommand">The AWB Hole command's internal name (<c>CommandNames.AwbHole</c>).</param>
-    public HolePickingWatch(string ownCommand)
+    /// <param name="moreOwnCommands">
+    /// Other commands that open the window and so restart the picking too: our Edit Feature (task 092), which brings
+    /// the open window to the front.
+    /// </param>
+    public HolePickingWatch(string ownCommand, params string[] moreOwnCommands)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(ownCommand);
-        _ownCommand = ownCommand;
+        ArgumentNullException.ThrowIfNull(moreOwnCommands);
+        foreach (var command in moreOwnCommands)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(command, nameof(moreOwnCommands));
+        }
+
+        _ownCommands = [ownCommand.Trim(), .. moreOwnCommands.Select(c => c.Trim())];
     }
 
     /// <summary>The last command Inventor reported starting since the picking last stopped or was resumed.</summary>
@@ -247,8 +257,8 @@ public sealed class HolePickingWatch
     public void CommandStarted(string? commandName) => _lastStarted = commandName;
 
     /// <summary>
-    /// Inventor stopped the picking: restart when the last command it started is AWB Hole, else cancel. Forgets the
-    /// last command started, so a later Esc cancels.
+    /// Inventor stopped the picking: restart when the last command it started is AWB Hole (or another of its own
+    /// commands), else cancel. Forgets the last command started, so a later Esc cancels.
     /// </summary>
     public HolePickingStop PickingStopped()
     {
@@ -261,7 +271,8 @@ public sealed class HolePickingWatch
     public void Resumed() => _lastStarted = null;
 
     // Inventor's internal command names are matched exactly, as the ribbon defines them.
-    private bool IsOwn(string? name) => string.Equals(name?.Trim(), _ownCommand, StringComparison.Ordinal);
+    private bool IsOwn(string? name) =>
+        _ownCommands.Any(own => string.Equals(name?.Trim(), own, StringComparison.Ordinal));
 }
 
 /// <summary>What the preview does for one window change.</summary>

@@ -90,9 +90,9 @@ namespace InventorAddin.Holes
         private ApplicationEvents? _appEvents;
         private UserInputEvents? _userInput;
 
-        // Tells whether the picking was stopped by AWB Hole itself (its button pressed while the window is open), so
-        // it is started again instead of the session being cancelled (task 090).
-        private readonly HolePickingWatch _watch = new HolePickingWatch(CommandNames.AwbHole);
+        // Tells whether the picking was stopped by AWB Hole itself (its button pressed while the window is open, or
+        // our Edit Feature, task 092), so it is started again instead of the session being cancelled (task 090).
+        private readonly HolePickingWatch _watch = new HolePickingWatch(CommandNames.AwbHole, CommandNames.AwbHoleEdit);
 
         // Inventor's main thread: the picking is started again after Inventor's terminate event has returned.
         private readonly System.Windows.Threading.Dispatcher _dispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher;

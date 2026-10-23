@@ -318,7 +318,8 @@ public sealed class AwbHoleViewModel : ObservableObject
         IEnumerable<HoleWorkbookProblem>? problems,
         HoleLastDepths? lastDepths,
         IHoleExpressionChecker? expressionChecker,
-        HoleLastDowelSeats? lastDowelSeats)
+        HoleLastDowelSeats? lastDowelSeats,
+        HoleReapplyOffer? reapplyOffer = null)
     {
         ArgumentNullException.ThrowIfNull(workbook);
 
@@ -334,6 +335,10 @@ public sealed class AwbHoleViewModel : ObservableObject
             .Where(n => n.Length > 0)
             .ToList()
             .AsReadOnly();
+        // Only a hole opened on its stored AWB data can be re-applied (task 092).
+        ReapplyDifferences = editSpec is not null && !madeByInventor && reapplyOffer is { IsOffered: true }
+            ? reapplyOffer.Differences
+            : [];
         TerminationOptions = editSpec?.Termination == HoleTermination.ToFace ? TerminationsWithTo : PickableTerminations;
 
         if (editSpec is null)
@@ -412,6 +417,10 @@ public sealed class AwbHoleViewModel : ObservableObject
     /// Edit mode: the window opens on <paramref name="spec"/>, the hole's stored spec, exactly as it is, before the
     /// first preview (spike 081 round 5).
     /// </summary>
+    /// <param name="reapplyOffer">
+    /// What no longer matches the hole's stored data (<see cref="HoleReapplyRules.Check"/>; task 092): the window says
+    /// so (<see cref="ReapplyNote"/>) and OK re-applies the stored settings. Null or empty makes no offer.
+    /// </param>
     public static AwbHoleViewModel ForEdit(
         HoleWorkbook workbook,
         string partName,
@@ -419,11 +428,13 @@ public sealed class AwbHoleViewModel : ObservableObject
         IEnumerable<HoleWorkbookProblem>? problems = null,
         HoleLastDepths? lastDepths = null,
         IHoleExpressionChecker? expressionChecker = null,
-        HoleLastDowelSeats? lastDowelSeats = null)
+        HoleLastDowelSeats? lastDowelSeats = null,
+        HoleReapplyOffer? reapplyOffer = null)
     {
         ArgumentNullException.ThrowIfNull(spec);
         return new AwbHoleViewModel(
-            workbook, partName, spec, false, null, problems, lastDepths, expressionChecker, lastDowelSeats);
+            workbook, partName, spec, false, null, problems, lastDepths, expressionChecker, lastDowelSeats,
+            reapplyOffer);
     }
 
     /// <summary>
@@ -449,8 +460,9 @@ public sealed class AwbHoleViewModel : ObservableObject
 
     /// <summary>
     /// Edit mode from the add-in's read-back of a hole (task 088, <c>HoleFeatureReader.ReadSpec</c>): an AWB hole opens
-    /// on its stored spec (<see cref="ForEdit"/>), any other hole on the closest spec with the read-back's notes
-    /// (<see cref="ForInventorHole"/>).
+    /// on its stored spec (<see cref="ForEdit"/>), with <paramref name="reapplyOffer"/> when it no longer matches its
+    /// stored data (task 092); any other hole on the closest spec with the read-back's notes
+    /// (<see cref="ForInventorHole"/>), and no offer.
     /// </summary>
     public static AwbHoleViewModel ForReadBack(
         HoleWorkbook workbook,
@@ -459,14 +471,17 @@ public sealed class AwbHoleViewModel : ObservableObject
         IEnumerable<HoleWorkbookProblem>? problems = null,
         HoleLastDepths? lastDepths = null,
         IHoleExpressionChecker? expressionChecker = null,
-        HoleLastDowelSeats? lastDowelSeats = null)
+        HoleLastDowelSeats? lastDowelSeats = null,
+        HoleReapplyOffer? reapplyOffer = null)
     {
         ArgumentNullException.ThrowIfNull(readBack);
         return readBack.IsInventorHole
             ? ForInventorHole(
                 workbook, partName, readBack.Spec, readBack.Notes, problems, lastDepths, expressionChecker,
                 lastDowelSeats)
-            : ForEdit(workbook, partName, readBack.Spec, problems, lastDepths, expressionChecker, lastDowelSeats);
+            : ForEdit(
+                workbook, partName, readBack.Spec, problems, lastDepths, expressionChecker, lastDowelSeats,
+                reapplyOffer);
     }
 
     /// <summary>
@@ -524,6 +539,21 @@ public sealed class AwbHoleViewModel : ObservableObject
 
     /// <summary>The read-back's notes for a hole made by Inventor's Hole command; empty otherwise.</summary>
     public IReadOnlyList<string> InventorHoleNotes { get; }
+
+    /// <summary>
+    /// True when the edited AWB hole no longer matches its stored data (task 092; spec 09, "The command"): the window
+    /// says what differs and that OK re-applies the settings shown, with their fit, tolerance and colour.
+    /// </summary>
+    public bool HasReapplyOffer => ReapplyDifferences.Count > 0;
+
+    /// <summary><see cref="HoleReapplyRules.HeadingText"/> while there is an offer, else null.</summary>
+    public string? ReapplyHeading => HasReapplyOffer ? HoleReapplyRules.HeadingText : null;
+
+    /// <summary>What differs, one line each; empty when there is no offer.</summary>
+    public IReadOnlyList<string> ReapplyDifferences { get; }
+
+    /// <summary><see cref="HoleReapplyRules.OfferText"/> while there is an offer, else null.</summary>
+    public string? ReapplyNote => HasReapplyOffer ? HoleReapplyRules.OfferText : null;
 
     // Fields, in the window's order.
 

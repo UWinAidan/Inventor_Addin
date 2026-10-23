@@ -30,6 +30,30 @@ namespace InventorAddin.Holes
             return HoleReadBack.Read(stored, ReadFacts(hole, warnings), workbook, defaultUnits);
         }
 
+        /// <summary>
+        /// Edit mode (task 092): the spec as <see cref="ReadSpec"/> reads it, and, for a hole opened on its stored AWB
+        /// data, the re-apply offer: what no longer matches that data (<see cref="HoleReapplyRules.Check"/>). The hole's
+        /// geometry is read once for both.
+        /// </summary>
+        /// <param name="checker">Reads a stored depth expression against the part's parameters.</param>
+        public static (HoleReadBackResult ReadBack, HoleReapplyOffer Reapply) ReadForEdit(
+            HoleFeature hole, HoleWorkbook workbook, HoleUnits defaultUnits, IHoleExpressionChecker? checker,
+            List<string>? warnings = null)
+        {
+            if (hole == null)
+                throw new ArgumentNullException(nameof(hole));
+            if (workbook == null)
+                throw new ArgumentNullException(nameof(workbook));
+
+            HoleStoredDataReadResult? stored = ComSafe.Get(() => HoleStoredDataStore.Read(hole), warnings, "AWB hole data");
+            InventorHoleFacts facts = ReadFacts(hole, warnings);
+            HoleReadBackResult readBack = HoleReadBack.Read(stored, facts, workbook, defaultUnits);
+            HoleReapplyOffer reapply = readBack.Stored is { } data
+                ? HoleReapplyRules.Check(data, facts, IsColoured(hole), checker)
+                : HoleReapplyOffer.None;
+            return (readBack, reapply);
+        }
+
         /// <summary>The hole's geometry as Inventor reports it.</summary>
         public static InventorHoleFacts ReadFacts(HoleFeature hole, List<string>? warnings = null)
         {

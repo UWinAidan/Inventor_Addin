@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Inventor;
 using InventorAddin.Commands;
+using InventorAddin.Holes;
 using InventorAddin.Core.Logging;
 using InventorAddin.Core.Ribbon;
 using InventorAddin.Core.Settings;
@@ -37,6 +38,9 @@ namespace InventorAddin.UI
         // AWB Hole in place of Inventor's Hole (task 091); null when AWB Hole failed to register.
         private HoleCommandTakeover? _holeTakeover;
 
+        // Edit Feature and double-click on a hole open AWB Hole (task 092); null when our Edit Feature failed to register.
+        private HoleEditRedirect? _holeEdit;
+
         public RibbonSetup(Application app, string clientId, AddinSettings settings, ILog log)
         {
             _app = app;
@@ -56,6 +60,7 @@ namespace InventorAddin.UI
             yield return new MassUpdateCommand();
             yield return new MaterialFinishCommand();
             yield return new AwbHoleCommand();
+            yield return new HoleEditFeatureCommand();
             yield return new SettingsCommand();
             yield return new AboutCommand();
             yield return new ExportModelDataCommand();
@@ -101,6 +106,7 @@ namespace InventorAddin.UI
             }
 
             StartHoleTakeover();
+            StartHoleEditRedirect(theme);
         }
 
         /// <summary>
@@ -123,6 +129,32 @@ namespace InventorAddin.UI
             catch (Exception ex)
             {
                 _log.Error("Hole takeover: starting failed; Inventor's Hole is left as it is.", ex);
+            }
+        }
+
+        /// <summary>
+        /// Edit Feature and double-click on a hole open AWB Hole while it has taken over Inventor's Hole (task 092). Our
+        /// Edit Feature has no ribbon button; it takes Inventor's Edit Feature icon, or AWB Hole's when that cannot be read.
+        /// </summary>
+        private void StartHoleEditRedirect(UiTheme theme)
+        {
+            if (!_commandsByName.TryGetValue(CommandNames.AwbHoleEdit, out AddinCommand? edit) || edit.Definition == null)
+            {
+                _log.Warn($"Command {CommandNames.AwbHoleEdit} is not registered, so editing a hole opens Inventor's Hole.");
+                return;
+            }
+
+            ButtonPictures? fallback = LoadPictures(edit, IconNames.AwbHole, theme);
+            try
+            {
+                _holeEdit = new HoleEditRedirect(_app, edit.Definition, () => _holeTakeover?.Owner, _log);
+                _holeEdit.Start(fallback);
+            }
+            catch (Exception ex)
+            {
+                _log.Error("Hole edit: starting failed; editing a hole opens Inventor's Hole.", ex);
+                _holeEdit?.Dispose();
+                _holeEdit = null;
             }
         }
 
@@ -246,7 +278,9 @@ namespace InventorAddin.UI
 
         public void Dispose()
         {
-            // Inventor's Hole and H are given back before the commands are released.
+            // Editing goes back to Inventor, and Inventor's Hole and H are given back, before the commands are released.
+            _holeEdit?.Dispose();
+            _holeEdit = null;
             _holeTakeover?.Dispose();
             _holeTakeover = null;
 

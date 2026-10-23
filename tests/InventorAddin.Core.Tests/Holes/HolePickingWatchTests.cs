@@ -104,4 +104,26 @@ public sealed class HolePickingWatchTests
     {
         Assert.Throws<ArgumentNullException>(() => new HolePickingWatch(null!));
     }
+
+    [Fact]
+    public void Stopped_AfterAnotherOwnCommand_Restarts()
+    {
+        // Task 092: our Edit Feature, pressed while the window is open, brings it to the front.
+        var watch = new HolePickingWatch(CommandNames.AwbHole, CommandNames.AwbHoleEdit);
+        watch.CommandStarted(CommandNames.AwbHoleEdit);
+        Assert.Equal(HolePickingStop.Restart, watch.PickingStopped());
+
+        watch.CommandStarted(CommandNames.AwbHole);
+        Assert.Equal(HolePickingStop.Restart, watch.PickingStopped());
+
+        watch.CommandStarted("PartNGxHoleEditCtxCmd");
+        Assert.Equal(HolePickingStop.Cancel, watch.PickingStopped());
+    }
+
+    [Fact]
+    public void RefusesABlankOrNullMoreOwnCommand()
+    {
+        Assert.Throws<ArgumentException>(() => new HolePickingWatch(CommandNames.AwbHole, " "));
+        Assert.Throws<ArgumentNullException>(() => new HolePickingWatch(CommandNames.AwbHole, (string[])null!));
+    }
 }

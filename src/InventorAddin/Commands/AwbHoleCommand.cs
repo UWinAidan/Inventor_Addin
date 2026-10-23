@@ -89,7 +89,7 @@ namespace InventorAddin.Commands
 
         /// <summary>
         /// Edit mode on <paramref name="hole"/>, a hole feature of <paramref name="doc"/>: its settings are read first
-        /// (<see cref="HoleFeatureReader.ReadSpec"/>), from its stored AWB data or, for a hole made by Inventor's Hole,
+        /// (<see cref="HoleFeatureReader.ReadForEdit"/>), from its stored AWB data or, for a hole made by Inventor's Hole,
         /// the closest settings with a note that OK makes it an AWB hole. While the window is open (on any hole), it is
         /// brought to the front instead and false is returned, so the caller can say so; true means the window will
         /// open (or say why it cannot).
@@ -226,12 +226,22 @@ namespace InventorAddin.Commands
             else
             {
                 var warnings = new List<string>();
-                HoleReadBackResult readBack = HoleFeatureReader.ReadSpec(
-                    hole, read.Workbook, read.Workbook.Settings.DefaultUnits, warnings);
+                (HoleReadBackResult readBack, HoleReapplyOffer reapply) = HoleFeatureReader.ReadForEdit(
+                    hole, read.Workbook, read.Workbook.Settings.DefaultUnits, expressionChecker, warnings);
                 foreach (string warning in warnings)
                     log.Warn(LogPrefix + warning);
+
+                // An AWB hole changed outside AWB Hole (task 092): the window says what differs; OK re-applies.
+                if (reapply.IsOffered)
+                {
+                    string holeName = ComSafe.Get(() => hole.Name) ?? "the hole";
+                    log.Info(LogPrefix + $"{holeName} no longer matches its stored data, so re-applying is offered: " +
+                             string.Join(" ", reapply.Differences));
+                }
+
                 viewModel = AwbHoleViewModel.ForReadBack(
-                    read.Workbook, partName, readBack, read.Problems, lastDepths, expressionChecker, lastDowelSeats);
+                    read.Workbook, partName, readBack, read.Problems, lastDepths, expressionChecker, lastDowelSeats,
+                    reapply);
             }
 
             // The diagram opens as it was left (task 104), and is remembered whenever it is opened or collapsed.

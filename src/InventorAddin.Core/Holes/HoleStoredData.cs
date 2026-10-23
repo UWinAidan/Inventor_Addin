@@ -57,7 +57,11 @@ public static class HoleStateComparison
 
     private const string CommandName = Branding.ShortName + " Hole";
 
-    public static HoleStateMatch Compare(HoleAppliedState stored, HoleAppliedState current)
+    public static HoleStateMatch Compare(HoleAppliedState stored, HoleAppliedState current) =>
+        Compare(stored, current, HoleUnits.Metric);
+
+    /// <summary>As <see cref="Compare(HoleAppliedState, HoleAppliedState)"/>, with lengths written in <paramref name="units"/>' length (mm or in).</summary>
+    public static HoleStateMatch Compare(HoleAppliedState stored, HoleAppliedState current, HoleUnits units)
     {
         ArgumentNullException.ThrowIfNull(stored);
         ArgumentNullException.ThrowIfNull(current);
@@ -67,13 +71,13 @@ public static class HoleStateComparison
         if (!Same(stored.HoleDiameterCm, current.HoleDiameterCm))
         {
             differences.Add(
-                $"The hole diameter is {Mm(current.HoleDiameterCm)}; {CommandName} made it {Mm(stored.HoleDiameterCm)}.");
+                $"The hole diameter is {LengthText(current.HoleDiameterCm, units)}; {CommandName} made it {LengthText(stored.HoleDiameterCm, units)}.");
         }
 
         if (!SameTolerance(stored, current))
         {
             differences.Add(
-                $"The tolerance is {ToleranceText(current)}; {CommandName} set {ToleranceText(stored)}.");
+                $"The tolerance is {ToleranceText(current, units)}; {CommandName} set {ToleranceText(stored, units)}.");
         }
 
         if (stored.Coloured != current.Coloured)
@@ -112,9 +116,13 @@ public static class HoleStateComparison
     private static bool Same(double? a, double? b) =>
         a is { } x && b is { } y ? Math.Abs(x - y) < LengthToleranceCm : a is null && b is null;
 
-    private static string Mm(double cm) => (cm * 10).ToString("0.####", CultureInfo.InvariantCulture) + " mm";
+    /// <summary>A length in centimetres written in the units' length: <c>12.5 mm</c> to 4 decimals, <c>0.5 in</c> to 5.</summary>
+    public static string LengthText(double cm, HoleUnits units) =>
+        units == HoleUnits.Imperial
+            ? (cm / 2.54).ToString("0.#####", CultureInfo.InvariantCulture) + " in"
+            : (cm * 10).ToString("0.####", CultureInfo.InvariantCulture) + " mm";
 
-    private static string ToleranceText(HoleAppliedState state)
+    private static string ToleranceText(HoleAppliedState state, HoleUnits units)
     {
         if (!state.HasTolerance)
         {
@@ -126,9 +134,11 @@ public static class HoleStateComparison
             return code;
         }
 
-        var upper = state.ToleranceUpperCm is { } u ? (u * 10).ToString("+0.####;-0.####;0", CultureInfo.InvariantCulture) : "?";
-        var lower = state.ToleranceLowerCm is { } l ? (l * 10).ToString("+0.####;-0.####;0", CultureInfo.InvariantCulture) : "?";
-        return $"{upper}/{lower} mm";
+        var imperial = units == HoleUnits.Imperial;
+        string Limit(double? cm) => cm is { } c
+            ? (imperial ? c / 2.54 : c * 10).ToString(imperial ? "+0.#####;-0.#####;0" : "+0.####;-0.####;0", CultureInfo.InvariantCulture)
+            : "?";
+        return $"{Limit(state.ToleranceUpperCm)}/{Limit(state.ToleranceLowerCm)} {(imperial ? "in" : "mm")}";
     }
 }
 

@@ -1290,4 +1290,56 @@ public sealed class AwbHoleViewModelTests
             expected,
             HoleToleranceOption.FormatLimit(decimal.Parse(value, System.Globalization.CultureInfo.InvariantCulture), units));
     }
+
+    // ---- re-apply offer (task 092) ----
+
+    private static HoleReadBackResult AwbReadBack(HoleSpec spec) =>
+        new(spec, HoleSource.Awb, new HoleStoredData(spec, new HoleAppliedState(0.5, null, null, null, false)), []);
+
+    [Fact]
+    public void AnEditedAwbHole_ThatNoLongerMatches_OffersToReapply()
+    {
+        var spec = NewHole().Spec;
+        var offer = new HoleReapplyOffer(["The hole diameter is 8 mm; AWB Hole made it 5.5 mm."]);
+
+        var vm = AwbHoleViewModel.ForReadBack(Workbook, PartName, AwbReadBack(spec), reapplyOffer: offer);
+
+        Assert.True(vm.HasReapplyOffer);
+        Assert.Equal(HoleReapplyRules.HeadingText, vm.ReapplyHeading);
+        Assert.Equal(offer.Differences, vm.ReapplyDifferences);
+        Assert.Equal(HoleReapplyRules.OfferText, vm.ReapplyNote);
+        Assert.False(vm.IsInventorHole);
+        Assert.Equal(spec, vm.Spec);
+    }
+
+    [Fact]
+    public void NoOffer_ForANewHole_AMatchingHole_OrAnInventorHole()
+    {
+        var spec = NewHole().Spec;
+        var offer = new HoleReapplyOffer(["Something differs."]);
+
+        Assert.False(NewHole().HasReapplyOffer);
+        Assert.Null(NewHole().ReapplyNote);
+        Assert.Empty(NewHole().ReapplyDifferences);
+
+        var matching = AwbHoleViewModel.ForReadBack(
+            Workbook, PartName, AwbReadBack(spec), reapplyOffer: HoleReapplyOffer.None);
+        Assert.False(matching.HasReapplyOffer);
+        Assert.Null(matching.ReapplyHeading);
+
+        var inventorHole = AwbHoleViewModel.ForReadBack(
+            Workbook, PartName, new HoleReadBackResult(spec, HoleSource.Inventor, null, []), reapplyOffer: offer);
+        Assert.False(inventorHole.HasReapplyOffer);
+        Assert.Equal(AwbHoleViewModel.InventorHoleNoteText, inventorHole.InventorHoleNote);
+    }
+
+    [Fact]
+    public void ForEdit_TakesTheOffer()
+    {
+        var vm = AwbHoleViewModel.ForEdit(
+            Workbook, PartName, NewHole().Spec, reapplyOffer: new HoleReapplyOffer(["The depth differs."]));
+
+        Assert.True(vm.HasReapplyOffer);
+        Assert.Equal(["The depth differs."], vm.ReapplyDifferences);
+    }
 }

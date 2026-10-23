@@ -72,6 +72,21 @@
                     </StackPanel>
                 </controls:FormSection>
 
+                <!-- An AWB hole changed outside AWB Hole (task 092): what differs, and that OK re-applies the settings shown. -->
+                <controls:FormSection Visibility="{Binding HasReapplyOffer, Mode=OneTime, Converter={StaticResource VisibleWhenTrue}}">
+                    <StackPanel>
+                        <TextBlock Style="{DynamicResource ValueText}" Text="{Binding ReapplyHeading, Mode=OneTime}" />
+                        <ItemsControl ItemsSource="{Binding ReapplyDifferences, Mode=OneTime}" Focusable="False">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Style="{DynamicResource ValueText}" Text="{Binding Mode=OneTime}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Style="{DynamicResource MutedText}" Text="{Binding ReapplyNote, Mode=OneTime}" />
+                    </StackPanel>
+                </controls:FormSection>
+
                 <!-- Units on its own row above the sections (mockup choice 1). -->
                 <controls:FormSection>
                     <controls:FieldRow Label="_Units" Target="{Binding ElementName=UnitsList}">

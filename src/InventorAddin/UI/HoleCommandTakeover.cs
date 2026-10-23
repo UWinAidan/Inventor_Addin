@@ -32,7 +32,13 @@ namespace InventorAddin.UI
         // Kept referenced, or the event stops firing.
         private UserInterfaceEvents? _uiEvents;
 
-        private HoleCommandOwner _owner;
+        private HoleCommandOwner _owner = HoleCommandOwner.Inventor;
+
+        /// <summary>
+        /// Who has the Hole button and H now: AWB Hole only while it has taken over (a take-over that failed gives
+        /// Inventor's Hole back). Editing a hole follows it (task 092).
+        /// </summary>
+        public HoleCommandOwner Owner => _owner;
 
         /// <summary>The takeover running in this session, or null before the ribbon is built or after unloading.</summary>
         internal static HoleCommandTakeover? Active { get; private set; }

@@ -98,6 +98,12 @@ public static class CommandNames
     public const string MaterialFinish = Prefix + "MaterialFinish";
     public const string AwbHole = Prefix + "AwbHole";
 
+    /// <summary>
+    /// Our Edit Feature for holes (task 092): put in place of Inventor's on the browser menu and the mini toolbar, with
+    /// Inventor's icon. It has no ribbon button.
+    /// </summary>
+    public const string AwbHoleEdit = Prefix + "AwbHoleEdit";
+
     private const string Prefix = Branding.IdPrefix + "_";
 }
 
