@@ -28,6 +28,11 @@ Every way of editing a hole in Inventor opens the AWB Hole window on it: Edit Fe
 - [ ] An Inventor hole opens with "OK makes this an AWB hole" (spec 09 question 5).
 - [ ] `dotnet test tests/InventorAddin.Core.Tests` passes; `dotnet build InventorAddin.slnx` builds
 
+## Notes for the implementer
+
+- Since this brief was written: the window was redesigned (104), depth boxes take expressions (100), and dowel seats are sized in the window (106). The re-apply comparison could also cover a dowel's seat sizes and the stored depth expressions (follow-ups of 100 and 106); include them if they fit the comparison cleanly, else leave them as follow-ups.
+- Today's edit path (`HoleReadBack`, `HoleSession` opening an existing hole) is how the window opens on a hole; route to it rather than building a second one.
+
 ## Verification
 
 Filled in by the implementer.
