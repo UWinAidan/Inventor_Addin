@@ -294,8 +294,9 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 | 101 | windows build | 096, 099 | none |
 | 102 | image only | 098, 099, 100 | 091, 092 |
 | 103 | **windows** (spike with Aidan) | 090 | 102 |
-| 104 | windows build | 102 approved by Aidan, 101 | 105 |
+| 104 | windows build | 102 approved by Aidan, 101, 106 | 105 |
 | 105 | windows build | 103, 092 | 104 |
+| 106 | windows build | 099, 100, 101 | none |
 
 - [x] 081 Spike: AWB Hole through the Inventor API (Windows)
 - [x] 082 Hole workbook: reader and models (Core)
@@ -318,12 +319,13 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 - [x] 099 Counterbore and countersink on tapped and dowel holes
 - [x] 100 Depth boxes take Inventor parameters and expressions
 - [x] 101 Preview holes in translucent red (solid red; see spec 09 question 13)
-- [x] 102 AWB Hole window redesign: mockup for Aidan (waiting for his approval)
+- [x] 102 AWB Hole window redesign: mockup for Aidan (approved 2026-10-23 with changes; revised)
 - [ ] 103 Spike: AWB Hole in a part edited in place in an assembly (with Aidan)
 - [ ] 104 AWB Hole window redesign
 - [ ] 105 AWB Hole in a part edited in place
+- [ ] 106 Dowel seats sized in the window
 
-**Order.** 082 and 083, 084, 085, 086 and 087 alongside, then 088, 089, 090. Aidan checked 090 on 2026-10-18; his three bugs and seven requests became tasks 093 to 105 (Aidan, 2026-10-18). Then: 093 to 101 one after another (fixes, then answers and requests), 091, 092, then 102 (mockup). Aidan then checks 091 to 101, approves or changes the mockup, and runs spike 103 with the parent session. Then 104 and 105, and a last check.
+**Order.** 082 and 083, 084, 085, 086 and 087 alongside, then 088, 089, 090. Aidan checked 090 on 2026-10-18; his three bugs and seven requests became tasks 093 to 105 (Aidan, 2026-10-18). Then: 093 to 101 one after another (fixes, then answers and requests), 091, 092, then 102 (mockup). Aidan then checks 091 to 101, approves or changes the mockup, and runs spike 103 with the parent session. Aidan approved the mockup on 2026-10-23 with changes (revised in task 102) and decided dowel seats (task 106). Then 106, 104, 091, 092; spike 103 and 105 with Aidan; and a last check.
 
 Not in part 1: AWB Hole on the Sheet Metal and Flat Pattern tabs (they keep Inventor's Hole), holes placed without a sketch, and Standard and Fastener type beyond spec 09's defaults (questions 2 and 3).
 
