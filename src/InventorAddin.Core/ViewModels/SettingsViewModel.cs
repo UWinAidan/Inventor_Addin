@@ -69,6 +69,16 @@ public sealed class SettingsViewModel : ObservableObject
     /// <summary>The one-line explanation shown under the finish list box.</summary>
     public const string FinishListHelpText = "Blank uses the starter finish list shipped with the add-in.";
 
+    /// <summary>The hole workbook row's label, and the name its messages use (spec 09, "Settings").</summary>
+    public const string HoleWorkbookFieldName = "Hole data";
+
+    /// <summary>The one-line explanation shown under the hole data box.</summary>
+    public const string HoleWorkbookHelpText = "The hole workbook (.xlsx). Blank uses the starter workbook shipped with the add-in.";
+
+    /// <summary>The note shown under the "Use Inventor's Hole command" checkbox.</summary>
+    public const string UseInventorHoleCommandNoteText =
+        "On gives the H shortcut and the Hole button on the 3D Model tab back to Inventor's Hole; off gives them to AWB Hole. Takes effect when you save.";
+
     /// <summary>
     /// The line break the other CAD folders text is shown with: the one a WPF text box inserts. Any line break is
     /// accepted when reading it back.
@@ -100,6 +110,7 @@ public sealed class SettingsViewModel : ObservableObject
     private string _otherCadFoldersText;
     private string _materialLibraryText;
     private string _finishListText;
+    private string _holeWorkbookText;
 
     private readonly Func<string, bool> _fileExists;
 
@@ -120,6 +131,7 @@ public sealed class SettingsViewModel : ObservableObject
         _fileExists = fileExists ?? File.Exists;
         _materialLibraryText = settings.MaterialLibraryPath;
         _finishListText = settings.FinishListPath;
+        _holeWorkbookText = settings.HoleWorkbookPath;
         _saved = Normalise(settings);
         _edited = Normalise(settings);
         _defaultDesignerText = settings.DefaultDesigner;
@@ -293,6 +305,39 @@ public sealed class SettingsViewModel : ObservableObject
         }
     }
 
+    /// <summary>The hole workbook path as typed. As <see cref="MaterialLibraryPath"/>, for a <c>.xlsx</c> file.</summary>
+    public string HoleWorkbookPath
+    {
+        get => _holeWorkbookText;
+        set
+        {
+            value ??= string.Empty;
+            if (_holeWorkbookText == value)
+                return;
+
+            _holeWorkbookText = value;
+            _edited.HoleWorkbookPath = PropertyValues.NormaliseText(value);
+            OnPropertyChanged();
+            SetValidationError(Validate());
+            OnEditChanged();
+        }
+    }
+
+    /// <summary>"Use Inventor's Hole command". Only stored; task 091 applies it when Settings is saved.</summary>
+    public bool UseInventorHoleCommand
+    {
+        get => _edited.UseInventorHoleCommand;
+        set
+        {
+            if (_edited.UseInventorHoleCommand == value)
+                return;
+
+            _edited.UseInventorHoleCommand = value;
+            OnPropertyChanged();
+            OnEditChanged();
+        }
+    }
+
     /// <summary>The units new files are created in.</summary>
     public UnitsSystem DefaultUnits
     {
@@ -339,6 +384,8 @@ public sealed class SettingsViewModel : ObservableObject
 
     public string MaterialFinishSummary => SettingsSummaries.MaterialFinish(_edited.MaterialLibraryPath, _edited.FinishListPath);
 
+    public string HolesSummary => SettingsSummaries.Holes(_edited.HoleWorkbookPath, _edited.UseInventorHoleCommand);
+
     public string DeveloperSummary => SettingsSummaries.Developer(_edited.ShowDeveloperTools);
 
     public string DefaultDesignerHelp => DefaultDesignerHelpText;
@@ -354,6 +401,10 @@ public sealed class SettingsViewModel : ObservableObject
     public string MaterialLibraryHelp => MaterialLibraryHelpText;
 
     public string FinishListHelp => FinishListHelpText;
+
+    public string HoleWorkbookHelp => HoleWorkbookHelpText;
+
+    public string UseInventorHoleCommandNote => UseInventorHoleCommandNoteText;
 
     /// <summary>Where the settings are written, for display.</summary>
     public string SettingsFilePath => _store.FilePath;
@@ -422,6 +473,10 @@ public sealed class SettingsViewModel : ObservableObject
     public static string? ValidateFinishListPath(string? path) =>
         ValidateLibraryFile(path, FinishListFieldName, LibraryPaths.FinishListExtension, @"D:\Libraries\finishes.csv");
 
+    /// <summary>As <see cref="ValidateMaterialLibraryPath"/>, for the hole workbook, which must end in <c>.xlsx</c>.</summary>
+    public static string? ValidateHoleWorkbookPath(string? path) =>
+        ValidateLibraryFile(path, HoleWorkbookFieldName, LibraryPaths.HoleWorkbookExtension, @"D:\Libraries\AWB_Holes.xlsx");
+
     /// <summary>The message <see cref="SaveCommand"/> shows when a changed library path names no file.</summary>
     public static string LibraryFileNotFoundError(string fieldName, string path) =>
         $"{fieldName}: '{path}' was not found. Choose an existing file, or leave it blank to use the starter file.";
@@ -484,10 +539,12 @@ public sealed class SettingsViewModel : ObservableObject
             OtherCadFolders = settings.OtherCadFolders.Select(PropertyValues.NormaliseText).Where(f => f.Length > 0).ToArray(),
             MaterialLibraryPath = PropertyValues.NormaliseText(settings.MaterialLibraryPath),
             FinishListPath = PropertyValues.NormaliseText(settings.FinishListPath),
+            HoleWorkbookPath = PropertyValues.NormaliseText(settings.HoleWorkbookPath),
         };
 
     // The first problem in window order: General (default designer, other names), then Part numbers (register
-    // folder), then Folders (work folder, other CAD folders), then Material and finish (library, finish list).
+    // folder), then Folders (work folder, other CAD folders), then Material and finish (library, finish list), then
+    // Holes (hole data).
     private string? Validate() =>
         PropertyValues.ValidateText(DefaultDesignerFieldName, _defaultDesignerText)
         ?? PropertyValues.ValidateText(OtherNamesFieldName, _otherNamesText)
@@ -495,14 +552,16 @@ public sealed class SettingsViewModel : ObservableObject
         ?? ValidateWorkFolder(_workFolderText)
         ?? ValidateOtherCadFolders(_otherCadFoldersText)
         ?? ValidateMaterialLibraryPath(_materialLibraryText)
-        ?? ValidateFinishListPath(_finishListText);
+        ?? ValidateFinishListPath(_finishListText)
+        ?? ValidateHoleWorkbookPath(_holeWorkbookText);
 
     // Whether the library files exist is checked only on save, and only for a path that changed: a check per
     // keystroke could block on a disconnected drive (spike 032), and a library on a NAS that is offline today should
     // not stop the user saving another setting.
     private string? CheckLibraryFilesExist() =>
         CheckFileExists(MaterialLibraryFieldName, _edited.MaterialLibraryPath, _saved.MaterialLibraryPath)
-        ?? CheckFileExists(FinishListFieldName, _edited.FinishListPath, _saved.FinishListPath);
+        ?? CheckFileExists(FinishListFieldName, _edited.FinishListPath, _saved.FinishListPath)
+        ?? CheckFileExists(HoleWorkbookFieldName, _edited.HoleWorkbookPath, _saved.HoleWorkbookPath);
 
     private string? CheckFileExists(string fieldName, string path, string savedPath)
     {
@@ -596,6 +655,12 @@ public sealed class SettingsViewModel : ObservableObject
             OnPropertyChanged(nameof(FinishListPath));
         }
 
+        if (_holeWorkbookText != toWrite.HoleWorkbookPath)
+        {
+            _holeWorkbookText = toWrite.HoleWorkbookPath;
+            OnPropertyChanged(nameof(HoleWorkbookPath));
+        }
+
         OnEditChanged();
         Saved?.Invoke(this, EventArgs.Empty);
     }
@@ -631,6 +696,7 @@ public sealed class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(PartNumbersSummary));
         OnPropertyChanged(nameof(FoldersSummary));
         OnPropertyChanged(nameof(MaterialFinishSummary));
+        OnPropertyChanged(nameof(HolesSummary));
         OnPropertyChanged(nameof(DeveloperSummary));
     }
 }

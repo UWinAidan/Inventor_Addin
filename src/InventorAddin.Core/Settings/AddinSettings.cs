@@ -1,3 +1,5 @@
+using InventorAddin.Core.Holes;
+
 namespace InventorAddin.Core.Settings;
 
 /// <summary>
@@ -7,8 +9,9 @@ namespace InventorAddin.Core.Settings;
 /// </summary>
 /// <remarks>
 /// A record so that two instances with the same values compare equal. <see cref="Equals(AddinSettings?)"/> is
-/// written out because <see cref="OtherCadFolders"/> and <see cref="PreferredMaterials"/> are lists, which a record would compare by reference: a new
-/// setting must be added there and to <see cref="GetHashCode"/>.
+/// written out because <see cref="OtherCadFolders"/> and <see cref="PreferredMaterials"/> are lists, and
+/// <see cref="LastDowelSeatsMm"/> and <see cref="LastDowelSeatsIn"/> maps, which a record would compare by reference: a
+/// new setting must be added there and to <see cref="GetHashCode"/>.
 /// </remarks>
 public sealed record AddinSettings
 {
@@ -128,6 +131,103 @@ public sealed record AddinSettings
     private string _finishListPath = string.Empty;
 
     /// <summary>
+    /// The hole workbook (<c>.xlsx</c>) AWB Hole reads (spec 09, "Settings"). <c>""</c> by default, which means the
+    /// starter workbook shipped with the add-in (<see cref="Materials.LibraryPaths.HoleWorkbook"/>). A null is stored
+    /// as <c>""</c>.
+    /// </summary>
+    public string HoleWorkbookPath
+    {
+        get => _holeWorkbookPath;
+        set => _holeWorkbookPath = value ?? string.Empty;
+    }
+
+    private string _holeWorkbookPath = string.Empty;
+
+    /// <summary>
+    /// "Use Inventor's Hole command" (spec 09, "Settings"): on gives Inventor's Hole button and H shortcut back; off,
+    /// the default, gives them to AWB Hole. <see cref="Holes.HoleTakeoverRules"/> decides what that sets (task 091).
+    /// </summary>
+    public bool UseInventorHoleCommand { get; set; }
+
+    /// <summary>
+    /// The depth, in mm, of the last blind clearance or dowel hole kept with OK in Metric (spec 09, "Blind holes";
+    /// task 097). A new blind hole in Metric starts at it. Not shown in the Settings window. Null until a hole is made;
+    /// a value that is not greater than zero is stored as null. Changed through
+    /// <see cref="Holes.HoleLastDepths.Remember"/>.
+    /// </summary>
+    public decimal? LastBlindDepthMm
+    {
+        get => _lastBlindDepthMm;
+        set => _lastBlindDepthMm = value is > 0 ? value : null;
+    }
+
+    private decimal? _lastBlindDepthMm;
+
+    /// <summary>As <see cref="LastBlindDepthMm"/>, in inches, for Imperial.</summary>
+    public decimal? LastBlindDepthIn
+    {
+        get => _lastBlindDepthIn;
+        set => _lastBlindDepthIn = value is > 0 ? value : null;
+    }
+
+    private decimal? _lastBlindDepthIn;
+
+    /// <summary>
+    /// The seat of the last dowel hole kept with OK in Metric, by dowel size, in mm (spec 09 question 14; task 106):
+    /// written to the file as an object keyed by the Dowel tab's Size (<c>"6 mm": { "cboreDiameter": 7, ... }</c>), a
+    /// value not known left out. A new seat on a dowel of that size starts at it. Not shown in the Settings window.
+    /// Empty by default; a null map is stored as empty, blank keys and null entries are dropped, keys match ignoring
+    /// case (the first of two such keys wins). The map is copied when set. Changed through
+    /// <see cref="HoleLastDowelSeats.Remember"/>.
+    /// </summary>
+    public IReadOnlyDictionary<string, HoleDowelSeat> LastDowelSeatsMm
+    {
+        get => _lastDowelSeatsMm;
+        set => _lastDowelSeatsMm = DowelSeatMap(value);
+    }
+
+    private IReadOnlyDictionary<string, HoleDowelSeat> _lastDowelSeatsMm = DowelSeatMap(null);
+
+    /// <summary>As <see cref="LastDowelSeatsMm"/>, in inches, for Imperial.</summary>
+    public IReadOnlyDictionary<string, HoleDowelSeat> LastDowelSeatsIn
+    {
+        get => _lastDowelSeatsIn;
+        set => _lastDowelSeatsIn = DowelSeatMap(value);
+    }
+
+    private IReadOnlyDictionary<string, HoleDowelSeat> _lastDowelSeatsIn = DowelSeatMap(null);
+
+    /// <summary>
+    /// Whether the AWB Hole window's diagram is open (task 104; mockup choice 12): true, the default, shows it; false
+    /// shows only its header line with a summary. Remembered across windows and restarts. Not shown in the Settings
+    /// window. Changed through <see cref="HoleDiagramState.Remember"/>.
+    /// </summary>
+    public bool HoleDiagramExpanded { get; set; } = true;
+
+    /// <summary>
+    /// A copy of a dowel seat map as the settings keep it: keys trimmed and matched ignoring case (the first wins),
+    /// blank keys and null entries dropped; empty for null.
+    /// </summary>
+    public static IReadOnlyDictionary<string, HoleDowelSeat> DowelSeatMap(IEnumerable<KeyValuePair<string, HoleDowelSeat>>? map)
+    {
+        var copy = new Dictionary<string, HoleDowelSeat>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (key, seat) in map ?? [])
+        {
+            var trimmed = (key ?? "").Trim();
+            if (trimmed.Length > 0 && seat is not null)
+                copy.TryAdd(trimmed, seat);
+        }
+
+        return copy;
+    }
+
+    private static bool SameDowelSeats(
+        IReadOnlyDictionary<string, HoleDowelSeat> a, IReadOnlyDictionary<string, HoleDowelSeat> b) =>
+        a.Count == b.Count
+        && a.All(entry => b.TryGetValue(entry.Key, out var other) && other == entry.Value
+            && b.Keys.Contains(entry.Key, StringComparer.Ordinal));
+
+    /// <summary>
     /// Display names of the materials starred as preferred in the Material and Finish window (spec 03, question 11).
     /// Not shown in the Settings window. Empty by default; a null list is stored as empty and null entries are
     /// dropped. The list is copied when set. Changed through <see cref="Materials.LibraryPaths.TogglePreferred"/>.
@@ -156,6 +256,13 @@ public sealed record AddinSettings
         && OtherNamesForMe == other.OtherNamesForMe
         && MaterialLibraryPath == other.MaterialLibraryPath
         && FinishListPath == other.FinishListPath
+        && HoleWorkbookPath == other.HoleWorkbookPath
+        && UseInventorHoleCommand == other.UseInventorHoleCommand
+        && LastBlindDepthMm == other.LastBlindDepthMm
+        && LastBlindDepthIn == other.LastBlindDepthIn
+        && SameDowelSeats(LastDowelSeatsMm, other.LastDowelSeatsMm)
+        && SameDowelSeats(LastDowelSeatsIn, other.LastDowelSeatsIn)
+        && HoleDiagramExpanded == other.HoleDiagramExpanded
         && PreferredMaterials.SequenceEqual(other.PreferredMaterials, StringComparer.Ordinal);
 
     public override int GetHashCode()
@@ -172,6 +279,13 @@ public sealed record AddinSettings
         hash.Add(OtherNamesForMe, StringComparer.Ordinal);
         hash.Add(MaterialLibraryPath, StringComparer.Ordinal);
         hash.Add(FinishListPath, StringComparer.Ordinal);
+        hash.Add(HoleWorkbookPath, StringComparer.Ordinal);
+        hash.Add(UseInventorHoleCommand);
+        hash.Add(LastBlindDepthMm);
+        hash.Add(LastBlindDepthIn);
+        hash.Add(LastDowelSeatsMm.Count);
+        hash.Add(LastDowelSeatsIn.Count);
+        hash.Add(HoleDiagramExpanded);
         foreach (var material in PreferredMaterials)
             hash.Add(material, StringComparer.Ordinal);
         return hash.ToHashCode();

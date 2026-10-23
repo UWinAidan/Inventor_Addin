@@ -2,7 +2,19 @@
 
 Where each big item stands. One line per item, kept current by the parent session. For the order of work and the task lists see `docs/PLAN.md`; for what needs doing next see `TODO.md`.
 
-Last updated: 2026-10-17
+Last updated: 2026-10-23
+
+## Session handoff (ContextKeeper)
+
+- Updated: 2026-10-23. Branch `claude/m4-hole-generator`, pushed, PR open against `main`.
+- Goal: M4 part 1 run per `docs/WORKFLOW.md`: finished. Tasks 102 (revised), 106, 104, 091, 092 committed; Core tests 3592 passed; the full solution builds on Windows.
+- Current state: nothing from 091 to 106 has run in Inventor. Aidan works through the PR's checklist.
+- Next steps:
+  1. Aidan's check of the PR; turn failures into fix tasks; update this file and `TODO.md` from what he reports.
+  2. Spike 103 (in-place edit) with Aidan, then task 105.
+  3. Open decisions for Aidan: spec 09 questions 11, 12, 14, 15 (window height), and the Defaults dated 2026-10-23 in `DECISIONS.md`.
+- Gotchas: `cat > file` with no heredoc in Git Bash waits on stdin and hangs; write scripts with the Write tool into the scratchpad. Many tracked files are CRLF: replace with line-ending-aware scripts. `GetValueFromExpression` throws "Unspecified error" with no reason; abort a nested transaction before its parent. Spike 081's code is at commit `1ef94fa` (branch deleted).
+- Read first: `docs/WORKFLOW.md`, `docs/PLAN.md` (M4 part 1), spec `docs/features/09-awb-hole.md`, task files 103 and 105.
 
 ## Big items
 
@@ -13,7 +25,8 @@ Last updated: 2026-10-17
 | Window style and icons (M1b) | 08 | **Done, tested in Inventor** | Tasks 020 to 031. Shared look in light and dark, all three windows restyled, icons on ribbon and headers, XAML rules test. Every check passed on Windows. Two follow-ups on the build's deploy line are in `TODO.md` |
 | Part creation and numbering (M2) | 02 | **Done, tested in Inventor** | Every check passed; the last run 1 checks were reported on 2026-10-17. Run 2 checked on Windows 2026-10-11; fix run 053 to 061 and fix run 2 (spike 062, tasks 063 to 066) checked 2026-10-12 and passed. Merged into main from `claude/m2-fix-run` |
 | Material and finish (M3) | 03 | **Done, tested in Inventor** | Tasks 067 to 080, merged into main from `claude/m3-material-finish` on 2026-10-17: starter library and finish list, Material and Finish window and button, Part Properties Change button and warning, Settings and About on every ribbon, windows that fit the screen, Settings as one resizable page of collapsible sections, dialogs with only a close button, and a themed scroll bar. Every check passed |
-| Hole generator and hole table wizard (M4) | 04 | Not started | Starts with a hole generator for part files (details to discuss with Aidan). Wizard: Core half needs three answers; add-in half needs a Windows spike |
+| AWB Hole (M4 part 1) | 09 | **Built, waiting for Aidan's check in Inventor** | Decided by Aidan 2026-10-17; spike 081 done with Aidan. Tasks 082 to 090 checked by Aidan 2026-10-18 (making, picking, previewing, tapped and dowel holes, OK, Cancel and Undo work). Then built on branch `claude/m4-hole-generator`, compiled on Windows, not yet run in Inventor: fixes and requests 093 to 101, mockup 102 (approved with changes 2026-10-23), dowel seats 106, window redesign 104, takeover of Hole and H 091, Edit Feature and double-click 092. Spike 103 (in-place edit) and task 105 wait for a session with Aidan |
+| Hole table wizard (M4 part 2) | 04 | Not started | Planned after AWB Hole. Core half needs three answers; add-in half needs a Windows spike |
 | Drawing tools (M5) | 05 | Not started | Waiting on which commands Aidan wants. Will include a custom drawing template |
 | iLogic injection (M6) | 06 | Not started | Waiting on which rules |
 | Distribution (installer, download page) | none yet | Parked | Was to be decided when M2 was planned; still waiting on Aidan |
@@ -32,5 +45,5 @@ States used: Not started, Planned, In progress, Built (merged, not tested in Inv
 
 ## Numbers
 
-- Tasks finished: 80 (001 to 080)
+- Tasks finished: 90 (001 to 090), plus 091 to 102, 104 and 106 on branch `claude/m4-hole-generator`
 - Core tests: 2650 after task 080; they run in the cloud and on Windows with `dotnet test tests/InventorAddin.Core.Tests`

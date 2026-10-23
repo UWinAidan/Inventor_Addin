@@ -96,6 +96,13 @@ public static class CommandNames
     public const string CreatePrint = Prefix + "CreatePrint";
     public const string MassUpdate = Prefix + "MassUpdate";
     public const string MaterialFinish = Prefix + "MaterialFinish";
+    public const string AwbHole = Prefix + "AwbHole";
+
+    /// <summary>
+    /// Our Edit Feature for holes (task 092): put in place of Inventor's on the browser menu and the mini toolbar, with
+    /// Inventor's icon. It has no ribbon button.
+    /// </summary>
+    public const string AwbHoleEdit = Prefix + "AwbHoleEdit";
 
     private const string Prefix = Branding.IdPrefix + "_";
 }
@@ -122,4 +129,7 @@ public static class IconNames
 
     // M3 (task 073). Material and Finish; task 075 added its layout entry.
     public const string MaterialFinish = "MaterialFinish";
+
+    // M4 part 1 (task 087). AWB Hole; its command task adds the layout entry.
+    public const string AwbHole = "AwbHole";
 }

@@ -9,9 +9,9 @@ namespace InventorAddin.Core.Materials;
 public sealed record LibraryPath(string Path, bool IsStarter);
 
 /// <summary>
-/// Where the material library and the finish list are read from (spec 03, "Add-in side"), and the preferred
-/// materials list. A blank setting means the starter file in the <see cref="StarterFolderName"/> folder beside the
-/// add-in, so a plain download works (Aidan, 2026-10-12).
+/// Where the material library and the finish list (spec 03, "Add-in side") and the hole workbook (spec 09) are read
+/// from, and the preferred materials list. A blank setting means the starter file in the
+/// <see cref="StarterFolderName"/> folder beside the add-in, so a plain download works (Aidan, 2026-10-12).
 /// </summary>
 public static class LibraryPaths
 {
@@ -24,11 +24,17 @@ public static class LibraryPaths
     /// <summary>The starter finish list's file name.</summary>
     public const string StarterFinishListFileName = "finishes.csv";
 
+    /// <summary>The starter hole workbook's file name (spec 09, "The workbook").</summary>
+    public const string StarterHoleWorkbookFileName = "AWB_Holes.xlsx";
+
     /// <summary>The material library's file extension, compared ignoring case.</summary>
     public const string MaterialLibraryExtension = ".adsklib";
 
     /// <summary>The finish list's file extension, compared ignoring case.</summary>
     public const string FinishListExtension = ".csv";
+
+    /// <summary>The hole workbook's file extension, compared ignoring case.</summary>
+    public const string HoleWorkbookExtension = ".xlsx";
 
     /// <summary>
     /// The material library to read: <see cref="AddinSettings.MaterialLibraryPath"/> trimmed when it is not blank,
@@ -45,6 +51,14 @@ public static class LibraryPaths
     /// <param name="addinFolder">The folder <c>InventorAddin.dll</c> runs from.</param>
     public static LibraryPath FinishList(AddinSettings settings, string addinFolder) =>
         Resolve((settings ?? throw new ArgumentNullException(nameof(settings))).FinishListPath, addinFolder, StarterFinishListFileName);
+
+    /// <summary>
+    /// The hole workbook to read: <see cref="AddinSettings.HoleWorkbookPath"/> trimmed when it is not blank, otherwise
+    /// the starter workbook in <paramref name="addinFolder"/>. Whether the file exists is not checked.
+    /// </summary>
+    /// <param name="addinFolder">The folder <c>InventorAddin.dll</c> runs from.</param>
+    public static LibraryPath HoleWorkbook(AddinSettings settings, string addinFolder) =>
+        Resolve((settings ?? throw new ArgumentNullException(nameof(settings))).HoleWorkbookPath, addinFolder, StarterHoleWorkbookFileName);
 
     /// <summary>Whether <paramref name="name"/> is in the preferred materials, ignoring case and surrounding spaces.</summary>
     public static bool IsPreferred(AddinSettings settings, string? name)

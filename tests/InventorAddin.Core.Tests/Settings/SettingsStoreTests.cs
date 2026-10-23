@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using InventorAddin.Core.Holes;
 using InventorAddin.Core.Settings;
 
 namespace InventorAddin.Core.Tests.Settings;
@@ -370,6 +371,13 @@ public sealed class SettingsStoreTests : IDisposable
             s => s with { OtherNamesForMe = "x" },
             s => s with { MaterialLibraryPath = @"D:\Lib.adsklib" },
             s => s with { FinishListPath = @"D:\finishes.csv" },
+            s => s with { HoleWorkbookPath = @"D:\AWB_Holes.xlsx" },
+            s => s with { UseInventorHoleCommand = true },
+            s => s with { LastBlindDepthMm = 12m },
+            s => s with { LastBlindDepthIn = 0.5m },
+            s => s with { LastDowelSeatsMm = new Dictionary<string, HoleDowelSeat> { ["6 mm"] = new(7m, 3m, null, null) } },
+            s => s with { LastDowelSeatsIn = new Dictionary<string, HoleDowelSeat> { ["1/4\""] = new(null, null, 0.3m, 90m) } },
+            s => s with { HoleDiagramExpanded = false },
             s => s with { PreferredMaterials = new[] { "Test Steel" } },
         };
         var settableProperties = typeof(AddinSettings).GetProperties().Count(p => p.CanWrite);
@@ -495,6 +503,223 @@ public sealed class SettingsStoreTests : IDisposable
         var result = store.Load();
         Assert.Empty(result.Warnings);
         Assert.Equal(original, result.Settings);
+    }
+
+    // ---- Hole settings (task 086) ----
+
+    [Fact]
+    public void HoleSettings_Defaults_AreBlankAndAwbHole()
+    {
+        var settings = new AddinSettings();
+
+        Assert.Equal("", settings.HoleWorkbookPath);
+        Assert.False(settings.UseInventorHoleCommand);
+    }
+
+    [Fact]
+    public void Load_FileWrittenBeforeHoleSettings_LoadsDefaults()
+    {
+        WriteSettingsFile("""
+            {
+              "schemaVersion": 1,
+              "materialLibraryPath": "D:\\Lib.adsklib",
+              "finishListPath": "D:\\finishes.csv"
+            }
+            """);
+
+        var result = new SettingsStore(_folder).Load();
+
+        Assert.Empty(result.Warnings);
+        Assert.Equal("", result.Settings.HoleWorkbookPath);
+        Assert.False(result.Settings.UseInventorHoleCommand);
+        Assert.Equal(@"D:\Lib.adsklib", result.Settings.MaterialLibraryPath);
+    }
+
+    [Fact]
+    public void Load_NullHoleWorkbookPath_LoadsAsBlank()
+    {
+        WriteSettingsFile("""{ "holeWorkbookPath": null }""");
+
+        var result = new SettingsStore(_folder).Load();
+
+        Assert.Empty(result.Warnings);
+        Assert.Equal(new AddinSettings(), result.Settings);
+    }
+
+    [Fact]
+    public void Save_WritesHoleSettingsInCamelCase_ThenRoundTrips()
+    {
+        var store = new SettingsStore(_folder);
+        var original = new AddinSettings { HoleWorkbookPath = @"\\server\share\AWB_Holes.xlsx", UseInventorHoleCommand = true };
+
+        store.Save(original);
+
+        var json = JsonNode.Parse(File.ReadAllText(SettingsPath))!.AsObject();
+        Assert.Equal(@"\\server\share\AWB_Holes.xlsx", json["holeWorkbookPath"]!.GetValue<string>());
+        Assert.True(json["useInventorHoleCommand"]!.GetValue<bool>());
+
+        var result = store.Load();
+        Assert.Empty(result.Warnings);
+        Assert.Equal(original, result.Settings);
+    }
+
+    // ---- Last blind hole depths (task 097) ----
+
+    [Fact]
+    public void Save_WritesLastBlindDepthsInCamelCase_ThenRoundTrips()
+    {
+        var store = new SettingsStore(_folder);
+        var original = new AddinSettings { LastBlindDepthMm = 12.5m, LastBlindDepthIn = 0.375m };
+
+        store.Save(original);
+
+        var json = JsonNode.Parse(File.ReadAllText(SettingsPath))!.AsObject();
+        Assert.Equal(12.5m, json["lastBlindDepthMm"]!.GetValue<decimal>());
+        Assert.Equal(0.375m, json["lastBlindDepthIn"]!.GetValue<decimal>());
+
+        var result = store.Load();
+        Assert.Empty(result.Warnings);
+        Assert.Equal(original, result.Settings);
+    }
+
+    [Fact]
+    public void Load_FileWrittenBeforeLastBlindDepths_LoadsThemAsNone()
+    {
+        WriteSettingsFile("""
+            {
+              "schemaVersion": 1,
+              "holeWorkbookPath": "D:\\Holes.xlsx"
+            }
+            """);
+
+        var result = new SettingsStore(_folder).Load();
+
+        Assert.Empty(result.Warnings);
+        Assert.Null(result.Settings.LastBlindDepthMm);
+        Assert.Null(result.Settings.LastBlindDepthIn);
+    }
+
+    [Fact]
+    public void LastBlindDepths_NotGreaterThanZero_AreStoredAsNone()
+    {
+        WriteSettingsFile("{ \"lastBlindDepthMm\": 0, \"lastBlindDepthIn\": -1 }");
+
+        var result = new SettingsStore(_folder).Load();
+
+        Assert.Empty(result.Warnings);
+        Assert.Equal(new AddinSettings(), result.Settings);
+    }
+
+    // ---- The AWB Hole diagram's state (task 104) ----
+
+    [Fact]
+    public void Save_WritesHoleDiagramExpandedInCamelCase_ThenRoundTrips()
+    {
+        var store = new SettingsStore(_folder);
+        var original = new AddinSettings { HoleDiagramExpanded = false };
+
+        store.Save(original);
+
+        var json = JsonNode.Parse(File.ReadAllText(SettingsPath))!.AsObject();
+        Assert.False(json["holeDiagramExpanded"]!.GetValue<bool>());
+
+        var result = store.Load();
+        Assert.Empty(result.Warnings);
+        Assert.Equal(original, result.Settings);
+        Assert.False(result.Settings.HoleDiagramExpanded);
+    }
+
+    [Fact]
+    public void Load_FileWrittenBeforeHoleDiagramState_LoadsItExpanded()
+    {
+        WriteSettingsFile("""
+            {
+              "schemaVersion": 1,
+              "holeWorkbookPath": "D:\\Holes.xlsx",
+              "lastBlindDepthMm": 12
+            }
+            """);
+
+        var result = new SettingsStore(_folder).Load();
+
+        Assert.Empty(result.Warnings);
+        Assert.True(result.Settings.HoleDiagramExpanded);
+    }
+
+    // ---- Last dowel seats (task 106) ----
+
+    [Fact]
+    public void Save_WritesLastDowelSeats_KeyedBySize_LeavingOutUnknownValues_ThenRoundTrips()
+    {
+        var store = new SettingsStore(_folder);
+        var original = new AddinSettings
+        {
+            LastDowelSeatsMm = new Dictionary<string, HoleDowelSeat>
+            {
+                ["6 mm"] = new(7.5m, 3m, null, null),
+                ["8 mm"] = new(9m, 4m, 9.5m, 100m),
+            },
+            LastDowelSeatsIn = new Dictionary<string, HoleDowelSeat> { ["1/4\""] = new(null, null, 0.29m, 90m) },
+        };
+
+        store.Save(original);
+
+        var json = JsonNode.Parse(File.ReadAllText(SettingsPath))!.AsObject();
+        var six = json["lastDowelSeatsMm"]!["6 mm"]!.AsObject();
+        Assert.Equal(7.5m, six["cboreDiameter"]!.GetValue<decimal>());
+        Assert.Equal(3m, six["cboreDepth"]!.GetValue<decimal>());
+        Assert.False(six.ContainsKey("csinkDiameter"));
+        Assert.False(six.ContainsKey("isEmpty"));
+        Assert.Equal(90m, json["lastDowelSeatsIn"]!["1/4\""]!["csinkAngleDeg"]!.GetValue<decimal>());
+
+        var result = store.Load();
+        Assert.Empty(result.Warnings);
+        Assert.Equal(original, result.Settings);
+        Assert.Equal(new HoleDowelSeat(9m, 4m, 9.5m, 100m), result.Settings.LastDowelSeatsMm["8 MM"]);
+    }
+
+    [Fact]
+    public void Load_FileWrittenBeforeLastDowelSeats_LoadsThemAsEmpty()
+    {
+        WriteSettingsFile("{ \"schemaVersion\": 1, \"lastBlindDepthMm\": 12 }");
+
+        var result = new SettingsStore(_folder).Load();
+
+        Assert.Empty(result.Warnings);
+        Assert.Empty(result.Settings.LastDowelSeatsMm);
+        Assert.Empty(result.Settings.LastDowelSeatsIn);
+    }
+
+    [Fact]
+    public void Load_LastDowelSeats_NullMapsEntriesAndMissingValues_AreTolerated()
+    {
+        WriteSettingsFile("""
+            {
+              "lastDowelSeatsMm": { "6 mm": null, " ": { "cboreDiameter": 7 }, "8 mm": { "cboreDiameter": 9 }, "8 MM": { "cboreDiameter": 1 } },
+              "lastDowelSeatsIn": null
+            }
+            """);
+
+        var result = new SettingsStore(_folder).Load();
+
+        Assert.Empty(result.Warnings);
+        var seat = Assert.Single(result.Settings.LastDowelSeatsMm);
+        Assert.Equal("8 mm", seat.Key);
+        Assert.Equal(new HoleDowelSeat(9m, null, null, null), seat.Value);
+        Assert.Empty(result.Settings.LastDowelSeatsIn);
+    }
+
+    [Fact]
+    public void LastDowelSeats_AreCopiedWhenSet()
+    {
+        var map = new Dictionary<string, HoleDowelSeat> { ["6 mm"] = new(7m, 3m, null, null) };
+        var settings = new AddinSettings { LastDowelSeatsMm = map };
+
+        map["8 mm"] = new(9m, 4m, null, null);
+
+        Assert.Single(settings.LastDowelSeatsMm);
+        Assert.Equal(settings, new AddinSettings { LastDowelSeatsMm = new Dictionary<string, HoleDowelSeat> { ["6 mm"] = new(7m, 3m, null, null) } });
+        Assert.NotEqual(settings, new AddinSettings { LastDowelSeatsMm = new Dictionary<string, HoleDowelSeat> { ["6 mm"] = new(7m, 2m, null, null) } });
     }
 
     [Fact]

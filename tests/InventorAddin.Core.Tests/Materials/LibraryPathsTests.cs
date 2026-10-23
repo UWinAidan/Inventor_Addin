@@ -74,6 +74,40 @@ public sealed class LibraryPathsTests
         Assert.Throws<ArgumentException>(() => LibraryPaths.FinishList(new AddinSettings(), folder!));
     }
 
+    // ---- Hole workbook (task 086) ----
+
+    [Fact]
+    public void HoleWorkbook_StarterFileName_AndExtension()
+    {
+        Assert.Equal("AWB_Holes.xlsx", LibraryPaths.StarterHoleWorkbookFileName);
+        Assert.Equal(".xlsx", LibraryPaths.HoleWorkbookExtension);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("  ")]
+    public void HoleWorkbook_BlankSetting_IsTheStarter(string setting)
+    {
+        var path = LibraryPaths.HoleWorkbook(new AddinSettings { HoleWorkbookPath = setting }, AddinFolder);
+
+        Assert.Equal(new LibraryPath(Starter("AWB_Holes.xlsx"), IsStarter: true), path);
+    }
+
+    [Fact]
+    public void HoleWorkbook_Setting_IsUsedTrimmed()
+    {
+        var path = LibraryPaths.HoleWorkbook(new AddinSettings { HoleWorkbookPath = " B:\\Data\\AWB_Holes.xlsx\t" }, AddinFolder);
+
+        Assert.Equal(new LibraryPath(@"B:\Data\AWB_Holes.xlsx", IsStarter: false), path);
+    }
+
+    [Fact]
+    public void HoleWorkbook_NeedsSettingsAndAnAddinFolder()
+    {
+        Assert.Throws<ArgumentNullException>(() => LibraryPaths.HoleWorkbook(null!, AddinFolder));
+        Assert.Throws<ArgumentException>(() => LibraryPaths.HoleWorkbook(new AddinSettings(), " "));
+    }
+
     [Fact]
     public void Paths_RejectNullSettings()
     {

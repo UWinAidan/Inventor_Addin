@@ -1,0 +1,205 @@
+namespace InventorAddin.Core.Holes;
+
+/// <summary>
+/// What kind of AWB hole it is (spec 09, "Types and seats"). In the window a dowel or precision hole is Type
+/// Clearance with Standard AWB Dowel (spec 09 question 3); Inventor models it as a plain drilled hole.
+/// </summary>
+public enum HoleKind
+{
+    Clearance,
+    Tapped,
+    Dowel,
+}
+
+/// <summary>The seat of a hole, as Inventor's: none, a counterbore or a countersink.</summary>
+public enum HoleSeat
+{
+    None,
+    Counterbore,
+    Countersink,
+}
+
+/// <summary>How the hole ends, as Inventor's: at a depth, through everything, or at a face picked in Inventor.</summary>
+public enum HoleTermination
+{
+    Distance,
+    ThroughAll,
+    ToFace,
+}
+
+/// <summary>
+/// The Type and Standard names the window shows (spec 09, "The window"), and how they map onto <see cref="HoleKind"/>.
+/// Type Clearance lists AWB Clearance and AWB Dowel; Type Tapped lists AWB Tapped.
+/// </summary>
+public static class HoleStandards
+{
+    public const string ClearanceType = "Clearance";
+    public const string TappedType = "Tapped";
+
+    public const string ClearanceStandard = Branding.ShortName + " Clearance";
+    public const string TappedStandard = Branding.ShortName + " Tapped";
+    public const string DowelStandard = Branding.ShortName + " Dowel";
+
+    /// <summary>The window's Type for a kind: Tapped for tapped holes, Clearance for clearance and dowel holes.</summary>
+    public static string TypeName(HoleKind kind) => kind == HoleKind.Tapped ? TappedType : ClearanceType;
+
+    /// <summary>The window's Standard for a kind.</summary>
+    public static string StandardName(HoleKind kind) => kind switch
+    {
+        HoleKind.Clearance => ClearanceStandard,
+        HoleKind.Tapped => TappedStandard,
+        HoleKind.Dowel => DowelStandard,
+        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
+    };
+
+    /// <summary>The Standards listed for a Type, in window order.</summary>
+    public static IReadOnlyList<string> StandardsFor(string type) =>
+        string.Equals(type, TappedType, StringComparison.OrdinalIgnoreCase)
+            ? [TappedStandard]
+            : [ClearanceStandard, DowelStandard];
+
+    /// <summary>The kind for a Standard name, or null when it is not one of ours.</summary>
+    public static HoleKind? KindFor(string? standard)
+    {
+        foreach (var kind in Enum.GetValues<HoleKind>())
+        {
+            if (string.Equals(standard?.Trim(), StandardName(kind), StringComparison.OrdinalIgnoreCase))
+            {
+                return kind;
+            }
+        }
+
+        return null;
+    }
+}
+
+/// <summary>
+/// The choices made for one AWB hole in the window (spec 09, "The window"). Lengths are in the units chosen at the
+/// top: millimetres for <see cref="HoleUnits.Metric"/>, inches for <see cref="HoleUnits.Imperial"/>, as in the
+/// workbook. <see cref="HoleRules"/> turns a spec and the workbook into <see cref="HoleGeometry"/>.
+/// </summary>
+/// <param name="Units">Metric or Imperial; picks the workbook rows.</param>
+/// <param name="Kind">Clearance, Tapped or Dowel.</param>
+/// <param name="Seat">
+/// None, Counterbore or Countersink, for every kind (spec 09, "Types and seats"). A tapped hole's seat comes from the
+/// Counterbore or Countersink row of the same size (<see cref="HoleRules.SameSizeCounterbores"/>; task 099); a dowel's
+/// from its own <see cref="CboreDiameter"/>, <see cref="CboreDepth"/>, <see cref="CsinkDiameter"/> and
+/// <see cref="CsinkAngleDeg"/> (task 106).
+/// </param>
+/// <param name="Size">
+/// The size key: the Size of a Clearance, Counterbore, Countersink or Dowel row, or the Thread of a Tapped row
+/// (as written in the workbook, <c>M6</c>, <c>#10-32 UNF</c>).
+/// </param>
+/// <param name="Fastener">
+/// Seated clearance and tapped holes: the Screw of the Counterbore or Countersink row (<c>SHCS</c>). Null takes the
+/// first row of the size (for a tapped hole, the first row of the same size), in workbook order. Not used for a dowel.
+/// </param>
+/// <param name="ClearanceFit">Clearance holes with no seat: the Clearance column used. Seated holes take the row's Hole fit.</param>
+/// <param name="PrecisionFit">Dowel holes: Slip, Normal or Press.</param>
+/// <param name="Tolerance">
+/// Dowel holes: the Name of the Precision Tol row, for the units and fit. Null takes the row marked Default, else
+/// the first.
+/// </param>
+/// <param name="ThreadDepth">Tapped holes: the thread depth; null takes the Tapped row's default.</param>
+/// <param name="DrillDepth">Tapped holes: the drill depth, the hole's depth when blind; null takes the row's default.</param>
+/// <param name="Termination">Distance, Through All or To a face.</param>
+/// <param name="Depth">Clearance and dowel holes ending at a distance: the hole depth.</param>
+/// <param name="DrillPoint">
+/// Blind holes: the Name of the Drill Point row. Null takes the row marked Default, else the first.
+/// </param>
+/// <param name="Flip">The direction is flipped, as Inventor's Flip.</param>
+/// <remarks>
+/// A depth typed as an Inventor expression (<c>d0</c>, <c>1.5*d0+1</c>, <c>12 mm</c>; task 100) keeps its text in
+/// <see cref="ThreadDepthExpression"/>, <see cref="DrillDepthExpression"/> or <see cref="DepthExpression"/>, beside
+/// its value: the depth field holds what the expression came to when it was checked, in the spec's units, and every
+/// check uses that value. The add-in writes the expression into the hole's parameter, so the hole stays parametric.
+/// An expression is null for a depth typed as a plain number.
+/// </remarks>
+public sealed record HoleSpec(
+    HoleUnits Units,
+    HoleKind Kind,
+    HoleSeat Seat,
+    string Size,
+    string? Fastener,
+    ClearanceFit ClearanceFit,
+    PrecisionFit PrecisionFit,
+    string? Tolerance,
+    decimal? ThreadDepth,
+    decimal? DrillDepth,
+    HoleTermination Termination,
+    decimal? Depth,
+    string? DrillPoint,
+    bool Flip)
+{
+    /// <summary>A clearance hole with no seat, Normal fit, through all; the other choices at their defaults.</summary>
+    public static HoleSpec ClearanceHole(HoleUnits units, string size) => new(
+        units, HoleKind.Clearance, HoleSeat.None, size, null, ClearanceFit.Normal, PrecisionFit.Normal, null,
+        null, null, HoleTermination.ThroughAll, null, null, false);
+
+    /// <summary>Tapped holes: the expression <see cref="ThreadDepth"/> came from, or null for a plain number.</summary>
+    public string? ThreadDepthExpression { get; init; }
+
+    /// <summary>Tapped holes: the expression <see cref="DrillDepth"/> came from, or null for a plain number.</summary>
+    public string? DrillDepthExpression { get; init; }
+
+    /// <summary>Clearance and dowel holes: the expression <see cref="Depth"/> came from, or null for a plain number.</summary>
+    public string? DepthExpression { get; init; }
+
+    // A dowel's seat (spec 09, "Dowel and precision holes"; task 106): sized in the window, not from a Counterbore or
+    // Countersink row, so a dowel has no Fastener. In the spec's units; the angle in degrees. Null leaves the box empty,
+    // and HoleRules asks for a value.
+
+    /// <summary>Dowel holes with a counterbore: its diameter.</summary>
+    public decimal? CboreDiameter { get; init; }
+
+    /// <summary>Dowel holes with a counterbore: its depth.</summary>
+    public decimal? CboreDepth { get; init; }
+
+    /// <summary>Dowel holes with a counterbore: the expression <see cref="CboreDepth"/> came from, or null for a number.</summary>
+    public string? CboreDepthExpression { get; init; }
+
+    /// <summary>Dowel holes with a countersink: its diameter.</summary>
+    public decimal? CsinkDiameter { get; init; }
+
+    /// <summary>Dowel holes with a countersink: its included angle, in degrees.</summary>
+    public decimal? CsinkAngleDeg { get; init; }
+
+    /// <summary>True when the hole ends at a distance and so has a bottom.</summary>
+    public bool IsBlind => Termination == HoleTermination.Distance;
+
+    /// <summary>
+    /// The same spec with every choice that does not apply to its kind, seat and termination put back to its default
+    /// (null, or Normal for the fits), so two specs that build the same hole compare equal. A depth's expression is
+    /// trimmed, and goes with its depth: null when the depth is. A dowel has no fastener; its own seat values apply only
+    /// to its seat (task 106). This is what <see cref="HoleStoredData"/> stores.
+    /// </summary>
+    public HoleSpec Normalised()
+    {
+        var seated = Seat != HoleSeat.None;
+        var tapped = Kind == HoleKind.Tapped;
+        var dowel = Kind == HoleKind.Dowel;
+        var dowelCbore = dowel && Seat == HoleSeat.Counterbore;
+        var dowelCsink = dowel && Seat == HoleSeat.Countersink;
+        var depthApplies = IsBlind && !tapped;
+        return this with
+        {
+            Size = Size.Trim(),
+            Fastener = seated && !dowel ? Fastener?.Trim() : null,
+            CboreDiameter = dowelCbore ? CboreDiameter : null,
+            CboreDepth = dowelCbore ? CboreDepth : null,
+            CboreDepthExpression = dowelCbore && CboreDepth is not null ? HoleExpressions.Clean(CboreDepthExpression) : null,
+            CsinkDiameter = dowelCsink ? CsinkDiameter : null,
+            CsinkAngleDeg = dowelCsink ? CsinkAngleDeg : null,
+            ClearanceFit = Kind == HoleKind.Clearance && Seat == HoleSeat.None ? ClearanceFit : ClearanceFit.Normal,
+            PrecisionFit = Kind == HoleKind.Dowel ? PrecisionFit : PrecisionFit.Normal,
+            Tolerance = Kind == HoleKind.Dowel ? Tolerance?.Trim() : null,
+            ThreadDepth = tapped ? ThreadDepth : null,
+            DrillDepth = tapped ? DrillDepth : null,
+            Depth = depthApplies ? Depth : null,
+            DrillPoint = IsBlind ? DrillPoint?.Trim() : null,
+            ThreadDepthExpression = tapped && ThreadDepth is not null ? HoleExpressions.Clean(ThreadDepthExpression) : null,
+            DrillDepthExpression = tapped && DrillDepth is not null ? HoleExpressions.Clean(DrillDepthExpression) : null,
+            DepthExpression = depthApplies && Depth is not null ? HoleExpressions.Clean(DepthExpression) : null,
+        };
+    }
+}

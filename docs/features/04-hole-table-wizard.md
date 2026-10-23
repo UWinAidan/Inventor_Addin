@@ -4,11 +4,9 @@ For a drawing view, find every hole, sort the holes into precision and clearance
 
 Reference screenshots (local only): `hole wizard pop up.png`, `hole wizard popup after loading veiw data.png`, `hole table result.png`, `hole table drawing leaders.png`, `Screenshot 2026-09-04 082249.png`.
 
-## First: a hole generator for part files
+## First: AWB Hole, the hole generator for part files
 
-Aidan, 2026-10-12: before the hole table wizard, M4 builds a **hole generator** that works in part files. It creates holes of every hole type Aidan has decided on, and colours precision and dowel holes by their fit: **tight red, regular blue, loose green**. The wizard comes after it in M4.
-
-The details (the hole types and their sizes and fits, how holes are placed, what "colour" is applied to: the hole's faces, as an appearance) are to be discussed with Aidan before M4 is planned, and written here then. The hole types Aidan has decided are not yet recorded in the repo.
+M4 part 1 is **AWB Hole**, our own hole command for part files, specified in its own spec: [`09-awb-hole.md`](09-awb-hole.md) (Aidan, 2026-10-17). It colours dowel and precision holes by fit (press red, normal blue, slip green, from `libraries/AWB_Holes.xlsx`). The ISO 286 limit logic is shared with this wizard. The wizard is M4 part 2, planned after AWB Hole.
 
 ## What exists today
 

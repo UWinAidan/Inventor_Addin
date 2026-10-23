@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 using Inventor;
+using InventorAddin.Commands;
 using InventorAddin.Core;
 using InventorAddin.UI;
 
@@ -39,6 +40,9 @@ namespace InventorAddin
 
         public void Deactivate()
         {
+            // An open AWB Hole session is cancelled, so the part is left as it was (task 089).
+            AwbHoleWindowLauncher.Shutdown();
+
             _startupTab?.Dispose();
             _startupTab = null;
 

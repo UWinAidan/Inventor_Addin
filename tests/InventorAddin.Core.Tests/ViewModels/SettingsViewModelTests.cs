@@ -1724,6 +1724,208 @@ public sealed class SettingsViewModelTests : IDisposable
         Assert.Equal("Blank uses the starter finish list shipped with the add-in.", vm.FinishListHelp);
     }
 
+    // ---- Holes (task 086) ----
+
+    private const string HoleFile = @"B:\Data\AWB_Holes.xlsx";
+
+    [Fact]
+    public void HoleSettings_StartWithGivenValues_NotDirty()
+    {
+        var vm = Create(new AddinSettings { HoleWorkbookPath = HoleFile, UseInventorHoleCommand = true });
+
+        Assert.Equal(HoleFile, vm.HoleWorkbookPath);
+        Assert.True(vm.UseInventorHoleCommand);
+        Assert.False(vm.IsDirty);
+        Assert.Null(vm.ErrorText);
+    }
+
+    [Fact]
+    public void HoleSettings_Defaults_AreBlankAndOff()
+    {
+        var vm = Create();
+
+        Assert.Equal("", vm.HoleWorkbookPath);
+        Assert.False(vm.UseInventorHoleCommand);
+    }
+
+    [Fact]
+    public void HoleWorkbookPath_Changing_MakesDirty_RaisesValueAndIsDirty()
+    {
+        var vm = CreateWithFiles(null, new List<string>(), HoleFile);
+        var changed = RecordPropertyChanges(vm);
+
+        vm.HoleWorkbookPath = HoleFile;
+
+        Assert.True(vm.IsDirty);
+        Assert.True(vm.SaveCommand.CanExecute(null));
+        Assert.Equal(new[] { nameof(SettingsViewModel.HoleWorkbookPath), nameof(SettingsViewModel.IsDirty) }, changed);
+    }
+
+    [Fact]
+    public void HoleWorkbookPath_OnlySpaces_IsNotAChange()
+    {
+        var vm = Create();
+
+        vm.HoleWorkbookPath = "  ";
+
+        Assert.False(vm.IsDirty);
+        Assert.Null(vm.ErrorText);
+    }
+
+    [Fact]
+    public void UseInventorHoleCommand_Toggling_MakesDirty_ThenBackIsClean()
+    {
+        var vm = Create();
+        var changed = RecordPropertyChanges(vm);
+
+        vm.UseInventorHoleCommand = true;
+
+        Assert.True(vm.IsDirty);
+        Assert.True(vm.SaveCommand.CanExecute(null));
+        Assert.Equal(new[] { nameof(SettingsViewModel.UseInventorHoleCommand), nameof(SettingsViewModel.IsDirty) }, changed);
+
+        vm.UseInventorHoleCommand = false;
+
+        Assert.False(vm.IsDirty);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(@"B:\Data\AWB_Holes.xlsx")]
+    [InlineData(@"  \\server\share\Holes.XLSX ")]
+    public void ValidateHoleWorkbookPath_BlankOrFullXlsxPath_IsValid(string? path)
+    {
+        Assert.Null(SettingsViewModel.ValidateHoleWorkbookPath(path));
+    }
+
+    [Fact]
+    public void ValidateHoleWorkbookPath_NotFullPath_NamesTheSetting()
+    {
+        Assert.Equal(
+            @"Hole data: enter a full path to the file, such as D:\Libraries\AWB_Holes.xlsx.",
+            SettingsViewModel.ValidateHoleWorkbookPath("AWB_Holes.xlsx"));
+    }
+
+    [Theory]
+    [InlineData(@"D:\Holes.xls")]
+    [InlineData(@"D:\Holes.xlsm")]
+    [InlineData(@"D:\Holes.csv")]
+    public void ValidateHoleWorkbookPath_WrongExtension_NamesTheSetting(string path)
+    {
+        Assert.Equal("Hole data must be a file ending in .xlsx.", SettingsViewModel.ValidateHoleWorkbookPath(path));
+    }
+
+    [Fact]
+    public void ValidateHoleWorkbookPath_InvalidCharacter_NamesTheSetting()
+    {
+        Assert.Equal(
+            "Hole data contains a character Windows does not allow.",
+            SettingsViewModel.ValidateHoleWorkbookPath(@"D:\Ho<les.xlsx"));
+    }
+
+    [Fact]
+    public void Validation_HoleDataComesAfterTheFinishList()
+    {
+        var vm = Create();
+        vm.HoleWorkbookPath = "Relative.xlsx";
+        vm.FinishListPath = "Relative.csv";
+
+        Assert.StartsWith("Finish list:", vm.ErrorText);
+        vm.FinishListPath = "";
+        Assert.StartsWith("Hole data:", vm.ErrorText);
+        Assert.False(vm.SaveCommand.CanExecute(null));
+        vm.HoleWorkbookPath = "";
+        Assert.Null(vm.ErrorText);
+    }
+
+    [Fact]
+    public void Save_MissingHoleWorkbook_IsRefused_WithTheFinishListWording()
+    {
+        var asked = new List<string>();
+        var vm = CreateWithFiles(null, asked);
+        vm.HoleWorkbookPath = $" {HoleFile} ";
+        var saved = false;
+        vm.Saved += (_, _) => saved = true;
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.Equal(SettingsViewModel.LibraryFileNotFoundError("Hole data", HoleFile), vm.ErrorText);
+        Assert.Equal(
+            @"Hole data: 'B:\Data\AWB_Holes.xlsx' was not found. Choose an existing file, or leave it blank to use the starter file.",
+            vm.ErrorText);
+        Assert.Equal(new[] { HoleFile }, asked);
+        Assert.False(saved);
+        Assert.False(File.Exists(SettingsPath));
+    }
+
+    [Fact]
+    public void Save_ExistingHoleWorkbook_AndSwitch_AreSavedTrimmed_AndRoundTrip()
+    {
+        var vm = CreateWithFiles(null, new List<string>(), HoleFile);
+        vm.HoleWorkbookPath = $"\t{HoleFile} ";
+        vm.UseInventorHoleCommand = true;
+        var changed = RecordPropertyChanges(vm);
+
+        vm.SaveCommand.Execute(null);
+
+        var expected = new AddinSettings { HoleWorkbookPath = HoleFile, UseInventorHoleCommand = true };
+        Assert.Null(vm.ErrorText);
+        Assert.Equal(expected, new SettingsStore(_folder).Load().Settings);
+        Assert.Equal(expected, vm.SavedSettings);
+        Assert.Equal(HoleFile, vm.HoleWorkbookPath);
+        Assert.Contains(nameof(SettingsViewModel.HoleWorkbookPath), changed);
+    }
+
+    [Fact]
+    public void Save_BlankOrUnchangedHoleWorkbook_IsNotCheckedOnDisk()
+    {
+        var asked = new List<string>();
+        var vm = CreateWithFiles(new AddinSettings { HoleWorkbookPath = HoleFile }, asked);
+        vm.UseInventorHoleCommand = true;
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.Null(vm.ErrorText);
+        Assert.NotNull(vm.SavedSettings);
+        Assert.Empty(asked);
+
+        var blank = CreateWithFiles(new AddinSettings { HoleWorkbookPath = HoleFile }, asked);
+        blank.HoleWorkbookPath = "";
+
+        blank.SaveCommand.Execute(null);
+
+        Assert.Null(blank.ErrorText);
+        Assert.Equal("", blank.SavedSettings!.HoleWorkbookPath);
+        Assert.Empty(asked);
+    }
+
+    [Fact]
+    public void HoleHelp_AndNote()
+    {
+        var vm = Create();
+
+        Assert.Equal("The hole workbook (.xlsx). Blank uses the starter workbook shipped with the add-in.", vm.HoleWorkbookHelp);
+        Assert.Equal(SettingsViewModel.UseInventorHoleCommandNoteText, vm.UseInventorHoleCommandNote);
+        Assert.Contains("Takes effect when you save.", vm.UseInventorHoleCommandNote);
+    }
+
+    [Fact]
+    public void HolesSummary_FollowsEdits_AndRaisesItsChange()
+    {
+        var vm = Create();
+        var changed = new List<string>();
+        vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName!);
+
+        Assert.Equal("starter hole data, AWB Hole", vm.HolesSummary);
+
+        vm.HoleWorkbookPath = HoleFile;
+        vm.UseInventorHoleCommand = true;
+
+        Assert.Equal("AWB_Holes.xlsx, Inventor's Hole", vm.HolesSummary);
+        Assert.Contains(nameof(SettingsViewModel.HolesSummary), changed);
+    }
+
     // ---- Section summaries (task 079) ----
 
     [Fact]

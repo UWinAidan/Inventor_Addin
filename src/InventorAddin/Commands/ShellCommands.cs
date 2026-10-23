@@ -35,7 +35,12 @@ namespace InventorAddin.Commands
             // Set only by a successful save; null after Cancel or closing the window.
             AddinSettings? saved = viewModel.SavedSettings;
             if (saved != null)
+            {
                 AddinServices.UpdateSettings(saved);
+
+                // "Use Inventor's Hole command" takes effect on Save, without a restart (task 091).
+                HoleCommandTakeover.Active?.ApplyFromSettings(saved, "settings saved");
+            }
         }
     }
 

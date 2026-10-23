@@ -1,0 +1,1345 @@
+using InventorAddin.Core.Holes;
+using InventorAddin.Core.ViewModels;
+
+namespace InventorAddin.Core.Tests.ViewModels;
+
+public sealed class AwbHoleViewModelTests
+{
+    private const string PartName = "Test bracket.ipt";
+
+    private static readonly HoleWorkbook Workbook = AwbHoleTestWorkbook.Create();
+
+    private static AwbHoleViewModel NewHole(HoleWorkbook? workbook = null) => new(workbook ?? Workbook, PartName);
+
+    private static List<string> Values<T>(IEnumerable<HoleOption<T>> options) =>
+        options.Select(o => o.Text).ToList();
+
+    private static List<string> ToleranceNames(IEnumerable<HoleToleranceOption> options) =>
+        options.Select(o => o.Value).ToList();
+
+    private sealed class Counter
+    {
+        public int Previews { get; private set; }
+        public List<string?> Changed { get; } = [];
+
+        public Counter(AwbHoleViewModel vm)
+        {
+            vm.PreviewNeeded += (_, _) => Previews++;
+            vm.PropertyChanged += (_, e) => Changed.Add(e.PropertyName);
+        }
+    }
+
+    private static HoleSpec MetricSpec(HoleKind kind, string size) => HoleSpec.ClearanceHole(HoleUnits.Metric, size) with
+    {
+        Kind = kind,
+    };
+
+    // ---- A new hole ----
+
+    [Fact]
+    public void NewHole_StartsOnTheDefaults()
+    {
+        var vm = NewHole();
+
+        Assert.Equal(HoleUnits.Metric, vm.Units);
+        Assert.Equal(HoleStandards.ClearanceType, vm.Type);
+        Assert.Equal(HoleSeat.None, vm.Seat);
+        Assert.Equal(HoleStandards.ClearanceStandard, vm.Standard);
+        Assert.Equal(HoleKind.Clearance, vm.Kind);
+        Assert.Null(vm.Fastener);
+        Assert.Equal("T3", vm.Size);
+        Assert.Equal("Normal", vm.Fit);
+        Assert.Null(vm.Tolerance);
+        Assert.Equal(HoleTermination.ThroughAll, vm.Termination);
+        Assert.Null(vm.DrillPoint);
+        Assert.False(vm.Flip);
+        Assert.False(vm.IsEdit);
+        Assert.False(vm.IsInventorHole);
+        Assert.Null(vm.InventorHoleNote);
+    }
+
+    [Fact]
+    public void NewHole_StartsOnTheWorkbooksDefaultUnits()
+    {
+        var vm = NewHole(AwbHoleTestWorkbook.Create(HoleUnits.Imperial));
+
+        Assert.Equal(HoleUnits.Imperial, vm.Units);
+        Assert.Equal("#3", vm.Size);
+    }
+
+    [Fact]
+    public void Header_NamesTheCommandAndThePart()
+    {
+        var vm = NewHole();
+
+        Assert.Equal("AWB Hole", vm.HeaderTitle);
+        Assert.Equal(PartName, vm.HeaderSubline);
+        Assert.Equal("Edit AWB Hole", AwbHoleViewModel.ForEdit(Workbook, PartName, vm.Spec).HeaderTitle);
+    }
+
+    [Fact]
+    public void FixedLists_AreInTheWindowsOrder()
+    {
+        Assert.Equal(["Metric", "Imperial"], Values(AwbHoleViewModel.UnitsOptions));
+        Assert.Equal(["Clearance", "Tapped"], Values(AwbHoleViewModel.TypeOptions));
+        Assert.Equal(["Distance", "Through All"], Values(NewHole().TerminationOptions));
+    }
+
+    // ---- Lists ----
+
+    [Fact]
+    public void Standard_ListsClearanceAndDowelForClearance_AndTappedForTapped()
+    {
+        var vm = NewHole();
+        Assert.Equal(["AWB Clearance", "AWB Dowel"], Values(vm.StandardOptions));
+
+        vm.Type = HoleStandards.TappedType;
+
+        Assert.Equal(["AWB Tapped"], Values(vm.StandardOptions));
+        Assert.Equal(HoleStandards.TappedStandard, vm.Standard);
+        Assert.Equal(HoleKind.Tapped, vm.Kind);
+    }
+
+    [Fact]
+    public void Sizes_LeaveOutHiddenRows_ListARepeatedSizeOnce_AndKeepWorkbookOrder()
+    {
+        var vm = NewHole();
+
+        Assert.Equal(["T3", "T5"], Values(vm.SizeOptions));
+    }
+
+    [Fact]
+    public void Sizes_ComeFromTheTabForTheKind()
+    {
+        var vm = NewHole();
+
+        vm.Standard = HoleStandards.DowelStandard;
+        Assert.Equal(["3 mm", "5 mm"], Values(vm.SizeOptions));
+
+        vm.Type = HoleStandards.TappedType;
+        Assert.Equal(["M3", "M5"], Values(vm.SizeOptions));
+
+        vm.Units = HoleUnits.Imperial;
+        Assert.Equal(["#5-40 UNC"], Values(vm.SizeOptions));
+    }
+
+    [Fact]
+    public void Seat_ForADowel_ListsEverySeat_HasNoFastener_AndStartsFromTheRowOfTheSameSize()
+    {
+        var vm = NewHole();
+        Assert.Equal(["None", "Counterbore", "Countersink"], Values(vm.SeatOptions));
+
+        vm.Seat = HoleSeat.Counterbore;
+        vm.Standard = HoleStandards.DowelStandard;
+
+        // 3 mm is the size of T3, which has a counterbore row (6 x 3) and no countersink row. A dowel's seat follows no
+        // fastener (task 106): every seat is listed and the boxes start from the row of the same size.
+        Assert.Equal("3 mm", vm.Size);
+        Assert.Equal(["None", "Counterbore", "Countersink"], Values(vm.SeatOptions));
+        Assert.Equal(HoleSeat.Counterbore, vm.Seat);
+        Assert.False(vm.ShowsFastener);
+        Assert.Empty(vm.FastenerOptions);
+        Assert.Null(vm.Fastener);
+        Assert.True(vm.ShowsCounterboreSizes);
+        Assert.False(vm.ShowsCountersinkSizes);
+        Assert.Equal((6m, 3m), (vm.CounterboreDiameter, vm.CounterboreDepth));
+        Assert.True(vm.ShowsFit);
+        Assert.True(vm.ShowsTolerance);
+        Assert.True(vm.ShowsFitColour);
+        Assert.Equal(HoleSeat.Counterbore, vm.Geometry!.Seat);
+        Assert.Equal(0.6, vm.Geometry.CounterboreDiameterCm!.Value, 12);
+        Assert.Equal(0.3, vm.Geometry.HoleDiameterCm, 12);
+        Assert.NotNull(vm.Geometry.Tolerance);
+        Assert.NotNull(vm.Geometry.FitColour);
+        Assert.Null(vm.Spec.Fastener);
+
+        vm.Size = "5 mm";
+
+        Assert.Equal(["None", "Counterbore", "Countersink"], Values(vm.SeatOptions));
+        Assert.Empty(vm.FastenerOptions);
+        Assert.Equal((9.5m, 5m), (vm.CounterboreDiameter, vm.CounterboreDepth));
+        Assert.Equal(0.95, vm.Geometry!.CounterboreDiameterCm!.Value, 12);
+    }
+
+    [Fact]
+    public void Seat_ForATappedSizeWithNoRowOfTheSameSize_IsNoneOnly_WhileADowelListsEverySeat()
+    {
+        var vm = NewHole();
+        vm.Units = HoleUnits.Imperial;
+        vm.Type = HoleStandards.TappedType;
+
+        Assert.Equal("#5-40 UNC", vm.Size);
+        Assert.Equal(["None"], Values(vm.SeatOptions));
+
+        vm.Type = HoleStandards.ClearanceType;
+        vm.Standard = HoleStandards.DowelStandard;
+
+        // 1/8" has no row of its size either; a dowel's seat is sized in the window (task 106).
+        Assert.Equal(["None", "Counterbore", "Countersink"], Values(vm.SeatOptions));
+    }
+
+    [Fact]
+    public void Tapped_WithASeat_TakesTheRowOfTheSameSize()
+    {
+        var vm = NewHole();
+        vm.Type = HoleStandards.TappedType;
+        vm.Size = "M5";
+        var counter = new Counter(vm);
+
+        vm.Seat = HoleSeat.Counterbore;
+
+        Assert.Equal(1, counter.Previews);
+        Assert.True(vm.ShowsFastener);
+        Assert.Equal(["TCAP", "TLOW"], Values(vm.FastenerOptions));   // THID is hidden
+        Assert.Equal("TCAP", vm.Fastener);
+        Assert.Null(vm.SeatProblem);
+        Assert.False(vm.ShowsFit);
+        Assert.False(vm.ShowsTolerance);
+        var geometry = vm.Geometry!;
+        Assert.Equal(HoleSeat.Counterbore, geometry.Seat);
+        Assert.Equal(0.95, geometry.CounterboreDiameterCm!.Value, 12);
+        Assert.Equal(0.42, geometry.HoleDiameterCm, 12);
+        Assert.NotNull(geometry.Thread);
+        Assert.Equal("TCAP", vm.Spec.Fastener);
+
+        vm.Fastener = "TLOW";
+
+        Assert.Equal(2, counter.Previews);
+        Assert.Equal(0.85, vm.Geometry!.CounterboreDiameterCm!.Value, 12);
+        Assert.Equal(["M3", "M5"], Values(vm.SizeOptions));          // the sizes do not depend on the seat
+
+        vm.Size = "M3";
+
+        Assert.Equal(["TCAP"], Values(vm.FastenerOptions));
+        Assert.Equal("TCAP", vm.Fastener);
+        Assert.Equal(0.6, vm.Geometry!.CounterboreDiameterCm!.Value, 12);
+
+        vm.Size = "M5";
+
+        Assert.Equal("TCAP", vm.Fastener);                            // the choice is kept when the list holds it
+        Assert.Equal(HoleSeat.Counterbore, vm.Seat);
+    }
+
+    [Fact]
+    public void Tapped_ASeatTheNewSizeHasNoRowFor_IsKept_AndSaysWhy()
+    {
+        var vm = NewHole();
+        vm.Type = HoleStandards.TappedType;
+        vm.Size = "M5";
+        vm.Seat = HoleSeat.Countersink;
+        Assert.Equal("TFLAT", vm.Fastener);
+
+        vm.Size = "M3";
+
+        Assert.Equal(HoleSeat.Countersink, vm.Seat);
+        Assert.Equal(["None", "Counterbore", "Countersink"], Values(vm.SeatOptions));
+        Assert.NotNull(vm.SeatProblem);
+        Assert.Contains("Countersink", vm.SeatProblem);
+        Assert.Contains("Set Seat to None", vm.SeatProblem);
+        Assert.Null(vm.Geometry);
+        Assert.False(vm.CanOk);
+
+        vm.Seat = HoleSeat.None;
+
+        Assert.Equal(["None", "Counterbore"], Values(vm.SeatOptions));
+        Assert.Null(vm.SeatProblem);
+        Assert.False(vm.ShowsFastener);
+        Assert.Null(vm.Fastener);
+    }
+
+    [Fact]
+    public void ChangingTheStandard_KeepsTheSeat_AndADowelSizesItInItsBoxes()
+    {
+        var vm = NewHole();
+        vm.Size = "T5";
+        vm.Seat = HoleSeat.Countersink;
+
+        vm.Standard = HoleStandards.DowelStandard;
+
+        // 3 mm has no countersink row of its size: the boxes start empty and ask for values (task 106).
+        Assert.Equal("3 mm", vm.Size);
+        Assert.Equal(HoleSeat.Countersink, vm.Seat);
+        Assert.Null(vm.SeatProblem);
+        Assert.Null(vm.CountersinkDiameter);
+        Assert.Null(vm.CountersinkAngle);
+        Assert.Equal("Enter a countersink diameter.", vm.CountersinkDiameterProblem);
+        Assert.Equal("Enter a countersink angle.", vm.CountersinkAngleProblem);
+        Assert.Null(vm.Geometry);
+
+        vm.Size = "5 mm";
+
+        Assert.Null(vm.CountersinkDiameterProblem);
+        Assert.Equal((10.4m, 90m), (vm.CountersinkDiameter, vm.CountersinkAngle));
+        Assert.Null(vm.Fastener);
+        Assert.NotNull(vm.Geometry);
+
+        vm.Standard = HoleStandards.ClearanceStandard;
+
+        Assert.Equal(HoleSeat.Countersink, vm.Seat);
+        Assert.Equal("TFLAT", vm.Fastener);
+        Assert.Null(vm.CountersinkDiameter);
+        Assert.NotNull(vm.Geometry);
+    }
+
+    [Fact]
+    public void Fastener_ListsTheSeatTabsScrews_OnlyForASeatedHole()
+    {
+        var vm = NewHole();
+        Assert.False(vm.ShowsFastener);
+        Assert.Empty(vm.FastenerOptions);
+
+        vm.Seat = HoleSeat.Counterbore;
+
+        Assert.True(vm.ShowsFastener);
+        Assert.Equal(["TCAP", "TLOW"], Values(vm.FastenerOptions));
+        Assert.Equal("TCAP", vm.Fastener);
+        Assert.Equal(["T3", "T5"], Values(vm.SizeOptions));
+
+        vm.Seat = HoleSeat.Countersink;
+
+        Assert.Equal(["TFLAT"], Values(vm.FastenerOptions));
+        Assert.Equal("TFLAT", vm.Fastener);
+        Assert.Equal(["T5"], Values(vm.SizeOptions));
+        Assert.Equal("T5", vm.Size);
+    }
+
+    [Fact]
+    public void Fastener_PicksTheSizesListed()
+    {
+        var vm = NewHole();
+        vm.Seat = HoleSeat.Counterbore;
+        Assert.Equal("T3", vm.Size);
+
+        vm.Fastener = "TLOW";
+
+        Assert.Equal(["T5"], Values(vm.SizeOptions));
+        Assert.Equal("T5", vm.Size);
+    }
+
+    [Fact]
+    public void Fit_ListsClearanceFits_DowelFitsWithColours_AndNothingElse()
+    {
+        var vm = NewHole();
+        Assert.True(vm.ShowsFit);
+        Assert.Equal(["Close", "Normal", "Loose"], vm.FitOptions.Select(o => o.Text));
+        Assert.All(vm.FitOptions, o => Assert.Null(o.Swatch));
+        Assert.False(vm.ShowsFitColour);
+        Assert.Null(vm.FitSwatch);
+
+        vm.Standard = HoleStandards.DowelStandard;
+        Assert.Equal(["Slip", "Normal", "Press"], vm.FitOptions.Select(o => o.Text));
+        Assert.Equal(["#28AA46", "#2864DC", "#DC2828"], vm.FitOptions.Select(o => o.Swatch));
+        Assert.True(vm.ShowsFitColour);
+
+        vm.Standard = HoleStandards.ClearanceStandard;
+        vm.Seat = HoleSeat.Counterbore;
+        Assert.False(vm.ShowsFit);
+        Assert.Empty(vm.FitOptions);
+        Assert.Null(vm.Fit);
+
+        vm.Type = HoleStandards.TappedType;
+        Assert.Empty(vm.FitOptions);
+    }
+
+    [Fact]
+    public void FitColour_FollowsTheSelectedDowelFit()
+    {
+        var vm = NewHole();
+        vm.Standard = HoleStandards.DowelStandard;
+
+        vm.Fit = "Press";
+
+        Assert.Equal("#DC2828", vm.FitSwatch);
+        Assert.Equal("Press fit", vm.FitColourText);
+        Assert.Equal(new HoleColour(220, 40, 40), vm.Geometry!.FitColour);
+    }
+
+    [Fact]
+    public void Tolerance_OnlyForDowels_PreselectsTheFirstDefaultRow()
+    {
+        var vm = NewHole();
+        Assert.False(vm.ShowsTolerance);
+        Assert.Empty(vm.ToleranceOptions);
+
+        vm.Standard = HoleStandards.DowelStandard;
+
+        Assert.True(vm.ShowsTolerance);
+        Assert.Equal(["N bore", "N loc", "N second"], ToleranceNames(vm.ToleranceOptions));
+        Assert.Equal("N loc", vm.Tolerance);
+    }
+
+    [Fact]
+    public void Tolerance_FollowsTheFit()
+    {
+        var vm = NewHole();
+        vm.Standard = HoleStandards.DowelStandard;
+
+        vm.Fit = "Press";
+        Assert.Equal(["P press"], ToleranceNames(vm.ToleranceOptions));
+        Assert.Equal("P press", vm.Tolerance);
+
+        vm.Fit = "Normal";
+        Assert.Equal("N loc", vm.Tolerance);
+    }
+
+    [Fact]
+    public void ThreadDepths_OnlyForBlindTappedHoles_FromTheTappedRow()
+    {
+        var vm = NewHole();
+        Assert.False(vm.ShowsThreadDepths);
+        Assert.Null(vm.ThreadDepth);
+
+        vm.Type = HoleStandards.TappedType;
+        Assert.False(vm.ShowsThreadDepths);
+
+        vm.Termination = HoleTermination.Distance;
+
+        Assert.True(vm.ShowsThreadDepths);
+        Assert.False(vm.ShowsDepth);
+        Assert.Equal(4.5m, vm.ThreadDepth);
+        Assert.Equal(6m, vm.DrillDepth);
+    }
+
+    [Fact]
+    public void DrillPoint_OnlyForBlindHoles_LeavesOutHiddenRows_AndPreselectsTheFirstDefault()
+    {
+        var vm = NewHole();
+        Assert.False(vm.ShowsDrillPoint);
+        Assert.Empty(vm.DrillPointOptions);
+
+        vm.Termination = HoleTermination.Distance;
+
+        Assert.True(vm.ShowsDrillPoint);
+        Assert.True(vm.ShowsDepth);
+        Assert.Equal(["118 deg", "90 deg", "Flat"], Values(vm.DrillPointOptions));
+        Assert.Equal("118 deg", vm.DrillPoint);
+
+        vm.Termination = HoleTermination.ThroughAll;
+        Assert.Empty(vm.DrillPointOptions);
+        Assert.Null(vm.DrillPoint);
+    }
+
+    // ---- Cascading ----
+
+    [Fact]
+    public void ChangingAField_KeepsLaterChoicesThatStillApply()
+    {
+        var vm = NewHole();
+        vm.Size = "T5";
+        vm.Fit = "Loose";
+        vm.Termination = HoleTermination.Distance;
+        vm.Depth = 12m;
+        vm.DrillPoint = "Flat";
+
+        vm.Flip = true;
+        vm.Standard = HoleStandards.DowelStandard;
+        vm.Standard = HoleStandards.ClearanceStandard;
+
+        Assert.Equal(HoleTermination.Distance, vm.Termination);
+        Assert.Equal(12m, vm.Depth);
+        Assert.Equal("Flat", vm.DrillPoint);
+        Assert.True(vm.Flip);
+        Assert.Equal("Normal", vm.Fit);
+        Assert.Equal("T3", vm.Size);
+    }
+
+    [Fact]
+    public void ChangingTheStandard_KeepsAFitBothListsHold()
+    {
+        var vm = NewHole();
+        vm.Fit = "Normal";
+
+        vm.Standard = HoleStandards.DowelStandard;
+
+        Assert.Equal("Normal", vm.Fit);
+    }
+
+    [Fact]
+    public void ChangingTheStandard_PutsAFitTheNewListLacksBackToNormal()
+    {
+        var vm = NewHole();
+        vm.Fit = "Close";
+
+        vm.Standard = HoleStandards.DowelStandard;
+
+        Assert.Equal("Normal", vm.Fit);
+    }
+
+    [Fact]
+    public void ChangingTheType_PutsTheSeatBackToNone()
+    {
+        var vm = NewHole();
+        vm.Seat = HoleSeat.Counterbore;
+
+        vm.Type = HoleStandards.TappedType;
+
+        Assert.Equal(HoleSeat.None, vm.Seat);
+        Assert.Null(vm.Fastener);
+        Assert.Equal("M3", vm.Size);
+    }
+
+    [Fact]
+    public void ChangingTheSeat_KeepsTheType()
+    {
+        var vm = NewHole();
+        vm.Type = HoleStandards.TappedType;
+        vm.Size = "M5";
+
+        vm.Seat = HoleSeat.Countersink;
+
+        Assert.Equal(HoleStandards.TappedType, vm.Type);
+        Assert.Equal(HoleSeat.Countersink, vm.Seat);
+        Assert.True(vm.ShowsFastener);
+        Assert.Equal(["TFLAT"], Values(vm.FastenerOptions));
+    }
+
+    [Fact]
+    public void ChangingTheSize_PutsTheTappedDepthsBackToTheRowsDefaults()
+    {
+        var vm = NewHole();
+        vm.Type = HoleStandards.TappedType;
+        vm.Termination = HoleTermination.Distance;
+        vm.ThreadDepth = 5m;
+
+        vm.Flip = true;
+        Assert.Equal(5m, vm.ThreadDepth);
+
+        vm.Size = "M5";
+
+        Assert.Equal(7.5m, vm.ThreadDepth);
+        Assert.Equal(10m, vm.DrillDepth);
+    }
+
+    [Fact]
+    public void ClearingATappedDepth_PutsBackTheRowsDefault()
+    {
+        var vm = NewHole();
+        vm.Type = HoleStandards.TappedType;
+        vm.Termination = HoleTermination.Distance;
+        vm.DrillDepth = 9m;
+
+        vm.DrillDepth = null;
+
+        Assert.Equal(6m, vm.DrillDepth);
+    }
+
+    [Fact]
+    public void Units_KeepTheSizeWithTheNearestNominal()
+    {
+        var vm = NewHole();
+        vm.Size = "T5";
+
+        vm.Units = HoleUnits.Imperial;
+        Assert.Equal("#5", vm.Size);
+
+        vm.Size = "#3";
+        vm.Units = HoleUnits.Metric;
+        Assert.Equal("T3", vm.Size);
+    }
+
+    [Fact]
+    public void Units_ForASeatedHole_UseTheClearanceNominal()
+    {
+        var vm = NewHole();
+        vm.Seat = HoleSeat.Counterbore;
+        vm.Size = "T3";
+
+        vm.Units = HoleUnits.Imperial;
+
+        Assert.Equal("TCAP", vm.Fastener);
+        Assert.Equal("#5", vm.Size);
+    }
+
+    [Fact]
+    public void Units_ConvertTheDepth()
+    {
+        var vm = NewHole();
+        vm.Termination = HoleTermination.Distance;
+        vm.Depth = 25.4m;
+
+        vm.Units = HoleUnits.Imperial;
+
+        Assert.Equal(1m, vm.Depth);
+    }
+
+    // ---- Setters a list does not hold ----
+
+    [Fact]
+    public void AValueTheListDoesNotHold_IsIgnored()
+    {
+        var vm = NewHole();
+        var counter = new Counter(vm);
+
+        vm.Size = null;
+        vm.Size = "T4";
+        vm.Fastener = "TCAP";
+        vm.Standard = "Something else";
+        vm.Seat = (HoleSeat)42;
+
+        Assert.Equal("T3", vm.Size);
+        Assert.Null(vm.Fastener);
+        Assert.Equal(HoleStandards.ClearanceStandard, vm.Standard);
+        Assert.Equal(HoleSeat.None, vm.Seat);
+        Assert.Equal(0, counter.Previews);
+        Assert.Contains(nameof(AwbHoleViewModel.Size), counter.Changed);
+    }
+
+    [Fact]
+    public void ASize_MatchesIgnoringCaseAndSpaces_AndTakesTheListsSpelling()
+    {
+        var vm = NewHole();
+
+        vm.Size = " t5 ";
+
+        Assert.Equal("T5", vm.Size);
+    }
+
+    // ---- Preview ----
+
+    [Fact]
+    public void OneUserChange_RaisesOnePreview_HoweverManyFieldsItCascadesInto()
+    {
+        var vm = NewHole();
+        vm.Seat = HoleSeat.Counterbore;
+        var counter = new Counter(vm);
+
+        vm.Type = HoleStandards.TappedType;
+
+        Assert.Equal(1, counter.Previews);
+        Assert.True(counter.Changed.Count > 3);
+    }
+
+    [Fact]
+    public void SettingTheSameValue_RaisesNoPreview()
+    {
+        var vm = NewHole();
+        var counter = new Counter(vm);
+
+        vm.Size = "T3";
+        vm.Units = HoleUnits.Metric;
+        vm.Flip = false;
+
+        Assert.Equal(0, counter.Previews);
+    }
+
+    [Fact]
+    public void AChangeTheSpecDoesNotUse_RaisesNoPreview()
+    {
+        var vm = NewHole();
+        vm.Termination = HoleTermination.Distance;
+        vm.Depth = 10m;
+        vm.Termination = HoleTermination.ThroughAll;
+        var counter = new Counter(vm);
+
+        vm.Depth = 20m;
+
+        Assert.Equal(0, counter.Previews);
+        Assert.Equal(20m, vm.Depth);
+    }
+
+    [Fact]
+    public void CentreCount_RaisesNoPreview_ButUpdatesTheChecks()
+    {
+        var vm = NewHole();
+        var counter = new Counter(vm);
+        var canExecuteChanged = 0;
+        vm.OkCommand.CanExecuteChanged += (_, _) => canExecuteChanged++;
+        Assert.NotNull(vm.CentresProblem);
+        Assert.False(vm.CanOk);
+
+        vm.CentreCount = 3;
+
+        Assert.Equal(0, counter.Previews);
+        Assert.Null(vm.CentresProblem);
+        Assert.True(vm.CanOk);
+        Assert.True(vm.OkCommand.CanExecute(null));
+        Assert.True(canExecuteChanged > 0);
+    }
+
+    // ---- Geometry, checks and OK ----
+
+    [Fact]
+    public void Geometry_IsWhatTheRulesBuild_EvenBeforeCentresArePicked()
+    {
+        var vm = NewHole();
+        vm.Size = "T5";
+
+        var expected = HoleRules.Build(vm.Spec, Workbook, 1);
+
+        Assert.Equal(expected.Geometry, vm.Geometry);
+        Assert.Equal(expected.Resolved, vm.BuildResult.Resolved);
+        Assert.Equal(0.55, vm.Geometry!.HoleDiameterCm, 10);
+    }
+
+    [Fact]
+    public void Problems_ShowBesideTheirField_AndOkWaitsForThem()
+    {
+        var vm = NewHole();
+        vm.CentreCount = 1;
+        vm.Termination = HoleTermination.Distance;
+        Assert.True(vm.CanOk);
+
+        vm.DepthText = "";
+
+        Assert.Equal("Enter a depth greater than zero.", vm.DepthProblem);
+        Assert.Null(vm.SizeProblem);
+        Assert.True(vm.HasProblems);
+        Assert.False(vm.CanOk);
+        Assert.Null(vm.Geometry);
+
+        vm.Depth = 10m;
+
+        Assert.Null(vm.DepthProblem);
+        Assert.True(vm.CanOk);
+        Assert.Equal(1.0, vm.Geometry!.DepthCm!.Value, 10);
+    }
+
+    [Fact]
+    public void OkAndCancel_RaiseTheirEvents()
+    {
+        var vm = NewHole();
+        vm.CentreCount = 1;
+        var ok = 0;
+        var cancel = 0;
+        vm.OkRequested += (_, _) => ok++;
+        vm.CancelRequested += (_, _) => cancel++;
+
+        vm.OkCommand.Execute(null);
+        vm.CancelCommand.Execute(null);
+
+        Assert.Equal(1, ok);
+        Assert.Equal(1, cancel);
+    }
+
+    [Fact]
+    public void Ok_DoesNothingWithoutCentres()
+    {
+        var vm = NewHole();
+        var ok = 0;
+        vm.OkRequested += (_, _) => ok++;
+
+        vm.OkCommand.Execute(null);
+
+        Assert.Equal(0, ok);
+    }
+
+    // ---- Edit mode ----
+
+    [Fact]
+    public void Edit_ShowsTheSpecExactly_WithHiddenRows_AndRaisesNoPreview()
+    {
+        var spec = MetricSpec(HoleKind.Clearance, "T4") with
+        {
+            ClearanceFit = ClearanceFit.Loose,
+            Termination = HoleTermination.Distance,
+            Depth = 12m,
+            DrillPoint = "60 deg",
+            Flip = true,
+        };
+
+        var vm = AwbHoleViewModel.ForEdit(Workbook, PartName, spec);
+        var counter = new Counter(vm);
+
+        Assert.True(vm.IsEdit);
+        Assert.Equal(spec.Normalised(), vm.Spec);
+        Assert.Equal("T4", vm.Size);
+        Assert.Equal(["T3", "T4", "T5"], Values(vm.SizeOptions));
+        Assert.Equal("Loose", vm.Fit);
+        Assert.Equal("60 deg", vm.DrillPoint);
+        Assert.Contains("60 deg", Values(vm.DrillPointOptions));
+        Assert.True(vm.BuildResult.Succeeded);
+        Assert.Equal(0, counter.Previews);
+
+        vm.Flip = false;
+        Assert.Equal("T4", vm.Size);
+        Assert.Equal(1, counter.Previews);
+
+        vm.Size = "T5";
+        Assert.Equal(["T3", "T5"], Values(vm.SizeOptions));
+    }
+
+    [Fact]
+    public void Edit_KeepsASizeNotInTheWorkbook_UntilAFieldAboveItChanges()
+    {
+        var vm = AwbHoleViewModel.ForEdit(Workbook, PartName, MetricSpec(HoleKind.Clearance, "T99"));
+
+        Assert.Equal("T99", vm.Size);
+        Assert.Contains("T99", Values(vm.SizeOptions));
+        Assert.NotNull(vm.SizeProblem);
+        Assert.Null(vm.Geometry);
+
+        vm.Flip = true;
+        Assert.Equal("T99", vm.Size);
+
+        vm.Standard = HoleStandards.DowelStandard;
+        vm.Standard = HoleStandards.ClearanceStandard;
+        Assert.Equal("T3", vm.Size);
+        Assert.DoesNotContain("T99", Values(vm.SizeOptions));
+    }
+
+    [Fact]
+    public void Edit_ShowsADowelWithItsTolerance_NotTheDefault()
+    {
+        var spec = MetricSpec(HoleKind.Dowel, "5 mm") with { PrecisionFit = PrecisionFit.Normal, Tolerance = "N bore" };
+
+        var vm = AwbHoleViewModel.ForEdit(Workbook, PartName, spec);
+
+        Assert.Equal(HoleStandards.ClearanceType, vm.Type);
+        Assert.Equal(HoleStandards.DowelStandard, vm.Standard);
+        Assert.Equal("Normal", vm.Fit);
+        Assert.Equal("N bore", vm.Tolerance);
+        Assert.Equal(spec.Normalised(), vm.Spec);
+    }
+
+    [Fact]
+    public void Edit_ShowsASeatedHoleWithAHiddenFastener()
+    {
+        var spec = MetricSpec(HoleKind.Clearance, "T5") with { Seat = HoleSeat.Counterbore, Fastener = "THID" };
+
+        var vm = AwbHoleViewModel.ForEdit(Workbook, PartName, spec);
+
+        Assert.Equal("THID", vm.Fastener);
+        Assert.Equal(["TCAP", "TLOW", "THID"], Values(vm.FastenerOptions));
+        Assert.Equal("T5", vm.Size);
+        Assert.True(vm.BuildResult.Succeeded);
+    }
+
+    [Fact]
+    public void Edit_ShowsATappedHolesOwnDepths()
+    {
+        var spec = MetricSpec(HoleKind.Tapped, "M5") with
+        {
+            Termination = HoleTermination.Distance,
+            ThreadDepth = 6m,
+            DrillDepth = 8m,
+        };
+
+        var vm = AwbHoleViewModel.ForEdit(Workbook, PartName, spec);
+
+        Assert.Equal(HoleStandards.TappedType, vm.Type);
+        Assert.Equal(6m, vm.ThreadDepth);
+        Assert.Equal(8m, vm.DrillDepth);
+        Assert.Equal("118 deg", vm.DrillPoint);
+    }
+
+    [Fact]
+    public void Edit_FillsDefaultsTheSpecLeftBlank()
+    {
+        var spec = MetricSpec(HoleKind.Tapped, "M5") with { Termination = HoleTermination.Distance };
+
+        var vm = AwbHoleViewModel.ForEdit(Workbook, PartName, spec);
+
+        Assert.Equal(7.5m, vm.ThreadDepth);
+        Assert.Equal(10m, vm.DrillDepth);
+        Assert.Equal("118 deg", vm.DrillPoint);
+    }
+
+    [Fact]
+    public void Edit_KeepsTheSeatAndFastenerOfATappedHole_AndTheSeatSizesOfADowel()
+    {
+        var tapped = MetricSpec(HoleKind.Tapped, "M5") with { Seat = HoleSeat.Counterbore, Fastener = "TLOW" };
+        var dowel = MetricSpec(HoleKind.Dowel, "5 mm") with
+        {
+            Seat = HoleSeat.Countersink,
+            CsinkDiameter = 7.5m,
+            CsinkAngleDeg = 100m,
+            Tolerance = "N bore",
+        };
+
+        foreach (var spec in new[] { tapped, dowel })
+        {
+            var vm = AwbHoleViewModel.ForEdit(Workbook, PartName, spec);
+
+            Assert.Equal(spec.Seat, vm.Seat);
+            Assert.Equal(spec.Fastener, vm.Fastener);
+            Assert.Null(vm.SeatProblem);
+            Assert.NotNull(vm.Geometry);
+            Assert.Equal(spec.Seat, vm.Spec.Seat);
+            Assert.Equal(spec.Fastener, vm.Spec.Fastener);
+            Assert.Equal(spec.CsinkDiameter, vm.Spec.CsinkDiameter);
+            Assert.Equal(spec.CsinkAngleDeg, vm.Spec.CsinkAngleDeg);
+        }
+    }
+
+    [Fact]
+    public void Edit_ShowsASeatTheSizeHasNoRowFor_WithItsProblem()
+    {
+        var spec = MetricSpec(HoleKind.Tapped, "M3") with { Seat = HoleSeat.Countersink };
+
+        var vm = AwbHoleViewModel.ForEdit(Workbook, PartName, spec);
+
+        Assert.Equal(HoleSeat.Countersink, vm.Seat);
+        Assert.NotNull(vm.SeatProblem);
+    }
+
+    [Fact]
+    public void InventorHole_OpensOnTheClosestSpec_WithANote()
+    {
+        var spec = MetricSpec(HoleKind.Clearance, "T5");
+
+        var vm = AwbHoleViewModel.ForInventorHole(Workbook, PartName, spec, ["  The closest size is picked. ", " "]);
+
+        Assert.True(vm.IsEdit);
+        Assert.True(vm.IsInventorHole);
+        Assert.Equal(AwbHoleViewModel.InventorHoleNoteText, vm.InventorHoleNote);
+        Assert.Contains("OK makes it an AWB Hole", vm.InventorHoleNote);
+        Assert.Equal(["The closest size is picked."], vm.InventorHoleNotes);
+        Assert.Equal(spec.Normalised(), vm.Spec);
+    }
+
+    [Fact]
+    public void AStoredHole_HasNoInventorNote()
+    {
+        var vm = AwbHoleViewModel.ForEdit(Workbook, PartName, MetricSpec(HoleKind.Clearance, "T5"));
+
+        Assert.False(vm.IsInventorHole);
+        Assert.Null(vm.InventorHoleNote);
+        Assert.Empty(vm.InventorHoleNotes);
+    }
+
+    // ---- Status ----
+
+    [Fact]
+    public void WorkbookProblems_AreCountedInTheStatusAtOpen()
+    {
+        HoleWorkbookProblem[] problems =
+        [
+            new("Clearance", 7, "The Normal value is not a number."),
+            new("Dowel", null, "The tab is missing."),
+        ];
+
+        var vm = new AwbHoleViewModel(Workbook, PartName, problems);
+
+        Assert.Equal("The hole workbook has 2 problems; see the details.", vm.StatusText);
+        Assert.False(vm.StatusIsError);
+        Assert.Equal(["Clearance tab, row 7: The Normal value is not a number.", "Dowel tab: The tab is missing."], vm.StatusNotes);
+        Assert.True(vm.HasStatusDetails);
+    }
+
+    [Fact]
+    public void NoWorkbookProblems_LeaveTheStatusBlank()
+    {
+        var vm = NewHole();
+
+        Assert.Equal("", vm.StatusText);
+        Assert.Null(vm.StatusDetails);
+    }
+
+    [Fact]
+    public void Refused_ShowsInTheErrorStyle_UntilTheNextChange()
+    {
+        var vm = NewHole();
+
+        vm.ShowRefused("The hole cuts nothing.");
+
+        Assert.True(vm.IsRefused);
+        Assert.Equal(AwbHoleViewModel.RefusedText, vm.StatusText);
+        Assert.Equal("Inventor could not make this hole; the last good hole is kept.", vm.StatusText);
+        Assert.True(vm.StatusIsError);
+        Assert.Equal("The hole cuts nothing.", vm.StatusDetails);
+
+        vm.Flip = true;
+
+        Assert.False(vm.IsRefused);
+        Assert.Equal("", vm.StatusText);
+        Assert.False(vm.StatusIsError);
+    }
+
+    [Fact]
+    public void ClearRefused_BringsBackTheStatusAtOpen()
+    {
+        var vm = new AwbHoleViewModel(Workbook, PartName, [new HoleWorkbookProblem("Dowel", 5, "Bad.")]);
+        vm.ShowRefused(null);
+        Assert.Null(vm.StatusDetails);
+
+        vm.ClearRefused();
+
+        Assert.False(vm.IsRefused);
+        Assert.Equal("The hole workbook has 1 problem; see the details.", vm.StatusText);
+        Assert.False(vm.StatusIsError);
+    }
+
+    [Fact]
+    public void AnEmptyWorkbook_OpensWithASizeProblem()
+    {
+        var vm = new AwbHoleViewModel(HoleWorkbook.Empty, PartName);
+
+        Assert.Null(vm.Size);
+        Assert.Empty(vm.SizeOptions);
+        Assert.NotNull(vm.SizeProblem);
+        Assert.False(vm.CanOk);
+    }
+
+    // ---- The blind depth a new hole starts at (task 097) ----
+
+    private static AwbHoleViewModel NewHoleWith(HoleLastDepths lastDepths, HoleWorkbook? workbook = null) =>
+        new(workbook ?? Workbook, PartName, null, lastDepths);
+
+    [Fact]
+    public void BlindClearance_WithNoDepthUsedYet_StartsAtTwiceTheNominal_AndCanOk()
+    {
+        var vm = NewHole();
+        vm.CentreCount = 1;
+
+        vm.Termination = HoleTermination.Distance;
+
+        Assert.Equal(6m, vm.Depth);
+        Assert.Equal("6", vm.DepthText);
+        Assert.Equal(6m, vm.Spec.Depth);
+        Assert.Null(vm.DepthProblem);
+        Assert.True(vm.CanOk);
+    }
+
+    [Fact]
+    public void BlindDowel_StartsAtTwiceTheNominal()
+    {
+        var vm = NewHole();
+        vm.Standard = HoleStandards.DowelStandard;
+        vm.Size = "5 mm";
+
+        vm.Termination = HoleTermination.Distance;
+
+        Assert.Equal(10m, vm.Depth);
+    }
+
+    [Fact]
+    public void BlindCounterbore_TakesItsClearanceRowsNominal()
+    {
+        var vm = NewHole();
+        vm.Seat = HoleSeat.Counterbore;
+        vm.Size = "T5";
+
+        vm.Termination = HoleTermination.Distance;
+
+        Assert.Equal(10m, vm.Depth);
+    }
+
+    [Fact]
+    public void BlindDepth_UsesTheWorkbooksMultiplier_RoundedToThreeDecimals()
+    {
+        var starter = AwbHoleTestWorkbook.Create();
+        var workbook = starter with { Settings = starter.Settings with { BlindDepthMultiplier = 1.2345m } };
+        var vm = NewHole(workbook);
+
+        vm.Termination = HoleTermination.Distance;
+
+        Assert.Equal(3.704m, vm.Depth);
+    }
+
+    [Fact]
+    public void BlindDepth_StartsAtTheLastDepthUsed_InEachUnits()
+    {
+        var vm = NewHoleWith(new HoleLastDepths(20m, 0.75m));
+
+        vm.Termination = HoleTermination.Distance;
+        Assert.Equal(20m, vm.Depth);
+
+        vm.Units = HoleUnits.Imperial;
+        Assert.Equal(0.75m, vm.Depth);
+    }
+
+    [Fact]
+    public void BlindDepth_WithALastDepthInTheOtherUnitsOnly_UsesTheMultiplierHere()
+    {
+        var vm = NewHoleWith(new HoleLastDepths(null, 0.75m));
+
+        vm.Termination = HoleTermination.Distance;
+        Assert.Equal(6m, vm.Depth);
+
+        vm.Units = HoleUnits.Imperial;
+        Assert.Equal(0.75m, vm.Depth);
+    }
+
+    [Fact]
+    public void AnUntypedDepth_FollowsTheSizeAndUnits()
+    {
+        var vm = NewHole();
+        vm.Termination = HoleTermination.Distance;
+        Assert.Equal(6m, vm.Depth);
+
+        vm.Size = "T5";
+        Assert.Equal(10m, vm.Depth);
+
+        vm.Units = HoleUnits.Imperial;
+        Assert.Equal("#5", vm.Size);
+        Assert.Equal(0.4m, vm.Depth);
+    }
+
+    [Fact]
+    public void ATypedDepth_IsKept_WhenTheSizeOrUnitsChange()
+    {
+        var vm = NewHoleWith(new HoleLastDepths(20m, 0.75m));
+        vm.Termination = HoleTermination.Distance;
+
+        vm.DepthText = "7";
+        vm.Size = "T5";
+        Assert.Equal(7m, vm.Depth);
+
+        vm.Termination = HoleTermination.ThroughAll;
+        vm.Termination = HoleTermination.Distance;
+        Assert.Equal(7m, vm.Depth);
+
+        vm.Units = HoleUnits.Imperial;
+        Assert.Equal(0.2756m, vm.Depth);
+    }
+
+    [Fact]
+    public void AnEmptiedDepthBox_DisablesOk_UntilTheNextChangeTheRuleFollows()
+    {
+        var vm = NewHole();
+        vm.CentreCount = 1;
+        vm.Termination = HoleTermination.Distance;
+
+        vm.DepthText = "";
+        Assert.Null(vm.Depth);
+        Assert.False(vm.CanOk);
+
+        vm.Flip = true;
+        Assert.Null(vm.Depth);
+        Assert.False(vm.CanOk);
+
+        vm.Size = "T5";
+        Assert.Equal(10m, vm.Depth);
+        Assert.True(vm.CanOk);
+    }
+
+    [Fact]
+    public void ATappedHole_KeepsTheTappedRowsDepths()
+    {
+        var vm = NewHoleWith(new HoleLastDepths(20m, null));
+        vm.Type = HoleStandards.TappedType;
+        vm.Size = "M5";
+
+        vm.Termination = HoleTermination.Distance;
+
+        Assert.Null(vm.Spec.Depth);
+        Assert.Equal(7.5m, vm.ThreadDepth);
+        Assert.Equal(10m, vm.DrillDepth);
+    }
+
+    [Fact]
+    public void AnEditedHole_KeepsItsOwnDepth()
+    {
+        var spec = MetricSpec(HoleKind.Clearance, "T3") with { Termination = HoleTermination.Distance, Depth = 12m };
+
+        var vm = AwbHoleViewModel.ForEdit(Workbook, PartName, spec, null, new HoleLastDepths(20m, null));
+        Assert.Equal(12m, vm.Depth);
+        Assert.Equal(12m, vm.Spec.Depth);
+
+        vm.Size = "T5";
+        Assert.Equal(12m, vm.Depth);
+    }
+
+    [Fact]
+    public void AnEditedThroughHole_MadeBlind_StartsAtTheLastDepthUsed()
+    {
+        var spec = MetricSpec(HoleKind.Clearance, "T3");
+
+        var vm = AwbHoleViewModel.ForEdit(Workbook, PartName, spec, null, new HoleLastDepths(20m, null));
+        vm.Termination = HoleTermination.Distance;
+
+        Assert.Equal(20m, vm.Depth);
+    }
+
+    [Fact]
+    public void SwatchOf_WritesHexRgb()
+    {
+        Assert.Equal("#0A10FF", HoleFitOption.SwatchOf(new HoleColour(10, 16, 255)));
+    }
+
+    // ---- The Tolerance list shows the limits for the size (task 098) ----
+
+    private static HoleToleranceOption ToleranceOption(AwbHoleViewModel vm, string name) =>
+        vm.ToleranceOptions.Single(o => o.Value == name);
+
+    private static AwbHoleViewModel Dowel(string size, HoleWorkbook? workbook = null)
+    {
+        var vm = NewHole(workbook);
+        vm.Standard = HoleStandards.DowelStandard;
+        vm.Size = size;
+        return vm;
+    }
+
+    [Fact]
+    public void ToleranceList_IsoRows_ShowTheCodeAndItsLimitsAtTheSize_WithTheNameAsSecondaryText()
+    {
+        var vm = Dowel("5 mm");
+
+        Assert.Equal(new HoleToleranceOption("N bore", "H7  +0.012 / 0", "N bore"), ToleranceOption(vm, "N bore"));
+        Assert.Equal(new HoleToleranceOption("N loc", "G7  +0.016 / +0.004", "N loc"), ToleranceOption(vm, "N loc"));
+        Assert.Equal(new HoleToleranceOption("N second", "H8  +0.018 / 0", "N second"), ToleranceOption(vm, "N second"));
+    }
+
+    [Fact]
+    public void ToleranceList_SixMillimetreH7_ReadsAsTheSpecSays()
+    {
+        var workbook = Workbook with
+        {
+            Dowel = [new DowelRow(5, HoleUnits.Metric, "6 mm", 6m, false), new DowelRow(6, HoleUnits.Metric, "10 mm", 10m, false)],
+        };
+        var vm = Dowel("6 mm", workbook);
+
+        Assert.Equal("H7  +0.012 / 0", ToleranceOption(vm, "N bore").Text);
+
+        vm.Size = "10 mm";
+
+        Assert.Equal("H7  +0.015 / 0", ToleranceOption(vm, "N bore").Text);
+    }
+
+    [Fact]
+    public void ToleranceList_LimitsRows_ShowTheirUpperAndLower()
+    {
+        var vm = Dowel("5 mm");
+
+        vm.Fit = "Press";
+        Assert.Equal(new HoleToleranceOption("P press", "0 / -0.010", "P press"), ToleranceOption(vm, "P press"));
+
+        vm.Fit = "Slip";
+        Assert.Equal(new HoleToleranceOption("S slip", "+0.010 / 0", "S slip"), ToleranceOption(vm, "S slip"));
+    }
+
+    [Fact]
+    public void ToleranceList_FollowsTheSize_AndKeepsTheSelection()
+    {
+        var vm = Dowel("5 mm");
+        vm.Tolerance = "N bore";
+        var counter = new Counter(vm);
+
+        vm.Size = "3 mm";
+
+        Assert.Equal("H7  +0.010 / 0", ToleranceOption(vm, "N bore").Text);
+        Assert.Equal("G7  +0.012 / +0.002", ToleranceOption(vm, "N loc").Text);
+        Assert.Equal("N bore", vm.Tolerance);
+        Assert.Contains(nameof(AwbHoleViewModel.ToleranceOptions), counter.Changed);
+    }
+
+    [Fact]
+    public void ToleranceList_FollowsTheFit_AndTheUnits_InInchesToFourDecimals()
+    {
+        var vm = Dowel("3 mm");
+        vm.Fit = "Slip";
+        Assert.Equal(["S slip"], ToleranceNames(vm.ToleranceOptions));
+
+        vm.Fit = "Normal";
+        vm.Units = HoleUnits.Imperial;
+
+        // 1/8" is 3.175 mm: H7 there is +12 um, 0.000472 in.
+        Assert.Equal("1/8\"", vm.Size);
+        Assert.Equal(new HoleToleranceOption("IN bore", "H7  +0.0005 / 0", "IN bore"), ToleranceOption(vm, "IN bore"));
+    }
+
+    [Fact]
+    public void ToleranceList_ASizeOutsideIso286_ShowsTheCodeAndSaysSo_AndTheRuleStillFlagsIt()
+    {
+        var workbook = Workbook with { Dowel = [new DowelRow(5, HoleUnits.Metric, "600 mm", 600m, false)] };
+        var vm = Dowel("600 mm", workbook);
+        vm.Tolerance = "N bore";
+
+        Assert.Equal("H7  not in ISO 286", ToleranceOption(vm, "N bore").Text);
+        Assert.Equal("N bore", vm.Tolerance);
+        Assert.NotNull(vm.ToleranceProblem);
+        Assert.False(vm.BuildResult.Succeeded);
+    }
+
+    [Fact]
+    public void ToleranceList_AKeptToleranceNotInTheWorkbook_ShowsItsNameOnly()
+    {
+        var spec = MetricSpec(HoleKind.Dowel, "5 mm") with { PrecisionFit = PrecisionFit.Normal, Tolerance = "Gone" };
+
+        var vm = AwbHoleViewModel.ForEdit(Workbook, PartName, spec);
+
+        Assert.Equal(new HoleToleranceOption("Gone", "Gone", null), ToleranceOption(vm, "Gone"));
+        Assert.Equal("Gone", vm.Tolerance);
+    }
+
+    [Fact]
+    public void ToleranceText_ARowWithoutLimitsOrCode_ShowsItsName_AndNoSecondaryText()
+    {
+        var workbook = Workbook with
+        {
+            PrecisionTolerances =
+            [
+                new PrecisionToleranceRow(5, HoleUnits.Metric, PrecisionFit.Normal, "Bare", ToleranceKind.Limits, null, null, null, true, ""),
+            ],
+        };
+        var vm = Dowel("5 mm", workbook);
+
+        Assert.Equal(new HoleToleranceOption("Bare", "Bare", null), ToleranceOption(vm, "Bare"));
+    }
+
+    [Fact]
+    public void ToleranceText_AnIsoRowWithNoKnownSize_ShowsTheCode()
+    {
+        var row = new PrecisionToleranceRow(5, HoleUnits.Metric, PrecisionFit.Normal, "Bore", ToleranceKind.Iso, " H7 ", null, null, true, "");
+
+        Assert.Equal("H7", HoleToleranceOption.TextFor(row, null));
+    }
+
+    [Theory]
+    [InlineData("0.012", HoleUnits.Metric, "+0.012")]
+    [InlineData("-0.02", HoleUnits.Metric, "-0.020")]
+    [InlineData("0", HoleUnits.Metric, "0")]
+    [InlineData("0.0004", HoleUnits.Metric, "0")]
+    [InlineData("0.0005", HoleUnits.Metric, "+0.001")]
+    [InlineData("0.0005", HoleUnits.Imperial, "+0.0005")]
+    [InlineData("-0.00004", HoleUnits.Imperial, "0")]
+    [InlineData("-0.001", HoleUnits.Imperial, "-0.0010")]
+    public void FormatLimit_SignsEveryNonZeroLimit_AndWritesZeroAsZero(string value, HoleUnits units, string expected)
+    {
+        Assert.Equal(
+            expected,
+            HoleToleranceOption.FormatLimit(decimal.Parse(value, System.Globalization.CultureInfo.InvariantCulture), units));
+    }
+
+    // ---- re-apply offer (task 092) ----
+
+    private static HoleReadBackResult AwbReadBack(HoleSpec spec) =>
+        new(spec, HoleSource.Awb, new HoleStoredData(spec, new HoleAppliedState(0.5, null, null, null, false)), []);
+
+    [Fact]
+    public void AnEditedAwbHole_ThatNoLongerMatches_OffersToReapply()
+    {
+        var spec = NewHole().Spec;
+        var offer = new HoleReapplyOffer(["The hole diameter is 8 mm; AWB Hole made it 5.5 mm."]);
+
+        var vm = AwbHoleViewModel.ForReadBack(Workbook, PartName, AwbReadBack(spec), reapplyOffer: offer);
+
+        Assert.True(vm.HasReapplyOffer);
+        Assert.Equal(HoleReapplyRules.HeadingText, vm.ReapplyHeading);
+        Assert.Equal(offer.Differences, vm.ReapplyDifferences);
+        Assert.Equal(HoleReapplyRules.OfferText, vm.ReapplyNote);
+        Assert.False(vm.IsInventorHole);
+        Assert.Equal(spec, vm.Spec);
+    }
+
+    [Fact]
+    public void NoOffer_ForANewHole_AMatchingHole_OrAnInventorHole()
+    {
+        var spec = NewHole().Spec;
+        var offer = new HoleReapplyOffer(["Something differs."]);
+
+        Assert.False(NewHole().HasReapplyOffer);
+        Assert.Null(NewHole().ReapplyNote);
+        Assert.Empty(NewHole().ReapplyDifferences);
+
+        var matching = AwbHoleViewModel.ForReadBack(
+            Workbook, PartName, AwbReadBack(spec), reapplyOffer: HoleReapplyOffer.None);
+        Assert.False(matching.HasReapplyOffer);
+        Assert.Null(matching.ReapplyHeading);
+
+        var inventorHole = AwbHoleViewModel.ForReadBack(
+            Workbook, PartName, new HoleReadBackResult(spec, HoleSource.Inventor, null, []), reapplyOffer: offer);
+        Assert.False(inventorHole.HasReapplyOffer);
+        Assert.Equal(AwbHoleViewModel.InventorHoleNoteText, inventorHole.InventorHoleNote);
+    }
+
+    [Fact]
+    public void ForEdit_TakesTheOffer()
+    {
+        var vm = AwbHoleViewModel.ForEdit(
+            Workbook, PartName, NewHole().Spec, reapplyOffer: new HoleReapplyOffer(["The depth differs."]));
+
+        Assert.True(vm.HasReapplyOffer);
+        Assert.Equal(["The depth differs."], vm.ReapplyDifferences);
+    }
+}

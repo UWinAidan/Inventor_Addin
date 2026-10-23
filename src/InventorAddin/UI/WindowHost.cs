@@ -14,7 +14,8 @@ namespace InventorAddin.UI
 {
     /// <summary>
     /// Shows the add-in's WPF windows. A dialog is owned by Inventor's main window, so it opens in
-    /// front of Inventor and Inventor cannot be used until it closes. Every window gets the shared look here,
+    /// front of Inventor and Inventor cannot be used until it closes. A modeless window (<see cref="ShowModeless"/>,
+    /// AWB Hole) is owned by Inventor's main window too, but Inventor stays usable while it is open. Every window gets the shared look here,
     /// in the colours of Inventor's active theme; no window applies the theme itself. Every window is also kept within
     /// the working area of the screen it opens on (Aidan, 2026-10-17): never taller, and moved up if it would run off
     /// the bottom. A window's body scrolls when its content is taller (the <c>DialogBody</c> style).
@@ -55,6 +56,31 @@ namespace InventorAddin.UI
             if (window == null)
                 throw new ArgumentNullException(nameof(window));
 
+            Prepare(window, headerIconName, owner, stateKey);
+            return window.ShowDialog();
+        }
+
+        /// <summary>
+        /// Shows <paramref name="window"/> modeless over Inventor (task 090: AWB Hole stays open while the user picks in
+        /// the model) and returns at once. It gets everything <see cref="ShowDialog"/> gives a window: owned by Inventor's
+        /// main window, so it stays in front of Inventor; the theme; the header icon; kept on the screen. Keyboard input
+        /// reaches it through <c>ElementHost.EnableModelessKeyboardInterop</c>, since Inventor runs the message loop.
+        /// Call it after Inventor's event or command has returned, through <c>Dispatcher.BeginInvoke</c>: a window
+        /// opened inside one shows but takes no input (spike 081 round 3).
+        /// </summary>
+        public static void ShowModeless(Window window, string? headerIconName = null, string? stateKey = null)
+        {
+            if (window == null)
+                throw new ArgumentNullException(nameof(window));
+
+            Prepare(window, headerIconName, null, stateKey);
+            System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(window);
+            window.Show();
+        }
+
+        /// <summary>Owner, theme, header icon, screen fit and remembered state, for a dialog or a modeless window.</summary>
+        private static void Prepare(Window window, string? headerIconName, Window? owner, string? stateKey)
+        {
             // Read as long so the conversion works whether the interop declares the handle as int or long.
             long? hwnd = owner == null ? ComSafe.Get(() => (long?)InventorHost.App.MainFrameHWND) : null;
             if (owner != null)
@@ -90,8 +116,6 @@ namespace InventorAddin.UI
             IReadOnlyList<ScreenArea>? screens = FitToScreen(window, screenHandle, resizable);
             if (stateKey != null)
                 Remember(window, stateKey, resizable, screens);
-
-            return window.ShowDialog();
         }
 
         /// <summary>

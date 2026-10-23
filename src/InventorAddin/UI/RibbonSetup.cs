@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Inventor;
 using InventorAddin.Commands;
+using InventorAddin.Holes;
 using InventorAddin.Core.Logging;
 using InventorAddin.Core.Ribbon;
 using InventorAddin.Core.Settings;
@@ -15,7 +16,8 @@ namespace InventorAddin.UI
     /// </summary>
     /// <remarks>
     /// Settings and Inventor's theme (for the icons) are read once, when the add-in starts. A changed setting or theme
-    /// takes effect at the next start.
+    /// takes effect at the next start, except "Use Inventor's Hole command", which <see cref="HoleCommandTakeover"/>
+    /// applies when Settings is saved.
     /// </remarks>
     public sealed class RibbonSetup : IDisposable
     {
@@ -32,6 +34,12 @@ namespace InventorAddin.UI
 
         // Commands that failed to register, so their layout entries are skipped with a warning that says why.
         private readonly HashSet<string> _failedCommands = new(StringComparer.Ordinal);
+
+        // AWB Hole in place of Inventor's Hole (task 091); null when AWB Hole failed to register.
+        private HoleCommandTakeover? _holeTakeover;
+
+        // Edit Feature and double-click on a hole open AWB Hole (task 092); null when our Edit Feature failed to register.
+        private HoleEditRedirect? _holeEdit;
 
         public RibbonSetup(Application app, string clientId, AddinSettings settings, ILog log)
         {
@@ -51,6 +59,8 @@ namespace InventorAddin.UI
             yield return new CreatePrintCommand();
             yield return new MassUpdateCommand();
             yield return new MaterialFinishCommand();
+            yield return new AwbHoleCommand();
+            yield return new HoleEditFeatureCommand();
             yield return new SettingsCommand();
             yield return new AboutCommand();
             yield return new ExportModelDataCommand();
@@ -93,6 +103,58 @@ namespace InventorAddin.UI
                 {
                     _log.Error($"Could not build the {environment.RibbonName()} ribbon. The other ribbons are still built.", ex);
                 }
+            }
+
+            StartHoleTakeover();
+            StartHoleEditRedirect(theme);
+        }
+
+        /// <summary>
+        /// AWB Hole replaces Inventor's Hole on the 3D Model tab, or not, as the settings say (task 091). Without AWB
+        /// Hole's definition, Inventor's Hole is left as it is.
+        /// </summary>
+        private void StartHoleTakeover()
+        {
+            if (!_commandsByName.TryGetValue(CommandNames.AwbHole, out AddinCommand? awbHole) || awbHole.Definition == null)
+            {
+                _log.Warn($"Command {CommandNames.AwbHole} is not registered, so Inventor's Hole is not replaced on the 3D Model tab.");
+                return;
+            }
+
+            try
+            {
+                _holeTakeover = new HoleCommandTakeover(_app, awbHole.Definition, _log);
+                _holeTakeover.Start(_settings);
+            }
+            catch (Exception ex)
+            {
+                _log.Error("Hole takeover: starting failed; Inventor's Hole is left as it is.", ex);
+            }
+        }
+
+        /// <summary>
+        /// Edit Feature and double-click on a hole open AWB Hole while it has taken over Inventor's Hole (task 092). Our
+        /// Edit Feature has no ribbon button; it takes Inventor's Edit Feature icon, or AWB Hole's when that cannot be read.
+        /// </summary>
+        private void StartHoleEditRedirect(UiTheme theme)
+        {
+            if (!_commandsByName.TryGetValue(CommandNames.AwbHoleEdit, out AddinCommand? edit) || edit.Definition == null)
+            {
+                _log.Warn($"Command {CommandNames.AwbHoleEdit} is not registered, so editing a hole opens Inventor's Hole.");
+                return;
+            }
+
+            ButtonPictures? fallback = LoadPictures(edit, IconNames.AwbHole, theme);
+            try
+            {
+                _holeEdit = new HoleEditRedirect(_app, edit.Definition, () => _holeTakeover?.Owner, _log);
+                _holeEdit.Start(fallback);
+            }
+            catch (Exception ex)
+            {
+                _log.Error("Hole edit: starting failed; editing a hole opens Inventor's Hole.", ex);
+                _holeEdit?.Dispose();
+                _holeEdit = null;
             }
         }
 
@@ -216,6 +278,12 @@ namespace InventorAddin.UI
 
         public void Dispose()
         {
+            // Editing goes back to Inventor, and Inventor's Hole and H are given back, before the commands are released.
+            _holeEdit?.Dispose();
+            _holeEdit = null;
+            _holeTakeover?.Dispose();
+            _holeTakeover = null;
+
             foreach (var c in _commands)
                 c.Dispose();
             _commands.Clear();
