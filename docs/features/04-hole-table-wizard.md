@@ -79,7 +79,7 @@ Inventor's own hole table can be created from a view and stays associative, but 
 
 ## Open questions
 
-1. **What makes a hole "precision"?** Any hole with a fit tolerance, or a specific list of fit classes, or a tolerance band below some limit.
+1. ~~**What makes a hole "precision"?**~~ Answered 2026-10-24 (Aidan, spec 09): a toleranced hole is precision: an AWB dowel, and an AWB Clearance or Simple hole with Toleranced ticked. Default: a hole with an Inventor tolerance on its diameter and no AWB data is precision too.
 2. **What does the *Split* checkbox do?** One guess: it gives that instance its own group and tag.
 3. **What does *Update Reams* do?** One guess: it refreshes precision hole descriptions after the model changes.
 4. **What does *Align* do?** One guess: it stacks the tables and snaps them to the corner above the title block.

@@ -293,10 +293,23 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 | 100 | windows build | 097, 099 | none |
 | 101 | windows build | 096, 099 | none |
 | 102 | image only | 098, 099, 100 | 091, 092 |
-| 103 | **windows** (spike with Aidan) | 090 | 102 |
+| 103 | **windows** (spike with Aidan; in place for AWB Hole and every command) | 090 | 107, 108 |
 | 104 | windows build | 102 approved by Aidan, 101, 106 | 105 |
-| 105 | windows build | 103, 092 | 104 |
+| 105 | windows build | 103, 092 | 109 |
 | 106 | windows build | 099, 100, 101 | none |
+| 107 | **windows** (spike with Aidan) | 101 | 103, 108 |
+| 108 | **windows** (spike with Aidan) | 106 | 103, 107 |
+| 109 | windows build | 103 | 105 if disjoint |
+| 110 | windows build | 107 | 111, 112, 113, 119 |
+| 111 | Core and starter workbook | 106 | 110, 119 |
+| 112 | Core | 111 | 110, 119 |
+| 113 | Core | 112 | 110, 119 |
+| 114 | windows build | 108, 112, 119 | none |
+| 115 | windows build | 108, 113, 114 | none |
+| 116 | windows build | 114 | none |
+| 117 | windows build | 094 | 110 to 113, 119 |
+| 118 | windows build | 114, 115 | 116, 117 |
+| 119 | **Python with Pillow** | 104 | 110 to 113, 117 |
 
 - [x] 081 Spike: AWB Hole through the Inventor API (Windows)
 - [x] 082 Hole workbook: reader and models (Core)
@@ -320,16 +333,31 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 - [x] 100 Depth boxes take Inventor parameters and expressions
 - [x] 101 Preview holes in translucent red (solid red; see spec 09 question 13)
 - [x] 102 AWB Hole window redesign: mockup for Aidan (approved 2026-10-23 with changes; revised)
-- [ ] 103 Spike: AWB Hole in a part edited in place in an assembly (with Aidan)
+- [ ] 103 Spike: editing a part in place, for AWB Hole and every AWB command (with Aidan)
 - [x] 104 AWB Hole window redesign
 - [ ] 105 AWB Hole in a part edited in place
 - [x] 106 Dowel seats sized in the window
+- [ ] 107 Spike: the AWB Hole preview drawn with client graphics (with Aidan)
+- [ ] 108 Spike: Simple and Taper Tapped holes, spotfaces, seats on every type, tolerance on a clearance hole (with Aidan)
+- [ ] 109 Every AWB command works in a part edited in place
+- [ ] 110 The AWB Hole preview drawn with client graphics, no face paint
+- [ ] 111 Hole workbook: Spotface and Taper Tapped tabs
+- [ ] 112 Core: Simple and Taper Tapped types, Spotface, any seat on any type
+- [ ] 113 Core: toleranced Clearance and Simple holes, Custom tolerance
+- [ ] 114 Simple and Taper Tapped holes and spotfaces in Inventor and the window
+- [ ] 115 Toleranced Clearance and Simple holes in Inventor and the window
+- [ ] 116 Thread and drill depths measured from the bottom of the seat
+- [ ] 117 Default hole centres per point, like Inventor's Hole
+- [ ] 118 The AWB Hole window fits without scrolling at 150 percent on 1080p
+- [ ] 119 Icons for Simple, Taper Tapped and Spotface
 
 **Order.** 082 and 083, 084, 085, 086 and 087 alongside, then 088, 089, 090. Aidan checked 090 on 2026-10-18; his three bugs and seven requests became tasks 093 to 105 (Aidan, 2026-10-18). Then: 093 to 101 one after another (fixes, then answers and requests), 091, 092, then 102 (mockup). Aidan then checks 091 to 101, approves or changes the mockup, and runs spike 103 with the parent session. Aidan approved the mockup on 2026-10-23 with changes (revised in task 102) and decided dowel seats (task 106). Then 106, 104, 091, 092; spike 103 and 105 with Aidan; and a last check.
 
-Not in part 1: AWB Hole on the Sheet Metal and Flat Pattern tabs (they keep Inventor's Hole), holes placed without a sketch, and Standard and Fastener type beyond spec 09's defaults (questions 2 and 3).
+**Round after PR #29's first look** (Aidan, 2026-10-24). Aidan's changes are tasks 103 (widened), 105 and 107 to 119; the fixes from his PR #29 checklist results are added to this round as further tasks, and the whole round runs at once, in a local session on Aidan's PC. Order: in-place editing first, as Aidan's top priority: spike 103 with Aidan, then 105 and 109. Spikes 107 and 108 run with Aidan in the same session. Then the Core work (111, 112, 113, 119 alongside), the checklist fixes, 110, 117, 114, 115, 116, and 118 last, since it lays out the window's final rows. Aidan then checks the round in Inventor.
 
-**Part 2: the hole table wizard** (spec 04), planned after part 1. Its Core half (classification, grouping, tagging, descriptions, table model) can be planned once spec 04's questions 1, 6 and 7 are answered; the add-in half waits on the Windows spike described in the spec.
+Not in part 1: AWB Hole on the Sheet Metal and Flat Pattern tabs (they keep Inventor's Hole), holes placed without a sketch, and Standard and Fastener type beyond spec 09's defaults (questions 2 and 3). Simple and Taper Tapped holes and spotfaces were added to part 1 on 2026-10-24 (Aidan).
+
+**Part 2: the hole table wizard** (spec 04), planned after part 1. Its Core half (classification, grouping, tagging, descriptions, table model) can be planned once spec 04's questions 6 and 7 are answered (question 1 was answered on 2026-10-24: a toleranced hole is precision); the add-in half waits on the Windows spike described in the spec.
 
 ### M5: Drawing tools (spec 05)
 
