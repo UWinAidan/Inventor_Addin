@@ -12,7 +12,7 @@ using Forms = System.Windows.Forms;
 namespace InventorAddin.Commands
 {
     /// <summary>
-    /// Save As Copy (spec 02, "Commands: Save As Copy"): copies the active part or assembly, with its unsaved edits, into
+    /// Save As Copy (spec 02, "Commands: Save As Copy"): copies the part or assembly being edited (also one edited in place), with its unsaved edits, into
     /// its own folder under the next part number and a new name, writes the creation properties on the copy, saves it
     /// and opens it. The original is not changed. The steps, their order and the messages are in
     /// <see cref="SaveAsCopyCreator"/> (Core); this class reads the original, shows the dialog and supplies Inventor.
@@ -32,8 +32,9 @@ namespace InventorAddin.Commands
 
         protected override void Execute()
         {
-            // The document open in the window, as Create Print uses: the part or assembly being copied.
-            Document? original = InventorHost.ActiveDocument;
+            // The document being edited (CommandDocuments, task 109), as Create Print uses: the part or assembly being
+            // copied, also one edited in place. The in-place edit is not ended; the copy opens in its own window.
+            Document? original = CommandTargetDocument();
             if (original == null)
             {
                 Show("Open a part or assembly first.", Forms.MessageBoxIcon.Information);

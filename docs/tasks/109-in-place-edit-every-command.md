@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 1
 - **Feature spec:** specs 02, 03 and 07 (each command's own section); `docs/features/09-awb-hole.md` ("The command")
-- **Status:** todo
+- **Status:** done
 - **Depends on:** 103
 - **Needs:** windows build
 - **Parallel-safe with:** 105 (disjoint files)
@@ -58,9 +58,10 @@ Out of scope:
 
 Filled in by the implementer.
 
-- **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):**
-- **Inventor API members not confirmed:**
+- **Ran:** on Windows, `dotnet build InventorAddin.slnx -tl:off -p:DeployToInventor=false`: build succeeded, 0 errors, 8 warnings (all CS8600 on the existing `Forms.Cursor previousCursor = Forms.Cursor.Current;` lines in Create Print, New Part, Save As Copy and Save As and Replace, untouched by this task). `dotnet test tests/InventorAddin.Core.Tests`: 3617 passed, 0 failed, 0 skipped.
+- **Not compiled (changed under `src/InventorAddin`):** none. Everything changed was built on Windows against Inventor 2026. Not yet run in Inventor.
+- **Inventor API members not confirmed:** none. The only members used are `Application.ActiveDocument` and `Application.ActiveEditDocument` through the existing `InventorHost` properties, and `Document.FullFileName`, all already in use.
+- **What changed:** `CommandDocuments.For` (Core) holds every command's row. `AddinCommand.CommandTargetDocument()` maps the row to `ActiveEditDocument`, `ActiveDocument` or null, and is the only place the choice is made. `DocumentEditCommand.DocumentToEdit` now defaults to it, so Part Properties (Edited) and Save As and Replace (TopLevel; its `ActiveDocument` override removed) both read it. Create Print, Save As Copy, New Part and Export Model Data call it directly. Create Print and Save As Copy move from `ActiveDocument` to the edited document; the other commands act on the same document as before.
 - **Manual checklist for Inventor:** for each step, edit one of your parts in place inside an assembly (double-click it), then:
   1. **Create Print**: the print made and opened is the part's, in the part's `Prints` folder.
   2. **Save As Copy**: the dialog shows the part's name, and the copy is of the part. The assembly is unchanged and still has the part in place.
@@ -73,3 +74,7 @@ Filled in by the implementer.
   9. Repeat steps 1, 2, 5 and 7 with a **sub-assembly** edited in place: each acts on the sub-assembly.
 
 ## Follow-ups
+
+- **Part Properties' transaction is not on `ActiveDocument`.** The brief says it "stays on `ActiveDocument`". In the code, only Change beside Material starts its transaction on `ActiveDocument`. The property writes (`TransactionWriteTarget`) and Generate run `RunInTransaction` on the edited document, the part while it is edited in place. This task left that unchanged. If checklist step 5 (one Undo in the assembly window reverts Designer) fails, that is the likely cause: start those transactions on `ActiveDocument`, as Material and Finish does (spike 067 section 4).
+- **Material and Finish still has its own `ActiveDocument` override** of `DocumentToEdit` (in `MaterialFinishCommand.cs`, not in this task's files). It is the transaction and selection document; the target comes from `MaterialFinishTargeting`, so behaviour matches its `Edited` row. It also reads `ActiveEditDocument` directly. A later task could make it read the TopLevel document through a named helper, so no command bypasses the rule by hand.
+- `AwbHoleCommand` and `HoleEditRedirect` read `ActiveEditDocument` directly (task 105 files, left alone). They could switch to `CommandTargetDocument()` when next touched.

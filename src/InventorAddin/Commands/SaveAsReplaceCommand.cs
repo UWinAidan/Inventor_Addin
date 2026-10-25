@@ -41,10 +41,10 @@ namespace InventorAddin.Commands
 
         protected override CommandTypesEnum CommandType => CommandTypesEnum.kShapeEditCmdType;
 
-        // The top-level assembly open in the window, also while a sub-assembly is edited in place: the selection is held
-        // by the top-level document then, and the sub-assembly's own SelectSet is empty (spike 052, task 060). The kind
-        // check, the selection, the transaction and the replace all use it.
-        protected override Document? DocumentToEdit => InventorHost.ActiveDocument;
+        // The document is the top-level assembly open in the window, by this command's row in CommandDocuments (TopLevel,
+        // task 109), also while a sub-assembly is edited in place: the selection is held by the top-level document then,
+        // and the sub-assembly's own SelectSet is empty (spike 052, task 060). The kind check, the selection, the
+        // transaction and the replace all use it (DocumentEditCommand.DocumentToEdit).
 
         protected override bool CanRunOn(DocumentKind kind) => kind.IsAssembly();
 

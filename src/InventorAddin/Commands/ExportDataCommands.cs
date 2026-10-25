@@ -19,7 +19,8 @@ namespace InventorAddin.Commands
 
         protected override void Execute()
         {
-            Document doc = InventorHost.ActiveEditDocument
+            // The document being edited, also a part or sub-assembly edited in place (CommandDocuments, task 109).
+            Document doc = CommandTargetDocument()
                 ?? throw new InvalidOperationException("No document is open.");
 
             var data = ModelExtractor.Extract(doc);

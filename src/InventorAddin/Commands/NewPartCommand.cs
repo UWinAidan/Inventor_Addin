@@ -32,9 +32,9 @@ namespace InventorAddin.Commands
         {
             AddinSettings settings = AddinServices.Settings;
 
-            // The active document's folder when it has been saved, else the Work folder; never the project workspace,
-            // which spike 032 found blank.
-            string? activeFile = ComSafe.Get(() => InventorHost.ActiveDocument?.FullFileName);
+            // The folder of the document open in the window (its row in CommandDocuments is TopLevel, task 109) when it
+            // has been saved, else the Work folder; never the project workspace, which spike 032 found blank.
+            string? activeFile = ComSafe.Get(() => CommandTargetDocument()?.FullFileName);
             string folder = NewPartCreator.DefaultFolder(activeFile, settings.WorkFolder);
 
             var viewModel = new NewPartViewModel(settings.DefaultDesigner, settings.DefaultUnits, folder);

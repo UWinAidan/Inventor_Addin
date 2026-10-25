@@ -156,6 +156,7 @@ Designer and Detailer are not in the dialog; they come from Settings and can be 
 - Copies the active part or assembly under a new number into the same folder. The dialog asks for the name and part type, pre-filled from the original.
 - Writes the creation properties on the copy (number, Description, part type, and Designer, Author and Detailer from Settings); everything else is kept from the original (Default). Opens the copy.
 - **Each copy gets its own new number** (Aidan, 2026-10-11). After saving the copy, the add-in reads its Part Number back and stops with an error if it is not the number just assigned. The name box is pre-filled with the original's name without its number.
+- While a part or sub-assembly is edited in place, it acts on that part or sub-assembly (Default, spike 103).
 
 **Save As and Replace** (Create panel; Assembly ribbon)
 
@@ -181,6 +182,7 @@ Designer and Detailer are not in the dialog; they come from Settings and can be 
 - Writes the model's Part Number into the drawing's Part Number when the model has a number. Nothing else is copied; the M5 title block will read the model's properties.
 - If the drawing file already exists, offers to open it instead (Default). It looks in `Prints` first, then beside the model, where prints made before 2026-10-11 were saved (Default).
 - Works on assemblies too (Default; Aidan said "part").
+- While a part or sub-assembly is edited in place, it acts on that part or sub-assembly (Default, spike 103).
 
 **Mass Update** (Properties panel; Part, Assembly and ZeroDoc ribbons) (Default: the folder scan and Mass Update are one command)
 

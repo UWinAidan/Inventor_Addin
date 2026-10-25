@@ -1,6 +1,7 @@
 using System;
 using Inventor;
 using InventorAddin.Core.Logging;
+using InventorAddin.Core.Ribbon;
 using InventorAddin.UI;
 
 namespace InventorAddin.Commands
@@ -117,6 +118,19 @@ namespace InventorAddin.Commands
         }
 
         protected abstract void Execute();
+
+        /// <summary>
+        /// The document this command acts on, by its row in <see cref="CommandDocuments"/> (task 109), the only place
+        /// that choice is made: the document being edited (<c>ActiveEditDocument</c>, the part or sub-assembly while it
+        /// is edited in place), the top-level document open in the window (<c>ActiveDocument</c>), or none. Null when
+        /// no document is open or the row is <see cref="CommandDocument.None"/>.
+        /// </summary>
+        protected Document? CommandTargetDocument() => CommandDocuments.For(InternalName) switch
+        {
+            CommandDocument.Edited => InventorHost.ActiveEditDocument,
+            CommandDocument.TopLevel => InventorHost.ActiveDocument,
+            _ => null,
+        };
 
         public void Dispose()
         {
