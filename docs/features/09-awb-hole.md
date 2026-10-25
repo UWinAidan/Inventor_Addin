@@ -138,7 +138,7 @@ New rows, in a new collapsible section "Holes" (Default):
 7. ~~**Default depth for a blind hole.**~~ Answered 2026-10-18 (Aidan): the last depth used, or 2 x D the first time, 2 being a value on the workbook's Settings tab (task 097).
 8. ~~**Removing a dowel's colour.**~~ Answered 2026-10-18 (Aidan): every face of the hole goes back to the part's colour (task 096).
 9. ~~**Seat sizes for a dowel hole.**~~ Answered 2026-10-23 (Aidan): no fastener standard; editable seat boxes starting from new seat columns on the Dowel tab, then the last values used (see "Dowel and precision holes"; task 106).
-10. **AWB Hole in a part edited in place.** Aidan wants it (2026-10-18), and on 2026-10-24 made it the top priority, for every AWB tool. How it is done is settled by spike 103 with Aidan.
+10. ~~**AWB Hole in a part edited in place.**~~ Settled 2026-10-25 by spike 103 with Aidan: it runs on the part being edited, with transactions, highlight and client graphics on the part and proxies converted to the part's objects (task 105); every other command acts on the document being edited (task 109); the mini toolbar's Hole button is taken over too (task 133); switching to another document cancels the window (Aidan).
 11. ~~**Default centres per point or per sketch.**~~ Answered 2026-10-24 (Aidan): per point, like Inventor's Hole (task 117).
 12. ~~**Thread depth under a counterbore.**~~ Answered 2026-10-24 (Aidan): a seated hole's thread and drill depths are measured from the bottom of the seat (task 116).
 13. ~~**The preview red is opaque.**~~ Answered 2026-10-24 (Aidan): a faint, see-through red copy of the hole volume drawn with client graphics, as Inventor's Hole does, end caps included; no face painting (spike 107, task 110).

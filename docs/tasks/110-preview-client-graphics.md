@@ -16,7 +16,7 @@ The preview looks like Inventor's own Hole preview (Aidan, 2026-10-24): a faint,
 - Remove task 101's preview paint: the paint transaction in `HoleSession` (`_paint`, `ClearPaint`), `HolePreviewWriter`'s face painting, and Core's `HolePreviewAppearance` where nothing else uses it. This also closes the `TODO.md` follow-ups "Preview red (task 101 review)" (a failed clear leaving the paint transaction open; "translucent" comments), which are folded in here.
 - Draw the preview as spike 107 recommends: the volume source, the node layout, the colour (RGB 220, 40, 40, the 2026-10-18 Default) and the opacity Aidan chose, redrawn after each successful change and removed on OK, Cancel, a refused change that keeps the last good hole (the graphics follow the last good hole), and when the session ends any other way.
 - Any geometry the graphics need (for example the profile of the hole volume per centre) is worked out in Core from `HoleGeometry`, with tests; the add-in only turns it into Inventor objects.
-- If task 105 is done first, the graphics also draw in a part edited in place, as spike 103 question 8 found; otherwise 105 picks this up.
+- Draw on the part's `ComponentDefinition.ClientGraphicsCollection` only, with no occurrence transform: spike 103 question 8 showed such graphics land exactly on the part in a part edited in place too. Colour through `GraphicsDataSets.CreateColorSet`, `ColorSet` and `ColorBinding = kOverallColor` (`LineGraphics` has no `Color`; the same applies to triangle graphics). If task 105 is done, check the preview in place as well.
 
 Out of scope:
 

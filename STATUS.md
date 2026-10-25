@@ -6,17 +6,12 @@ Last updated: 2026-10-25
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-10-25. Branch `claude/m4-hole-generator`; PR #29 open against `main`. Plan commits local only, not pushed.
-- Goal: run the M4 part 1 round (tasks 103, 105, 107 to 132) per `docs/WORKFLOW.md`.
-- Done this session: Aidan's PR #29 checklist results and requests turned into tasks 120 to 132; his decisions logged in `DECISIONS.md` (2026-10-25); spec 09 updated (split button, Sheet Metal tab, seat boxes on every type, typed values kept, live typing, 60 deg point, tolerance levels, hand colour kept, question 20); spike 108 gained question 7 (seat depth 0, centre-drill spot); `docs/PLAN.md` table, checklist and full order; `TODO.md`.
-- Current state: no code changed. `libraries/AWB_Holes.xlsx` has an uncommitted change in the working copy that this session did not make: ask Aidan whether it is his before tasks 111, 131 or 132 touch the starter workbook.
-- Next steps:
-  1. Spike 103 (in place) with Aidan, then write and run 105 and 109.
-  2. Spikes 107 and 108 with Aidan.
-  3. Then 120, 121, 128, 129; 123, 124, 125, 122; 126; 111, 112, 113, 119; 131, 132; 127; 130; 110, 117, 114, 115, 116; 118 last.
-  4. Before running 105, 109, 110, 114, 115 or 127, write them in full from their spike's Recommendations. Push when the round runs.
-- Gotchas: `cat > file` with no heredoc in Git Bash waits on stdin and hangs; use the Write tool or a `python - <<'EOF'` heredoc. Files are LF in the working copy with autocrlf (harmless warning). `GetValueFromExpression` throws "Unspecified error" with no reason; abort a nested transaction before its parent. Spike 081's code is at commit `1ef94fa`. Each command's document choice today is in task 103's audit table.
-- Read first: `docs/WORKFLOW.md`, `docs/PLAN.md` ("Round after PR #29's first look"), `docs/features/09-awb-hole.md`, task 103, the 2026-10-24 and 2026-10-25 rows of `DECISIONS.md`.
+- Updated: 2026-10-25. Branch `claude/m4-hole-generator`; PR #29 open against `main`. The spike branch `spike/103-in-place-edit` (`313e7cf`, `2e4e650`) is local only and never merged.
+- Spike 103 done (rounds 1 and 2 with Aidan): Results and Recommendations in `docs/tasks/103-spike-in-place-edit.md`. Tasks 105 and 109 written in full; new tasks 133 (mini toolbar Hole button `PartDMHoleCmd`) and 134 (Save As and Replace renames the occurrence it replaces, from Aidan's Rename report: Inventor's `Replace` keeps the occurrence name, so later Renames found no match).
+- Spike log gap: only AWB Hole, Material and Finish, Part Properties and About were seen run in place; the other commands and the sub-assembly case are on task 109's checklist.
+- `libraries/AWB_Holes.xlsx` change was Aidan's (097-5 test) and was discarded.
+- Next: run 105, 109, 133, 134 per `docs/WORKFLOW.md` (implementer, reviewer, commit each), then spikes 107 and 108 with Aidan, then the order in `docs/PLAN.md`.
+- Gotchas: build with `dotnet build InventorAddin.slnx -tl:off` (check `Get-Process Inventor` first, or `-p:DeployToInventor=false`). Check interop members by reflection on `C:\Program Files\Autodesk\Inventor 2026\Bin\Autodesk.Inventor.Interop.dll`. Log: `%APPDATA%\AwbAddinwbaddin.log`. Use Python heredocs for file edits in Git Bash.
 
 ## Big items
 
