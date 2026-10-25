@@ -2,12 +2,12 @@
 
 Everything that needs doing and is not already a task in `docs/PLAN.md`. Kept current by the parent session: items are added when they come up and removed when they are done or turned into a task. Where the project stands is in `STATUS.md`; why things are the way they are is in `DECISIONS.md`.
 
-Last updated: 2026-10-24
+Last updated: 2026-10-25
 
 ## Next up
 
-1. M4 part 1: 091 to 102, 104 and 106 are done on branch `claude/m4-hole-generator` (PR #29). Aidan's changes after his first look (2026-10-24) are planned as tasks 103 (widened), 105 and 107 to 119 in `docs/PLAN.md`. **Next: Aidan sends his PR #29 checklist results**; the parent turns failures into fix tasks, adds them to the same round, and then runs the whole round in one go, in-place editing (spike 103 with Aidan, then 105, 109) first.
-2. Ribbon icon colours: Aidan picks option A, B or C from `docs/ui-mockups/ribbon-icons-colour-options.png` on branch `claude/ribbon-icon-colour`; then build it.
+1. M4 part 1: the round is planned: tasks 103, 105, 107 to 119, and 120 to 132 from Aidan's PR #29 checklist results and requests (2026-10-25). **Next: run the round** per `docs/WORKFLOW.md`, starting with spike 103 (in place) with Aidan; the full order is in `docs/PLAN.md` ("Round after PR #29's first look").
+2. Ribbon icon colours: Aidan picks option A, B or C from `docs/ui-mockups/ribbon-icons-colour-options.png` on branch `claude/ribbon-icon-colour`; then build it. **Later, not this round** (Aidan, 2026-10-25): every AWB icon gets a more polished look, done together with the colour option.
 3. Aidan finishes the remaining Part Properties checks below.
 
 ## Waiting on Aidan: checks in Inventor
@@ -24,7 +24,10 @@ Last updated: 2026-10-24
 
 **M4 part 1, 090** was checked on 2026-10-18: steps 1 to 4a, 6, 7, 10, 12 to 21 and 25 passed (step 5 skipped). Steps 8 and 11 and the tapped thread display failed, now tasks 093 to 095; step 4b and Aidan's other requests are tasks 096 to 105. Steps 22 to 24 (editing) wait for 092.
 
-**M4 part 1, 091 to 106** (not 103, 105): built on `claude/m4-hole-generator`, compiled on Windows, not yet run in Inventor. The combined checklist is in the pull request and in each task file's Verification section. Aidan's first look on 2026-10-24 gave six changes (now tasks 103, 105, 107 to 119); his checklist results are still to come.
+**M4 part 1, 091 to 106** (not 103, 105) were checked on 2026-10-25. Failed, now fix tasks: 091-3 (120), 091-4 (121), 096-3 (122), 099-3 (123), 100-7 (124), 106-5 (125). Every other step passed or was accepted as it is (092-4, 098-2, 099-5), except:
+- [ ] Not tested yet: 106 steps 6, 7 and 10 (fold into task 125's check)
+- Skipped, not needed: 091-6, 095-4, 099-2 (covered by 106), 106-8, 106-9
+- 095-5 answered: Inventor's own Hole dialog, editing an AWB tapped hole with no changes, keeps the bore at the tap drill, not the minor diameter.
 
 From Part Properties (task 019):
 
@@ -97,16 +100,16 @@ Small things noticed while building. None is urgent. The parent turns these into
 - A finish list saved by Excel as plain "CSV" (not "CSV UTF-8") is in the Windows code page, so a non-ASCII character in a print note would read as a replacement character. Whoever reads the file (task 075) could fall back to the ANSI code page when the bytes are not valid UTF-8. (task 068)
 
 **AWB Hole**
-- Edit routing (task 092): a Re-apply button that previews the stored settings before OK, if the note is not enough. Not compared for re-apply: a tapped hole's thread (`M6` stored, `M6x1` reported), clearance and tapped seat sizes (not stored), and an expression replaced by a plain number of the same value. An unreadable extent or tolerance can make a re-apply offer. `HoleFeatureReader.ReadSpec` and `ReadAppliedState` are no longer called.
-- Hole takeover (task 091): taking over clears a shortcut the user gave Inventor's Hole, and giving it back restores H, not their key (remember it if wanted); giving back clears any key the user gave AWB Hole. After a crash H stays on AWB Hole until the next start. `HoleTakeoverRules.For` is unused by the adapter, whose "failed, so give back" rule could move to Core
+- Edit routing (task 092): a Re-apply button that previews the stored settings before OK, if the note is not enough. Not compared for re-apply: a tapped hole's thread (`M6` stored, `M6x1` reported), and an expression replaced by a plain number of the same value. An unreadable extent or tolerance can make a re-apply offer. `HoleFeatureReader.ReadSpec` and `ReadAppliedState` are no longer called.
+- Hole takeover (task 091): taking over clears a shortcut the user gave Inventor's Hole, and giving it back restores H, not their key (remember it if wanted); giving back clears any key the user gave AWB Hole. After a crash H stays on AWB Hole until the next start. 
 - Window redesign (task 104): the Tolerance closed box still hides the row name with a deliberately failing `ComboBoxItem` ancestor binding (a template selector in `UI/Theme` would be cleaner). A hole ending at a face is drawn as a through hole in the diagram. The diagram frame has no fill (the mockup's panel colour is not a spec 08 token). Clearance and Seat None icons look alike (different rows). Arrow keys in an icon row rebuild the preview on every press; check it is not sluggish on a heavy part
-- Dowel seats (task 106): the Dowel tab's autofilter still covers A:D only (widening it changes `xl/workbook.xml`'s `_FilterDatabase` too). A non-number in one of the optional seat columns drops the whole Dowel row; dropping only that value would be kinder. A wrong-type `lastDowelSeatsMm`/`In` value in a hand-edited settings.json makes the whole file fail to load, like other typed settings. Check in Inventor that a counterbore depth expression (`d0/8`) keeps the seat parametric (106 checklist step 4)
+- Dowel seats (task 106): the Dowel tab's autofilter still covers A:D only (widening it changes `xl/workbook.xml`'s `_FilterDatabase` too). A non-number in one of the optional seat columns drops the whole Dowel row; dropping only that value would be kinder. A wrong-type `lastDowelSeatsMm`/`In` value in a hand-edited settings.json makes the whole file fail to load, like other typed settings.
 - Redo of an AWB Hole (task 101 spike): `RedoTransaction` after one Undo did not bring the hole back; check Ctrl+Y in Inventor
 - Depth expressions (task 100): an expression changed in Inventor's Parameters dialog after OK is not seen by Edit, which opens an AWB hole on its stored expression (task 092 now compares a stored expression by its value today)
 - Seats on tapped and dowel holes (task 099 review): the same-size match is within 0.0001, so 0.312 in one tab and 0.3125 in another give no seat (a per-unit tolerance would be kinder); two Clearance sizes with one nominal (`#5` and `1/8`, both 0.125 in) would both be offered; switching Standard from a seated AWB Clearance to AWB Dowel goes to the first dowel size, not the nearest. The window mockup (102) could put Fastener type under Size, since for tapped and dowel holes its list follows the size
 - Aidan's own hole workbook has no "Blind depth multiplier" row on its Settings tab (added to the starter in task 097); without it 2 is used. Copy the row across to change it. Aidan may prefer the name "Blind depth (x D)" to match its neighbours (the reader would then accept both)
 - The Settings window saves a copy of the settings taken when it opened; it is modal, so today nothing else can change them meanwhile. If it ever becomes modeless, merge `LastBlindDepth*` and `PreferredMaterials` from the current settings on save (task 097 review)
-- Tapped holes (task 095): check on a drawing what Inventor's thread notes and hole tables show now that a hole's minor diameter minimum is the workbook's tap drill, and whether Inventor's own Hole dialog keeps the tap drill when it edits an AWB tapped hole (095 checklist step 5). `HoleThreadNames.NominalSize` is no longer used; a tap drill change could be made in place instead of remaking the hole
+- Tapped holes (task 095): check on a drawing what Inventor's thread notes and hole tables show now that a hole's minor diameter minimum is the workbook's tap drill. `HoleThreadNames.NominalSize` is no longer used; a tap drill change could be made in place instead of remaking the hole
 - In the 090 check two AWB Holes in a row started on the same sketch seconds apart; task 094's start log line says how the sketch was chosen. If it says "newest visible unconsumed" right after an OK, the sketch is not ending hidden in the visible UI: a new bug (task 094)
 - In `HoleFeatureWriter.Change` the seat is ordered against the hole diameter only; a Distance counterbore made deeper while the hole is made shallower in one step (or the reverse) is not ordered against the depth. Not reached with workbook rows; fix if "Inventor refused the change" shows in the log for it (task 093)
 - ISO 286 tables (task 083) were typed from the standard's values and checked from memory by the reviewer, not against a copy of ISO 286-2; worth a spot-check, mainly sizes over 250 mm. K9 to K11 over 3 mm and N9 to N11 up to 1 mm are refused (readings of the standard's footnotes). JS7 to JS11 round an odd IT value down before halving, as ISO 286-2 prints it; if the Precision Tol tab ever holds a JS code, compare one odd-IT size with Inventor's own fit. (task 083)

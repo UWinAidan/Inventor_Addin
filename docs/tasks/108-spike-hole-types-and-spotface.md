@@ -19,6 +19,7 @@ Aidan, 2026-10-24: AWB Hole gets two more types, Simple (a diameter only) and Ta
 4. **Simple.** A plain drilled hole at a typed diameter is what dowels already use; confirm a diameter written as an expression (`d0*2`, `8 mm`) keeps the hole parametric, like the depth boxes (task 100).
 5. **Tolerance on a clearance hole.** Task 088 sets Inventor's fit tolerance (ISO rows) or deviations (Limits rows) on a dowel's diameter. Confirm the same works on a seated clearance hole's through diameter without touching the seat, and that Custom limits (typed deviations) go on the same way. Confirm the read-back.
 6. **Read-back of a hole made by Inventor's command** with a spotface or a tapered thread: what `HoleFeatureReader` would see, so Edit opens it as the right type (spec 09, question 5).
+7. **Seat depth 0 and a centre-drill spot** (Aidan, 2026-10-25): does Inventor accept a counterbore or spotface depth of 0 (and what it models), and a small countersink (60 and 90 deg) on a tapped, a dowel and a Simple hole? Task 127 is written from this.
 
 ## How
 
@@ -31,4 +32,4 @@ Filled in after the rounds with Aidan.
 
 ## Recommendations
 
-Filled in after the rounds with Aidan; tasks 114 and 115 are completed from them.
+Filled in after the rounds with Aidan; tasks 114, 115 and 127 are completed from them.
