@@ -163,6 +163,7 @@ Designer and Detailer are not in the dialog; they come from Settings and can be 
 - With one component selected in the active assembly: makes a copy as Save As Copy does, then replaces **that occurrence only** with the copy (Default, open question 16).
 - A component inside a sub-assembly can be selected (Aidan, question 25). The occurrence is replaced inside the sub-assembly, and the sub-assembly is saved. The dialog says so, because every assembly that uses the sub-assembly changes and Undo cannot put the saved file back.
 - The selection is read from the top-level assembly open in the window, also while a sub-assembly is being edited in place (spike 052: the selection is held by the top-level document then, and the sub-assembly's own selection is empty).
+- The replaced occurrence takes the copy's name when it was named after the original (`OLD,AWB-10017:1` becomes `NEW,AWB-10022:1`); one given another name keeps it (Default, task 134).
 
 **Rename** (button beside the part name in Part Properties)
 

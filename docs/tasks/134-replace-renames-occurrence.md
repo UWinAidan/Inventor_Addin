@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 1 (a fix to M2's Save As and Replace, run in this round)
 - **Feature spec:** `docs/features/02-part-creation-and-numbering.md` ("Commands: Save As and Replace", "Commands: Rename")
-- **Status:** todo
+- **Status:** done
 - **Depends on:** none
 - **Needs:** windows build
 - **Parallel-safe with:** 105, 109, 133
@@ -59,9 +59,14 @@ Out of scope:
 
 Filled in by the implementer.
 
-- **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):**
-- **Inventor API members not confirmed:**
+- **Ran:** on Windows with Inventor 2026 installed:
+  - `dotnet build InventorAddin.slnx -tl:off -p:DeployToInventor=false`: 0 errors, 8 warnings. All 8 are the existing CS8600 on the `Forms.Cursor previousCursor = Forms.Cursor.Current;` line in CreatePrint, NewPart, SaveAsCopy and SaveAsReplace (each reported twice, for the project and the WPF temp project). None is in code this task added.
+  - `dotnet test tests/InventorAddin.Core.Tests`: 3638 passed, 0 failed, 0 skipped.
+- **Not compiled (changed under `src/InventorAddin`):** none. `src/InventorAddin/Commands/SaveAsReplaceCommand.cs` compiled in the Windows build above. It has not been run in Inventor.
+- **Inventor API members not confirmed:** every member name compiled against the 2026 interop. `ComponentOccurrence.Name` (set) is used in `RenameService.RenameOccurrences`, and `ComponentOccurrenceProxy.NativeObject` is used in this file's `ReadSelection`. Three behaviours still need checking in Inventor:
+  - Setting the name on the proxy's `NativeObject` right after `Replace` on the proxy. The native occurrence is read again after the replace.
+  - One Undo reverting both the replace and the name.
+  - A failed `Name` set leaving the transaction open, so that the replace still ends with it.
 - **Manual checklist for Inventor:**
   1. In one of your assemblies, select an occurrence named after its file (for example `PLATE,AWB-…:1`) and run Save As and Replace with a new name. The browser shows the new file's name with `:1`.
   2. Press Undo once: the original component and its name are back.
@@ -71,3 +76,8 @@ Filled in by the implementer.
   6. Rename the stale `BRACKET_V4,AWB-10017:1` in `ASSY_GEARBOX` by hand once, unless you answer spec 02 question 27 the other way.
 
 ## Follow-ups
+
+- Implementation notes for the reviewer:
+  - The note is carried on a new optional `NewPartResult.Note`, and `NewPartCreator.Notice` adds it after the offline and duplicate text. Save As and Replace shows the message with a Warning icon when there is a note.
+  - `OccurrenceName` is read from the selected occurrence, which for a nested component is the proxy, as the task says. The name is set on the native occurrence.
+  - The new Notice line is tested in `SaveAsReplacerTests`. `NewPartCreatorTests` has no test of its own for `Note` yet.

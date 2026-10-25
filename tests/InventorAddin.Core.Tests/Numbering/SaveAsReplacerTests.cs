@@ -46,12 +46,18 @@ public sealed class SaveAsReplacerTests : IDisposable
     private ReplaceSelection TopLevel(
         DocumentKind kind = DocumentKind.Part,
         EditBlock component = EditBlock.None,
-        EditBlock assembly = EditBlock.None) =>
-        new(_component, kind, component, assembly);
+        EditBlock assembly = EditBlock.None,
+        string? occurrenceName = null) =>
+        new(_component, kind, component, assembly, OccurrenceName: occurrenceName);
 
-    private ReplaceSelection Nested(EditBlock subAssembly = EditBlock.None, string? subFile = null, string? occurrence = "Frame:1") =>
+    private ReplaceSelection Nested(
+        EditBlock subAssembly = EditBlock.None,
+        string? subFile = null,
+        string? occurrence = "Frame:1",
+        string? occurrenceName = null) =>
         new(_component, DocumentKind.Part, EditBlock.None, subAssembly,
-            SubAssemblyFullFileName: subFile ?? _subAssembly, SubAssemblyOccurrenceName: occurrence);
+            SubAssemblyFullFileName: subFile ?? _subAssembly, SubAssemblyOccurrenceName: occurrence,
+            OccurrenceName: occurrenceName);
 
     private SaveAsReplacer Replacer(ReplaceSelection selection) =>
         new(Store(), _target, selection, "Test Designer", _log);
@@ -356,6 +362,110 @@ public sealed class SaveAsReplacerTests : IDisposable
         Assert.DoesNotContain("save sub-assembly", _target.Calls);
     }
 
+    // ReplacedOccurrenceName (task 134)
+
+    private const string Original = @"C:\Cad\TEST_PLATE_A,AWB-10050.ipt";
+    private const string Copy = @"C:\Cad\TEST_PLATE_B,AWB-10061.ipt";
+
+    [Theory]
+    [InlineData("TEST_PLATE_A,AWB-10050:1", "TEST_PLATE_B,AWB-10061:1")]
+    [InlineData("test_plate_a,awb-10050:1", "TEST_PLATE_B,AWB-10061:1")]
+    [InlineData("TEST_PLATE_A,AWB-10050:12", "TEST_PLATE_B,AWB-10061:12")]
+    public void ReplacedOccurrenceName_NamedAfterTheOriginal_TakesTheCopysNameAndTheSameDigits(string name, string expected)
+    {
+        Assert.Equal(expected, SaveAsReplacer.ReplacedOccurrenceName(name, Original, Copy));
+    }
+
+    [Theory]
+    [InlineData("MY_NAME:1")]
+    [InlineData("TEST_PLATE_A,AWB-10050")]
+    [InlineData("TEST_PLATE_A,AWB-10050:")]
+    [InlineData("TEST_PLATE_A,AWB-10050:x")]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public void ReplacedOccurrenceName_AnyOtherName_IsNull(string? name)
+    {
+        Assert.Null(SaveAsReplacer.ReplacedOccurrenceName(name, Original, Copy));
+    }
+
+    [Fact]
+    public void ReplacedOccurrenceName_AnOriginalWithNoNumber_TakesTheCopysName()
+    {
+        Assert.Equal(
+            "TEST_PLATE_2,AWB-10030:1",
+            SaveAsReplacer.ReplacedOccurrenceName("TEST_PLATE:1", @"C:\Cad\TEST_PLATE.ipt", @"C:\Cad\TEST_PLATE_2,AWB-10030.ipt"));
+    }
+
+    [Theory]
+    [InlineData(null, Copy)]
+    [InlineData(Original, null)]
+    [InlineData("", Copy)]
+    [InlineData(Original, " ")]
+    public void ReplacedOccurrenceName_BlankPaths_IsNull(string? original, string? copy)
+    {
+        Assert.Null(SaveAsReplacer.ReplacedOccurrenceName("TEST_PLATE_A,AWB-10050:1", original, copy));
+    }
+
+    // Replace: the occurrence's name (task 134)
+
+    [Fact]
+    public void Replace_OccurrenceNamedAfterTheOriginal_PassesTheCopysName()
+    {
+        var result = Replacer(TopLevel(occurrenceName: "test_bracket,AWB-10001:3")).Replace(Request());
+
+        Assert.Equal("TEST_BRACKET_COPY,AWB-10001:3", _target.NewOccurrenceName);
+        Assert.Contains($"replace {CopyPath}", _target.Calls);
+        Assert.Null(result.Note);
+        Assert.Null(NewPartCreator.Notice(result));
+    }
+
+    [Theory]
+    [InlineData("MY_BRACKET:1")]
+    [InlineData(null)]
+    public void Replace_OccurrenceWithAnotherName_PassesNoName(string? name)
+    {
+        _target.NameProblem = "Should not be asked.";
+
+        var result = Replacer(TopLevel(occurrenceName: name)).Replace(Request());
+
+        Assert.Contains($"replace {CopyPath}", _target.Calls);
+        Assert.Null(_target.NewOccurrenceName);
+        Assert.Null(result.Note);
+        Assert.Empty(_log.Warnings);
+    }
+
+    [Fact]
+    public void Replace_Nested_PassesTheCopysName_ThenSavesTheSubAssembly()
+    {
+        Replacer(Nested(occurrenceName: "TEST_BRACKET,AWB-10001:2")).Replace(Request());
+
+        Assert.Equal("TEST_BRACKET_COPY,AWB-10001:2", _target.NewOccurrenceName);
+        Assert.Equal("save sub-assembly", _target.Calls[^1]);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Replace_NameThatCannotBeSet_KeepsTheReplace_LogsIt_AndSaysSo(bool nested)
+    {
+        _target.NameProblem = "The name is taken.";
+        const string old = "test_bracket,AWB-10001:1";
+
+        var result = Replacer(nested ? Nested(occurrenceName: old) : TopLevel(occurrenceName: old)).Replace(Request());
+
+        Assert.Equal("AWB-10001", result.PartNumber);
+        Assert.Contains($"replace {CopyPath}", _target.Calls);
+        Assert.Equal(nested, _target.Calls.Contains("save sub-assembly"));
+        var note = SaveAsReplacer.OccurrenceNameKeptMessage(old, "TEST_BRACKET_COPY,AWB-10001:1", "The name is taken.");
+        Assert.Equal(note, result.Note);
+        Assert.Contains("kept its old name test_bracket,AWB-10001:1", note, StringComparison.Ordinal);
+        Assert.Contains("The name is taken.", note, StringComparison.Ordinal);
+        Assert.Equal(note, NewPartCreator.Notice(result));
+        Assert.Contains(_log.Warnings, w => w.Contains("The name is taken.", StringComparison.Ordinal));
+        Assert.Empty(_log.Errors);
+    }
+
     [Fact]
     public void Constructor_RejectsNulls()
     {
@@ -374,6 +484,12 @@ public sealed class SaveAsReplacerTests : IDisposable
         public Exception? CloseCopyFailure { get; set; }
         public Exception? ReplaceFailure { get; set; }
         public Exception? SaveSubAssemblyFailure { get; set; }
+
+        /// <summary>The name passed with the replace; null when none was asked for.</summary>
+        public string? NewOccurrenceName { get; private set; }
+
+        /// <summary>What the replace returns when a name is asked for: null sets it, text is the reason it could not.</summary>
+        public string? NameProblem { get; set; }
 
         /// <summary>What the copy's Part Number reads after saving; null reads back what was written.</summary>
         public string? ReadBack { get; set; }
@@ -397,11 +513,13 @@ public sealed class SaveAsReplacerTests : IDisposable
                 throw CloseCopyFailure;
         }
 
-        public void ReplaceOccurrence(string copyFullPath)
+        public string? ReplaceOccurrence(string copyFullPath, string? newOccurrenceName)
         {
             Calls.Add($"replace {copyFullPath}");
             if (ReplaceFailure is not null)
                 throw ReplaceFailure;
+            NewOccurrenceName = newOccurrenceName;
+            return newOccurrenceName is null ? null : NameProblem;
         }
 
         public void SaveSubAssembly()

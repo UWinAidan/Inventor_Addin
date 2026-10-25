@@ -125,7 +125,10 @@ namespace InventorAddin.Commands
 
             string? notice = NewPartCreator.Notice(result);
             if (notice != null)
-                Show(notice, result.DuplicateMessages.Count > 0 ? Forms.MessageBoxIcon.Warning : Forms.MessageBoxIcon.Information);
+            {
+                bool warn = result.DuplicateMessages.Count > 0 || result.Note != null;
+                Show(notice, warn ? Forms.MessageBoxIcon.Warning : Forms.MessageBoxIcon.Information);
+            }
         }
 
         /// <summary>
@@ -216,7 +219,8 @@ namespace InventorAddin.Commands
                 IsVirtual: isVirtual,
                 SubAssemblyFullFileName: subAssemblyPath,
                 SubAssemblyOccurrenceName: subAssemblyOccurrence,
-                IsSuppressed: suppressed);
+                IsSuppressed: suppressed,
+                OccurrenceName: ComSafe.Get(() => occurrence.Name));
 
             return new SelectedComponent(selection, component, subAssembly);
         }
@@ -290,9 +294,42 @@ namespace InventorAddin.Commands
             }
 
             // A proxy's Replace edits the sub-assembly (spike 032). The transaction is on the top-level assembly
-            // (ActiveDocument) either way, also while a sub-assembly is edited in place (task 060); a failure aborts it.
-            public void ReplaceOccurrence(string copyFullPath) =>
-                _command.RunInTransaction(_assembly, () => _occurrence.Replace(copyFullPath, false));
+            // (ActiveDocument) either way, also while a sub-assembly is edited in place (task 060); a failure of the
+            // replace aborts it. The new name is set in the same transaction, so one Undo reverts both (task 134); a
+            // failure to set it is caught here and returned, so the replace stands.
+            public string? ReplaceOccurrence(string copyFullPath, string? newOccurrenceName)
+            {
+                string? nameProblem = null;
+                _command.RunInTransaction(_assembly, () =>
+                {
+                    _occurrence.Replace(copyFullPath, false);
+                    if (newOccurrenceName != null)
+                        nameProblem = SetName(newOccurrenceName);
+                });
+                return nameProblem;
+            }
+
+            /// <summary>
+            /// Gives the replaced occurrence <paramref name="name"/>: in an open assembly its name still reads the
+            /// original's after the replace (spike 103), so it is set directly. For an occurrence inside a sub-assembly
+            /// the name is set on the proxy's native occurrence, the sub-assembly's own, which is saved afterwards.
+            /// Null when the name was set, otherwise the reason it was not.
+            /// </summary>
+            private string? SetName(string name)
+            {
+                try
+                {
+                    ComponentOccurrence target = _occurrence is ComponentOccurrenceProxy proxy
+                        ? (ComponentOccurrence)proxy.NativeObject
+                        : _occurrence;
+                    target.Name = name;
+                    return null;
+                }
+                catch (Exception ex)
+                {
+                    return ex.Message;
+                }
+            }
 
             public void SaveSubAssembly()
             {

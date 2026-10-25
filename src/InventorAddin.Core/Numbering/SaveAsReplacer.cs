@@ -22,6 +22,10 @@ namespace InventorAddin.Core.Numbering;
 /// which is replaced in and saved; <c>""</c> when that sub-assembly has never been saved. Null for a top-level occurrence.
 /// </param>
 /// <param name="SubAssemblyOccurrenceName">The sub-assembly's occurrence name in the browser, for example <c>Sub:1</c>.</param>
+/// <param name="OccurrenceName">
+/// The selected occurrence's name as Inventor reads it, for example <c>BRACKET,AWB-10017:1</c>; null when it could not
+/// be read. It decides whether the replaced occurrence takes the copy's name (<see cref="SaveAsReplacer.ReplacedOccurrenceName"/>).
+/// </param>
 public sealed record ReplaceSelection(
     string ComponentFullFileName,
     DocumentKind ComponentKind,
@@ -30,7 +34,8 @@ public sealed record ReplaceSelection(
     bool IsVirtual = false,
     string? SubAssemblyFullFileName = null,
     string? SubAssemblyOccurrenceName = null,
-    bool IsSuppressed = false)
+    bool IsSuppressed = false,
+    string? OccurrenceName = null)
 {
     /// <summary>True when the occurrence is inside a sub-assembly, so the sub-assembly is edited and saved.</summary>
     public bool InSubAssembly => SubAssemblyFullFileName is not null;
@@ -50,9 +55,15 @@ public interface ISaveAsReplaceTarget : ISaveAsCopySource
 
     /// <summary>
     /// Replaces the selected occurrence only with the file at <paramref name="copyFullPath"/>
-    /// (spike 032: <c>Replace(path, false)</c>, which keeps the constraints). Throws when it cannot.
+    /// (spike 032: <c>Replace(path, false)</c>, which keeps the constraints), then, when
+    /// <paramref name="newOccurrenceName"/> is not null, gives the occurrence that name (task 134). Both are one undo
+    /// step. Throws when the replace fails.
     /// </summary>
-    void ReplaceOccurrence(string copyFullPath);
+    /// <returns>
+    /// Null when no name was asked for or the name was set; otherwise the reason the name could not be set. A name that
+    /// could not be set does not undo the replace.
+    /// </returns>
+    string? ReplaceOccurrence(string copyFullPath, string? newOccurrenceName);
 
     /// <summary>Saves the sub-assembly the replace edited. Called only for an occurrence inside a sub-assembly.</summary>
     void SaveSubAssembly();
@@ -255,6 +266,28 @@ public sealed class SaveAsReplacer
         $"Part number {number} was assigned and the copy '{copyPath}' was made, but the component could not be " +
         $"replaced: {reason} The copy and its number stay; replace the component with it by hand.";
 
+    /// <summary>
+    /// The note added to the result when the replace worked but the occurrence could not be given the copy's name
+    /// (task 134).
+    /// </summary>
+    public static string OccurrenceNameKeptMessage(string? oldName, string newName, string reason) =>
+        $"The component was replaced, but the occurrence kept its old name {(string.IsNullOrWhiteSpace(oldName) ? "" : oldName.Trim() + " ")}" +
+        $"and could not be renamed {newName}: {reason} Rename it by hand so that Rename can follow the file later.";
+
+    /// <summary>
+    /// The name the replaced occurrence takes (spec 02, "Commands: Save As and Replace"; Default, task 134): when
+    /// <paramref name="occurrenceName"/> is the original's file name without folder and extension, a colon and digits
+    /// (ignoring case), the copy's file name without folder and extension, a colon and the same digits. Otherwise null:
+    /// an occurrence given another name keeps it. <c>BRACKET,AWB-10017:1</c> becomes <c>BRACKET_2,AWB-10022:1</c>.
+    /// </summary>
+    /// <remarks>
+    /// The matching is Rename's (<see cref="RenamePlan.RenamedOccurrence"/>, Aidan 2026-10-11), so a later Rename of the
+    /// copy finds the occurrence. A name that already reads as the copy's file name also gives the copy's name, which
+    /// is the same name.
+    /// </remarks>
+    public static string? ReplacedOccurrenceName(string? occurrenceName, string? originalFullPath, string? copyFullPath) =>
+        RenamePlan.RenamedOccurrence(occurrenceName, originalFullPath, copyFullPath);
+
     public static string SubAssemblySaveFailedMessage(string number, string name, string reason) =>
         $"The component was replaced with {number}, but the sub-assembly {name} could not be saved: {reason} " +
         "It is changed in Inventor but not on disk; save it yourself.";
@@ -283,10 +316,13 @@ public sealed class SaveAsReplacer
             _log.Warn($"Save As and Replace: the copy '{result.FullPath}' could not be closed before the replace. {ex.Message}");
         }
 
-        // 3. Replace the selected occurrence only.
+        // 3. Replace the selected occurrence only, and give it the copy's name when it was named after the original
+        //    (task 134). A name that could not be set leaves the replace done.
+        var newName = ReplacedOccurrenceName(_selection.OccurrenceName, _selection.ComponentFullFileName, result.FullPath);
+        string? nameProblem;
         try
         {
-            _target.ReplaceOccurrence(result.FullPath);
+            nameProblem = _target.ReplaceOccurrence(result.FullPath, newName);
         }
         catch (Exception ex)
         {
@@ -294,6 +330,14 @@ public sealed class SaveAsReplacer
                 $"Save As and Replace: the copy '{result.FullPath}' ({assigned}) was made, but the occurrence could not be " +
                 "replaced. The copy and its register entry stay.", ex);
             throw new NewPartException(ReplaceFailedMessage(assigned, result.FullPath, ex.Message), assigned, ex);
+        }
+
+        if (newName is not null && nameProblem is not null)
+        {
+            _log.Warn(
+                $"Save As and Replace: the occurrence '{_selection.OccurrenceName}' was replaced with {assigned}, but could " +
+                $"not be renamed '{newName}'. {nameProblem}");
+            result = result with { Note = OccurrenceNameKeptMessage(_selection.OccurrenceName, newName, nameProblem) };
         }
 
         // 4. Save the sub-assembly the replace edited.
