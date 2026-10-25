@@ -1,4 +1,5 @@
 using InventorAddin.Core.Holes;
+using InventorAddin.Core.Ribbon;
 using InventorAddin.Core.Settings;
 using InventorAddin.Core.ViewModels;
 
@@ -92,5 +93,119 @@ public sealed class HoleTakeoverRulesTests
         Assert.Contains("Inventor's Hole", HoleTakeoverRules.AppliedMessage(HoleTakeoverRules.GivenBack("", "H"), "unload"));
         Assert.Contains("given back", HoleTakeoverRules.TakeOverFailedMessage("settings saved"));
         Assert.Throws<ArgumentNullException>(() => HoleTakeoverRules.AppliedMessage(null!, "x"));
+    }
+
+    // ---- task 133: the mini toolbar's Hole ----
+
+    private const string Ours = CommandNames.AwbHole;
+    private const string InventorsMiniHole = HoleTakeoverRules.InventorMiniToolbarHoleCommand;
+
+    [Fact]
+    public void MiniToolbarHole_IdMatchesTheSpike() =>
+        Assert.Equal("PartDMHoleCmd", HoleTakeoverRules.InventorMiniToolbarHoleCommand);
+
+    [Fact]
+    public void MiniToolbarHole_InsertsOursBeforeInventors_AtItsOneBasedIndex()
+    {
+        // Spike 103's toolbar on a sketch point in place.
+        Assert.Equal(1, HoleTakeoverRules.MiniToolbarHoleIndex(
+            [InventorsMiniHole, "SketchEditSketchCtxCmd", "AssemblyVisibilityCtxCmd"], Ours));
+        Assert.Equal(3, HoleTakeoverRules.MiniToolbarHoleIndex(["A", "B", InventorsMiniHole], Ours));
+        Assert.Equal(2, HoleTakeoverRules.MiniToolbarHoleIndex(["A", " PartDMHoleCmd "], Ours));
+    }
+
+    [Fact]
+    public void MiniToolbarHole_NoInventorEntry_IsNull()
+    {
+        Assert.Null(HoleTakeoverRules.MiniToolbarHoleIndex([], Ours));
+        Assert.Null(HoleTakeoverRules.MiniToolbarHoleIndex(["SketchEditSketchCtxCmd", null], Ours));
+        // The ribbon's Hole is not the mini toolbar's, and names match exactly.
+        Assert.Null(HoleTakeoverRules.MiniToolbarHoleIndex([HoleTakeoverRules.InventorHoleCommand], Ours));
+        Assert.Null(HoleTakeoverRules.MiniToolbarHoleIndex(["partdmholecmd"], Ours));
+    }
+
+    [Fact]
+    public void MiniToolbarHole_OursAlreadyThere_IsNull()
+    {
+        Assert.Null(HoleTakeoverRules.MiniToolbarHoleIndex([Ours, InventorsMiniHole], Ours));
+        Assert.Null(HoleTakeoverRules.MiniToolbarHoleIndex([InventorsMiniHole, Ours], Ours));
+    }
+
+    [Fact]
+    public void MiniToolbarHole_BadArguments_Throw()
+    {
+        Assert.Throws<ArgumentNullException>(() => HoleTakeoverRules.MiniToolbarHoleIndex(null!, Ours));
+        Assert.Throws<ArgumentException>(() => HoleTakeoverRules.MiniToolbarHoleIndex([], " "));
+    }
+
+    [Theory]
+    [InlineData("PartDMHoleCmd", HoleCommandOwner.Awb, true, false, true)]
+    [InlineData(" PartDMHoleCmd ", HoleCommandOwner.Awb, true, false, true)]
+    [InlineData("PartDMHoleCmd", HoleCommandOwner.Inventor, true, false, false)]
+    [InlineData("PartDMHoleCmd", null, true, false, false)]
+    [InlineData("PartDMHoleCmd", HoleCommandOwner.Awb, false, false, false)]
+    [InlineData("PartDMHoleCmd", HoleCommandOwner.Awb, true, true, false)]
+    [InlineData("PartHoleCmd", HoleCommandOwner.Awb, true, false, false)]
+    [InlineData("partdmholecmd", HoleCommandOwner.Awb, true, false, false)]
+    [InlineData(null, HoleCommandOwner.Awb, true, false, false)]
+    public void MiniToolbarBackstop_StopsInventorsHole_OnlyWhenAwbOwnsItAndNotAskedFor(
+        string? command, HoleCommandOwner? owner, bool isPart, bool askedFor, bool expected) =>
+        Assert.Equal(expected, HoleTakeoverRules.StopsInventorMiniToolbarHole(command, owner, isPart, askedFor));
+
+    [Fact]
+    public void RunRequest_NothingAsked_NoStartIsAskedFor()
+    {
+        var request = new InventorHoleRunRequest();
+
+        Assert.False(request.IsPending);
+        Assert.False(request.StartIsAskedFor(InventorsMiniHole));
+    }
+
+    [Fact]
+    public void RunRequest_Asked_LetsTheNextMiniToolbarHoleThroughOnce()
+    {
+        var request = new InventorHoleRunRequest();
+        request.Ask();
+
+        Assert.True(request.IsPending);
+        Assert.True(request.StartIsAskedFor(InventorsMiniHole));
+        Assert.False(request.IsPending);
+        Assert.False(request.StartIsAskedFor(InventorsMiniHole));
+    }
+
+    [Fact]
+    public void RunRequest_RibbonHoleStartOnTheWay_KeepsTheRequest()
+    {
+        var request = new InventorHoleRunRequest();
+        request.Ask();
+
+        Assert.False(request.StartIsAskedFor(HoleTakeoverRules.InventorHoleCommand));
+        Assert.True(request.IsPending);
+        Assert.True(request.StartIsAskedFor(InventorsMiniHole));
+    }
+
+    [Theory]
+    [InlineData("SketchEditSketchCtxCmd")]
+    [InlineData(CommandNames.AwbHole)]
+    [InlineData(null)]
+    public void RunRequest_AnotherCommandStarts_ClearsTheRequest(string? other)
+    {
+        var request = new InventorHoleRunRequest();
+        request.Ask();
+
+        Assert.False(request.StartIsAskedFor(other));
+        Assert.False(request.IsPending);
+        Assert.False(request.StartIsAskedFor(InventorsMiniHole));
+    }
+
+    [Fact]
+    public void SheetMetalMessage_NamesTheEntries()
+    {
+        string message = HoleTakeoverRules.SheetMetalMiniToolbarMessage(["SheetMetalHoleCmd", null, " X "]);
+
+        Assert.Contains("SheetMetalHoleCmd, (unnamed), X", message);
+        Assert.Contains("PartDMHoleCmd", message);
+        Assert.Contains("(none)", HoleTakeoverRules.SheetMetalMiniToolbarMessage([]));
+        Assert.Throws<ArgumentNullException>(() => HoleTakeoverRules.SheetMetalMiniToolbarMessage(null!));
     }
 }

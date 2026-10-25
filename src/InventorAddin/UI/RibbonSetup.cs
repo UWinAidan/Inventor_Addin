@@ -133,8 +133,9 @@ namespace InventorAddin.UI
         }
 
         /// <summary>
-        /// Edit Feature and double-click on a hole open AWB Hole while it has taken over Inventor's Hole (task 092). Our
-        /// Edit Feature has no ribbon button; it takes Inventor's Edit Feature icon, or AWB Hole's when that cannot be read.
+        /// Edit Feature and double-click on a hole open AWB Hole while it has taken over Inventor's Hole (task 092), and so
+        /// does the mini toolbar's Hole on a sketch point (task 133). Our Edit Feature has no ribbon button; it takes
+        /// Inventor's Edit Feature icon, or AWB Hole's when that cannot be read.
         /// </summary>
         private void StartHoleEditRedirect(UiTheme theme)
         {
@@ -144,10 +145,14 @@ namespace InventorAddin.UI
                 return;
             }
 
+            // AWB Hole's own definition, with its icon, for the mini toolbar's Hole entry (task 133).
+            ButtonDefinition? awbHole =
+                _commandsByName.TryGetValue(CommandNames.AwbHole, out AddinCommand? hole) ? hole.Definition : null;
+
             ButtonPictures? fallback = LoadPictures(edit, IconNames.AwbHole, theme);
             try
             {
-                _holeEdit = new HoleEditRedirect(_app, edit.Definition, () => _holeTakeover?.Owner, _log);
+                _holeEdit = new HoleEditRedirect(_app, edit.Definition, awbHole, () => _holeTakeover?.Owner, _log);
                 _holeEdit.Start(fallback);
             }
             catch (Exception ex)

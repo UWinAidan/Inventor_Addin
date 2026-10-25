@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 1
 - **Feature spec:** `docs/features/09-awb-hole.md` ("The command")
-- **Status:** todo
+- **Status:** done
 - **Depends on:** 105, 092
 - **Needs:** windows build
 - **Parallel-safe with:** 109, 134 (not 105: same file)
@@ -50,14 +50,21 @@ Out of scope:
 
 Filled in by the implementer.
 
-- **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):**
-- **Inventor API members not confirmed:**
+- **Ran:** `dotnet build InventorAddin.slnx -tl:off -p:DeployToInventor=false` on Windows: build succeeded, 0 errors (the 8 warnings are the existing CS8600 ones, none in the changed files; checked with `--no-incremental`). `dotnet test tests/InventorAddin.Core.Tests`: 3659 passed, 0 failed, 0 skipped. Not yet run in Inventor.
+- **Not compiled (changed under `src/InventorAddin`):** none; `HoleEditRedirect.cs` and `RibbonSetup.cs` were built on Windows. Behaviour in Inventor is not yet seen.
+- **Inventor API members not confirmed:** none by name. Every member was already in use: `NameValueMap.Count`, `Name[i]`, `Value[name]`, `Insert(name, value, index, before)`, `Remove` (task 092, `HoleEditRedirect`), `CommandManager.StopActiveCommand` (task 092), `UserInputEvents.OnActivateCommand` and `OnContextualMiniToolbar` (task 092), `SketchPoint` as a selection type (`HoleSession`, `PartExtractor`). Behaviour not yet seen in Inventor: (1) what `Value["PartDMHoleCmd"]` holds; if it is Inventor's own definition, the inserted entry might show Inventor's icon or run Inventor's Hole instead of ours (checklist item 1 shows which); (2) whether `item is SketchPoint` is true for a `SketchPointProxy` in a sheet metal part edited in place, for the sheet metal log line (only the log depends on it); (3) whether the ribbon's `PartHoleCmd` also fires `PartDMHoleCmd`.
 - **Manual checklist for Inventor:**
-  1. In one of your parts, with a sketch that has points, left-click a point. The mini toolbar shows AWB Hole's icon, not Inventor's Hole. Press it: the AWB Hole window opens.
+  1. In one of your parts, with a sketch that has points, left-click a point. The mini toolbar shows AWB Hole's icon, not Inventor's Hole. Press it: the AWB Hole window opens, and the clicked point is one of the picked centres.
   2. Repeat with the part edited in place inside an assembly.
   3. Turn "Use Inventor's Hole command" on in AWB Settings, then left-click a point: the mini toolbar has Inventor's Hole, and it opens Inventor's Hole. Turn the setting off again.
   4. If task 129 is done, choose Inventor Hole from the AWB Hole split button: Inventor's Hole opens and is not stopped.
   5. In a sheet metal part, left-click a sketch point and report what the mini toolbar shows (the log names its entries).
+  5a. In a sheet metal part's flat pattern, left-click a sketch point and report what the mini toolbar shows. The flat pattern should keep Inventor's Hole (spec 09); if AWB Hole's icon shows there, report it.
+  6. After items 1 to 5, open `%APPDATA%\AwbAddin\awbaddin.log`. It should have no "Hole takeover: replacing Hole on the mini toolbar failed" error. In item 1, if the window opens and the log has "Inventor's Hole from the mini toolbar started", the inserted entry ran Inventor's command and the backstop caught it. Report that line if you see it.
 
 ## Follow-ups
+
+- **Task 129 must mark its "Inventor Hole" run as asked for.** Just before it runs Inventor's Hole, it calls `HoleEditRedirect.Active?.InventorHoleAsked()`. That lets the next `PartDMHoleCmd` start through once (`InventorHoleRunRequest` in Core). A start of `PartHoleCmd` keeps the request, and any other command clears it. If 129 runs a different command, add that command to the commands that keep the request in `InventorHoleRunRequest.StartIsAskedFor`. 129 was not done when this task ran, so nothing calls `InventorHoleAsked` yet.
+- `HoleEditRules`' class remarks still say editing works "on the part open in the window only, not on a part edited in place". Task 105 changed that, so the remark is stale.
+- If checklist item 1 shows Inventor's icon on the inserted entry, or pressing it opens Inventor's Hole, always pass our `ButtonDefinition` as the value for the Hole entry instead of Inventor's entry's value.
+- The backstop opens AWB Hole with `ShowNew` only, as the brief says. It does not call `AwbHoleWindowLauncher.CommandPressed` first. If a session is already open when `PartDMHoleCmd` starts, the session sees a foreign command and cancels, and a new window opens. This is worth checking if it comes up.

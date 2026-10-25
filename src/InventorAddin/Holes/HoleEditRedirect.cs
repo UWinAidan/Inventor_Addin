@@ -5,6 +5,7 @@ using Inventor;
 using InventorAddin.Commands;
 using InventorAddin.Core.Holes;
 using InventorAddin.Core.Logging;
+using InventorAddin.Core.Models;
 using InventorAddin.Core.Ribbon;
 using InventorAddin.Core.ViewModels;
 using InventorAddin.UI;
@@ -16,7 +17,10 @@ namespace InventorAddin.Holes
     /// 2 to 4; task 092): Inventor's Edit Feature on the browser's right-click menu and on the viewport's mini toolbar is
     /// swapped for ours (<see cref="HoleEditFeatureCommand"/>, with Inventor's icon), a double-click on a hole or a face
     /// it made opens our window, and Inventor's own hole edit, if it starts anyway, is stopped and our window opened.
-    /// <see cref="HoleEditRules"/> makes every decision; this reads Inventor, asks it, and applies the answer.
+    /// The mini toolbar's Hole entry, shown on a sketch point (<c>PartDMHoleCmd</c>, not the ribbon's Hole), is swapped
+    /// for AWB Hole's button the same way, and Inventor's, if it starts anyway, is stopped and AWB Hole opened for a new
+    /// hole (spike 103; task 133). <see cref="HoleEditRules"/> and <see cref="HoleTakeoverRules"/> make every decision;
+    /// this reads Inventor, asks them, and applies the answer.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -44,6 +48,15 @@ namespace InventorAddin.Holes
 
         private readonly Application _app;
         private readonly ButtonDefinition _editFeature;
+
+        // AWB Hole's definition, kept alive by RibbonSetup; null when it failed to register (the Hole entry is then left).
+        private readonly ButtonDefinition? _awbHole;
+
+        // A start of Inventor's mini toolbar Hole the add-in asked for (task 129's "Inventor Hole"), let through once.
+        private readonly InventorHoleRunRequest _holeRunRequest = new();
+
+        // The names on a sheet metal part's mini toolbar on a sketch point are logged once per session (task 133).
+        private bool _sheetMetalToolbarLogged;
         private readonly Func<HoleCommandOwner?> _owner;
         private readonly ILog _log;
 
@@ -57,11 +70,17 @@ namespace InventorAddin.Holes
         internal static HoleEditRedirect? Active { get; private set; }
 
         /// <param name="editFeature">Our Edit Feature's definition, kept alive by <see cref="RibbonSetup"/>.</param>
+        /// <param name="awbHole">
+        /// AWB Hole's definition, kept alive by <see cref="RibbonSetup"/>, for the mini toolbar's Hole entry; null leaves
+        /// Inventor's entry.
+        /// </param>
         /// <param name="owner">Who has the Hole command now; null when the takeover is not running.</param>
-        public HoleEditRedirect(Application app, ButtonDefinition editFeature, Func<HoleCommandOwner?> owner, ILog log)
+        public HoleEditRedirect(
+            Application app, ButtonDefinition editFeature, ButtonDefinition? awbHole, Func<HoleCommandOwner?> owner, ILog log)
         {
             _app = app ?? throw new ArgumentNullException(nameof(app));
             _editFeature = editFeature ?? throw new ArgumentNullException(nameof(editFeature));
+            _awbHole = awbHole;
             _owner = owner ?? throw new ArgumentNullException(nameof(owner));
             _log = log ?? throw new ArgumentNullException(nameof(log));
         }
@@ -81,7 +100,15 @@ namespace InventorAddin.Holes
             _input.OnActivateCommand += OnActivateCommand;
             Active = this;
             _log.Info($"Hole edit: Edit Feature and double-click on a hole open {AwbHoleViewModel.CommandName} while it has taken over Inventor's Hole.");
+            if (_awbHole == null)
+                _log.Warn($"Command {CommandNames.AwbHole} is not registered, so the mini toolbar's Hole opens Inventor's Hole.");
         }
+
+        /// <summary>
+        /// The add-in is about to run Inventor's Hole itself (task 129's "Inventor Hole"): the next start of Inventor's
+        /// mini toolbar Hole is let through, not stopped by the backstop.
+        /// </summary>
+        internal void InventorHoleAsked() => _holeRunRequest.Ask();
 
         /// <summary>Our Edit Feature was pressed: the window opens on the selected hole.</summary>
         internal void EditFeaturePressed()
@@ -138,28 +165,26 @@ namespace InventorAddin.Holes
             }
         }
 
-        /// <summary>The viewport's mini toolbar: ours inserted before Inventor's Edit Feature, and Inventor's removed.</summary>
+        /// <summary>
+        /// The viewport's mini toolbar: AWB Hole inserted before Inventor's Hole entry, whatever was clicked, and our Edit
+        /// Feature before Inventor's on a hole; Inventor's removed in each case.
+        /// </summary>
         private void OnContextualMiniToolbar(ObjectsEnumerator selected, NameValueMap displayed, NameValueMap info)
         {
             try
             {
                 // A menu built for no hole (or another part) leaves no hole behind for our Edit Feature to fall back on.
                 _offeredHole = null;
-                if (!Redirects(out _))
+                if (!Redirects(out PartDocument? doc))
                     return;
+
+                ReplaceMiniToolbarHole(selected, displayed, doc!);
 
                 HoleFeature? hole = SelectedHole(selected);
                 if (hole == null)
                     return;
 
-                int count = ComSafe.Get(() => displayed.Count);
-                var names = new List<string?>();
-                for (int i = 1; i <= count; i++)
-                {
-                    int index = i;
-                    names.Add(ComSafe.Get(() => displayed.Name[index]));
-                }
-
+                List<string?> names = ToolbarNames(displayed);
                 int? target = HoleEditRules.MiniToolbarIndex(names, CommandNames.AwbHoleEdit);
                 if (target == null)
                     return;
@@ -203,13 +228,77 @@ namespace InventorAddin.Holes
         }
 
         /// <summary>
-        /// The backstop: Inventor's hole edit started by some other route. Once its event has returned it is stopped and
-        /// our window opened on the selected hole (spike 081).
+        /// The mini toolbar's Hole entry (<c>PartDMHoleCmd</c>; task 133): AWB Hole's button inserted where it is and
+        /// Inventor's removed, as for Edit Feature. Its value is Inventor's entry's, or AWB Hole's definition when
+        /// Inventor gives none. A failure is logged and leaves Inventor's entry; the Edit Feature swap still runs.
+        /// </summary>
+        private void ReplaceMiniToolbarHole(ObjectsEnumerator selected, NameValueMap displayed, PartDocument doc)
+        {
+            if (_awbHole == null)
+                return;
+
+            try
+            {
+                List<string?> names = ToolbarNames(displayed);
+                LogSheetMetalToolbar(selected, names, doc);
+
+                int? target = HoleTakeoverRules.MiniToolbarHoleIndex(names, CommandNames.AwbHole);
+                if (target == null)
+                    return;
+
+                object? value = ComSafe.Get(() => displayed.Value[HoleTakeoverRules.InventorMiniToolbarHoleCommand]);
+                displayed.Insert(CommandNames.AwbHole, value ?? _awbHole, target.Value, true);
+                displayed.Remove(HoleTakeoverRules.InventorMiniToolbarHoleCommand);
+            }
+            catch (Exception ex)
+            {
+                _log.Error("Hole takeover: replacing Hole on the mini toolbar failed; Inventor's is left.", ex);
+            }
+        }
+
+        /// <summary>
+        /// The first mini toolbar on a sketch point in a sheet metal part this session: its entries logged at Info, since
+        /// sheet metal may show another Hole command (task 133). Only <c>PartDMHoleCmd</c> is replaced either way.
+        /// </summary>
+        private void LogSheetMetalToolbar(ObjectsEnumerator selected, List<string?> names, PartDocument doc)
+        {
+            if (_sheetMetalToolbarLogged || DocumentKinds.Of((Document)doc) != DocumentKind.SheetMetalPart)
+                return;
+
+            bool onPoint = false;
+            foreach (object item in selected)
+            {
+                if (item is SketchPoint)
+                {
+                    onPoint = true;
+                    break;
+                }
+            }
+
+            if (!onPoint)
+                return;
+
+            _sheetMetalToolbarLogged = true;
+            _log.Info(HoleTakeoverRules.SheetMetalMiniToolbarMessage(names));
+        }
+
+        /// <summary>
+        /// Each command Inventor starts; the run request (task 129) sees every one. Inventor's mini toolbar Hole, started
+        /// by some other route, is stopped and AWB Hole opened (task 133). Inventor's hole edit, the backstop for Edit
+        /// Feature, is stopped and our window opened on the selected hole (spike 081). Each is done once Inventor's event
+        /// has returned.
         /// </summary>
         private void OnActivateCommand(string commandName, NameValueMap context)
         {
             try
             {
+                bool asked = _holeRunRequest.StartIsAskedFor(commandName);
+                if (HoleTakeoverRules.IsInventorMiniToolbarHole(commandName))
+                {
+                    StopInventorsMiniToolbarHole(commandName, asked);
+                    return;
+                }
+
                 if (!HoleEditRules.IsInventorEdit(commandName))
                     return;
 
@@ -249,7 +338,59 @@ namespace InventorAddin.Holes
             }
         }
 
+        /// <summary>
+        /// The mini toolbar backstop (task 133): Inventor's <c>PartDMHoleCmd</c> started while AWB Hole has Hole, and the
+        /// add-in did not ask for it. Once its event has returned it is stopped and AWB Hole opened on the part, as its
+        /// button does.
+        /// </summary>
+        private void StopInventorsMiniToolbarHole(string commandName, bool asked)
+        {
+            PartDocument? doc = CurrentPart();
+            if (!HoleTakeoverRules.StopsInventorMiniToolbarHole(commandName, _owner(), doc != null, asked))
+            {
+                if (asked)
+                    _log.Info("Hole takeover: Inventor's Hole was asked for; it is left to run.");
+                return;
+            }
+
+            System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() =>
+            {
+                try
+                {
+                    _app.CommandManager.StopActiveCommand();
+                }
+                catch (Exception ex)
+                {
+                    _log.Error("Hole takeover: stopping Inventor's Hole from the mini toolbar failed.", ex);
+                }
+
+                try
+                {
+                    _log.Info($"Hole takeover: Inventor's Hole from the mini toolbar started; {AwbHoleViewModel.CommandName} opens instead.");
+                    AwbHoleWindowLauncher.ShowNew(doc!);
+                }
+                catch (Exception ex)
+                {
+                    _log.Error($"Hole takeover: opening {AwbHoleViewModel.CommandName} after Inventor's Hole failed.", ex);
+                }
+            }));
+        }
+
         // ---- helpers ----
+
+        /// <summary>The mini toolbar's entry names, in order (the map is 1-based); an unreadable name is null.</summary>
+        private static List<string?> ToolbarNames(NameValueMap displayed)
+        {
+            int count = ComSafe.Get(() => displayed.Count);
+            var names = new List<string?>();
+            for (int i = 1; i <= count; i++)
+            {
+                int index = i;
+                names.Add(ComSafe.Get(() => displayed.Name[index]));
+            }
+
+            return names;
+        }
 
         /// <summary>True when editing opens AWB Hole now, with a part being edited.</summary>
         private bool Redirects(out PartDocument? doc)
