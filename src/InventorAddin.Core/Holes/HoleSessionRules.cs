@@ -98,6 +98,20 @@ public static class HoleSessionRules
         edit && (openedKind == HoleKind.Dowel || openedFitColoured) && keptKind != HoleKind.Dowel;
 
     /// <summary>
+    /// Whether a document being deactivated ends the session as Cancel does (spec 09, "The command"; spike 103 round
+    /// 2; task 105): the user switched away from the document that was active when the session began, which is the
+    /// assembly when the part is edited in place and the part in its own window. Only the event before the switch
+    /// counts. The full document names are compared ignoring case; a name that is empty matches nothing.
+    /// </summary>
+    /// <param name="sessionDocument">The full document name of the document active when the session began.</param>
+    /// <param name="deactivating">The full document name of the document being deactivated.</param>
+    /// <param name="before">The event is the one raised before the switch.</param>
+    public static bool EndsOnDeactivate(string? sessionDocument, string? deactivating, bool before) =>
+        before
+        && !string.IsNullOrEmpty(sessionDocument)
+        && string.Equals(sessionDocument, deactivating, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
     /// The sketch whose hole centres a new hole starts with, as Inventor's Hole picks it: the sketch the user
     /// selected, else the sketch of the points the user selected, else the newest visible sketch with hole-centre
     /// points that no feature consumes yet (task 094: Inventor's Hole preselects only unused centres, and a hole on a

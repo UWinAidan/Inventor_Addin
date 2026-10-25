@@ -22,6 +22,21 @@ public sealed class HoleSessionRulesTests
     }
 
     [Theory]
+    [InlineData(@"C:\Work\Gearbox.iam", @"C:\Work\Gearbox.iam", true, true)]
+    [InlineData(@"C:\Work\Gearbox.iam", @"c:\work\GEARBOX.IAM", true, true)]
+    [InlineData(@"C:\Work\Bracket.ipt", @"C:\Work\Bracket.ipt", true, true)]
+    [InlineData(@"C:\Work\Gearbox.iam", @"C:\Work\Gearbox.iam", false, false)]
+    [InlineData(@"C:\Work\Gearbox.iam", @"C:\Work\Bracket.ipt", true, false)]
+    [InlineData(@"C:\Work\Gearbox.iam", null, true, false)]
+    [InlineData("", "", true, false)]
+    [InlineData(null, null, true, false)]
+    public void EndsOnDeactivate_OnlyTheSessionsDocumentBeforeTheSwitch(
+        string? session, string? deactivating, bool before, bool ends)
+    {
+        Assert.Equal(ends, HoleSessionRules.EndsOnDeactivate(session, deactivating, before));
+    }
+
+    [Theory]
     [InlineData(30, false)]
     [InlineData(500, false)]
     [InlineData(501, true)]

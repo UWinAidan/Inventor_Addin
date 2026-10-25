@@ -21,8 +21,14 @@ namespace InventorAddin.Holes
     /// <remarks>
     /// <para>
     /// Only while AWB Hole has taken over Inventor's Hole (the switch "Use Inventor's Hole command" off; asked of
-    /// <see cref="HoleCommandTakeover"/> at each event, so a change in Settings takes effect at once), and only in a part
-    /// open in the window, as for the AWB Hole command.
+    /// <see cref="HoleCommandTakeover"/> at each event, so a change in Settings takes effect at once), and only while a
+    /// part is being edited: the part open in the window, or a part edited in place inside an assembly (task 105), as
+    /// for the AWB Hole command.
+    /// </para>
+    /// <para>
+    /// In place, Inventor gives a hole, or a face it made, as a proxy in the assembly (a <c>HoleFeatureProxy</c> or a
+    /// <c>FaceProxy</c>); the part's own hole is used instead (spike 103). The selection is read from the part, then
+    /// from the active document, where Inventor keeps it in place.
     /// </para>
     /// <para>
     /// The window is always opened after Inventor's event has returned (<see cref="AwbHoleWindowLauncher.ShowForEdit"/>
@@ -86,11 +92,11 @@ namespace InventorAddin.Holes
             PartDocument? doc = CurrentPart();
             if (doc == null)
             {
-                _log.Info($"Command {CommandNames.AwbHoleEdit} not run: no part is open in the window.");
+                _log.Info($"Command {CommandNames.AwbHoleEdit} not run: no part is being edited.");
                 return;
             }
 
-            HoleFeature? hole = SelectedHole(ComSafe.Get(() => doc.SelectSet)) ?? offered;
+            HoleFeature? hole = SelectedHoleNow(doc) ?? offered;
             if (hole == null)
             {
                 _log.Warn($"Command {CommandNames.AwbHoleEdit} not run: no single hole is selected.");
@@ -208,7 +214,7 @@ namespace InventorAddin.Holes
                     return;
 
                 bool redirects = Redirects(out PartDocument? doc);
-                HoleFeature? hole = redirects ? SelectedHole(ComSafe.Get(() => doc!.SelectSet)) : null;
+                HoleFeature? hole = redirects ? SelectedHoleNow(doc!) : null;
                 if (!HoleEditRules.StopsInventorEdit(commandName, redirects, hole != null))
                 {
                     if (redirects)
@@ -245,17 +251,20 @@ namespace InventorAddin.Holes
 
         // ---- helpers ----
 
-        /// <summary>True when editing opens AWB Hole now, with the part open in the window.</summary>
+        /// <summary>True when editing opens AWB Hole now, with a part being edited.</summary>
         private bool Redirects(out PartDocument? doc)
         {
             doc = CurrentPart();
             return HoleEditRules.Redirects(_owner(), doc != null);
         }
 
-        /// <summary>The part open in the window, or null for any other document (an assembly with a part edited in place).</summary>
+        /// <summary>
+        /// The part being edited (<c>ActiveEditDocument</c>): the part open in the window, or a part edited in place
+        /// inside an assembly. Null for any other document.
+        /// </summary>
         private static PartDocument? CurrentPart()
         {
-            Document? doc = ComSafe.Get(() => InventorHost.ActiveDocument);
+            Document? doc = ComSafe.Get(() => InventorHost.ActiveEditDocument);
             if (doc == null || !DocumentKinds.Of(doc).IsPart())
                 return null;
             return doc as PartDocument;
@@ -268,8 +277,24 @@ namespace InventorAddin.Holes
             _log.Info(opening ? HoleEditRules.OpeningMessage(route, name) : HoleEditRules.AlreadyOpenMessage(route, name));
         }
 
+        /// <summary>
+        /// The one hole selected now: in the part's selection, else, when the part is edited in place, in the active
+        /// document's (spike 103).
+        /// </summary>
+        private HoleFeature? SelectedHoleNow(PartDocument doc)
+        {
+            HoleFeature? hole = SelectedHole(ComSafe.Get(() => doc.SelectSet));
+            if (hole != null)
+                return hole;
+
+            Document? active = ComSafe.Get(() => _app.ActiveDocument);
+            if (active == null || ReferenceEquals(active, doc))
+                return null;
+            return SelectedHole(ComSafe.Get(() => active.SelectSet));
+        }
+
         /// <summary>The one hole a selection is about: holes, and faces holes made (<c>Face.CreatedByFeature</c>).</summary>
-        private static HoleFeature? SelectedHole(IEnumerable? selected)
+        private HoleFeature? SelectedHole(IEnumerable? selected)
         {
             if (selected == null)
                 return null;
@@ -280,12 +305,27 @@ namespace InventorAddin.Holes
             return HoleEditRules.SingleHole(holes, SameHole);
         }
 
-        private static HoleFeature? HoleOf(object? item) => item switch
+        /// <summary>
+        /// The hole an item is, or made it: a hole, or a face (a <c>FaceProxy</c> in place) through
+        /// <c>CreatedByFeature</c>. A <c>HoleFeatureProxy</c>, given or found, is taken as the part's own hole; one that
+        /// gives no native object is logged and skipped. Null for anything else, a face of another feature included.
+        /// </summary>
+        private HoleFeature? HoleOf(object? item)
         {
-            HoleFeature hole => hole,
-            Face face => ComSafe.Get(() => face.CreatedByFeature) as HoleFeature,
-            _ => null,
-        };
+            object? found = item switch
+            {
+                HoleFeature hole => hole,
+                Face face => ComSafe.Get(() => face.CreatedByFeature),
+                _ => null,
+            };
+            if (found is not HoleFeatureProxy proxy)
+                return found as HoleFeature;
+
+            HoleFeature? native = ComSafe.Get(() => proxy.NativeObject);
+            if (native == null)
+                _log.Warn("Hole edit: a hole selected in the assembly gave no hole in the part; it is skipped.");
+            return native;
+        }
 
         private static bool SameHole(HoleFeature a, HoleFeature b)
         {

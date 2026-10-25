@@ -350,7 +350,7 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 - [x] 102 AWB Hole window redesign: mockup for Aidan (approved 2026-10-23 with changes; revised)
 - [x] 103 Spike: editing a part in place, for AWB Hole and every AWB command (with Aidan)
 - [x] 104 AWB Hole window redesign
-- [ ] 105 AWB Hole in a part edited in place
+- [x] 105 AWB Hole in a part edited in place
 - [x] 106 Dowel seats sized in the window
 - [ ] 107 Spike: the AWB Hole preview drawn with client graphics (with Aidan)
 - [ ] 108 Spike: Simple and Taper Tapped holes, spotfaces, seats on every type, tolerance on a clearance hole (with Aidan)

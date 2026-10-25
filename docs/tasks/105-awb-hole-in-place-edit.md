@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 1
 - **Feature spec:** `docs/features/09-awb-hole.md` ("The command")
-- **Status:** todo
+- **Status:** done
 - **Depends on:** 103, 092
 - **Needs:** windows build
 - **Parallel-safe with:** 109 (disjoint files), 134
@@ -71,15 +71,23 @@ Out of scope:
 
 Filled in by the implementer.
 
-- **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):**
-- **Inventor API members not confirmed:**
+- **Ran:** on Aidan's PC (Windows, Inventor 2026 installed), `dotnet build InventorAddin.slnx -tl:off -p:DeployToInventor=false`: succeeded, 0 errors, 8 warnings, all CS8600 in files this task did not touch (`CreatePrintCommand`, `NewPartCommand`, `SaveAsCopyCommand`, `SaveAsReplaceCommand`). `dotnet test tests/InventorAddin.Core.Tests`: 3600 passed, 0 failed, 0 skipped (8 new cases for `HoleSessionRules.EndsOnDeactivate`). Not run in Inventor.
+- **Not compiled (changed under `src/InventorAddin`):** none. `AwbHoleCommand.cs`, `HoleSession.cs` and `HoleEditRedirect.cs` all compiled in the Windows build above; none of it has run in Inventor yet.
+- **Inventor API members not confirmed:** none. Every member is one the brief lists as confirmed by spike 103 (`ActiveEditDocument`, `SketchPointProxy.NativeObject`, `PlanarSketchProxy.NativeObject`, `HoleFeatureProxy.NativeObject`, `Face.CreatedByFeature` on a `FaceProxy`, `ApplicationEvents.OnDeactivateDocument`) or was already used in these files (`Document.SelectSet`, `Document.FullDocumentName`). Not confirmed in Inventor: that the add-in's handler sees the same RCW for the deactivating `_Document` as `ActiveDocument` gave at the start; the handler falls back to comparing `FullDocumentName`, so either way it matches a saved document.
 - **Manual checklist for Inventor:**
   1. Open an assembly and double-click one of your parts to edit it in place. Press **H**: the AWB Hole window opens on that part, and the default centres are picked and blue.
   2. Click centres to unpick and pick them. The highlight and preview follow. Press OK: the hole is in the part. Press Undo once in the assembly window: the hole is gone.
   3. Start AWB Hole again from the AWB Addin tab, then press Cancel: nothing changed in the part or the assembly.
   4. Double-click an AWB hole's face in place: the window opens on that hole. Change its size, press OK, then Undo once: it reverts. Right-click the hole in the browser and choose Edit Feature: our window opens.
+  4a. In place, press the AWB Hole button in the 3D Model tab's Modify panel (where Inventor's Hole was): the window opens on the part.
+  4b. In place, left-click an AWB hole's face and choose Edit Feature on the mini toolbar: our window opens on that hole.
+  4c. In place, double-click a face of an extrusion: Inventor's own edit opens, not ours.
   5. With the window open in place, press Return: the window closes and nothing is changed. Repeat, then close the assembly: the window closes. Repeat, then switch to another open document: the window closes and nothing is changed.
   6. In a part's own window, open AWB Hole and switch to another document: the window closes. Everything else works as before.
 
 ## Follow-ups
+
+- **Attribution of the switch rule.** The brief calls the switch rule a Default from spike 103, but `DECISIONS.md` (2026-10-25) and spec question 10 record it as Aidan's. The spec line says "(Aidan, 2026-10-25; spike 103)" to match `DECISIONS.md`. The parent may need no new `DECISIONS.md` entry.
+- **The backstop reads the in-place selection too.** `HoleEditRedirect.OnActivateCommand` (Inventor's own hole edit started some other route) now uses the same part-then-active-document selection as `EditFeaturePressed`; without it, the backstop would find no hole in place and leave Inventor's edit running.
+- **An unsaved assembly or part.** The switch rule compares full document names, which may be empty for a document never saved; the add-in also compares the document objects first, which should cover it. Worth a check in Inventor with a new, unsaved assembly.
+- **A point of another component.** In place, `OnSelect` takes any `SketchPointProxy` as its native point without checking it belongs to the part being edited. Inventor should only offer the edited part's points, but a pick from another part would be toggled against that part's sketch. If Aidan sees it, guard on the point's document.

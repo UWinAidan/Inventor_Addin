@@ -24,9 +24,10 @@ namespace InventorAddin.Commands
     /// <para>
     /// The session runs its own transaction for as long as the window is open (one Undo step on OK), so the command
     /// starts none, and it is an <see cref="AddinCommand"/>, not a <see cref="DocumentEditCommand"/>. The command makes
-    /// and changes hole features, so its type is <c>kShapeEditCmdType</c>. It runs on the document open in the window,
-    /// which must be a part: a part edited in place inside an assembly is refused (the session's transaction, picking
-    /// and highlight are all on the part; not tried in Inventor).
+    /// and changes hole features, so its type is <c>kShapeEditCmdType</c>. It runs on the document being edited
+    /// (<c>ActiveEditDocument</c>), which must be a part: the part open in the window, or a part edited in place inside
+    /// an assembly (spike 103; task 105). In place, the session's transactions, picking and highlight are on the part,
+    /// and one Undo in the assembly window reverts it.
     /// </para>
     /// <para>
     /// Every press first tells the launcher (<see cref="AwbHoleWindowLauncher.CommandPressed"/>), whatever the document
@@ -48,7 +49,8 @@ namespace InventorAddin.Commands
         {
             AwbHoleWindowLauncher.CommandPressed();
 
-            Document? doc = InventorHost.ActiveDocument;
+            // In a part's own window this is the part; in place, the part being edited, not the assembly.
+            Document? doc = ComSafe.Get(() => InventorHost.ActiveEditDocument);
             DocumentKind kind = doc == null ? DocumentKind.Unknown : DocumentKinds.Of(doc);
             if (doc == null || !kind.IsPart())
             {
@@ -111,7 +113,7 @@ namespace InventorAddin.Commands
         /// AWB Hole was pressed (its button or shortcut), before the document check. While a session is open, its
         /// <see cref="HoleSession.ResumePicking"/> is queued for after Inventor's command has returned: that restarts the
         /// picking if the press stopped it, and in every case clears the press the session recorded, so a refused
-        /// press (no part open, a part edited in place) cannot turn a later Esc or command into a restart.
+        /// press (no part being edited) cannot turn a later Esc or command into a restart.
         /// </summary>
         public static void CommandPressed()
         {

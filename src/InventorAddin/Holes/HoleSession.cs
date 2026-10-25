@@ -34,7 +34,15 @@ namespace InventorAddin.Holes
     /// <see cref="AwbHoleViewModel.OkRequested"/> is <see cref="Ok"/> and <see cref="AwbHoleViewModel.CancelRequested"/>
     /// is <see cref="Cancel"/>. The window (task 090) closes on <see cref="Ended"/>, and calls <see cref="Cancel"/>
     /// when it is closed any other way. <see cref="Ended"/> is raised once, by every way out: OK, Cancel, Inventor
-    /// closing the document, Inventor stopping the picking, and <see cref="Dispose"/>.
+    /// closing the document, the user switching to another document, Inventor stopping the picking, and
+    /// <see cref="Dispose"/>.
+    /// </para>
+    /// <para>
+    /// The part may be edited in place inside an assembly (spike 103; task 105). Everything still happens on the part:
+    /// the transactions, the highlight set and the hole. Inventor then gives picked and selected sketch points and
+    /// sketches as proxies in the assembly; each is taken as its native object in the part before it is used. The
+    /// session ends as Cancel does when the document that was active when it began is deactivated: the assembly in
+    /// place, the part in its own window.
     /// </para>
     /// <para>
     /// Inventor stopping the picking cancels the session, except when the command that stopped it is AWB Hole itself
@@ -64,6 +72,11 @@ namespace InventorAddin.Holes
         private string? _defaultSketchFrom;
 
         private Transaction? _outer;
+
+        // The document active when the session began (the assembly when the part is edited in place, else the part),
+        // and its full name: switching away from it ends the session (task 105).
+        private Document? _startDoc;
+        private string? _startDocName;
 
         // The open preview transaction holding the red on the hole's faces (task 101); null when not painted.
         private Transaction? _paint;
@@ -290,6 +303,10 @@ namespace InventorAddin.Holes
 
         private void Begin(HoleFeature? existing)
         {
+            _startDoc = ComSafe.Get(() => _app.ActiveDocument);
+            Document? startDoc = _startDoc;
+            _startDocName = startDoc == null ? null : ComSafe.Get(() => startDoc.FullDocumentName);
+
             if (existing != null)
                 StartEditPicks(existing);
             else
@@ -305,6 +322,7 @@ namespace InventorAddin.Holes
 
             _appEvents = _app.ApplicationEvents;
             _appEvents.OnCloseDocument += OnCloseDocument;
+            _appEvents.OnDeactivateDocument += OnDeactivateDocument;
             _userInput = _app.CommandManager.UserInputEvents;
             _userInput.OnActivateCommand += OnActivateCommand;
             _viewModel.PreviewNeeded += OnPreviewNeeded;
@@ -336,16 +354,13 @@ namespace InventorAddin.Holes
         {
             PlanarSketch? selectedSketch = null;
             PlanarSketch? sketchOfPoint = null;
-            SelectSet? selection = ComSafe.Get(() => _doc.SelectSet);
-            if (selection != null)
+            foreach (object raw in SelectedItems())
             {
-                foreach (object item in selection)
-                {
-                    if (selectedSketch == null && item is PlanarSketch sketch)
-                        selectedSketch = sketch;
-                    else if (sketchOfPoint == null && item is SketchPoint point)
-                        sketchOfPoint = ComSafe.Get(() => point.Parent as PlanarSketch);
-                }
+                object? item = NativeOf(raw);
+                if (selectedSketch == null && item is PlanarSketch sketch)
+                    selectedSketch = sketch;
+                else if (sketchOfPoint == null && item is SketchPoint point)
+                    sketchOfPoint = ComSafe.Get(() => point.Parent as PlanarSketch);
             }
 
             PlanarSketch? chosen = HoleSessionRules.DefaultSketch(selectedSketch, sketchOfPoint, SketchesNewestFirst());
@@ -364,6 +379,31 @@ namespace InventorAddin.Holes
             }
 
             _picks.Start(chosen, centres);
+        }
+
+        /// <summary>
+        /// What is selected now: the part's selection, then, when the part is edited in place, the active document's,
+        /// where Inventor keeps it (spike 103). Items may be proxies; <see cref="NativeOf"/> takes them into the part.
+        /// </summary>
+        private List<object> SelectedItems()
+        {
+            var items = new List<object>();
+            AddSelected(items, ComSafe.Get(() => _doc.SelectSet));
+            Document? active = ComSafe.Get(() => _app.ActiveDocument);
+            if (active != null && !ReferenceEquals(active, _doc))
+                AddSelected(items, ComSafe.Get(() => active.SelectSet));
+            return items;
+        }
+
+        private static void AddSelected(List<object> items, SelectSet? selection)
+        {
+            if (selection == null)
+                return;
+            ComSafe.Run(() =>
+            {
+                foreach (object item in selection)
+                    items.Add(item);
+            });
         }
 
         private IEnumerable<(PlanarSketch, Func<bool>, Func<bool>, Func<bool>)> SketchesNewestFirst()
@@ -471,9 +511,10 @@ namespace InventorAddin.Holes
             try
             {
                 bool changed = false;
-                foreach (object item in justSelected)
+                foreach (object raw in justSelected)
                 {
-                    if (item is not SketchPoint point)
+                    // In place, Inventor gives the point as a proxy in the assembly; the part's own point is used.
+                    if (NativeOf(raw) is not SketchPoint point)
                         continue;
 
                     PlanarSketch? sketch = ComSafe.Get(() => point.Parent as PlanarSketch);
@@ -574,6 +615,41 @@ namespace InventorAddin.Holes
 
             _log.Info(LogPrefix + "the part is closing; the session is cancelled.");
             Cancel(HoleSessionEndReason.ByInventor);
+        }
+
+        /// <summary>
+        /// The user is switching away from the document that was active when the session began (the assembly when the
+        /// part is edited in place, the part in its own window): the session is cancelled before the switch, as
+        /// Inventor's own commands are (spike 103 round 2; task 105).
+        /// </summary>
+        private void OnDeactivateDocument(
+            _Document document, EventTimingEnum beforeOrAfter, NameValueMap context, out HandlingCodeEnum handlingCode)
+        {
+            handlingCode = HandlingCodeEnum.kEventNotHandled;
+            if (_ended || _ending)
+                return;
+
+            try
+            {
+                bool before = beforeOrAfter == EventTimingEnum.kBefore;
+                bool ours = before && _startDoc != null && ReferenceEquals(document, _startDoc);
+                if (!ours)
+                {
+                    string? name = ComSafe.Get(() => document.FullDocumentName);
+                    ours = HoleSessionRules.EndsOnDeactivate(_startDocName, name, before);
+                }
+
+                if (!ours)
+                    return;
+
+                _log.Info(LogPrefix + "another document is being activated; the session is cancelled.");
+                Cancel(HoleSessionEndReason.ByInventor);
+            }
+            catch (Exception ex)
+            {
+                _log.Error(LogPrefix + "following a document switch failed; the session is cancelled.", ex);
+                Cancel(HoleSessionEndReason.Failed);
+            }
         }
 
         private bool IsOurDocument(_Document document, string fullDocumentName)
@@ -919,6 +995,24 @@ namespace InventorAddin.Holes
             ComSafe.Run(() => _app.ActiveView.Update());
         }
 
+        /// <summary>
+        /// A sketch point or sketch picked or selected in the assembly while the part is edited in place is a proxy;
+        /// the part's own object is used instead (spike 103). Anything else is returned as it is. A proxy that gives no
+        /// native object is logged and skipped (null).
+        /// </summary>
+        private object? NativeOf(object item)
+        {
+            object? native = item switch
+            {
+                SketchPointProxy point => ComSafe.Get(() => point.NativeObject),
+                PlanarSketchProxy sketch => ComSafe.Get(() => sketch.NativeObject),
+                _ => item,
+            };
+            if (native == null)
+                _log.Warn(LogPrefix + "a sketch point or sketch picked in the assembly gave no object in the part; it is skipped.");
+            return native;
+        }
+
         private static bool SamePoint(SketchPoint a, SketchPoint b) =>
             ReferenceEquals(a, b)
             || (SameSketch(ComSafe.Get(() => a.Parent as PlanarSketch), ComSafe.Get(() => b.Parent as PlanarSketch))
@@ -981,7 +1075,11 @@ namespace InventorAddin.Holes
                 DropInteraction(stop: true);
                 ComSafe.Run(() => _highlight?.Delete());
                 if (_appEvents != null)
+                {
                     ComSafe.Run(() => _appEvents.OnCloseDocument -= OnCloseDocument);
+                    ComSafe.Run(() => _appEvents.OnDeactivateDocument -= OnDeactivateDocument);
+                }
+
                 if (_userInput != null)
                     ComSafe.Run(() => _userInput.OnActivateCommand -= OnActivateCommand);
                 _viewModel.PreviewNeeded -= OnPreviewNeeded;
