@@ -6,12 +6,15 @@ Last updated: 2026-10-25
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-10-25. Branch `claude/m4-hole-generator`; PR #29 open against `main`. The spike branch `spike/103-in-place-edit` (`313e7cf`, `2e4e650`) is local only and never merged.
-- Spike 103 done (rounds 1 and 2 with Aidan): Results and Recommendations in `docs/tasks/103-spike-in-place-edit.md`. Tasks 105 and 109 written in full; new tasks 133 (mini toolbar Hole button `PartDMHoleCmd`) and 134 (Save As and Replace renames the occurrence it replaces, from Aidan's Rename report: Inventor's `Replace` keeps the occurrence name, so later Renames found no match).
-- Spike log gap: only AWB Hole, Material and Finish, Part Properties and About were seen run in place; the other commands and the sub-assembly case are on task 109's checklist.
-- `libraries/AWB_Holes.xlsx` change was Aidan's (097-5 test) and was discarded.
-- Next: run 105, 109, 133, 134 per `docs/WORKFLOW.md` (implementer, reviewer, commit each), then spikes 107 and 108 with Aidan, then the order in `docs/PLAN.md`.
-- Gotchas: build with `dotnet build InventorAddin.slnx -tl:off` (check `Get-Process Inventor` first, or `-p:DeployToInventor=false`). Check interop members by reflection on `C:\Program Files\Autodesk\Inventor 2026\Bin\Autodesk.Inventor.Interop.dll`. Log: `%APPDATA%\AwbAddinwbaddin.log`. Use Python heredocs for file edits in Git Bash.
+- Updated: 2026-10-25. Branch `claude/m4-hole-generator`, latest commit `3572dfc`, not pushed. PR #29 open against `main`. `spike/103-in-place-edit` is local only, never merged.
+- Done this session: spike 103 with Aidan (`1e69903`, Results and Recommendations in `docs/tasks/103-spike-in-place-edit.md`); tasks 105 (`5bdbbdb`, AWB Hole in place), 109 (`02a5255`, every command acts on the document being edited, Core `CommandDocuments`), 134 (`baa98c3`, Save As and Replace renames the replaced occurrence: Aidan's Rename report), 133 (`3572dfc`, mini toolbar `PartDMHoleCmd` swapped for AWB Hole). Each reviewed PASS; build 0 errors, 3659 Core tests passed at the last run. **None of it has been run in Inventor.**
+- Open: Aidan's "every command passes in place" is not backed by the spike log (only AWB Hole, Material and Finish, Part Properties, About ran in place); task 109's checklist covers the rest. Part Properties' transactions start on the edited part, not the assembly: 109 checklist step 5 (one Undo in the assembly) is the likely failure. Spec 02 question 27 (stale occurrence names) waits on Aidan.
+- Next steps:
+  1. Spikes 107 (client graphics preview) and 108 (hole types, spotface) with Aidan, each on its own `spike/NNN-...` branch off `claude/m4-hole-generator`, as spike 103 was.
+  2. Then the order in `docs/PLAN.md` ("Round after PR #29's first look"): 120, 121, 128, 129 (129 must call `HoleEditRedirect.Active?.InventorHoleAsked()`, see `TODO.md`), 123, 124, 125, 122, 126, 111, 112, 113, 119, 131, 132, 127, 130, 110, 117, 114, 115, 116, 118.
+  3. Aidan can check 105, 109, 133, 134 in Inventor at any point from their task checklists.
+- Gotchas: build with `dotnet build InventorAddin.slnx -tl:off` (check `Get-Process Inventor` first, or add `-p:DeployToInventor=false`). Check interop members by reflection on `C:\Program Files\Autodesk\Inventor 2026\Bin\Autodesk.Inventor.Interop.dll`. Log: `%APPDATA%\AwbAddinwbaddin.log`. `LineGraphics` has no `Color` (use `CreateColorSet` + `kOverallColor`). Use Python heredocs for edits in Git Bash. Run implementers one at a time (shared obj/ and build).
+- Read first: `docs/WORKFLOW.md`, `docs/PLAN.md`, `docs/tasks/107-spike-client-graphics-preview.md`, `docs/tasks/108-spike-hole-types-and-spotface.md`, `TODO.md` follow-ups.
 
 ## Big items
 
