@@ -6,7 +6,7 @@ Last updated: 2026-10-28
 
 ## Next up
 
-1. M4 part 1: the round is planned: tasks 103 to 134 (2026-10-25). Spike 103 is done (rounds 1 and 2 with Aidan, 2026-10-25); it gave tasks 105 and 109 in full and two new tasks, 133 (the mini toolbar's Hole button) and 134 (Save As and Replace renames the occurrence; Aidan's Rename report). 105, 109, 133 and 134 are done (not yet run in Inventor). Spike 107 is done (round 1 with Aidan, 2026-10-28; its fix is checked in spike 108's build). **Next:** spike 108 with Aidan, then 135 (Rename renames any AWB-format occurrence name, Aidan 2026-10-28); the full order is in `docs/PLAN.md` ("Round after PR #29's first look").
+1. M4 part 1: the round is planned: tasks 103 to 134 (2026-10-25). Spike 103 is done (rounds 1 and 2 with Aidan, 2026-10-25); it gave tasks 105 and 109 in full and two new tasks, 133 (the mini toolbar's Hole button) and 134 (Save As and Replace renames the occurrence; Aidan's Rename report). 105, 109, 133 and 134 are done (not yet run in Inventor). Spikes 107 and 108 are done (with Aidan, 2026-10-28); tasks 114, 115 and 127 are completed from 108. The preview's drill point (spike 107 round 4, `f0a2f33` on `spike/108-hole-types`) still needs one look in Inventor before task 110. **Next:** that look, then 135 (Rename renames any AWB-format occurrence name, Aidan 2026-10-28); the full order is in `docs/PLAN.md` ("Round after PR #29's first look").
 2. Ribbon icon colours: Aidan picks option A, B or C from `docs/ui-mockups/ribbon-icons-colour-options.png` on branch `claude/ribbon-icon-colour`; then build it. **Later, not this round** (Aidan, 2026-10-25): every AWB icon gets a more polished look, done together with the colour option.
 3. Aidan finishes the remaining Part Properties checks below.
 
@@ -54,6 +54,8 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Question 17 in spec 09: a toleranced clearance or Simple hole takes the colour of its Precision Tol row's fit, Custom the normal colour (Default); or one new precision colour?
 - Question 18 in spec 09: Custom tolerance is in the dowel list too (Default); or dowels keep only the workbook rows?
 - Question 19 in spec 09: a Simple hole's diameter and seats, and a Taper Tapped seat, start from the last values used, else empty (Default); or from workbook defaults?
+- Question 21 in spec 09: Inventor models a taper tapped hole at its own tap drill; the Taper Tapped tab's Tap drill column feeds notes and tables only (Default); or drop the column?
+- Question 22 in spec 09: no Thread depth box on a taper tapped hole, since Inventor threads the table's effective length (Default); or a spike round to try setting it?
 - The Defaults dated 2026-10-24 in `DECISIONS.md`: the Spotface and Taper Tapped tab layouts, invented NPT and BSPT starter rows, Simple's Diameter box, the tolerance list for clearance holes
 
 **Hole table (spec 04), blocks the wizard half of M4**

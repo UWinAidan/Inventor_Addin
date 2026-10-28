@@ -54,7 +54,7 @@ It follows Inventor's Hole panel, with a **Metric or Imperial** selector on the 
 
 ## Types and seats
 
-Hole types and seats stay as Inventor's: Clearance, Tapped, **Simple** and **Taper Tapped**, each with None, Counterbore, Countersink or **Spotface** (Aidan, 2026-10-24). **Every seat works on every type**, tapped and taper tapped included, and **its dimensions are editable in the window on every type** (Aidan, 2026-10-25; task 126); the rows below give the starting values. A dowel or precision hole is the Clearance type with Standard AWB Dowel; there is no separate Type entry (Aidan, question 3). How the workbook's tabs map onto them:
+Hole types and seats stay as Inventor's: Clearance, Tapped, **Simple** and **Taper Tapped**, each with None, Counterbore, Countersink or **Spotface** (Aidan, 2026-10-24). **Every seat works on every type**, tapped and taper tapped included, **except Counterbore on Taper Tapped**, which Inventor does not allow (Aidan, 2026-10-28, spike 108), and **its dimensions are editable in the window on every type** (Aidan, 2026-10-25; task 126); the rows below give the starting values. A dowel or precision hole is the Clearance type with Standard AWB Dowel; there is no separate Type entry (Aidan, question 3). How the workbook's tabs map onto them:
 
 | Type, Standard | Seat | Sizes from | Fit | Coloured |
 |---|---|---|---|---|
@@ -63,7 +63,7 @@ Hole types and seats stay as Inventor's: Clearance, Tapped, **Simple** and **Tap
 | Clearance, AWB Clearance | Countersink | Countersink, through hole from Clearance at its "Hole fit" | from the row | only when toleranced |
 | Clearance, AWB Clearance | Spotface | Clearance at the chosen fit; the spotface from the Spotface row of the same size, editable | Close, Normal, Loose | only when toleranced |
 | Tapped, AWB Tapped | any | Tapped; a counterbore or countersink from the row of the same size (Aidan, question 6), a spotface from the Spotface row of the same size, editable | none | no |
-| Taper Tapped, AWB Taper Tapped | any | Taper Tapped; a seat sized in the window (Default, question 19) | none | no |
+| Taper Tapped, AWB Taper Tapped | None, Countersink, Spotface (no Counterbore) | Taper Tapped; a seat sized in the window (Default, question 19) | none | no |
 | Simple | any | the Diameter typed; a seat sized in the window (Default, question 19) | none | only when toleranced |
 | Clearance, AWB Dowel (dowel and precision) | any | Dowel; a counterbore or countersink sized in the window, starting from the Dowel row's seat columns (Aidan, question 9), a spotface from the Spotface row of the same size | Slip, Normal, Press, with a Tolerance | **yes**, the seat too |
 
@@ -79,8 +79,8 @@ Hole types and seats stay as Inventor's: Clearance, Tapped, **Simple** and **Tap
 
 ## Taper tapped holes
 
-- **Tapered pipe threads, for example NPT and BSPT** (Aidan, 2026-10-24), from a new workbook tab, **Taper Tapped**. The tap drill from the tab, modelled at that diameter, with the thread showing in the model as Inventor's tapered tapped holes show it (spike 108).
-- Thread and drill depths as for tapped holes: from the row's default columns, editable, measured from the bottom of the seat.
+- **Tapered pipe threads, for example NPT and BSPT** (Aidan, 2026-10-24), from a new workbook tab, **Taper Tapped**. The thread shows in the model as Inventor's tapered tapped holes show it. **The modelled tap drill is Inventor's thread-table value**: Inventor refuses or ignores a tap drill set through the API (spike 108). The tab's Tap drill feeds notes and hole tables only (Default, question 21).
+- Drill depth as for tapped holes: from the row's default column, editable, measured from the bottom of the seat. **Thread depth:** Inventor threads the table's effective length; until a spike round shows a taper thread depth can be set, the window shows no Thread depth box on a taper tapped hole (Default, question 22).
 - No tolerance (thread class is separate).
 
 ## The workbook: `libraries/AWB_Holes.xlsx`
@@ -152,4 +152,6 @@ New rows, in a new collapsible section "Holes" (Default):
 17. **The precision colour of a toleranced clearance or Simple hole.** Default: the fit colour of the Precision Tol row chosen (press red, normal blue, slip green), and normal blue for Custom; the list shows every Precision Tol row for the units. The other choice: one new "precision" colour on the workbook's Settings tab for every toleranced clearance and Simple hole.
 18. **Custom tolerance on dowels.** Aidan asked for Custom on toleranced clearance and Simple holes, alongside "the same Tolerance dropdown dowels use". Default: Custom is in the dowel list too. Should dowels keep only the workbook rows?
 19. **Starting values for a Simple hole and its seats, and for a Taper Tapped seat.** Default: the last values used with OK (Simple diameter per units; Simple seats per units and seat; Taper Tapped seats per units, size and seat), else empty and OK waits. A spotface takes the Spotface row of the same size where there is one. Would Aidan rather have workbook defaults for these (for example a Simple seat as a multiple of D)?
-20. **A seat depth of 0.** Aidan (2026-10-25) asked to allow a seat depth of 0 if Inventor accepts one. Spike 108 question 7 checks it; task 127 builds the answer. Until then a seat depth must be above zero.
+20. ~~**A seat depth of 0.**~~ Answered: Inventor accepts a counterbore or spotface depth of 0 (spike 108 question 7), so it is allowed, as Aidan asked on 2026-10-25. Task 127.
+21. **The Taper Tapped tab's Tap drill column.** Inventor models a taper tapped hole at its own thread-table tap drill and will not take another (spike 108). Default: the column stays and feeds notes and hole tables only. Should it be dropped instead?
+22. **Thread depth on a taper tapped hole.** Inventor threads the table's effective length. Default: no Thread depth box on a taper tapped hole. Should a spike round try `FullThreadDepth` and `EffectiveLength` so the thread depth can be set as on a tapped hole?

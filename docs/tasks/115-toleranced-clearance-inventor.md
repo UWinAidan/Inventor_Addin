@@ -13,7 +13,7 @@ A Clearance or Simple hole can be toleranced in the window (Aidan, 2026-10-24): 
 
 ## Scope
 
-- `src/InventorAddin/Holes/HoleFeatureWriter.cs`, `HoleFitWriter.cs`, `HoleFeatureReader.cs`: the tolerance on the through diameter of a Clearance or Simple hole (seated too, the seat untouched), from an ISO row, a Limits row or Custom limits, as spike 108 question 5 confirmed; the colour from task 113's rule on every face; unticking removes both (task 096's reset).
+- `src/InventorAddin/Holes/HoleFeatureWriter.cs`, `HoleFitWriter.cs`, `HoleFeatureReader.cs`: the tolerance on the through diameter of a Clearance or Simple hole (seated too, the seat untouched), from an ISO row, a Limits row or Custom limits, as spike 108 question 5 confirmed: `HoleFitWriter.ApplyTolerance` works unchanged on a seated clearance hole (ISO gives `kLimitsFitsStackedTolerance`, Custom gives `kDeviationTolerance`, the counterbore diameter stays `kDefaultTolerance`) and `HoleFeatureReader.ReadFacts` reads both back, so no new API work is expected; the colour from task 113's rule on every face; unticking removes both (task 096's reset).
 - `src/InventorAddin/UI/AwbHoleWindow.xaml(.cs)`: the Toleranced checkbox on one row, the Tolerance row it opens (the dowel's dropdown, reused), and the Custom Upper and Lower boxes.
 
 ## Acceptance criteria

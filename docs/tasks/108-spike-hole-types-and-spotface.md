@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 1
 - **Feature spec:** `docs/features/09-awb-hole.md` ("Types and seats", "Simple holes", "Taper tapped holes", "Toleranced clearance and Simple holes")
-- **Status:** todo
+- **Status:** done (2026-10-28; the preview drill-point fix, round 4, still to be confirmed with spike 107)
 - **Depends on:** 106
 - **Needs:** **windows** (spike, with Aidan in Inventor)
 - **Parallel-safe with:** 103, 107 (other spikes, separate branches)
@@ -28,8 +28,94 @@ Aidan, 2026-10-24: AWB Hole gets two more types, Simple (a diameter only) and Ta
 
 ## Results
 
-Filled in after the rounds with Aidan.
+Round 1, 2026-10-28. Aidan ran all 21 cases (`mode=make`, `dir=pos`) on a 20 mm block of his own, made a spotface hole and a taper tapped hole with Inventor's Hole command, then ran `mode=read`. Every hole made came out `kUpToDateHealth`. One case was refused (case 8).
+
+**1. Spotface.**
+- `HoleFeatures.AddSpotFaceByThroughAllExtent` and `AddSpotFaceByDistanceExtent2` both work. They take the spotface diameter and depth. `HoleType` reads `kSpotFaceHole`, and `SpotFaceDiameter` and `SpotFaceDepth` are model parameters.
+- Depth is measured differently for a spotface:
+  - The spotface depth is measured down from the start face.
+  - The hole's `Depth` is measured from the spotface's bottom, not from the start face:
+    - Through All in the 20 mm block reads `Depth` 1.95 cm with a 0.5 mm spotface (case 1), and 1.8 cm with Aidan's own 9.4 x 2 spotface.
+    - Blind 12 with a 0.5 mm spotface ends 12.5 mm below the top (case 2), and blind 15 with a 1 mm spotface ends 16 mm below the top (case 13).
+  - A counterbore is the opposite: the hole's `Depth` is measured from the start face (case 12 ends 15 mm below the top, with an 11 x 1 counterbore; Through All reads 2 cm, case 15).
+- Changing the seat in place works in every order (case 3: counterbore → `SetSpotFace` → `SetCSink` → `SetCBore` → `SetDrilled` → `SetSpotFace`). `HoleType` follows each call. Inventor reuses the same parameters (`d28` for the seat diameter, `d29` for its depth), so there is no new parameter on each switch.
+- **`HoleFeatureReader.ReadFacts` does not recognise a spotface:** `Seat` comes back empty for cases 1, 2, 3, 10, 13 and 18, and for Aidan's own spotface hole, and the spotface diameter and depth are not read.
+
+**2. Taper Tapped.**
+- `HoleFeatures.CreateTaperedTapInfo(true, "NPT", "1/4")` and `("BSP Taper Internal", "Rc 1/4")` are accepted. The holes are made by the plain `AddDrilledBy...` calls (blind, cases 4 and 6), and also Through All (case 5).
+- The hole has no `HoleDiameter` parameter; the size comes from the table.
+- `TaperedThreadInfo.TapDrillDiameter` is in the thread's own units: 0.422 for NPT 1/4 (inches, `Metric False`), 10.5 for Rc 1/4 (mm, `Metric True`). It is not in cm.
+- Setting the tap drill before Add is refused (E_FAIL). Setting it after Add, by assigning a new `TapInfo`, is accepted and reads back 1.11, but the model's size does not change (case 7 has the same range as case 4). **The model's tap drill cannot be set**, so the workbook's tap drill can only appear in notes and tables. No hidden tapered equivalent of `_CreateTapInfo` was tried.
+- Aidan's own taper hole from Inventor's dialog used the thread type `NPT for PVC Pipe and Fitting`, so the table has more taper types than `NPT` and `BSP Taper Internal`.
+- **`HoleFeatureReader.ReadFacts` reads a taper tapped hole as Tapped with no type, designation or diameter**, because it casts `TapInfo` to `HoleTapInfo` only.
+
+**3. Seats on tapped holes.**
+- NPT 1/4 blind with a countersink 20 at 90° (case 9) and with a spotface 22 x 1 (case 10) are made.
+- **NPT 1/4 blind with a counterbore 20 x 3 is refused** (E_FAIL, case 8), through `AddCBoreByDistanceExtent2` with a `TaperedThreadInfo`.
+- M6x1 blind (drill 15, thread 10) is made with no seat, with a counterbore 11 x 1 and with a spotface 11 x 1 (cases 11 to 13). The drill depth follows the rule in question 1: from the start face with a counterbore, from the seat bottom with a spotface. The log's thread-face range covers the whole drilled cylinder, so it does not show where the thread starts; that needs a look in the model.
+
+**4. Simple with an expression.** The diameter `spk108_d * 2` (with `spk108_d` = 4 mm) gives 8 mm, and Inventor stores the expression as `spk108_d * 2 ul`. After `spk108_d` is set to 5 mm, the hole is 10 mm. It stays parametric.
+
+**5. Tolerance on a clearance hole.** `HoleFitWriter.ApplyTolerance` on a counterbored 6.6 Through All:
+- H7 gives `kLimitsFitsStackedTolerance` 'H7' +0.015 / 0 mm on the hole diameter (case 15).
+- Custom gives `kDeviationTolerance` +0.02 / 0 mm (case 16).
+- The counterbore diameter keeps `kDefaultTolerance` both times.
+- `ReadFacts` reads both back: the ISO code and deviations for H7, and the deviations with no code for Custom.
+
+**6. Read-back of Inventor's own holes.** See the bold notes in questions 1 and 2. A spotface reads as no seat, and a taper tapped hole reads as Tapped with no thread data. Without changes to `HoleFeatureReader`, Edit would open both as the wrong type.
+
+**7. Depth 0 and centre-drill spots.**
+- A counterbore 11 x 0 (case 17) and a spotface 11 x 0 (case 18) are accepted. Each models only the hole (one face), and `HoleType` stays `kCounterBoreHole` or `kSpotFaceHole`.
+- `ReadFacts` reads case 17 as Counterbore with depth 0.
+- A small countersink is accepted on all three holes tried:
+  - M6x1 Through All with 6.5 at 90° (depth 0.79 mm, full thread kept)
+  - a 6 mm dowel blind 12 with 7 at 60°
+  - a Simple 4 mm blind 10 with 5 at 60°
+
+**Round 2 (Aidan, 2026-10-28, in Inventor).**
+- **Taper thread in the model:** the thread texture covers the upper part of each taper tapped hole (the table's effective length), with a plain bore below. `TaperedThreadInfo` has a writable `FullThreadDepth`, and `EffectiveLength` is typed `Object` and writable, but neither was tried, so it is unknown whether a taper thread depth can be set.
+- **Counterbore on a taper tapped hole:** Inventor's own Hole command greys out Counterbore for Taper Tapped and offers Spotface and Countersink. Case 8's refusal is Inventor's rule. Aidan: AWB Hole does not offer Counterbore on a taper tapped hole.
+- **Edit read an Inventor-made Ø10 blind hole as Clearance M8 Loose.** That is correct: the workbook's M8 row is Close 8.4, Normal 9, Loose 10, and `HoleReadBack` matches the diameter exactly.
+
+**Preview (spike 107 rounds 2 to 4, run in this build).**
+- Round 2: `Face.CalculateFacets` throws DISP_E_TYPEMISMATCH from C# on every face, so `source=faces` drew nothing.
+- Round 3 (`461e122`) takes each face's extent from points sampled along its edges (`CurveEvaluator.GetParamExtents` and `GetPointAtParam`, `ref` arrays the caller allocates).
+  - Aidan: a counterbore or countersink running off the edge is drawn whole (pass).
+  - Aidan: looking down a through hole shows red, so the end caps work (pass).
+  - **A drill point is still missing (fail).** The log shows a NullReferenceException on the cone face, so the whole cone was skipped.
+- Round 4 (`f0a2f33`): an edge that cannot be sampled (the apex) falls back to its vertices, and a cone whose points all sit at one height still runs to its apex. Built; not yet run in Inventor.
 
 ## Recommendations
 
-Filled in after the rounds with Aidan; tasks 114, 115 and 127 are completed from them.
+**Spotface (task 114).**
+- Make a spotface with `AddSpotFaceBy...Extent`, and change a seat in place with `SetSpotFace`, `SetCBore`, `SetCSink` and `SetDrilled`. No recreate is needed to change a seat.
+- `HoleFeatureReader` must read `kSpotFaceHole` with its `SpotFaceDiameter` and `SpotFaceDepth` into a Spotface seat. Today it returns no seat.
+- **Depth reference:** Inventor measures a spotface hole's `Depth` from the spotface bottom and a counterbore hole's from the start face.
+  - Spec 09 measures the drill depth from the seat bottom (question 12). So the writer passes the window's depth unchanged for a spotface, and adds the seat depth for a counterbore.
+  - The reader does the reverse.
+  - Check this against task 116's rule before writing it.
+
+**Taper Tapped (task 114).**
+- Make with `CreateTaperedTapInfo(true, threadType, designation)` and the plain `AddDrilledBy...`, `AddCSinkBy...` or `AddSpotFaceBy...` calls. Blind and Through All both work.
+- Thread types come from the Taper Tapped tab and must match Inventor's thread table: `NPT` (designations like `1/4`), `BSP Taper Internal` (`Rc 1/4`), and others such as `NPT for PVC Pipe and Fitting`.
+- **No Counterbore seat** (Aidan): the window hides or disables Counterbore for Taper Tapped, as Inventor does.
+- **The model's tap drill is Inventor's table value.**
+  - `TapDrillDiameter` cannot be set before Add, and setting it afterwards does not change the model.
+  - It is in the thread's own units (inches for NPT, mm for metric).
+  - The workbook's Tap drill column can only feed notes and hole tables. This replaces spec 09's "modelled at that diameter" (Default, Inventor's limit; spec question).
+- **Thread depth on a taper tapped hole is unproven.** Inventor threads the table's effective length. Until a short round sets `FullThreadDepth` and `EffectiveLength`, the window shows no Thread depth box for taper tapped holes, and the drill depth stays editable (Default; spec question).
+- `HoleFeatureReader` must read a `TaperedThreadInfo` (type, designation, Through All or blind) into a Taper Tapped spec. Today it casts to `HoleTapInfo` only and loses the thread.
+
+**Simple (task 114).** Write the diameter as an expression through the hole's diameter parameter, as task 100 does for depths. Inventor keeps it parametric and stores the expression with a trailing ` ul` for a unitless factor. The reader should show the expression without the ` ul`.
+
+**Tolerance on clearance and Simple holes (task 115).** `HoleFitWriter.ApplyTolerance` works unchanged on a seated clearance hole's diameter:
+- ISO gives `kLimitsFitsStackedTolerance`, and Custom gives `kDeviationTolerance`.
+- The seat is not touched.
+- `ReadFacts` reads both back.
+- Nothing new is needed in the API layer.
+
+**Depth 0 and centre-drill spots (task 127).**
+- A counterbore or spotface depth of 0 is accepted: Inventor keeps the hole type and models only the hole. Allow 0.
+- A countersink at 60 or 90° is accepted on tapped, dowel and Simple holes. The read-back works with existing code, except that a spotface needs task 114's reader change.
+
+**Preview (task 110).** Build each face's solid from edge samples, as in round 4, once Aidan confirms the drill point.
