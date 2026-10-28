@@ -6,7 +6,7 @@ Last updated: 2026-10-28
 
 ## Next up
 
-1. M4 part 1: the round is planned: tasks 103 to 134 (2026-10-25). Spike 103 is done (rounds 1 and 2 with Aidan, 2026-10-25); it gave tasks 105 and 109 in full and two new tasks, 133 (the mini toolbar's Hole button) and 134 (Save As and Replace renames the occurrence; Aidan's Rename report). 105, 109, 133 and 134 are done (not yet run in Inventor). **Next:** spikes 107 and 108 with Aidan, then 135 (Rename renames any AWB-format occurrence name, Aidan 2026-10-28); the full order is in `docs/PLAN.md` ("Round after PR #29's first look").
+1. M4 part 1: the round is planned: tasks 103 to 134 (2026-10-25). Spike 103 is done (rounds 1 and 2 with Aidan, 2026-10-25); it gave tasks 105 and 109 in full and two new tasks, 133 (the mini toolbar's Hole button) and 134 (Save As and Replace renames the occurrence; Aidan's Rename report). 105, 109, 133 and 134 are done (not yet run in Inventor). Spike 107 is done (round 1 with Aidan, 2026-10-28; its fix is checked in spike 108's build). **Next:** spike 108 with Aidan, then 135 (Rename renames any AWB-format occurrence name, Aidan 2026-10-28); the full order is in `docs/PLAN.md` ("Round after PR #29's first look").
 2. Ribbon icon colours: Aidan picks option A, B or C from `docs/ui-mockups/ribbon-icons-colour-options.png` on branch `claude/ribbon-icon-colour`; then build it. **Later, not this round** (Aidan, 2026-10-25): every AWB icon gets a more polished look, done together with the colour option.
 3. Aidan finishes the remaining Part Properties checks below.
 
