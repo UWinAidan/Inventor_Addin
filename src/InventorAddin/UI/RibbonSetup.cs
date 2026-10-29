@@ -15,9 +15,17 @@ namespace InventorAddin.UI
     /// To add a button: add a layout entry in Core and register the command in <see cref="CreateCommands"/>.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Settings and Inventor's theme (for the icons) are read once, when the add-in starts. A changed setting or theme
     /// takes effect at the next start, except "Use Inventor's Hole command", which <see cref="HoleCommandTakeover"/>
     /// applies when Settings is saved.
+    /// </para>
+    /// <para>
+    /// The add-in's controls (<see cref="AddinUi"/>: its tab on every ribbon and its button on Inventor's Modify panel)
+    /// are deleted when the add-in unloads, and any an earlier load left are deleted before the ribbon is built, so a
+    /// reload from the Add-In Manager builds the ribbon as a start does (task 121). The command definitions are kept, so
+    /// users' Quick Access Toolbar entries and shortcuts on our commands survive; a reload reuses them.
+    /// </para>
     /// </remarks>
     public sealed class RibbonSetup : IDisposable
     {
@@ -75,6 +83,11 @@ namespace InventorAddin.UI
         /// </summary>
         public void Create()
         {
+            // A reload starts clean: what an earlier load left would hide the new buttons (task 121).
+            RemoveUi(AddinUiOccasion.Loading);
+
+            var report = new RibbonBuildReport();
+
             UiTheme theme = ThemeResources.ReadInventorTheme();
             _log.Info(
                 $"Ribbon icons use the {UiThemes.ResourceSuffix(theme)} set, from Inventor's theme at start. " +
@@ -97,13 +110,17 @@ namespace InventorAddin.UI
 
                 try
                 {
-                    BuildRibbon(environment, panels);
+                    BuildRibbon(environment, panels, report);
                 }
                 catch (Exception ex)
                 {
                     _log.Error($"Could not build the {environment.RibbonName()} ribbon. The other ribbons are still built.", ex);
                 }
             }
+
+            report.CommandsRegistered = _commands.Count;
+            report.CommandsFailed = _failedCommands.Count;
+            _log.Info(report.Summary());
 
             StartHoleTakeover();
             StartHoleEditRedirect(theme);
@@ -163,14 +180,16 @@ namespace InventorAddin.UI
             }
         }
 
-        private void BuildRibbon(RibbonEnvironment environment, IReadOnlyList<PanelLayout> panels)
+        private void BuildRibbon(RibbonEnvironment environment, IReadOnlyList<PanelLayout> panels, RibbonBuildReport report)
         {
             Ribbon ribbon = _app.UserInterfaceManager.Ribbons[environment.RibbonName()];
-            RibbonTab tab = GetOrAddTab(ribbon);
+            RibbonTab tab = GetOrAddTab(ribbon, out bool tabAdded);
+            report.Tab(environment.RibbonName(), tabAdded);
 
             foreach (PanelLayout panelLayout in panels)
             {
-                RibbonPanel panel = GetOrAddPanel(tab, panelLayout.Id, panelLayout.DisplayName);
+                RibbonPanel panel = GetOrAddPanel(tab, panelLayout.Id, panelLayout.DisplayName, out bool panelAdded);
+                report.Panel(panelAdded);
 
                 foreach (ButtonLayout button in panelLayout.Buttons)
                 {
@@ -190,7 +209,7 @@ namespace InventorAddin.UI
                         continue;
                     }
 
-                    AddButton(panel, command, button.Size == ButtonSize.Large);
+                    report.Button(AddButton(panel, command, button.Size == ButtonSize.Large));
                 }
             }
         }
@@ -257,28 +276,129 @@ namespace InventorAddin.UI
             _commandsByName.Add(command.InternalName, command);
         }
 
-        private RibbonTab GetOrAddTab(Ribbon ribbon)
+        private RibbonTab GetOrAddTab(Ribbon ribbon, out bool added)
         {
+            added = false;
             foreach (RibbonTab t in ribbon.RibbonTabs)
                 if (t.InternalName == RibbonIds.TabId)
                     return t;
+            added = true;
             return ribbon.RibbonTabs.Add(RibbonIds.TabName, RibbonIds.TabId, _clientId);
         }
 
-        private RibbonPanel GetOrAddPanel(RibbonTab tab, string id, string name)
+        private RibbonPanel GetOrAddPanel(RibbonTab tab, string id, string name, out bool added)
         {
+            added = false;
             foreach (RibbonPanel p in tab.RibbonPanels)
                 if (p.InternalName == id)
                     return p;
+            added = true;
             return tab.RibbonPanels.Add(name, id, _clientId);
         }
 
-        private static void AddButton(RibbonPanel panel, AddinCommand command, bool useLargeIcon)
+        /// <summary>Adds the command's button to the panel; false when a button for it was already there.</summary>
+        private static bool AddButton(RibbonPanel panel, AddinCommand command, bool useLargeIcon)
         {
             foreach (CommandControl c in panel.CommandControls)
                 if (c.InternalName == command.Definition!.InternalName)
-                    return;
+                    return false;
             panel.CommandControls.AddButton(command.Definition, useLargeIcon);
+            return true;
+        }
+
+        /// <summary>
+        /// Deletes everything <see cref="AddinUi"/> lists: our buttons on Inventor's panels, then our tab on every ribbon
+        /// (with its panels and buttons). The command definitions are kept. Each item is deleted on its own, so one
+        /// failure does not stop the others. What was removed is logged as one line, and each failure as a warning.
+        /// Never throws.
+        /// </summary>
+        private void RemoveUi(AddinUiOccasion occasion)
+        {
+            var report = new AddinUiRemovalReport(occasion);
+            try
+            {
+                RemoveForeignButtons(report);
+                RemoveTabs(report);
+
+                _log.Info(report.Summary());
+                foreach (string message in report.FailureMessages())
+                    _log.Warn(message);
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"Ribbon: removing the add-in's tabs and buttons failed ({occasion}).", ex);
+            }
+        }
+
+        private void RemoveForeignButtons(AddinUiRemovalReport report)
+        {
+            foreach (ForeignButton button in AddinUi.ForeignButtons)
+            {
+                string where = $"{button.CommandInternalName} on panel {button.PanelId} of the {button.RibbonName} ribbon";
+
+                var found = new List<CommandControl>();
+                try
+                {
+                    RibbonPanel panel = _app.UserInterfaceManager.Ribbons[button.RibbonName]
+                        .RibbonTabs[button.TabId]
+                        .RibbonPanels[button.PanelId];
+
+                    // Collected first: deleting while enumerating a COM collection can skip items.
+                    foreach (CommandControl c in panel.CommandControls)
+                        if (ComSafe.Get(() => c.InternalName) == button.CommandInternalName)
+                            found.Add(c);
+                }
+                catch (Exception ex)
+                {
+                    report.Failed($"{where} (the panel could not be read)", ex.Message);
+                }
+
+                foreach (CommandControl control in found)
+                {
+                    try
+                    {
+                        control.Delete();
+                        report.ButtonRemoved();
+                    }
+                    catch (Exception ex)
+                    {
+                        report.Failed(where, ex.Message);
+                    }
+                }
+            }
+        }
+
+        private void RemoveTabs(AddinUiRemovalReport report)
+        {
+            foreach (string ribbonName in AddinUi.TabRibbonNames)
+            {
+                string where = $"the {RibbonIds.TabName} tab on the {ribbonName} ribbon";
+
+                var found = new List<RibbonTab>();
+                try
+                {
+                    foreach (RibbonTab t in _app.UserInterfaceManager.Ribbons[ribbonName].RibbonTabs)
+                        if (ComSafe.Get(() => t.InternalName) == RibbonIds.TabId)
+                            found.Add(t);
+                }
+                catch (Exception ex)
+                {
+                    report.Failed($"{where} (the ribbon's tabs could not be read)", ex.Message);
+                }
+
+                foreach (RibbonTab tab in found)
+                {
+                    try
+                    {
+                        tab.Delete();
+                        report.TabRemoved();
+                    }
+                    catch (Exception ex)
+                    {
+                        report.Failed(where, ex.Message);
+                    }
+                }
+            }
         }
 
         public void Dispose()
@@ -289,10 +409,25 @@ namespace InventorAddin.UI
             _holeTakeover?.Dispose();
             _holeTakeover = null;
 
+            // Each command on its own, so one failing release cannot skip the others or the removal below.
             foreach (var c in _commands)
-                c.Dispose();
+            {
+                try
+                {
+                    c.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    _log.Warn($"Could not release command {c.InternalName} while unloading. {ex.Message}");
+                }
+            }
             _commands.Clear();
             _commandsByName.Clear();
+            _failedCommands.Clear();
+
+            // Then our tabs and our button on Inventor's Modify panel are deleted, so a reload starts clean (task 121). The
+            // command definitions are kept (see AddinUi).
+            RemoveUi(AddinUiOccasion.Unloading);
         }
     }
 }

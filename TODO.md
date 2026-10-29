@@ -6,7 +6,7 @@ Last updated: 2026-10-28
 
 ## Next up
 
-1. M4 part 1: the round is planned: tasks 103 to 134 (2026-10-25). Spike 103 is done (rounds 1 and 2 with Aidan, 2026-10-25); it gave tasks 105 and 109 in full and two new tasks, 133 (the mini toolbar's Hole button) and 134 (Save As and Replace renames the occurrence; Aidan's Rename report). 105, 109, 133 and 134 are done (not yet run in Inventor). Spikes 107 and 108 are done (with Aidan, 2026-10-28); task 110 is confirmed from 107's final result (round 4: drill point, seats off the edge and end caps all pass), tasks 114, 115 and 127 are completed from 108. 135 and 120 are done. **Next:** 121, 128, 129 (ribbon fixes); the full order is in `docs/PLAN.md` ("Round after PR #29's first look").
+1. M4 part 1: the round is planned: tasks 103 to 134 (2026-10-25). Spike 103 is done (rounds 1 and 2 with Aidan, 2026-10-25); it gave tasks 105 and 109 in full and two new tasks, 133 (the mini toolbar's Hole button) and 134 (Save As and Replace renames the occurrence; Aidan's Rename report). 105, 109, 133 and 134 are done (not yet run in Inventor). Spikes 107 and 108 are done (with Aidan, 2026-10-28); task 110 is confirmed from 107's final result (round 4: drill point, seats off the edge and end caps all pass), tasks 114, 115 and 127 are completed from 108. 135, 120 and 121 are done. **Next:** 128, 129 (ribbon fixes); the full order is in `docs/PLAN.md` ("Round after PR #29's first look").
 2. Ribbon icon colours: Aidan picks option A, B or C from `docs/ui-mockups/ribbon-icons-colour-options.png` on branch `claude/ribbon-icon-colour`; then build it. **Later, not this round** (Aidan, 2026-10-25): every AWB icon gets a more polished look, done together with the colour option.
 3. Aidan finishes the remaining Part Properties checks below.
 
@@ -148,7 +148,7 @@ Small things noticed while building. None is urgent. The parent turns these into
 
 **Ribbon icons**
 - Rendering icons on Windows (Pillow 12.3.0) re-encodes 12 existing 32 px PNGs with identical pixels but different bytes; restore them with `git checkout` after a render, or make `render.py` skip writing a PNG whose pixels match the file on disk. At 16 px the second hatch line of `MaterialFinish` touches the ring at (12,8); shorten it if it ever shows. (task 073)
-- `RibbonSetup.AddButton` returns early when a control with the command's name is already on the panel, so if Inventor ever keeps the add-in's controls between sessions a size change would not show. Only if a button shows its old size. (task 056)
+- `RibbonSetup.AddButton` returns early when a control with the command's name is already on the panel, so if Inventor ever keeps the add-in's controls between sessions a size change would not show. Only if a button shows its old size. (task 056; task 121 now deletes our controls on load and unload, so close this once 121's reload check passes)
 - When Inventor refuses the icons but has already created the definition, the log says "the button shows text only" and then that the definition was reused; the first line may be untrue. (task 042)
 - Task 030: embed only `UI/Icons/*.png`. The `.svg` sources sit in the same folder and must stay out of the build. (task 024)
 

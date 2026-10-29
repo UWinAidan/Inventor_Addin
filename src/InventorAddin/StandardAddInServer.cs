@@ -31,6 +31,9 @@ namespace InventorAddin
             AddinServices.Log.Info(
                 $"{Branding.ProductName} {version?.ToString() ?? "unknown"} started in Inventor major version {inventorMajor?.ToString() ?? "unknown"}.");
 
+            // A reload from the Add-In Manager passes false; the ribbon is built the same either way (task 121).
+            AddinServices.Log.Info($"Inventor activated the add-in with firstTime = {firstTime}.");
+
             _ribbon = new RibbonSetup(InventorHost.App, ClientId, AddinServices.Settings, AddinServices.Log);
             _ribbon.Create();
 

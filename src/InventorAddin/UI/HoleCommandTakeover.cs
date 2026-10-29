@@ -364,7 +364,10 @@ namespace InventorAddin.UI
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool IsWindowEnabled(IntPtr hwnd);
 
-        /// <summary>The add-in is unloading: Inventor's Hole and H are given back, and the reset event released.</summary>
+        /// <summary>
+        /// The add-in is unloading: Inventor's Hole and H are given back, and the reset event released. <see cref="RibbonSetup"/>
+        /// then deletes our button from the Modify panel, so a reload adds it again (task 121).
+        /// </summary>
         public void Dispose()
         {
             if (ReferenceEquals(Active, this))

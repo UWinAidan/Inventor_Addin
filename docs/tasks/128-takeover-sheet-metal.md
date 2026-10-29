@@ -13,7 +13,7 @@ Aidan, 2026-10-25: AWB Hole also replaces Inventor's Hole on the **Sheet Metal**
 
 ## Scope
 
-- `src/InventorAddin/UI/RibbonSetup.cs`, `HoleCommandTakeover.cs`: find the Sheet Metal tab's panel that holds Inventor's Hole (look it up at run time by the control's command, `PartHoleCmd` or the sheet metal one, rather than a guessed panel name; log what was found), put AWB Hole before it, large, and hide Inventor's button there, the same way task 091 does on the 3D Model tab. The switch shows and hides both.
+- `src/InventorAddin/UI/RibbonSetup.cs`, `HoleCommandTakeover.cs`: find the Sheet Metal tab's panel that holds Inventor's Hole (look it up at run time by the control's command, `PartHoleCmd` or the sheet metal one, rather than a guessed panel name; log what was found), put AWB Hole before it, large, and hide Inventor's button there, the same way task 091 does on the 3D Model tab. The switch shows and hides both. Add the new button to Core's `AddinUi.ForeignButtons` (task 121), or an unload leaves it behind.
 - If the Sheet Metal tab uses a different command name for its Hole, H is still one binding: confirm in the log which command H reaches on a sheet metal part.
 - AWB Hole itself already works on sheet metal parts (task 090 Default); confirm a hole made on a sheet metal face is correct.
 
