@@ -12,13 +12,22 @@ public sealed class AddinUiTests
     }
 
     [Fact]
-    public void ForeignButtons_AreAwbHoleOnTheModifyPanel()
+    public void ForeignButtons_AreAwbHoleOnTheModifyPanelAndTheSheetMetalTab()
     {
-        ForeignButton button = Assert.Single(AddinUi.ForeignButtons);
-        Assert.Equal(HoleTakeoverRules.RibbonName, button.RibbonName);
-        Assert.Equal(HoleTakeoverRules.TabId, button.TabId);
-        Assert.Equal(HoleTakeoverRules.PanelId, button.PanelId);
-        Assert.Equal(CommandNames.AwbHole, button.CommandInternalName);
+        Assert.Equal(2, AddinUi.ForeignButtons.Count);
+
+        ForeignButton model = AddinUi.ForeignButtons[0];
+        Assert.Equal(HoleTakeoverRules.RibbonName, model.RibbonName);
+        Assert.Equal(HoleTakeoverRules.TabId, model.TabId);
+        Assert.Equal(HoleTakeoverRules.PanelId, model.PanelId);
+        Assert.Equal(CommandNames.AwbHole, model.CommandInternalName);
+
+        // Task 128: the Sheet Metal tab's panel is looked up at run time, so every panel on the tab is searched.
+        ForeignButton sheetMetal = AddinUi.ForeignButtons[1];
+        Assert.Equal(HoleTakeoverRules.RibbonName, sheetMetal.RibbonName);
+        Assert.Equal(HoleTakeoverRules.SheetMetalTabId, sheetMetal.TabId);
+        Assert.Null(sheetMetal.PanelId);
+        Assert.Equal(CommandNames.AwbHole, sheetMetal.CommandInternalName);
     }
 
     [Fact]
@@ -93,6 +102,24 @@ public sealed class AddinUiTests
 
         Assert.Equal(expected, Assert.Single(report.FailureMessages()));
         Assert.Single(report.Failures);
+    }
+
+    [Fact]
+    public void Removal_TabNotFound_IsOneInfoLineNamingTheId_NotAFailure()
+    {
+        // Task 128: the Sheet Metal tab's id is not confirmed; a wrong one must not read as a failure.
+        var report = new AddinUiRemovalReport(AddinUiOccasion.Unloading);
+        report.TabNotFound("Part", "id_TabSheetMetal");
+        report.TabNotFound("Part", "id_TabSheetMetal");
+
+        Assert.Equal(
+            "Ribbon (add-in unloading): tab id_TabSheetMetal was not found on the Part ribbon, so there is nothing to " +
+            "remove there. If AWB Hole shows on that tab, its id is wrong.",
+            Assert.Single(report.NotFoundMessages()));
+        Assert.Equal(new[] { "Part: id_TabSheetMetal" }, report.TabsNotFound);
+        Assert.Empty(report.Failures);
+        Assert.Empty(report.FailureMessages());
+        Assert.Equal("Ribbon (add-in unloading): there was nothing to remove.", report.Summary());
     }
 
     [Fact]

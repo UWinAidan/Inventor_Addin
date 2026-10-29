@@ -21,7 +21,8 @@ namespace InventorAddin.UI
     /// applies when Settings is saved.
     /// </para>
     /// <para>
-    /// The add-in's controls (<see cref="AddinUi"/>: its tab on every ribbon and its button on Inventor's Modify panel)
+    /// The add-in's controls (<see cref="AddinUi"/>: its tab on every ribbon and AWB Hole on Inventor's Modify panel and
+    /// Sheet Metal tab)
     /// are deleted when the add-in unloads, and any an earlier load left are deleted before the ribbon is built, so a
     /// reload from the Add-In Manager builds the ribbon as a start does (task 121). The command definitions are kept, so
     /// users' Quick Access Toolbar entries and shortcuts on our commands survive; a reload reuses them.
@@ -127,14 +128,14 @@ namespace InventorAddin.UI
         }
 
         /// <summary>
-        /// AWB Hole replaces Inventor's Hole on the 3D Model tab, or not, as the settings say (task 091). Without AWB
-        /// Hole's definition, Inventor's Hole is left as it is.
+        /// AWB Hole replaces Inventor's Hole on the 3D Model and Sheet Metal tabs, or not, as the settings say (tasks 091
+        /// and 128). Without AWB Hole's definition, Inventor's Hole is left as it is.
         /// </summary>
         private void StartHoleTakeover()
         {
             if (!_commandsByName.TryGetValue(CommandNames.AwbHole, out AddinCommand? awbHole) || awbHole.Definition == null)
             {
-                _log.Warn($"Command {CommandNames.AwbHole} is not registered, so Inventor's Hole is not replaced on the 3D Model tab.");
+                _log.Warn($"Command {CommandNames.AwbHole} is not registered, so Inventor's Hole is not replaced on the 3D Model and Sheet Metal tabs.");
                 return;
             }
 
@@ -321,6 +322,8 @@ namespace InventorAddin.UI
                 RemoveTabs(report);
 
                 _log.Info(report.Summary());
+                foreach (string message in report.NotFoundMessages())
+                    _log.Info(message);
                 foreach (string message in report.FailureMessages())
                     _log.Warn(message);
             }
@@ -334,19 +337,46 @@ namespace InventorAddin.UI
         {
             foreach (ForeignButton button in AddinUi.ForeignButtons)
             {
-                string where = $"{button.CommandInternalName} on panel {button.PanelId} of the {button.RibbonName} ribbon";
+                string where = button.PanelId == null
+                    ? $"{button.CommandInternalName} on tab {button.TabId} of the {button.RibbonName} ribbon"
+                    : $"{button.CommandInternalName} on panel {button.PanelId} of the {button.RibbonName} ribbon";
 
                 var found = new List<CommandControl>();
                 try
                 {
-                    RibbonPanel panel = _app.UserInterfaceManager.Ribbons[button.RibbonName]
-                        .RibbonTabs[button.TabId]
-                        .RibbonPanels[button.PanelId];
+                    // Found by enumerating, so a tab id that is wrong (the Sheet Metal tab's is not confirmed, task 128)
+                    // is reported as not found rather than as a failure.
+                    RibbonTab? tab = null;
+                    foreach (RibbonTab t in _app.UserInterfaceManager.Ribbons[button.RibbonName].RibbonTabs)
+                        if (ComSafe.Get(() => t.InternalName) == button.TabId)
+                        {
+                            tab = t;
+                            break;
+                        }
+
+                    if (tab == null)
+                    {
+                        report.TabNotFound(button.RibbonName, button.TabId);
+                        continue;
+                    }
+
+                    // A null panel id means every panel on the tab: that panel is looked up at run time (task 128).
+                    var panels = new List<RibbonPanel>();
+                    if (button.PanelId == null)
+                    {
+                        foreach (RibbonPanel p in tab.RibbonPanels)
+                            panels.Add(p);
+                    }
+                    else
+                    {
+                        panels.Add(tab.RibbonPanels[button.PanelId]);
+                    }
 
                     // Collected first: deleting while enumerating a COM collection can skip items.
-                    foreach (CommandControl c in panel.CommandControls)
-                        if (ComSafe.Get(() => c.InternalName) == button.CommandInternalName)
-                            found.Add(c);
+                    foreach (RibbonPanel panel in panels)
+                        foreach (CommandControl c in panel.CommandControls)
+                            if (ComSafe.Get(() => c.InternalName) == button.CommandInternalName)
+                                found.Add(c);
                 }
                 catch (Exception ex)
                 {
@@ -425,7 +455,7 @@ namespace InventorAddin.UI
             _commandsByName.Clear();
             _failedCommands.Clear();
 
-            // Then our tabs and our button on Inventor's Modify panel are deleted, so a reload starts clean (task 121). The
+            // Then our tabs and our buttons on Inventor's panels are deleted, so a reload starts clean (task 121). The
             // command definitions are kept (see AddinUi).
             RemoveUi(AddinUiOccasion.Unloading);
         }

@@ -95,6 +95,26 @@ public sealed class HoleTakeoverRulesTests
         Assert.Throws<ArgumentNullException>(() => HoleTakeoverRules.AppliedMessage(null!, "x"));
     }
 
+    [Fact]
+    public void Messages_NameTheSheetMetalTab_WhenItWasSet()
+    {
+        // Task 128.
+        Assert.Contains("on the 3D Model tab and", HoleTakeoverRules.AppliedMessage(HoleTakeoverRules.TakenOver, "startup"));
+        Assert.Contains(
+            "on the 3D Model and Sheet Metal tabs and the H shortcut",
+            HoleTakeoverRules.AppliedMessage(HoleTakeoverRules.TakenOver, "startup", sheetMetalTab: true));
+        Assert.Contains(
+            "its button on the 3D Model and Sheet Metal tabs and its shortcut back",
+            HoleTakeoverRules.AppliedMessage(HoleTakeoverRules.GivenBack("", "H"), "unload", sheetMetalTab: true));
+    }
+
+    [Fact]
+    public void SheetMetalIds_AreSpike081sPanelOnTheSheetMetalTab()
+    {
+        Assert.Equal("id_TabSheetMetal", HoleTakeoverRules.SheetMetalTabId);
+        Assert.Equal("id_PanelP_SheetMetalModify", HoleTakeoverRules.SheetMetalPanelId);
+    }
+
     // ---- task 133: the mini toolbar's Hole ----
 
     private const string Ours = CommandNames.AwbHole;

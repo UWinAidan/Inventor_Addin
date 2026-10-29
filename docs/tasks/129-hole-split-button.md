@@ -13,6 +13,7 @@ Aidan, 2026-10-25: AWB Hole on the 3D Model and Sheet Metal tabs becomes a **spl
 
 ## Scope
 
+- From task 128: the split button goes on the Sheet Metal panel `HoleCommandTakeover` finds as well as on the Modify panel, and stays covered by Core `AddinUi.ForeignButtons` so unload and load remove it.
 - `src/InventorAddin/UI/RibbonSetup.cs`, `HoleCommandTakeover.cs`, a new command for Inventor Hole and one for the toggle in `src/InventorAddin/Commands/`.
 - The split button (`CommandControls.AddSplitButton` or what the API reference gives; check the members), with AWB Hole as its main button. When the setting is on, the split button is hidden and Inventor's Hole shows, as today; Default: the toggle is then reached from AWB Settings or the AWB Addin tab's AWB Hole (which stays a plain button).
 - **Inventor Hole** runs Inventor's Hole command once (`ControlDefinitions["PartHoleCmd"].Execute`, or the sheet metal one) without changing the setting. While it runs, the takeover must not redirect it to AWB Hole (task 092 stops Inventor's hole edit started other ways; a new Inventor hole from this button is allowed). Its icon is Inventor's Hole icon if it can be read, else ours (as task 092).

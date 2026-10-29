@@ -3,7 +3,7 @@ using InventorAddin.Core.ViewModels;
 
 namespace InventorAddin.Core.Holes;
 
-/// <summary>Which Hole command has the Hole button on the 3D Model tab and the H shortcut (spec 09, "The command").</summary>
+/// <summary>Which Hole command has the Hole button on the 3D Model and Sheet Metal tabs and the H shortcut (spec 09, "The command").</summary>
 public enum HoleCommandOwner
 {
     /// <summary>AWB Hole: the switch "Use Inventor's Hole command" is off, the default.</summary>
@@ -14,11 +14,12 @@ public enum HoleCommandOwner
 }
 
 /// <summary>
-/// What the add-in sets on the 3D Model tab's Modify panel and on the two Hole commands' shortcuts.
+/// What the add-in sets on the 3D Model tab's Modify panel, on the Sheet Metal tab's Hole panel (task 128), and on the
+/// two Hole commands' shortcuts.
 /// </summary>
 /// <param name="Owner">Who the state gives the Hole button and H to.</param>
-/// <param name="AwbButtonVisible">Whether AWB Hole's button on the Modify panel shows.</param>
-/// <param name="InventorButtonVisible">Whether Inventor's Hole button on the Modify panel shows.</param>
+/// <param name="AwbButtonVisible">Whether AWB Hole's buttons on Inventor's panels show.</param>
+/// <param name="InventorButtonVisible">Whether Inventor's Hole buttons on those panels show.</param>
 /// <param name="AwbShortcut">AWB Hole's <c>OverrideShortcut</c>; empty clears it.</param>
 /// <param name="InventorShortcut">
 /// Inventor's Hole's <c>OverrideShortcut</c>, or null to leave it as it is (the user's own shortcut for it).
@@ -59,6 +60,18 @@ public static class HoleTakeoverRules
 
     /// <inheritdoc cref="RibbonName"/>
     public const string PanelId = "id_PanelP_ModelModify";
+
+    /// <summary>
+    /// The Part ribbon's Sheet Metal tab, where AWB Hole replaces Inventor's Hole too (Aidan, 2026-10-25; task 128).
+    /// Not confirmed by a spike: the add-in logs every panel with a Hole command when it applies the takeover.
+    /// </summary>
+    public const string SheetMetalTabId = "id_TabSheetMetal";
+
+    /// <summary>
+    /// The Sheet Metal tab's panel spike 081 saw Inventor's Hole on (small). The panel is looked up at run time by the
+    /// control's command (<see cref="SheetMetalHolePanel"/>); this one is preferred when several hold it.
+    /// </summary>
+    public const string SheetMetalPanelId = "id_PanelP_SheetMetalModify";
 
     /// <summary>The shortcut AWB Hole takes, and Inventor's Hole's default when Inventor cannot say what it is.</summary>
     public const string Shortcut = "H";
@@ -140,12 +153,14 @@ public static class HoleTakeoverRules
         string.IsNullOrWhiteSpace(inventorDefault) ? Shortcut : inventorDefault.Trim();
 
     /// <summary>The log line for a state applied, with why it was applied (startup, settings saved, and so on).</summary>
-    public static string AppliedMessage(HoleTakeoverState state, string reason)
+    /// <param name="sheetMetalTab">Whether the Sheet Metal tab's Hole button was set too (task 128).</param>
+    public static string AppliedMessage(HoleTakeoverState state, string reason, bool sheetMetalTab = false)
     {
         ArgumentNullException.ThrowIfNull(state);
+        var tabs = sheetMetalTab ? "the 3D Model and Sheet Metal tabs" : "the 3D Model tab";
         return state.Owner == HoleCommandOwner.Awb
-            ? $"Hole takeover ({reason}): {AwbHoleViewModel.CommandName} has the Hole button on the 3D Model tab and the {Shortcut} shortcut."
-            : $"Hole takeover ({reason}): Inventor's Hole has its button on the 3D Model tab and its shortcut back.";
+            ? $"Hole takeover ({reason}): {AwbHoleViewModel.CommandName} has the Hole button on {tabs} and the {Shortcut} shortcut."
+            : $"Hole takeover ({reason}): Inventor's Hole has its button on {tabs} and its shortcut back.";
     }
 
     /// <summary>The log line when taking over failed and Inventor's Hole is being given back.</summary>

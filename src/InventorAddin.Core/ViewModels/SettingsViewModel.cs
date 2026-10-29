@@ -77,7 +77,7 @@ public sealed class SettingsViewModel : ObservableObject
 
     /// <summary>The note shown under the "Use Inventor's Hole command" checkbox.</summary>
     public const string UseInventorHoleCommandNoteText =
-        "On gives the H shortcut and the Hole button on the 3D Model tab back to Inventor's Hole; off gives them to AWB Hole. Takes effect when you save.";
+        "On gives the H shortcut and the Hole button on the 3D Model and Sheet Metal tabs back to Inventor's Hole; off gives them to AWB Hole. Takes effect when you save.";
 
     /// <summary>
     /// The line break the other CAD folders text is shown with: the one a WPF text box inserts. Any line break is

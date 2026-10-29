@@ -6,9 +6,12 @@ namespace InventorAddin.Core.Ribbon;
 /// <summary>A button the add-in puts on one of Inventor's own ribbon panels, not on the add-in's tab.</summary>
 /// <param name="RibbonName">The Inventor ribbon (the key into <c>UserInterfaceManager.Ribbons</c>).</param>
 /// <param name="TabId">Inventor's tab, by internal name.</param>
-/// <param name="PanelId">Inventor's panel on that tab, by internal name.</param>
+/// <param name="PanelId">
+/// Inventor's panel on that tab, by internal name, or null for every panel on the tab: the add-in looks that panel up
+/// at run time (the Sheet Metal tab's Hole panel, task 128).
+/// </param>
 /// <param name="CommandInternalName">The add-in command the button runs.</param>
-public sealed record ForeignButton(string RibbonName, string TabId, string PanelId, string CommandInternalName);
+public sealed record ForeignButton(string RibbonName, string TabId, string? PanelId, string CommandInternalName);
 
 /// <summary>
 /// The add-in's controls in Inventor's ribbons: its tab on every ribbon and its buttons on Inventor's own panels.
@@ -28,10 +31,14 @@ public static class AddinUi
     public static IReadOnlyList<string> TabRibbonNames { get; } =
         RibbonEnvironments.All.Select(e => e.RibbonName()).ToArray();
 
-    /// <summary>AWB Hole on the 3D Model tab's Modify panel (task 091).</summary>
+    /// <summary>
+    /// AWB Hole on the 3D Model tab's Modify panel (task 091), and on whichever Sheet Metal tab panel holds Inventor's
+    /// Hole (task 128; looked up at run time, so every panel on that tab is searched).
+    /// </summary>
     public static IReadOnlyList<ForeignButton> ForeignButtons { get; } = new[]
     {
         new ForeignButton(HoleTakeoverRules.RibbonName, HoleTakeoverRules.TabId, HoleTakeoverRules.PanelId, CommandNames.AwbHole),
+        new ForeignButton(HoleTakeoverRules.RibbonName, HoleTakeoverRules.SheetMetalTabId, null, CommandNames.AwbHole),
     };
 }
 
@@ -49,6 +56,7 @@ public enum AddinUiOccasion
 public sealed class AddinUiRemovalReport
 {
     private readonly List<string> _failures = new();
+    private readonly List<(string Ribbon, string TabId)> _tabsNotFound = new();
 
     public AddinUiRemovalReport(AddinUiOccasion occasion)
     {
@@ -71,6 +79,25 @@ public sealed class AddinUiRemovalReport
     /// <param name="what">What could not be removed, for example "the AWB Addin tab on the Part ribbon".</param>
     /// <param name="error">Inventor's error message.</param>
     public void Failed(string what, string error) => _failures.Add($"{what}: {error}");
+
+    /// <summary>
+    /// Inventor's tab a <see cref="ForeignButton"/> is on is not on its ribbon (task 128: the Sheet Metal tab's id is
+    /// not confirmed), so there was nothing to remove there. Not a failure; each tab is reported once.
+    /// </summary>
+    public void TabNotFound(string ribbonName, string tabId)
+    {
+        if (!_tabsNotFound.Contains((ribbonName, tabId)))
+            _tabsNotFound.Add((ribbonName, tabId));
+    }
+
+    /// <summary>The tabs reported by <see cref="TabNotFound"/>, as "Part: id_TabX".</summary>
+    public IReadOnlyList<string> TabsNotFound => _tabsNotFound.Select(t => $"{t.Ribbon}: {t.TabId}").ToArray();
+
+    /// <summary>One info line per tab not found, naming its id.</summary>
+    public IEnumerable<string> NotFoundMessages() =>
+        _tabsNotFound.Select(t =>
+            $"{Prefix}: tab {t.TabId} was not found on the {t.Ribbon} ribbon, so there is nothing to remove there. " +
+            "If AWB Hole shows on that tab, its id is wrong.");
 
     private string Prefix => $"Ribbon ({AddinUiOccasions.Text(Occasion)})";
 

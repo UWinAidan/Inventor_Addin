@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Inventor;
@@ -9,9 +10,10 @@ using InventorAddin.Core.Settings;
 namespace InventorAddin.UI
 {
     /// <summary>
-    /// AWB Hole replaces Inventor's Hole on the 3D Model tab and takes its H shortcut, or gives both back, as the
-    /// setting "Use Inventor's Hole command" says (spec 09, "The command"; spike 081 section 3; task 091).
-    /// <see cref="HoleTakeoverRules"/> makes every decision; this class reads Inventor and applies the state.
+    /// AWB Hole replaces Inventor's Hole on the 3D Model tab and the Sheet Metal tab and takes its H shortcut, or gives
+    /// them back, as the setting "Use Inventor's Hole command" says (spec 09, "The command"; spike 081 section 3; tasks
+    /// 091 and 128). The Flat Pattern tab keeps Inventor's Hole. <see cref="HoleTakeoverRules"/> and
+    /// <see cref="SheetMetalHolePanel"/> make every decision; this class reads Inventor and applies the state.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -22,6 +24,13 @@ namespace InventorAddin.UI
     /// for Inventor's window to be enabled again, re-applies as toggling the setting does, and checks the shortcuts stay.
     /// Every step is logged. <see cref="Dispose"/>, when the add-in unloads, gives Inventor's
     /// Hole and H back, so a removed add-in never leaves Inventor without its Hole.
+    /// </para>
+    /// <para>
+    /// The Sheet Metal tab's panel is found at every apply by the control's command (<c>PartHoleCmd</c>), not by a fixed
+    /// panel name, and what was found is logged when it changes (task 128). A tab or panel that cannot be read is
+    /// skipped and named in that log line. No such panel, or a ribbon that cannot be read at all, is a warning, not a
+    /// failure: the 3D Model tab is still taken over. Only a failure while changing a panel that was found fails the
+    /// take-over.
     /// </para>
     /// <para>
     /// Every failure is logged and never thrown into Inventor. A take-over that fails at any step gives Inventor's
@@ -43,6 +52,9 @@ namespace InventorAddin.UI
         private System.Windows.Forms.Timer? _resetTimer;
 
         private HoleCommandOwner _owner = HoleCommandOwner.Inventor;
+
+        // The last Sheet Metal panel lookup logged, so an unchanged ribbon is not logged at every apply.
+        private string? _sheetMetalLookupLogged;
 
         /// <summary>
         /// Who has the Hole button and H now: AWB Hole only while it has taken over (a take-over that failed gives
@@ -111,7 +123,8 @@ namespace InventorAddin.UI
 
         /// <summary>
         /// Our large button before Inventor's Hole, Inventor's hidden, H moved to ours (spike 081: ours first, then
-        /// Inventor's cleared). False after the first step that fails; the caller then gives Hole back.
+        /// Inventor's cleared), on the 3D Model tab's Modify panel and on the Sheet Metal tab's Hole panel (task 128).
+        /// False after the first step that fails; the caller then gives Hole back on both.
         /// </summary>
         private bool TryTakeOver(string reason)
         {
@@ -119,22 +132,30 @@ namespace InventorAddin.UI
             {
                 HoleTakeoverState state = HoleTakeoverRules.TakenOver;
                 ControlDefinition inventorHole = InventorHole();
-                RibbonPanel panel = ModifyPanel();
 
-                CommandControl awbControl = FindControl(panel, _awbHole.InternalName)
-                    ?? panel.CommandControls.AddButton(_awbHole, true, true, HoleTakeoverRules.InventorHoleCommand, true);
-                awbControl.Visible = state.AwbButtonVisible;
-
-                CommandControl? inventorControl = FindControl(panel, HoleTakeoverRules.InventorHoleCommand);
-                if (inventorControl == null)
+                if (!ShowOnPanel(ModifyPanel(), state))
                     _log.Warn($"Hole takeover ({reason}): Inventor's Hole button is not on the 3D Model tab's Modify panel; only the shortcut is moved.");
-                else
-                    inventorControl.Visible = state.InventorButtonVisible;
+
+                // Reading the Sheet Metal tab must not cost the 3D Model tab its takeover; only a failure on a panel
+                // that was found (ShowOnPanel) fails the take-over.
+                RibbonPanel? sheetMetal;
+                try
+                {
+                    sheetMetal = SheetMetalPanel(reason);
+                }
+                catch (Exception ex)
+                {
+                    sheetMetal = null;
+                    _log.Warn($"Hole takeover ({reason}): the Sheet Metal tab could not be read; only the 3D Model tab is taken over. {ex.Message}");
+                }
+
+                if (sheetMetal != null)
+                    ShowOnPanel(sheetMetal, state);
 
                 _awbHole.OverrideShortcut = state.AwbShortcut;
                 inventorHole.OverrideShortcut = state.InventorShortcut ?? string.Empty;
 
-                _log.Info(HoleTakeoverRules.AppliedMessage(state, reason));
+                _log.Info(HoleTakeoverRules.AppliedMessage(state, reason, sheetMetal != null));
                 return true;
             }
             catch (Exception ex)
@@ -145,8 +166,28 @@ namespace InventorAddin.UI
         }
 
         /// <summary>
+        /// Takes over one panel: our large button added before Inventor's Hole when it is not there yet, then both
+        /// buttons shown or hidden as <paramref name="state"/> says. False when Inventor's Hole is not on the panel (our
+        /// button is then added as task 091 adds it on the Modify panel).
+        /// </summary>
+        private bool ShowOnPanel(RibbonPanel panel, HoleTakeoverState state)
+        {
+            CommandControl awbControl = FindControl(panel, _awbHole.InternalName)
+                ?? panel.CommandControls.AddButton(_awbHole, true, true, HoleTakeoverRules.InventorHoleCommand, true);
+            awbControl.Visible = state.AwbButtonVisible;
+
+            CommandControl? inventorControl = FindControl(panel, HoleTakeoverRules.InventorHoleCommand);
+            if (inventorControl == null)
+                return false;
+
+            inventorControl.Visible = state.InventorButtonVisible;
+            return true;
+        }
+
+        /// <summary>
         /// Inventor's Hole button shown, ours hidden, our shortcut cleared and Inventor's given its default back (spike
-        /// 081 round 1's fix). Each step runs on its own, so one failure does not stop the others; failures are logged.
+        /// 081 round 1's fix), on the 3D Model tab and the Sheet Metal tab. Each step runs on its own, so one failure does
+        /// not stop the others; failures are logged.
         /// </summary>
         private void GiveBack(string reason)
         {
@@ -154,21 +195,25 @@ namespace InventorAddin.UI
 
             ControlDefinition? inventorHole = Try(InventorHole, "finding Inventor's Hole command", reason, ref ok);
             RibbonPanel? panel = Try(ModifyPanel, "finding the 3D Model tab's Modify panel", reason, ref ok);
+            RibbonPanel? sheetMetal = null;
+            try
+            {
+                sheetMetal = SheetMetalPanel(reason);
+            }
+            catch (Exception ex)
+            {
+                // As when taking over: an unreadable Sheet Metal tab only means there is nothing there to give back.
+                _log.Warn($"Hole takeover ({reason}): the Sheet Metal tab could not be read; Hole is given back on the 3D Model tab only. {ex.Message}");
+            }
 
             string? currentOverride = inventorHole == null ? null : ComSafe.Get(() => inventorHole.OverrideShortcut);
             string? defaultShortcut = inventorHole == null ? null : ComSafe.Get(() => inventorHole.DefaultShortcut);
             HoleTakeoverState state = HoleTakeoverRules.GivenBack(currentOverride, defaultShortcut);
 
             if (panel != null)
-            {
-                CommandControl? inventorControl = Try(() => FindControl(panel, HoleTakeoverRules.InventorHoleCommand), "finding Inventor's Hole button", reason, ref ok);
-                if (inventorControl != null)
-                    Try(() => inventorControl.Visible = state.InventorButtonVisible, "showing Inventor's Hole button", reason, ref ok);
-
-                CommandControl? awbControl = Try(() => FindControl(panel, _awbHole.InternalName), "finding our Hole button on the Modify panel", reason, ref ok);
-                if (awbControl != null)
-                    Try(() => awbControl.Visible = state.AwbButtonVisible, "hiding our Hole button on the Modify panel", reason, ref ok);
-            }
+                GiveBackOnPanel(panel, state, "the Modify panel", reason, ref ok);
+            if (sheetMetal != null)
+                GiveBackOnPanel(sheetMetal, state, "the Sheet Metal tab", reason, ref ok);
 
             Try(() => _awbHole.OverrideShortcut = state.AwbShortcut, "clearing our Hole command's shortcut", reason, ref ok);
             if (inventorHole != null && state.InventorShortcut != null)
@@ -178,7 +223,19 @@ namespace InventorAddin.UI
             }
 
             if (ok)
-                _log.Info(HoleTakeoverRules.AppliedMessage(state, reason));
+                _log.Info(HoleTakeoverRules.AppliedMessage(state, reason, sheetMetal != null));
+        }
+
+        /// <summary>Inventor's Hole button shown and ours hidden on one panel; each step on its own.</summary>
+        private void GiveBackOnPanel(RibbonPanel panel, HoleTakeoverState state, string where, string reason, ref bool ok)
+        {
+            CommandControl? inventorControl = Try(() => FindControl(panel, HoleTakeoverRules.InventorHoleCommand), $"finding Inventor's Hole button on {where}", reason, ref ok);
+            if (inventorControl != null)
+                Try(() => inventorControl.Visible = state.InventorButtonVisible, $"showing Inventor's Hole button on {where}", reason, ref ok);
+
+            CommandControl? awbControl = Try(() => FindControl(panel, _awbHole.InternalName), $"finding our Hole button on {where}", reason, ref ok);
+            if (awbControl != null)
+                Try(() => awbControl.Visible = state.AwbButtonVisible, $"hiding our Hole button on {where}", reason, ref ok);
         }
 
         /// <summary>
@@ -335,6 +392,90 @@ namespace InventorAddin.UI
                 .RibbonTabs[HoleTakeoverRules.TabId]
                 .RibbonPanels[HoleTakeoverRules.PanelId];
 
+        /// <summary>
+        /// The Sheet Metal tab's panel that holds Inventor's Hole, found by the control's command over the whole Part
+        /// ribbon (<see cref="SheetMetalHolePanel"/>; task 128), or null when there is none. What was found is logged when
+        /// it differs from the last lookup. A tab or panel that throws while being read (a contextual tab, another
+        /// add-in's tab, a panel not filled yet) is skipped and named in that line, so one bad tab cannot hide the Sheet
+        /// Metal one. Throws only when the Part ribbon or its tab list cannot be read; the caller treats that as no panel.
+        /// </summary>
+        private RibbonPanel? SheetMetalPanel(string reason)
+        {
+            var read = new List<RibbonPanelControls>();
+            var sheetMetalPanels = new Dictionary<string, RibbonPanel>(StringComparer.Ordinal);
+            var skipped = new List<string>();
+
+            Ribbon ribbon = _app.UserInterfaceManager.Ribbons[HoleTakeoverRules.RibbonName];
+            int tabIndex = 0;
+            foreach (RibbonTab tab in ribbon.RibbonTabs)
+            {
+                tabIndex++;
+                string? tabId = null;
+                try
+                {
+                    tabId = ComSafe.Get(() => tab.InternalName);
+                    RibbonPanels? panels = ComSafe.Get(() => tab.RibbonPanels);
+                    if (tabId == null || panels == null)
+                        continue;
+
+                    string? tabName = ComSafe.Get(() => tab.DisplayName);
+                    int panelIndex = 0;
+                    foreach (RibbonPanel panel in panels)
+                    {
+                        panelIndex++;
+                        string? panelId = null;
+                        try
+                        {
+                            panelId = ComSafe.Get(() => panel.InternalName);
+                            if (panelId == null)
+                                continue;
+
+                            read.Add(new RibbonPanelControls(tabId, tabName, panelId, ControlNames(panel)));
+                            if (SheetMetalHolePanel.IsSheetMetalTab(tabId))
+                                sheetMetalPanels[panelId] = panel;
+                        }
+                        catch (Exception ex)
+                        {
+                            skipped.Add($"panel {panelId ?? "#" + panelIndex} on tab {tabId} ({ex.Message})");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    skipped.Add($"tab {tabId ?? "#" + tabIndex} ({ex.Message})");
+                }
+            }
+
+            SheetMetalHolePanelChoice choice = SheetMetalHolePanel.Find(read);
+            string message = skipped.Count == 0
+                ? choice.Message
+                : $"{choice.Message} Could not be read, so skipped: {string.Join("; ", skipped)}.";
+            if (message != _sheetMetalLookupLogged)
+            {
+                _sheetMetalLookupLogged = message;
+                string line = $"{message} ({reason})";
+                if (choice.IsWarning || skipped.Count > 0)
+                    _log.Warn(line);
+                else
+                    _log.Info(line);
+            }
+
+            return choice.PanelId != null && sheetMetalPanels.TryGetValue(choice.PanelId, out RibbonPanel? found) ? found : null;
+        }
+
+        /// <summary>The internal names of the panel's top-level controls, null where unreadable.</summary>
+        private static List<string?> ControlNames(RibbonPanel panel)
+        {
+            var names = new List<string?>();
+            CommandControls? controls = ComSafe.Get(() => panel.CommandControls);
+            if (controls == null)
+                return names;
+
+            foreach (CommandControl c in controls)
+                names.Add(ComSafe.Get(() => c.InternalName));
+            return names;
+        }
+
         private static CommandControl? FindControl(RibbonPanel panel, string internalName)
         {
             foreach (CommandControl c in panel.CommandControls)
@@ -366,7 +507,8 @@ namespace InventorAddin.UI
 
         /// <summary>
         /// The add-in is unloading: Inventor's Hole and H are given back, and the reset event released. <see cref="RibbonSetup"/>
-        /// then deletes our button from the Modify panel, so a reload adds it again (task 121).
+        /// then deletes our buttons from the Modify panel and the Sheet Metal tab, so a reload adds them again (tasks 121
+        /// and 128).
         /// </summary>
         public void Dispose()
         {
