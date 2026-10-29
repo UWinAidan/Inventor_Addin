@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 1
 - **Feature spec:** `docs/features/09-awb-hole.md` ("Types and seats", "Simple holes", "Taper tapped holes", "Toleranced clearance and Simple holes")
-- **Status:** done (2026-10-28; the preview drill-point fix, round 4, still to be confirmed with spike 107)
+- **Status:** done (2026-10-28; the preview fix, spike 107 round 4, confirmed by Aidan the same day)
 - **Depends on:** 106
 - **Needs:** **windows** (spike, with Aidan in Inventor)
 - **Parallel-safe with:** 103, 107 (other spikes, separate branches)
@@ -83,7 +83,7 @@ Round 1, 2026-10-28. Aidan ran all 21 cases (`mode=make`, `dir=pos`) on a 20 mm 
   - Aidan: a counterbore or countersink running off the edge is drawn whole (pass).
   - Aidan: looking down a through hole shows red, so the end caps work (pass).
   - **A drill point is still missing (fail).** The log shows a NullReferenceException on the cone face, so the whole cone was skipped.
-- Round 4 (`f0a2f33`): an edge that cannot be sampled (the apex) falls back to its vertices, and a cone whose points all sit at one height still runs to its apex. Built; not yet run in Inventor.
+- Round 4 (`f0a2f33`): an edge that cannot be sampled (the apex) falls back to its vertices, and a cone whose points all sit at one height still runs to its apex. Aidan, in Inventor: the drill point is red from the side, a counterbore off the edge is whole, and a through hole is red down the bore. All pass; the preview matches Inventor's in every view.
 
 ## Recommendations
 
@@ -118,4 +118,4 @@ Round 1, 2026-10-28. Aidan ran all 21 cases (`mode=make`, `dir=pos`) on a 20 mm 
 - A counterbore or spotface depth of 0 is accepted: Inventor keeps the hole type and models only the hole. Allow 0.
 - A countersink at 60 or 90° is accepted on tapped, dowel and Simple holes. The read-back works with existing code, except that a spotface needs task 114's reader change.
 
-**Preview (task 110).** Build each face's solid from edge samples, as in round 4, once Aidan confirms the drill point.
+**Preview (task 110).** Build each face's solid from edge samples, as in round 4 (confirmed by Aidan, 2026-10-28).

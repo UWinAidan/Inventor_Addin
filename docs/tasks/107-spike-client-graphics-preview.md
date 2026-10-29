@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 1
 - **Feature spec:** `docs/features/09-awb-hole.md` ("The window": live 3D preview; question 13)
-- **Status:** done (round 1 with Aidan, 2026-10-28; the round 2 fix is checked in spike 108's build)
+- **Status:** done (rounds 1 to 4 with Aidan, 2026-10-28; rounds 2 to 4 were run in spike 108's build)
 - **Depends on:** 101
 - **Needs:** **windows** (spike, with Aidan in Inventor)
 - **Parallel-safe with:** 103, 108 (other spikes, separate branches)
@@ -42,7 +42,19 @@ Round 1 with Aidan, 2026-10-28, branch `spike/107-client-graphics` (`4969f50`). 
 6. **Removing the paint.** Nothing of task 101's paint is needed: the paint transaction was not opened in any `faces` or `copy` draw.
 7. **In place** (spike 103 question 8 confirmed): the preview is drawn on the part being edited inside an assembly and lands on it. Pass.
 
+**Final result (rounds 2 to 4, Aidan, 2026-10-28, run in spike 108's build on `spike/108-hole-types`).**
+- Round 2: `Face.CalculateFacets` throws DISP_E_TYPEMISMATCH from C# on every face (its typed `out` arrays), so `source=faces` drew nothing.
+- Round 3 (`461e122`): each face's extent along its axis comes from points sampled along each of its edges (`Edge.Evaluator`, `CurveEvaluator.GetParamExtents`, then `GetPointAtParam` with `ref` arrays the caller allocates, 25 points per edge). Seats off the edge and end caps passed; the drill point cone was skipped (a NullReferenceException on the cone face, from its apex edge).
+- Round 4 (`f0a2f33`): an edge that cannot be sampled falls back to its vertices (`Edge.StartVertex`, `StopVertex`, `Vertex.Point`); a cone whose points all sit at one height runs to its apex; the tip radius is at least 0.001 cm. Aidan, in Inventor:
+  - A blind hole's drill point seen from the side is red. **Pass.**
+  - A counterbore running off the edge of the part is drawn whole. **Pass.**
+  - A through hole seen straight down the bore is red. **Pass.**
+  - The preview now matches Inventor's own in every view.
+
 ## Recommendations
+
+The recommendations below were written after round 1; where they differ, the final result above wins: extents come from edge samples, not `CalculateFacets`.
+
 
 For task 110:
 
