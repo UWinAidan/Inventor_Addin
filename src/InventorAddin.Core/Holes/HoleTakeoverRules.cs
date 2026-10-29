@@ -92,6 +92,49 @@ public static class HoleTakeoverRules
     public static HoleTakeoverState For(HoleCommandOwner owner, string? inventorOverride, string? inventorDefault) =>
         owner == HoleCommandOwner.Awb ? TakenOver : GivenBack(inventorOverride, inventorDefault);
 
+    /// <summary>
+    /// Who has the Hole button and H after applying <paramref name="requested"/>: AWB Hole only when it was asked for
+    /// and taking over worked. A take-over that failed gives Inventor's Hole back, so Inventor's Hole keeps working.
+    /// </summary>
+    public static HoleCommandOwner OwnerAfterApply(HoleCommandOwner requested, bool takeOverSucceeded) =>
+        requested == HoleCommandOwner.Awb && takeOverSucceeded ? HoleCommandOwner.Awb : HoleCommandOwner.Inventor;
+
+    /// <summary>
+    /// What is applied, in order, to put the Hole commands right after a shortcut reset (task 120): what toggling
+    /// the switch off and on in Settings does, the fix that worked in check 091-3. AWB Hole gives Hole back first and
+    /// then takes it over; Inventor's Hole is given back once.
+    /// </summary>
+    public static IReadOnlyList<HoleCommandOwner> ResetReapplyOrder(HoleCommandOwner owner) =>
+        owner == HoleCommandOwner.Awb
+            ? [HoleCommandOwner.Inventor, HoleCommandOwner.Awb]
+            : [HoleCommandOwner.Inventor];
+
+    /// <summary>
+    /// Whether the two Hole commands' shortcuts, as read from Inventor, are what <paramref name="owner"/> having Hole
+    /// sets, or null when either could not be read. AWB Hole: H on ours, none on Inventor's. Inventor's Hole: none on
+    /// ours, a shortcut on Inventor's (its default, or the user's own).
+    /// </summary>
+    /// <param name="awbOverride">AWB Hole's <c>OverrideShortcut</c>, or null when unreadable.</param>
+    /// <param name="inventorOverride">Inventor's Hole's <c>OverrideShortcut</c>, or null when unreadable.</param>
+    public static bool? ShortcutsApplied(HoleCommandOwner owner, string? awbOverride, string? inventorOverride)
+    {
+        if (awbOverride == null || inventorOverride == null)
+        {
+            return null;
+        }
+
+        return owner == HoleCommandOwner.Awb
+            ? string.Equals(awbOverride.Trim(), Shortcut, StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(inventorOverride)
+            : string.IsNullOrWhiteSpace(awbOverride) && !string.IsNullOrWhiteSpace(inventorOverride);
+    }
+
+    /// <summary>The two Hole commands' shortcuts as read, for the log: "AWB Hole 'H', Inventor's Hole none".</summary>
+    public static string ShortcutsMessage(string? awbOverride, string? inventorOverride) =>
+        $"{AwbHoleViewModel.CommandName} {Describe(awbOverride)}, Inventor's Hole {Describe(inventorOverride)}";
+
+    private static string Describe(string? shortcut) =>
+        shortcut == null ? "unreadable" : string.IsNullOrWhiteSpace(shortcut) ? "none" : $"'{shortcut.Trim()}'";
+
     /// <summary>Inventor's Hole's default shortcut, or <see cref="Shortcut"/> when it reads blank or not at all.</summary>
     public static string DefaultShortcut(string? inventorDefault) =>
         string.IsNullOrWhiteSpace(inventorDefault) ? Shortcut : inventorDefault.Trim();

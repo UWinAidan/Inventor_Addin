@@ -1,4 +1,6 @@
 using System;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Inventor;
 using InventorAddin.Core.Holes;
 using InventorAddin.Core.Logging;
@@ -15,7 +17,10 @@ namespace InventorAddin.UI
     /// <para>
     /// Applied by <see cref="RibbonSetup"/> once the ribbon is built, again after Settings is saved
     /// (<see cref="ApplyFromSettings"/>, through <see cref="Active"/>), and after the user resets shortcuts
-    /// (<c>UserInterfaceEvents.OnResetShortcuts</c>). <see cref="Dispose"/>, when the add-in unloads, gives Inventor's
+    /// (<c>UserInterfaceEvents.OnResetShortcuts</c>; task 120). Inventor fires that event while the Customize dialog is
+    /// still open, and the dialog writes its own shortcuts when it closes, so <see cref="HoleShortcutResetPlan"/> waits
+    /// for Inventor's window to be enabled again, re-applies as toggling the setting does, and checks the shortcuts stay.
+    /// Every step is logged. <see cref="Dispose"/>, when the add-in unloads, gives Inventor's
     /// Hole and H back, so a removed add-in never leaves Inventor without its Hole.
     /// </para>
     /// <para>
@@ -31,6 +36,11 @@ namespace InventorAddin.UI
 
         // Kept referenced, or the event stops firing.
         private UserInterfaceEvents? _uiEvents;
+
+        private const string ResetReason = "shortcuts reset";
+        private readonly HoleShortcutResetPlan _resetPlan = new();
+        private readonly Stopwatch _sinceReset = new();
+        private System.Windows.Forms.Timer? _resetTimer;
 
         private HoleCommandOwner _owner = HoleCommandOwner.Inventor;
 
@@ -89,16 +99,13 @@ namespace InventorAddin.UI
 
         private void Apply(HoleCommandOwner owner, string reason)
         {
-            _owner = owner;
+            bool tookOver = owner == HoleCommandOwner.Awb && TryTakeOver(reason);
+            _owner = HoleTakeoverRules.OwnerAfterApply(owner, tookOver);
+            if (_owner == HoleCommandOwner.Awb)
+                return;
+
             if (owner == HoleCommandOwner.Awb)
-            {
-                if (TryTakeOver(reason))
-                    return;
-
                 _log.Warn(HoleTakeoverRules.TakeOverFailedMessage(reason));
-                _owner = HoleCommandOwner.Inventor;
-            }
-
             GiveBack(reason);
         }
 
@@ -174,28 +181,150 @@ namespace InventorAddin.UI
                 _log.Info(HoleTakeoverRules.AppliedMessage(state, reason));
         }
 
+        /// <summary>
+        /// Inventor reported a shortcut reset, with the Customize dialog still open: starts the plan and its timer. Nothing
+        /// is applied here; the dialog would overwrite it when it closes (check 091-3).
+        /// </summary>
         private void OnResetShortcuts(NameValueMap context)
         {
-            // Re-applied after Inventor's event has returned, so the reset is done before the shortcuts are set again.
             try
             {
-                System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() =>
+                if (!ReferenceEquals(Active, this))
                 {
-                    try
-                    {
-                        if (ReferenceEquals(Active, this))
-                            Apply(_owner, "shortcuts reset");
-                    }
-                    catch (Exception ex)
-                    {
-                        _log.Error("Hole takeover (shortcuts reset): re-applying failed.", ex);
-                    }
-                }));
+                    _log.Info($"Hole takeover ({ResetReason}): Inventor reported a shortcut reset, but the takeover is not running; nothing is changed.");
+                    return;
+                }
+
+                _sinceReset.Restart();
+                LogStep(_resetPlan.Reset(MainWindowEnabled(), ShortcutsNow(out _, out _)));
+
+                if (_resetTimer == null)
+                {
+                    _resetTimer = new System.Windows.Forms.Timer { Interval = (int)HoleShortcutResetPlan.CheckInterval.TotalMilliseconds };
+                    _resetTimer.Tick += OnResetTick;
+                    _resetTimer.Start();
+                }
             }
             catch (Exception ex)
             {
-                _log.Error("Hole takeover (shortcuts reset): could not queue the re-apply.", ex);
+                FailReset("watching for the Customize dialog to close failed", ex);
             }
+        }
+
+        /// <summary>A tick while <see cref="HoleShortcutResetPlan"/> watches: tells it what Inventor shows, then does its step.</summary>
+        private void OnResetTick(object? sender, EventArgs e)
+        {
+            try
+            {
+                string shortcuts = ShortcutsNow(out string? awbShortcut, out string? inventorShortcut);
+                HoleCommandOwner? owner = SettingsOwner();
+                bool? applied = owner == null ? null : HoleTakeoverRules.ShortcutsApplied(owner.Value, awbShortcut, inventorShortcut);
+
+                HoleShortcutResetStep step = _resetPlan.Check(_sinceReset.Elapsed, MainWindowEnabled(), applied, shortcuts);
+                LogStep(step);
+
+                if (step.Action == HoleShortcutResetAction.ReApply)
+                    ReapplyAfterReset(owner);
+                else if (step.Action == HoleShortcutResetAction.Done)
+                    StopResetTimer();
+            }
+            catch (Exception ex)
+            {
+                FailReset("checking the shortcuts failed", ex);
+            }
+        }
+
+        /// <summary>What toggling the setting off and on does (<see cref="HoleTakeoverRules.ResetReapplyOrder"/>).</summary>
+        private void ReapplyAfterReset(HoleCommandOwner? owner)
+        {
+            if (owner == null)
+            {
+                _log.Warn($"Hole takeover ({ResetReason}): the setting could not be read, so the Hole command is not re-applied.");
+                return;
+            }
+
+            foreach (HoleCommandOwner step in HoleTakeoverRules.ResetReapplyOrder(owner.Value))
+                Apply(step, ResetReason);
+        }
+
+        /// <summary>The owner the current settings name (as saved last), or null when they cannot be read.</summary>
+        private HoleCommandOwner? SettingsOwner()
+        {
+            try
+            {
+                return HoleTakeoverRules.OwnerFor(AddinServices.Settings);
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"Hole takeover ({ResetReason}): the setting could not be read.", ex);
+                return null;
+            }
+        }
+
+        /// <summary>The two Hole commands' override shortcuts as read now (null when unreadable), and the log text for them.</summary>
+        private string ShortcutsNow(out string? awbShortcut, out string? inventorShortcut)
+        {
+            awbShortcut = ComSafe.Get(() => _awbHole.OverrideShortcut);
+            ControlDefinition? inventorHole = ComSafe.Get(InventorHole);
+            inventorShortcut = inventorHole == null ? null : ComSafe.Get(() => inventorHole.OverrideShortcut);
+            return HoleTakeoverRules.ShortcutsMessage(awbShortcut, inventorShortcut);
+        }
+
+        /// <summary>
+        /// Whether Inventor's main window is enabled; a modal dialog such as Customize disables it. Null when unreadable.
+        /// </summary>
+        private bool? MainWindowEnabled()
+        {
+            // Read as long so the conversion works whether the interop declares the handle as int or long (as WindowHost).
+            long? hwnd = ComSafe.Get(() => (long?)_app.MainFrameHWND);
+            if (hwnd == null || hwnd.Value == 0)
+                return null;
+
+            try
+            {
+                return IsWindowEnabled(new IntPtr(hwnd.Value));
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        private void LogStep(HoleShortcutResetStep step)
+        {
+            if (step.LogMessage == null)
+                return;
+
+            if (step.IsWarning)
+                _log.Warn(step.LogMessage);
+            else
+                _log.Info(step.LogMessage);
+        }
+
+        private void FailReset(string what, Exception ex)
+        {
+            _log.Error($"Hole takeover ({ResetReason}): {what}. Save Settings, or restart Inventor, to give H to the right Hole.", ex);
+            _resetPlan.Cancel();
+            try
+            {
+                StopResetTimer();
+            }
+            catch (Exception stopEx)
+            {
+                _log.Error($"Hole takeover ({ResetReason}): stopping the check failed.", stopEx);
+            }
+        }
+
+        private void StopResetTimer()
+        {
+            _sinceReset.Reset();
+            if (_resetTimer == null)
+                return;
+
+            _resetTimer.Stop();
+            _resetTimer.Tick -= OnResetTick;
+            _resetTimer.Dispose();
+            _resetTimer = null;
         }
 
         private ControlDefinition InventorHole() =>
@@ -231,6 +360,10 @@ namespace InventorAddin.UI
         private void Try(Action step, string what, string reason, ref bool ok) =>
             Try<object?>(() => { step(); return null; }, what, reason, ref ok);
 
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool IsWindowEnabled(IntPtr hwnd);
+
         /// <summary>The add-in is unloading: Inventor's Hole and H are given back, and the reset event released.</summary>
         public void Dispose()
         {
@@ -248,6 +381,18 @@ namespace InventorAddin.UI
             }
 
             _uiEvents = null;
+
+            try
+            {
+                if (_resetPlan.Cancel())
+                    _log.Info($"Hole takeover ({ResetReason}): stopped watching; the add-in is unloading.");
+                StopResetTimer();
+            }
+            catch (Exception ex)
+            {
+                _log.Warn($"Hole takeover: stopping the shortcut reset check failed. {ex.Message}");
+            }
+
             GiveBack("add-in unloading");
         }
     }

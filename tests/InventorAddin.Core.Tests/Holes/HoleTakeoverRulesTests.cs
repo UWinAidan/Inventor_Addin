@@ -208,4 +208,54 @@ public sealed class HoleTakeoverRulesTests
         Assert.Contains("(none)", HoleTakeoverRules.SheetMetalMiniToolbarMessage([]));
         Assert.Throws<ArgumentNullException>(() => HoleTakeoverRules.SheetMetalMiniToolbarMessage(null!));
     }
+
+    [Theory]
+    [InlineData(HoleCommandOwner.Awb, true, HoleCommandOwner.Awb)]
+    [InlineData(HoleCommandOwner.Awb, false, HoleCommandOwner.Inventor)]
+    [InlineData(HoleCommandOwner.Inventor, true, HoleCommandOwner.Inventor)]
+    [InlineData(HoleCommandOwner.Inventor, false, HoleCommandOwner.Inventor)]
+    public void OwnerAfterApply_FailedTakeOverGivesHoleBack(HoleCommandOwner requested, bool succeeded, HoleCommandOwner expected) =>
+        Assert.Equal(expected, HoleTakeoverRules.OwnerAfterApply(requested, succeeded));
+
+    [Fact]
+    public void ResetReapplyOrder_Awb_GivesBackThenTakesOver_AsTogglingTheSwitchDoes() =>
+        Assert.Equal(
+            [HoleCommandOwner.Inventor, HoleCommandOwner.Awb],
+            HoleTakeoverRules.ResetReapplyOrder(HoleCommandOwner.Awb));
+
+    [Fact]
+    public void ResetReapplyOrder_Inventor_GivesBackOnce() =>
+        Assert.Equal([HoleCommandOwner.Inventor], HoleTakeoverRules.ResetReapplyOrder(HoleCommandOwner.Inventor));
+
+    [Theory]
+    [InlineData(HoleCommandOwner.Awb, "H", "", true)]
+    [InlineData(HoleCommandOwner.Awb, " h ", "  ", true)]
+    [InlineData(HoleCommandOwner.Awb, "", "H", false)]
+    [InlineData(HoleCommandOwner.Awb, "H", "H", false)]
+    [InlineData(HoleCommandOwner.Awb, "", "", false)]
+    [InlineData(HoleCommandOwner.Inventor, "", "H", true)]
+    [InlineData(HoleCommandOwner.Inventor, "", "Ctrl+J", true)]
+    [InlineData(HoleCommandOwner.Inventor, "H", "", false)]
+    [InlineData(HoleCommandOwner.Inventor, "", "", false)]
+    public void ShortcutsApplied_ComparesWhatWasRead(HoleCommandOwner owner, string awb, string inventor, bool expected) =>
+        Assert.Equal(expected, HoleTakeoverRules.ShortcutsApplied(owner, awb, inventor));
+
+    [Theory]
+    [InlineData(null, "")]
+    [InlineData("H", null)]
+    public void ShortcutsApplied_Unreadable_IsNull(string? awb, string? inventor)
+    {
+        Assert.Null(HoleTakeoverRules.ShortcutsApplied(HoleCommandOwner.Awb, awb, inventor));
+        Assert.Null(HoleTakeoverRules.ShortcutsApplied(HoleCommandOwner.Inventor, awb, inventor));
+    }
+
+    [Fact]
+    public void ShortcutsMessage_NamesBothCommands() =>
+        Assert.Equal(
+            $"{AwbHoleViewModel.CommandName} 'H', Inventor's Hole none",
+            HoleTakeoverRules.ShortcutsMessage(" H ", ""));
+
+    [Fact]
+    public void ShortcutsMessage_Unreadable() =>
+        Assert.Contains("Inventor's Hole unreadable", HoleTakeoverRules.ShortcutsMessage("H", null));
 }

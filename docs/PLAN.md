@@ -367,7 +367,7 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 - [ ] 117 Default hole centres per point, like Inventor's Hole
 - [ ] 118 The AWB Hole window fits without scrolling at 150 percent on 1080p
 - [ ] 119 Icons for Simple, Taper Tapped and Spotface
-- [ ] 120 H opens AWB Hole again after the shortcuts are reset
+- [x] 120 H opens AWB Hole again after the shortcuts are reset
 - [ ] 121 The AWB Addin tab and AWB Hole button come back after the add-in is reloaded
 - [ ] 122 A hand colour on a hole face survives the hole being remade
 - [ ] 123 The seat is kept when type, standard or size changes
