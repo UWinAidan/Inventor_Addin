@@ -278,4 +278,113 @@ public sealed class HoleTakeoverRulesTests
     [Fact]
     public void ShortcutsMessage_Unreadable() =>
         Assert.Contains("Inventor's Hole unreadable", HoleTakeoverRules.ShortcutsMessage("H", null));
+
+    // ---- The split button (task 129) ----
+
+    [Fact]
+    public void SplitButtonCommands_AwbHoleFirst_ThenInventorHole_ThenTheToggle() =>
+        Assert.Equal(
+            new[] { CommandNames.AwbHole, CommandNames.InventorHole, CommandNames.UseInventorHoleByDefault },
+            HoleTakeoverRules.SplitButtonCommands);
+
+    [Theory]
+    [InlineData(true, true, HoleButtonKind.SplitButton)]
+    [InlineData(false, true, HoleButtonKind.PlainButton)]
+    [InlineData(true, false, HoleButtonKind.PlainButton)]
+    [InlineData(false, false, HoleButtonKind.PlainButton)]
+    public void ButtonKind_SplitOnlyWithBothDropdownCommands(bool inventorHole, bool toggle, HoleButtonKind expected) =>
+        Assert.Equal(expected, HoleTakeoverRules.ButtonKind(inventorHole, toggle));
+
+    [Fact]
+    public void InventorHole_RunsTheRibbonHoleCommand_OnBothTabs() =>
+        Assert.Equal("PartHoleCmd", HoleTakeoverRules.InventorHoleRunCommand);
+
+    [Fact]
+    public void InventorHole_StartOfItsCommand_KeepsTheRunRequest_ForTheMiniToolbarBackstop()
+    {
+        // Task 133's follow-up: Inventor Hole asks first, then runs PartHoleCmd; that start must not use up or clear the
+        // request, and the mini toolbar's Hole is let through once.
+        var request = new InventorHoleRunRequest();
+        request.Ask();
+
+        Assert.False(request.StartIsAskedFor(HoleTakeoverRules.InventorHoleRunCommand));
+        Assert.True(request.IsPending);
+        Assert.True(request.StartIsAskedFor(HoleTakeoverRules.InventorMiniToolbarHoleCommand));
+        Assert.False(request.IsPending);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TogglePressed_FollowsTheSetting(bool useInventorHole) =>
+        Assert.Equal(
+            useInventorHole,
+            HoleTakeoverRules.TogglePressed(new AddinSettings { UseInventorHoleCommand = useInventorHole }));
+
+    [Fact]
+    public void TogglePressed_NullSettings_Throws() =>
+        Assert.Throws<ArgumentNullException>(() => HoleTakeoverRules.TogglePressed(null!));
+
+    [Theory]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public void Toggled_FlipsTheSetting_AndKeepsTheRest(bool before, bool after)
+    {
+        var settings = new AddinSettings { UseInventorHoleCommand = before, DefaultDesigner = "Test Designer" };
+
+        AddinSettings toggled = HoleTakeoverRules.Toggled(settings);
+
+        Assert.Equal(after, toggled.UseInventorHoleCommand);
+        Assert.Equal(settings with { UseInventorHoleCommand = after }, toggled);
+        Assert.Equal(before, settings.UseInventorHoleCommand);
+    }
+
+    [Fact]
+    public void Toggled_ThenOwnerFor_GivesTheOtherHole()
+    {
+        var settings = new AddinSettings();
+
+        Assert.Equal(HoleCommandOwner.Awb, HoleTakeoverRules.OwnerFor(settings));
+        Assert.Equal(HoleCommandOwner.Inventor, HoleTakeoverRules.OwnerFor(HoleTakeoverRules.Toggled(settings)));
+    }
+
+    [Fact]
+    public void ToggledMessage_SaysOnOrOff_AndWhere()
+    {
+        Assert.Equal(
+            "\"Use Inventor's Hole by default\" turned on; settings saved to 'C:\\data\\settings.json'.",
+            HoleTakeoverRules.ToggledMessage(new AddinSettings { UseInventorHoleCommand = true }, @"C:\data\settings.json"));
+        Assert.Contains("turned off", HoleTakeoverRules.ToggledMessage(new AddinSettings(), "x"));
+    }
+
+    [Fact]
+    public void ToggleSaveFailedText_NamesTheFileAndTheError() =>
+        Assert.Equal(
+            "The setting was not changed: settings could not be saved to 'C:\\data\\settings.json'. Access denied.",
+            HoleTakeoverRules.ToggleSaveFailedText(@"C:\data\settings.json", "Access denied."));
+
+    [Fact]
+    public void DropdownTexts_AreAidansNames()
+    {
+        Assert.Equal("Inventor Hole", HoleTakeoverRules.InventorHoleText);
+        Assert.Equal("Use Inventor's Hole by default", HoleTakeoverRules.UseInventorHoleText);
+    }
+
+    [Fact]
+    public void PlainButtonMessage_NamesTheReasonAndBothEntries()
+    {
+        string message = HoleTakeoverRules.PlainButtonMessage("startup");
+
+        Assert.StartsWith("Hole takeover (startup): ", message);
+        Assert.Contains("Inventor Hole", message);
+        Assert.Contains("Use Inventor's Hole by default", message);
+    }
+
+    [Theory]
+    [InlineData(CommandNames.InventorHole, IconNames.AwbHole)]
+    [InlineData(CommandNames.UseInventorHoleByDefault, IconNames.Settings)]
+    [InlineData(CommandNames.AwbHole, null)]
+    [InlineData(CommandNames.Settings, null)]
+    public void DropdownIconName_OnlyForTheDropdownCommands(string command, string? expected) =>
+        Assert.Equal(expected, HoleTakeoverRules.DropdownIconName(command));
 }

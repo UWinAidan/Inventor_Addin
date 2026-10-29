@@ -46,6 +46,10 @@ public static class CommandDocuments
         [CommandNames.NewPart] = CommandDocument.TopLevel,
 
         [CommandNames.Settings] = CommandDocument.None,
+
+        // Task 129: Inventor Hole runs Inventor's own command, which picks its document; the toggle changes a setting.
+        [CommandNames.InventorHole] = CommandDocument.None,
+        [CommandNames.UseInventorHoleByDefault] = CommandDocument.None,
         [CommandNames.About] = CommandDocument.None,
 
         // A folder of files, not a document.

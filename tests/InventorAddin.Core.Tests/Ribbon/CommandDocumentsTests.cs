@@ -17,6 +17,8 @@ public sealed class CommandDocumentsTests
     [InlineData(CommandNames.NewPart, CommandDocument.TopLevel)]
     [InlineData(CommandNames.Settings, CommandDocument.None)]
     [InlineData(CommandNames.About, CommandDocument.None)]
+    [InlineData(CommandNames.InventorHole, CommandDocument.None)]
+    [InlineData(CommandNames.UseInventorHoleByDefault, CommandDocument.None)]
     [InlineData(CommandNames.MassUpdate, CommandDocument.None)]
     [InlineData(CommandNames.ExportLibraries, CommandDocument.None)]
     public void For_GivesTheCommandsRow(string commandName, CommandDocument expected)

@@ -152,4 +152,39 @@ public sealed class AddinUiTests
             report.Summary());
         Assert.Equal(new[] { "Part" }, report.TabsFound);
     }
+
+    // ---- Finding the split button (task 129) ----
+
+    [Theory]
+    [InlineData(CommandNames.AwbHole, null)]
+    [InlineData(null, CommandNames.AwbHole)]
+    [InlineData("SomeSplitName", CommandNames.AwbHole)]
+    public void IsControlOf_ByNameOrTopCommand(string? controlName, string? displayed) =>
+        Assert.True(AddinUi.IsControlOf(CommandNames.AwbHole, controlName, displayed, []));
+
+    [Fact]
+    public void IsControlOf_ByADropdownEntry() =>
+        Assert.True(AddinUi.IsControlOf(
+            CommandNames.AwbHole, "SomeSplitName", null, [null, CommandNames.InventorHole, CommandNames.AwbHole]));
+
+    [Fact]
+    public void IsControlOf_InventorsOwnHole_IsNotOurs() =>
+        Assert.False(AddinUi.IsControlOf(CommandNames.AwbHole, "PartHoleCmd", "PartHoleCmd", ["PartHoleCmd"]));
+
+    [Fact]
+    public void IsControlOf_OtherAwbCommandOnly_IsNotAwbHole() =>
+        Assert.False(AddinUi.IsControlOf(CommandNames.AwbHole, null, null, [CommandNames.InventorHole]));
+
+    [Fact]
+    public void IsControlOf_NamesMatchExactly() =>
+        Assert.False(AddinUi.IsControlOf(CommandNames.AwbHole, "awb_awbhole", null, []));
+
+    [Fact]
+    public void ForeignButton_Matches_UsesItsCommand()
+    {
+        ForeignButton model = AddinUi.ForeignButtons[0];
+
+        Assert.True(model.Matches(null, CommandNames.AwbHole, []));
+        Assert.False(model.Matches(null, null, []));
+    }
 }

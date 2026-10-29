@@ -376,7 +376,7 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 - [ ] 126 Editable seat boxes on clearance and tapped holes
 - [ ] 127 Centre-drill spot: a small countersink on any hole, and a seat depth of 0
 - [x] 128 AWB Hole replaces Inventor's Hole on the Sheet Metal tab
-- [ ] 129 AWB Hole as a split button with Inventor Hole and the default toggle
+- [x] 129 AWB Hole as a split button with Inventor Hole and the default toggle
 - [ ] 130 Text boxes update the preview as you type
 - [ ] 131 A 60 deg drill point
 - [ ] 132 Several tolerance levels per fit

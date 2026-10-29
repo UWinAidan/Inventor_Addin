@@ -1,3 +1,4 @@
+using InventorAddin.Core.Ribbon;
 using InventorAddin.Core.Settings;
 using InventorAddin.Core.ViewModels;
 
@@ -11,6 +12,19 @@ public enum HoleCommandOwner
 
     /// <summary>Inventor's Hole: the switch is on, or the add-in is unloading, or taking over failed.</summary>
     Inventor,
+}
+
+/// <summary>The control AWB Hole gets on Inventor's 3D Model and Sheet Metal tabs (task 129).</summary>
+public enum HoleButtonKind
+{
+    /// <summary>
+    /// A split button: AWB Hole on top, and a dropdown with AWB Hole, Inventor Hole and "Use Inventor's Hole by
+    /// default".
+    /// </summary>
+    SplitButton,
+
+    /// <summary>The plain AWB Hole button of task 091, used when a dropdown command failed to register.</summary>
+    PlainButton,
 }
 
 /// <summary>
@@ -167,6 +181,98 @@ public static class HoleTakeoverRules
     public static string TakeOverFailedMessage(string reason) =>
         $"Hole takeover ({reason}): {AwbHoleViewModel.CommandName} could not replace Inventor's Hole, so Inventor's Hole and its shortcut " +
         $"are given back. {AwbHoleViewModel.CommandName} is still on the {Branding.ProductName} tab.";
+
+    // ---- The split button (task 129) ----
+
+    /// <summary>The dropdown entry that runs Inventor's Hole once (Aidan, 2026-10-25).</summary>
+    public const string InventorHoleText = "Inventor Hole";
+
+    /// <summary>Its tooltip.</summary>
+    public const string InventorHoleDescription =
+        "Run Inventor's Hole command once. The next Hole or H opens " + AwbHoleViewModel.CommandName + " again.";
+
+    /// <summary>The dropdown toggle for the setting "Use Inventor's Hole command" (Aidan, 2026-10-25).</summary>
+    public const string UseInventorHoleText = "Use Inventor's Hole by default";
+
+    /// <summary>Its tooltip.</summary>
+    public const string UseInventorHoleDescription =
+        "Give the Hole button and the H shortcut back to Inventor's Hole. The same setting as \"Use Inventor's Hole " +
+        "command\" in " + Branding.ProductName + " Settings; turn it off there.";
+
+    /// <summary>
+    /// The split button's commands, in order: AWB Hole, shown on top and first in the dropdown, then Inventor Hole,
+    /// then the toggle. Inventor's <c>AddSplitButton</c> takes the top command and this list.
+    /// </summary>
+    public static IReadOnlyList<string> SplitButtonCommands { get; } =
+        [CommandNames.AwbHole, CommandNames.InventorHole, CommandNames.UseInventorHoleByDefault];
+
+    /// <summary>
+    /// The split button when both dropdown commands are registered; else AWB Hole's plain button, so the takeover
+    /// still works without them.
+    /// </summary>
+    public static HoleButtonKind ButtonKind(bool inventorHoleRegistered, bool toggleRegistered) =>
+        inventorHoleRegistered && toggleRegistered ? HoleButtonKind.SplitButton : HoleButtonKind.PlainButton;
+
+    /// <summary>The log line when the split button cannot be used and AWB Hole's plain button is put there instead.</summary>
+    public static string PlainButtonMessage(string reason) =>
+        $"Hole takeover ({reason}): {InventorHoleText} or \"{UseInventorHoleText}\" is not registered, so " +
+        $"{AwbHoleViewModel.CommandName} is a plain button on Inventor's tabs, with no dropdown.";
+
+    /// <summary>
+    /// The icon a dropdown command registers with, as it has no layout entry: AWB Hole's for Inventor Hole, replaced by
+    /// Inventor's Hole icon when that can be read (as task 092 does for Edit Feature), and the Settings icon for the
+    /// toggle (Default). Null for any other command.
+    /// </summary>
+    public static string? DropdownIconName(string commandInternalName) => commandInternalName switch
+    {
+        CommandNames.InventorHole => IconNames.AwbHole,
+        CommandNames.UseInventorHoleByDefault => IconNames.Settings,
+        _ => null,
+    };
+
+    /// <summary>
+    /// The command Inventor Hole runs, on the 3D Model tab and on the Sheet Metal tab alike: the Sheet Metal tab's Hole
+    /// button runs <see cref="InventorHoleCommand"/> too (task 128). The mini toolbar backstop lets it through
+    /// (<see cref="InventorHoleRunRequest"/>).
+    /// </summary>
+    public const string InventorHoleRunCommand = InventorHoleCommand;
+
+    /// <summary>Whether the toggle shows pressed: while the setting "Use Inventor's Hole command" is on.</summary>
+    public static bool TogglePressed(AddinSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        return settings.UseInventorHoleCommand;
+    }
+
+    /// <summary>The settings after the toggle is pressed: "Use Inventor's Hole command" flipped, the rest unchanged.</summary>
+    public static AddinSettings Toggled(AddinSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        return settings with { UseInventorHoleCommand = !settings.UseInventorHoleCommand };
+    }
+
+    /// <summary>Why the takeover is applied after the toggle was pressed, for the log.</summary>
+    public const string ToggledReason = "Use Inventor's Hole by default pressed";
+
+    /// <summary>The log line once the toggled setting is saved.</summary>
+    public static string ToggledMessage(AddinSettings saved, string filePath)
+    {
+        ArgumentNullException.ThrowIfNull(saved);
+        var state = saved.UseInventorHoleCommand ? "on" : "off";
+        return $"\"{UseInventorHoleText}\" turned {state}; settings saved to '{filePath}'.";
+    }
+
+    /// <summary>The message when the toggled setting could not be saved; nothing is changed.</summary>
+    public static string ToggleSaveFailedText(string filePath, string error) =>
+        $"The setting was not changed: settings could not be saved to '{filePath}'. {error}";
+
+    /// <summary>The message when the add-in has no data folder, so the toggled setting cannot be saved.</summary>
+    public const string ToggleNoDataFolderText =
+        "The setting was not changed: the add-in could not set up its data folder when Inventor started, so it cannot save settings.";
+
+    /// <summary>The log line when Inventor Hole runs Inventor's Hole.</summary>
+    public const string InventorHoleRunMessage =
+        "Hole takeover: " + InventorHoleText + " pressed; Inventor's Hole runs once and the setting is unchanged.";
 
     /// <summary>
     /// The viewport's mini toolbar (<c>OnContextualMiniToolbar</c>, its commands in a <c>NameValueMap</c>; task 133): the

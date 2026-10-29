@@ -104,6 +104,18 @@ public static class CommandNames
     /// </summary>
     public const string AwbHoleEdit = Prefix + "AwbHoleEdit";
 
+    /// <summary>
+    /// "Inventor Hole" in AWB Hole's split button on Inventor's 3D Model and Sheet Metal tabs (task 129): runs Inventor's
+    /// Hole once. It has no button of its own.
+    /// </summary>
+    public const string InventorHole = Prefix + "InventorHole";
+
+    /// <summary>
+    /// "Use Inventor's Hole by default" in AWB Hole's split button (task 129): the toggle for the setting "Use
+    /// Inventor's Hole command". It has no button of its own.
+    /// </summary>
+    public const string UseInventorHoleByDefault = Prefix + "UseInventorHoleByDefault";
+
     private const string Prefix = Branding.IdPrefix + "_";
 }
 

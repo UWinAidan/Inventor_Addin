@@ -2,19 +2,29 @@
 
 Where each big item stands. One line per item, kept current by the parent session. For the order of work and the task lists see `docs/PLAN.md`; for what needs doing next see `TODO.md`.
 
-Last updated: 2026-10-25
+Last updated: 2026-10-28
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-10-25. Branch `claude/m4-hole-generator`, latest commit `3572dfc`, not pushed. PR #29 open against `main`. `spike/103-in-place-edit` is local only, never merged.
-- Done this session: spike 103 with Aidan (`1e69903`, Results and Recommendations in `docs/tasks/103-spike-in-place-edit.md`); tasks 105 (`5bdbbdb`, AWB Hole in place), 109 (`02a5255`, every command acts on the document being edited, Core `CommandDocuments`), 134 (`baa98c3`, Save As and Replace renames the replaced occurrence: Aidan's Rename report), 133 (`3572dfc`, mini toolbar `PartDMHoleCmd` swapped for AWB Hole). Each reviewed PASS; build 0 errors, 3659 Core tests passed at the last run. **None of it has been run in Inventor.**
-- Open: Aidan's "every command passes in place" is not backed by the spike log (only AWB Hole, Material and Finish, Part Properties, About ran in place); task 109's checklist covers the rest. Part Properties' transactions start on the edited part, not the assembly: 109 checklist step 5 (one Undo in the assembly) is the likely failure. Spec 02 question 27 (stale occurrence names) waits on Aidan.
+- Updated: 2026-10-28 20:45. Branch `claude/m4-hole-generator` at `de4231d`, not pushed; PR #29 open against `main`. Spike branches (local only, never merged): `spike/107-client-graphics` (`b56f0db`), `spike/108-hole-types` (`f0a2f33`).
+- Goal: run the M4 part 1 round in `docs/PLAN.md` order, one implementer and one reviewer per task, one commit per task.
+- Done this session:
+  - `4e8de5c`: spike 107 final result (round 4 passed in Inventor: drill point, seats off the edge, end caps); tasks 107 and 108 ticked; task 110 confirmed (edge samples, vertex fallback, 0.001 cm tip).
+  - `d2c2460` task 135 (Rename renames any AWB-format occurrence name; Save As and Replace keeps task 134's rule).
+  - `e81fdac` task 120 (H after a shortcut reset: waits for the Customize dialog to close, then gives back and takes over; capped at 3 re-applies).
+  - `c22a4f3` task 121 (reload: tab and Modify-panel button deleted on load and unload; command definitions kept, a Default in DECISIONS).
+  - `task 128` (AWB Hole on the Sheet Metal tab) committed after a second review; the tab and panel ids are unconfirmed (log shows them).
+- State:
+  - Nothing from 135, 120 or 121 has been run in Inventor. The installed add-in is still the spike 108 round 4 build: Inventor was open all session, so every build used `-p:DeployToInventor=false`.
+  - Two Core tests flaked once each (in `TODO.md`).
 - Next steps:
-  1. Spikes 107 (client graphics preview) and 108 (hole types, spotface) with Aidan, each on its own `spike/NNN-...` branch off `claude/m4-hole-generator`, as spike 103 was.
-  2. Then the order in `docs/PLAN.md` ("Round after PR #29's first look"): 120, 121, 128, 129 (129 must call `HoleEditRedirect.Active?.InventorHoleAsked()`, see `TODO.md`), 123, 124, 125, 122, 126, 111, 112, 113, 119, 131, 132, 127, 130, 110, 117, 114, 115, 116, 118.
-  3. Aidan can check 105, 109, 133, 134 in Inventor at any point from their task checklists.
-- Gotchas: build with `dotnet build InventorAddin.slnx -tl:off` (check `Get-Process Inventor` first, or add `-p:DeployToInventor=false`). Check interop members by reflection on `C:\Program Files\Autodesk\Inventor 2026\Bin\Autodesk.Inventor.Interop.dll`. Log: `%APPDATA%\AwbAddinwbaddin.log`. `LineGraphics` has no `Color` (use `CreateColorSet` + `kOverallColor`). Use Python heredocs for edits in Git Bash. Run implementers one at a time (shared obj/ and build).
-- Read first: `docs/WORKFLOW.md`, `docs/PLAN.md`, `docs/tasks/107-spike-client-graphics-preview.md`, `docs/tasks/108-spike-hole-types-and-spotface.md`, `TODO.md` follow-ups.
+  1. Follow the PLAN order: 129, 123, 124, 125, 122, 126, 111, 112, 113, 119, 131, 132, 127, 130, 110, 117, 114, 115, 116, 136, 118.
+  2. When Inventor is closed, run `dotnet build InventorAddin.slnx -tl:off` on this branch so the installed add-in is this branch's again.
+- Gotchas:
+  - Check `tasklist //FI "IMAGENAME eq Inventor.exe"` before building. If Inventor is open, pass `-p:DeployToInventor=false`.
+  - Task 128 must list its Sheet Metal button in Core `AddinUi.ForeignButtons`, so unload removes it.
+  - Spike 107's preview code is read with `git show spike/108-hole-types:src/InventorAddin/Spike107.cs` (task 110).
+- Read first: `docs/PLAN.md` ("Round after PR #29's first look"), `TODO.md` Next up, the next task file.
 
 ## Big items
 

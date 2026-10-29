@@ -11,7 +11,12 @@ namespace InventorAddin.Core.Ribbon;
 /// at run time (the Sheet Metal tab's Hole panel, task 128).
 /// </param>
 /// <param name="CommandInternalName">The add-in command the button runs.</param>
-public sealed record ForeignButton(string RibbonName, string TabId, string? PanelId, string CommandInternalName);
+public sealed record ForeignButton(string RibbonName, string TabId, string? PanelId, string CommandInternalName)
+{
+    /// <summary>Whether a control read from Inventor's panel is this button; see <see cref="AddinUi.IsControlOf"/>.</summary>
+    public bool Matches(string? controlInternalName, string? displayedCommand, IEnumerable<string?> childCommands) =>
+        AddinUi.IsControlOf(CommandInternalName, controlInternalName, displayedCommand, childCommands);
+}
 
 /// <summary>
 /// The add-in's controls in Inventor's ribbons: its tab on every ribbon and its buttons on Inventor's own panels.
@@ -40,6 +45,26 @@ public static class AddinUi
         new ForeignButton(HoleTakeoverRules.RibbonName, HoleTakeoverRules.TabId, HoleTakeoverRules.PanelId, CommandNames.AwbHole),
         new ForeignButton(HoleTakeoverRules.RibbonName, HoleTakeoverRules.SheetMetalTabId, null, CommandNames.AwbHole),
     };
+
+    /// <summary>
+    /// Whether a control on one of Inventor's panels is the add-in's control for <paramref name="commandInternalName"/>:
+    /// a plain button named after the command, or a split button (task 129) whose name, top command or one of whose
+    /// dropdown entries is the command. Which of these Inventor reports for a split button is not confirmed, so any of
+    /// them counts; a split button found by any route is never added twice and is always removed. Names match exactly.
+    /// </summary>
+    /// <param name="controlInternalName">The control's <c>InternalName</c>, or null when unreadable.</param>
+    /// <param name="displayedCommand">Its <c>ControlDefinition.InternalName</c>, or null when unreadable.</param>
+    /// <param name="childCommands">Its <c>ChildControls</c>' names and commands (empty for a plain button).</param>
+    public static bool IsControlOf(
+        string commandInternalName, string? controlInternalName, string? displayedCommand, IEnumerable<string?> childCommands)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(commandInternalName);
+        ArgumentNullException.ThrowIfNull(childCommands);
+
+        return Same(controlInternalName) || Same(displayedCommand) || childCommands.Any(Same);
+
+        bool Same(string? name) => string.Equals(name?.Trim(), commandInternalName, StringComparison.Ordinal);
+    }
 }
 
 /// <summary>When the add-in's user interface is removed.</summary>

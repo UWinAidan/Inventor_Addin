@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Inventor;
 using InventorAddin.Commands;
 using InventorAddin.Holes;
+using InventorAddin.Core.Holes;
 using InventorAddin.Core.Logging;
 using InventorAddin.Core.Ribbon;
 using InventorAddin.Core.Settings;
@@ -21,8 +22,8 @@ namespace InventorAddin.UI
     /// applies when Settings is saved.
     /// </para>
     /// <para>
-    /// The add-in's controls (<see cref="AddinUi"/>: its tab on every ribbon and AWB Hole on Inventor's Modify panel and
-    /// Sheet Metal tab)
+    /// The add-in's controls (<see cref="AddinUi"/>: its tab on every ribbon and AWB Hole's split button on Inventor's
+    /// Modify panel and Sheet Metal tab, task 129)
     /// are deleted when the add-in unloads, and any an earlier load left are deleted before the ribbon is built, so a
     /// reload from the Add-In Manager builds the ribbon as a start does (task 121). The command definitions are kept, so
     /// users' Quick Access Toolbar entries and shortcuts on our commands survive; a reload reuses them.
@@ -70,6 +71,8 @@ namespace InventorAddin.UI
             yield return new MaterialFinishCommand();
             yield return new AwbHoleCommand();
             yield return new HoleEditFeatureCommand();
+            yield return new InventorHoleCommand();
+            yield return new UseInventorHoleByDefaultCommand();
             yield return new SettingsCommand();
             yield return new AboutCommand();
             yield return new ExportModelDataCommand();
@@ -129,7 +132,8 @@ namespace InventorAddin.UI
 
         /// <summary>
         /// AWB Hole replaces Inventor's Hole on the 3D Model and Sheet Metal tabs, or not, as the settings say (tasks 091
-        /// and 128). Without AWB Hole's definition, Inventor's Hole is left as it is.
+        /// and 128), as a split button with Inventor Hole and "Use Inventor's Hole by default" (task 129; a plain button
+        /// when either failed to register). Without AWB Hole's definition, Inventor's Hole is left as it is.
         /// </summary>
         private void StartHoleTakeover()
         {
@@ -141,7 +145,9 @@ namespace InventorAddin.UI
 
             try
             {
-                _holeTakeover = new HoleCommandTakeover(_app, awbHole.Definition, _log);
+                _holeTakeover = new HoleCommandTakeover(
+                    _app, awbHole.Definition, DefinitionOf(CommandNames.InventorHole),
+                    DefinitionOf(CommandNames.UseInventorHoleByDefault), _log);
                 _holeTakeover.Start(_settings);
             }
             catch (Exception ex)
@@ -149,6 +155,10 @@ namespace InventorAddin.UI
                 _log.Error("Hole takeover: starting failed; Inventor's Hole is left as it is.", ex);
             }
         }
+
+        /// <summary>A registered command's definition, or null when it failed to register.</summary>
+        private ButtonDefinition? DefinitionOf(string commandInternalName) =>
+            _commandsByName.TryGetValue(commandInternalName, out AddinCommand? command) ? command.Definition : null;
 
         /// <summary>
         /// Edit Feature and double-click on a hole open AWB Hole while it has taken over Inventor's Hole (task 092), and so
@@ -245,7 +255,10 @@ namespace InventorAddin.UI
         {
             try
             {
-                Register(command, LoadPictures(command, icons.IconNameFor(command.InternalName), theme));
+                // The split button's dropdown commands have no layout entry, so their icons are named in Core (task 129).
+                string? iconName = icons.IconNameFor(command.InternalName)
+                    ?? HoleTakeoverRules.DropdownIconName(command.InternalName);
+                Register(command, LoadPictures(command, iconName, theme));
             }
             catch (Exception ex)
             {
@@ -372,10 +385,13 @@ namespace InventorAddin.UI
                         panels.Add(tab.RibbonPanels[button.PanelId]);
                     }
 
-                    // Collected first: deleting while enumerating a COM collection can skip items.
+                    // Collected first: deleting while enumerating a COM collection can skip items. A split button (task
+                    // 129) is found by its name, its top command or a dropdown entry.
                     foreach (RibbonPanel panel in panels)
                         foreach (CommandControl c in panel.CommandControls)
-                            if (ComSafe.Get(() => c.InternalName) == button.CommandInternalName)
+                            if (button.Matches(ComSafe.Get(() => c.InternalName),
+                                    ComSafe.Get(() => c.ControlDefinition.InternalName),
+                                    HoleCommandTakeover.ChildCommands(c)))
                                 found.Add(c);
                 }
                 catch (Exception ex)

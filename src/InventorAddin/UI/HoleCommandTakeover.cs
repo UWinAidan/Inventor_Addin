@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using Inventor;
 using InventorAddin.Core.Holes;
 using InventorAddin.Core.Logging;
+using InventorAddin.Core.Ribbon;
 using InventorAddin.Core.Settings;
 
 namespace InventorAddin.UI
@@ -33,6 +34,13 @@ namespace InventorAddin.UI
     /// take-over.
     /// </para>
     /// <para>
+    /// On both panels AWB Hole is a split button (task 129): AWB Hole on top, and a dropdown with AWB Hole, Inventor Hole
+    /// and "Use Inventor's Hole by default", whose pressed state this sets at every apply from the settings. Without
+    /// either dropdown command, or when Inventor refuses the split button, AWB Hole's plain button is used as before.
+    /// Our control is found by its name, its top command or a dropdown entry (<see cref="AddinUi.IsControlOf"/>), since
+    /// which of those Inventor reports for a split button is not confirmed.
+    /// </para>
+    /// <para>
     /// Every failure is logged and never thrown into Inventor. A take-over that fails at any step gives Inventor's
     /// Hole back, so Inventor's Hole keeps working.
     /// </para>
@@ -41,6 +49,12 @@ namespace InventorAddin.UI
     {
         private readonly Application _app;
         private readonly ButtonDefinition _awbHole;
+
+        // The split button's dropdown commands (task 129), kept alive by RibbonSetup; null when one failed to register.
+        private readonly ButtonDefinition? _inventorHoleItem;
+        private readonly ButtonDefinition? _toggleItem;
+        private bool _plainButtonLogged;
+
         private readonly ILog _log;
 
         // Kept referenced, or the event stops firing.
@@ -66,10 +80,15 @@ namespace InventorAddin.UI
         internal static HoleCommandTakeover? Active { get; private set; }
 
         /// <param name="awbHole">AWB Hole's button definition, kept alive by <see cref="RibbonSetup"/>.</param>
-        public HoleCommandTakeover(Application app, ButtonDefinition awbHole, ILog log)
+        /// <param name="inventorHoleItem">Inventor Hole's definition for the split button, or null (task 129).</param>
+        /// <param name="toggleItem">"Use Inventor's Hole by default"'s definition for the split button, or null.</param>
+        public HoleCommandTakeover(
+            Application app, ButtonDefinition awbHole, ButtonDefinition? inventorHoleItem, ButtonDefinition? toggleItem, ILog log)
         {
             _app = app ?? throw new ArgumentNullException(nameof(app));
             _awbHole = awbHole ?? throw new ArgumentNullException(nameof(awbHole));
+            _inventorHoleItem = inventorHoleItem;
+            _toggleItem = toggleItem;
             _log = log ?? throw new ArgumentNullException(nameof(log));
         }
 
@@ -77,6 +96,7 @@ namespace InventorAddin.UI
         public void Start(AddinSettings settings)
         {
             Active = this;
+            CopyInventorHoleIcon();
             ApplyFromSettings(settings, "startup");
 
             try
@@ -106,7 +126,27 @@ namespace InventorAddin.UI
                 return;
             }
 
+            ShowToggleState(settings);
             Apply(owner, reason);
+        }
+
+        /// <summary>
+        /// "Use Inventor's Hole by default" shows pressed while the setting is on (task 129). A failure is logged; the
+        /// setting itself is applied either way.
+        /// </summary>
+        internal void ShowToggleState(AddinSettings settings)
+        {
+            if (_toggleItem == null)
+                return;
+
+            try
+            {
+                _toggleItem.Pressed = HoleTakeoverRules.TogglePressed(settings);
+            }
+            catch (Exception ex)
+            {
+                _log.Warn($"Hole takeover: showing whether \"{HoleTakeoverRules.UseInventorHoleText}\" is on failed. {ex.Message}");
+            }
         }
 
         private void Apply(HoleCommandOwner owner, string reason)
@@ -133,7 +173,7 @@ namespace InventorAddin.UI
                 HoleTakeoverState state = HoleTakeoverRules.TakenOver;
                 ControlDefinition inventorHole = InventorHole();
 
-                if (!ShowOnPanel(ModifyPanel(), state))
+                if (!ShowOnPanel(ModifyPanel(), state, reason))
                     _log.Warn($"Hole takeover ({reason}): Inventor's Hole button is not on the 3D Model tab's Modify panel; only the shortcut is moved.");
 
                 // Reading the Sheet Metal tab must not cost the 3D Model tab its takeover; only a failure on a panel
@@ -150,7 +190,7 @@ namespace InventorAddin.UI
                 }
 
                 if (sheetMetal != null)
-                    ShowOnPanel(sheetMetal, state);
+                    ShowOnPanel(sheetMetal, state, reason);
 
                 _awbHole.OverrideShortcut = state.AwbShortcut;
                 inventorHole.OverrideShortcut = state.InventorShortcut ?? string.Empty;
@@ -166,14 +206,13 @@ namespace InventorAddin.UI
         }
 
         /// <summary>
-        /// Takes over one panel: our large button added before Inventor's Hole when it is not there yet, then both
-        /// buttons shown or hidden as <paramref name="state"/> says. False when Inventor's Hole is not on the panel (our
-        /// button is then added as task 091 adds it on the Modify panel).
+        /// Takes over one panel: our large split button (or plain button) added before Inventor's Hole when it is not
+        /// there yet, then both shown or hidden as <paramref name="state"/> says. False when Inventor's Hole is not on
+        /// the panel (our control is then added as task 091 adds it on the Modify panel).
         /// </summary>
-        private bool ShowOnPanel(RibbonPanel panel, HoleTakeoverState state)
+        private bool ShowOnPanel(RibbonPanel panel, HoleTakeoverState state, string reason)
         {
-            CommandControl awbControl = FindControl(panel, _awbHole.InternalName)
-                ?? panel.CommandControls.AddButton(_awbHole, true, true, HoleTakeoverRules.InventorHoleCommand, true);
+            CommandControl awbControl = FindAwbControl(panel) ?? AddAwbControl(panel, reason);
             awbControl.Visible = state.AwbButtonVisible;
 
             CommandControl? inventorControl = FindControl(panel, HoleTakeoverRules.InventorHoleCommand);
@@ -233,7 +272,7 @@ namespace InventorAddin.UI
             if (inventorControl != null)
                 Try(() => inventorControl.Visible = state.InventorButtonVisible, $"showing Inventor's Hole button on {where}", reason, ref ok);
 
-            CommandControl? awbControl = Try(() => FindControl(panel, _awbHole.InternalName), $"finding our Hole button on {where}", reason, ref ok);
+            CommandControl? awbControl = Try(() => FindAwbControl(panel), $"finding our Hole button on {where}", reason, ref ok);
             if (awbControl != null)
                 Try(() => awbControl.Visible = state.AwbButtonVisible, $"hiding our Hole button on {where}", reason, ref ok);
         }
@@ -474,6 +513,132 @@ namespace InventorAddin.UI
             foreach (CommandControl c in controls)
                 names.Add(ComSafe.Get(() => c.InternalName));
             return names;
+        }
+
+        /// <summary>
+        /// Adds AWB Hole's large control before Inventor's Hole: the split button (task 129) when both dropdown commands
+        /// are registered and Inventor takes it, else the plain button of task 091. What Inventor reports for a new split
+        /// button is logged, so how it is found again can be confirmed.
+        /// </summary>
+        private CommandControl AddAwbControl(RibbonPanel panel, string reason)
+        {
+            string panelId = ComSafe.Get(() => panel.InternalName) ?? "(unnamed panel)";
+            if (HoleTakeoverRules.ButtonKind(_inventorHoleItem != null, _toggleItem != null) == HoleButtonKind.SplitButton)
+            {
+                try
+                {
+                    ObjectCollection items = _app.TransientObjects.CreateObjectCollection();
+                    foreach (string command in HoleTakeoverRules.SplitButtonCommands)
+                        items.Add(SplitDefinition(command));
+
+                    CommandControl split = panel.CommandControls.AddSplitButton(
+                        _awbHole, items, true, true, HoleTakeoverRules.InventorHoleCommand, true);
+
+                    string? name = ComSafe.Get(() => split.InternalName);
+                    string? top = ComSafe.Get(() => split.ControlDefinition.InternalName);
+                    bool foundAgain = FindAwbControl(panel) != null;
+                    string line =
+                        $"Hole takeover ({reason}): split button added on panel {panelId}; Inventor names it " +
+                        $"'{name ?? "unreadable"}' with top command '{top ?? "unreadable"}'" +
+                        (foundAgain ? "." : ", and it cannot be found again, so it may be added twice.");
+                    if (foundAgain)
+                        _log.Info(line);
+                    else
+                        _log.Warn(line);
+                    return split;
+                }
+                catch (Exception ex)
+                {
+                    _log.Warn($"Hole takeover ({reason}): Inventor refused the split button on panel {panelId}, so " +
+                              $"{_awbHole.DisplayName} is a plain button there. {ex.Message}");
+                }
+            }
+            else if (!_plainButtonLogged)
+            {
+                _plainButtonLogged = true;
+                _log.Warn(HoleTakeoverRules.PlainButtonMessage(reason));
+            }
+
+            return panel.CommandControls.AddButton(_awbHole, true, true, HoleTakeoverRules.InventorHoleCommand, true);
+        }
+
+        /// <summary>The definition for one of <see cref="HoleTakeoverRules.SplitButtonCommands"/>.</summary>
+        private ButtonDefinition SplitDefinition(string command) => command switch
+        {
+            CommandNames.AwbHole => _awbHole,
+            CommandNames.InventorHole => _inventorHoleItem!,
+            CommandNames.UseInventorHoleByDefault => _toggleItem!,
+            _ => throw new ArgumentOutOfRangeException(nameof(command), command, "Not a split button command."),
+        };
+
+        /// <summary>AWB Hole's control on the panel, plain or split (<see cref="AddinUi.IsControlOf"/>), or null.</summary>
+        private CommandControl? FindAwbControl(RibbonPanel panel)
+        {
+            foreach (CommandControl c in panel.CommandControls)
+            {
+                if (AddinUi.IsControlOf(_awbHole.InternalName, ComSafe.Get(() => c.InternalName),
+                        ComSafe.Get(() => c.ControlDefinition.InternalName), ChildCommands(c)))
+                    return c;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// The names and commands of a control's dropdown entries (<c>ChildControls</c>); empty for a plain button or
+        /// when unreadable. Used to find our split button again (task 129), here and when the add-in's controls are
+        /// removed.
+        /// </summary>
+        internal static List<string?> ChildCommands(CommandControl control)
+        {
+            var names = new List<string?>();
+            CommandControls? children = ComSafe.Get(() => control.ChildControls);
+            if (children == null)
+                return names;
+
+            try
+            {
+                foreach (CommandControl child in children)
+                {
+                    names.Add(ComSafe.Get(() => child.InternalName));
+                    names.Add(ComSafe.Get(() => child.ControlDefinition.InternalName));
+                }
+            }
+            catch (Exception)
+            {
+                // A dropdown that cannot be listed adds no names; the control's own names are still compared.
+            }
+
+            return names;
+        }
+
+        /// <summary>
+        /// Inventor Hole takes Inventor's Hole icon (task 129, as task 092 does for Edit Feature); where it cannot be
+        /// read, the AWB Hole icon it was registered with stays. A failure is logged.
+        /// </summary>
+        private void CopyInventorHoleIcon()
+        {
+            if (_inventorHoleItem == null)
+                return;
+
+            try
+            {
+                ControlDefinition inventors = InventorHole();
+                stdole.IPictureDisp? standard = ComSafe.Get(() => inventors.StandardIcon);
+                stdole.IPictureDisp? large = ComSafe.Get(() => inventors.LargeIcon);
+                if (standard == null || large == null)
+                    _log.Warn($"Hole takeover: Inventor's Hole icon could not be read; {HoleTakeoverRules.InventorHoleText} " +
+                              $"keeps the {_awbHole.DisplayName} icon where it is missing.");
+
+                if (standard != null)
+                    _inventorHoleItem.StandardIcon = standard;
+                if (large != null)
+                    _inventorHoleItem.LargeIcon = large;
+            }
+            catch (Exception ex)
+            {
+                _log.Warn($"Hole takeover: giving {HoleTakeoverRules.InventorHoleText} Inventor's Hole icon failed. {ex.Message}");
+            }
         }
 
         private static CommandControl? FindControl(RibbonPanel panel, string internalName)
