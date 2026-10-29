@@ -389,6 +389,16 @@ public sealed class SaveAsReplacerTests : IDisposable
         Assert.Null(SaveAsReplacer.ReplacedOccurrenceName(name, Original, Copy));
     }
 
+    [Theory]
+    [InlineData("TEST_PLATE_OLD,AWB-10040:1")]
+    [InlineData("TEST_PLATE_OLD,AWB-10050:1")]
+    [InlineData("OTHER_PART,AWB-10061:2")]
+    public void ReplacedOccurrenceName_AStaleAwbNameNotMadeFromTheOriginal_IsNull(string name)
+    {
+        // Rename renames any AWB-format name (task 135); Save As and Replace keeps task 134's rule.
+        Assert.Null(SaveAsReplacer.ReplacedOccurrenceName(name, Original, Copy));
+    }
+
     [Fact]
     public void ReplacedOccurrenceName_AnOriginalWithNoNumber_TakesTheCopysName()
     {

@@ -281,12 +281,13 @@ public sealed class SaveAsReplacer
     /// an occurrence given another name keeps it. <c>BRACKET,AWB-10017:1</c> becomes <c>BRACKET_2,AWB-10022:1</c>.
     /// </summary>
     /// <remarks>
-    /// The matching is Rename's (<see cref="RenamePlan.RenamedOccurrence"/>, Aidan 2026-10-11), so a later Rename of the
+    /// The matching is Rename's old-or-new-stem rule (<see cref="RenamePlan.RenamedOccurrenceNamedAfterFile"/>, Aidan 2026-10-11), so a later Rename of the
     /// copy finds the occurrence. A name that already reads as the copy's file name also gives the copy's name, which
-    /// is the same name.
+    /// is the same name. Rename's wider rule for any AWB-format name (task 135) is Rename's only, so this uses
+    /// <see cref="RenamePlan.RenamedOccurrenceNamedAfterFile"/>: a stale AWB name not made from the original is kept.
     /// </remarks>
     public static string? ReplacedOccurrenceName(string? occurrenceName, string? originalFullPath, string? copyFullPath) =>
-        RenamePlan.RenamedOccurrence(occurrenceName, originalFullPath, copyFullPath);
+        RenamePlan.RenamedOccurrenceNamedAfterFile(occurrenceName, originalFullPath, copyFullPath);
 
     public static string SubAssemblySaveFailedMessage(string number, string name, string reason) =>
         $"The component was replaced with {number}, but the sub-assembly {name} could not be saved: {reason} " +

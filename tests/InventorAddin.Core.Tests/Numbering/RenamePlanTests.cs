@@ -722,7 +722,6 @@ public sealed class RenamePlanTests : IDisposable
     [InlineData("BRACKET,AWB-10005: 1")]
     [InlineData("BRACKET,AWB-10005:1:2")]
     [InlineData("MY BRACKET")]
-    [InlineData("XBRACKET,AWB-10005:1")]
     [InlineData("BRACKET:1")]
     [InlineData("")]
     [InlineData(null)]
@@ -777,7 +776,6 @@ public sealed class RenamePlanTests : IDisposable
     [InlineData("BRACKET_2,AWB-10005:-1")]
     [InlineData("BRACKET_2,AWB-10005: 1")]
     [InlineData("BRACKET_2,AWB-10005:1:2")]
-    [InlineData("XBRACKET_2,AWB-10005:1")]
     [InlineData("BRACKET_2:1")]
     public void RenamedOccurrence_NearMissesOfTheNewFileName_AreLeftAlone(string name)
     {
@@ -789,6 +787,93 @@ public sealed class RenamePlanTests : IDisposable
     {
         Assert.Null(RenamePlan.RenamedOccurrence(
             RenamePlan.TemporaryOccurrenceName("BRACKET_2,AWB-10005:1"), OldBracket, NewBracket));
+    }
+
+    // RenamedOccurrence: any name in the AWB format (Aidan 2026-10-28, spec 02 question 27; task 135)
+
+    private const string OldWidget = @"C:\Cad\WIDGET_V5,AWB-10022.ipt";
+    private const string NewWidget = @"C:\Cad\WIDGET_V6,AWB-10022.ipt";
+
+    [Theory]
+    [InlineData("WIDGET_V4,AWB-10017:1", "WIDGET_V6,AWB-10022:1")]
+    [InlineData("SOMETHING_ELSE,AWB-10900:3", "WIDGET_V6,AWB-10022:3")]
+    [InlineData("WIDGET_V4,AWB-10022:1", "WIDGET_V6,AWB-10022:1")]
+    [InlineData("widget_v4,awb-10017:2", "WIDGET_V6,AWB-10022:2")]
+    [InlineData("WIDGET_V4,AWB-10017:12", "WIDGET_V6,AWB-10022:12")]
+    [InlineData("WIDGET_V4,AWB-10017:007", "WIDGET_V6,AWB-10022:007")]
+    [InlineData("BASE,PLATE,AWB-10017:1", "WIDGET_V6,AWB-10022:1")]
+    [InlineData("WIDGET_V4,AWB-99999:1", "WIDGET_V6,AWB-10022:1")]
+    public void RenamedOccurrence_AStaleAwbName_GetsTheNewNameAndTheSameDigits(string name, string expected)
+    {
+        Assert.Equal(expected, RenamePlan.RenamedOccurrence(name, OldWidget, NewWidget));
+    }
+
+    [Theory]
+    [InlineData("WIDGET_V4,AWB-10017:")]
+    [InlineData("WIDGET_V4,AWB-10017")]
+    [InlineData("WIDGET_V4,AWB-10017:1a")]
+    [InlineData("WIDGET_V4,AWB-10017: 1")]
+    [InlineData("WIDGET_V4,AWB-10017:-1")]
+    [InlineData("WIDGET_V4,AWB-10017:1:2")]
+    [InlineData("MY_NAME:1")]
+    [InlineData("WIDGET:1")]
+    [InlineData("WIDGET,AWB-1234:1")]
+    [InlineData("WIDGET,AWB-10000:1")]
+    [InlineData("WIDGET,AWB-100171:1")]
+    [InlineData("WIDGET,XYZ-10017:1")]
+    [InlineData("WIDGET,AWB10017:1")]
+    [InlineData(",AWB-10017:1")]
+    [InlineData("AWB-10017:1")]
+    [InlineData("AWB-10017,WIDGET:1")]
+    [InlineData("WIDGET,AWB-10017 copy:1")]
+    public void RenamedOccurrence_NotInTheAwbFormat_IsLeftAlone(string name)
+    {
+        Assert.Null(RenamePlan.RenamedOccurrence(name, OldWidget, NewWidget));
+    }
+
+    [Theory]
+    [InlineData("WIDGET_V5,AWB-10022:1", "WIDGET_V6,AWB-10022:1")]
+    [InlineData("WIDGET_V6,AWB-10022:1", "WIDGET_V6,AWB-10022:1")]
+    public void RenamedOccurrence_TheOldOrNewStem_StillGetsTheNewName(string name, string expected)
+    {
+        Assert.Equal(expected, RenamePlan.RenamedOccurrence(name, OldWidget, NewWidget));
+    }
+
+    [Fact]
+    public void RenamedOccurrence_AStaleAwbNameWhenTheOldFileHasNoNumber_GetsTheNewName()
+    {
+        Assert.Equal(
+            "WIDGET_V6,AWB-10022:1",
+            RenamePlan.RenamedOccurrence("WIDGET_V4,AWB-10017:1", @"C:\Cad\WIDGET_V5.ipt", NewWidget));
+    }
+
+    [Theory]
+    [InlineData("WIDGET_V4,AWB-10017:1", true)]
+    [InlineData("widget_v4,awb-10017:1", true)]
+    [InlineData("WIDGET_V4,AWB-10017:", false)]
+    [InlineData("WIDGET:1", false)]
+    [InlineData(",AWB-10017:1", false)]
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    public void IsAwbOccurrenceName(string? name, bool expected)
+    {
+        Assert.Equal(expected, RenamePlan.IsAwbOccurrenceName(name));
+    }
+
+    [Theory]
+    [InlineData("WIDGET_V4,AWB-10017:1")]
+    [InlineData("SOMETHING_ELSE,AWB-10900:3")]
+    public void RenamedOccurrenceNamedAfterFile_AStaleAwbName_IsLeftAlone(string name)
+    {
+        Assert.Null(RenamePlan.RenamedOccurrenceNamedAfterFile(name, OldWidget, NewWidget));
+    }
+
+    [Theory]
+    [InlineData("WIDGET_V5,AWB-10022:1", "WIDGET_V6,AWB-10022:1")]
+    [InlineData("WIDGET_V6,AWB-10022:2", "WIDGET_V6,AWB-10022:2")]
+    public void RenamedOccurrenceNamedAfterFile_TheOldOrNewStem_GetsTheNewName(string name, string expected)
+    {
+        Assert.Equal(expected, RenamePlan.RenamedOccurrenceNamedAfterFile(name, OldWidget, NewWidget));
     }
 
     // TemporaryOccurrenceName (task 065)
