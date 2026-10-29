@@ -221,8 +221,10 @@ public sealed class AwbHoleViewModelTests
     }
 
     [Fact]
-    public void Tapped_ASeatTheNewSizeHasNoRowFor_IsKept_AndSaysWhy()
+    public void Tapped_ASeatTheNewSizeHasNoRowFor_FallsBackToNone_WithNoMessage_AndComesBackWithTheSize()
     {
+        // Task 123: a size with no row for the seat shows None and says nothing; the seat comes back with a size
+        // that has a row for it.
         var vm = NewHole();
         vm.Type = HoleStandards.TappedType;
         vm.Size = "M5";
@@ -231,20 +233,119 @@ public sealed class AwbHoleViewModelTests
 
         vm.Size = "M3";
 
-        Assert.Equal(HoleSeat.Countersink, vm.Seat);
-        Assert.Equal(["None", "Counterbore", "Countersink"], Values(vm.SeatOptions));
-        Assert.NotNull(vm.SeatProblem);
-        Assert.Contains("Countersink", vm.SeatProblem);
-        Assert.Contains("Set Seat to None", vm.SeatProblem);
-        Assert.Null(vm.Geometry);
-        Assert.False(vm.CanOk);
-
-        vm.Seat = HoleSeat.None;
-
+        Assert.Equal(HoleSeat.None, vm.Seat);
         Assert.Equal(["None", "Counterbore"], Values(vm.SeatOptions));
         Assert.Null(vm.SeatProblem);
         Assert.False(vm.ShowsFastener);
         Assert.Null(vm.Fastener);
+        Assert.NotNull(vm.Geometry);
+        Assert.Equal(HoleSeat.None, vm.Spec.Seat);
+
+        vm.Size = "M5";
+
+        Assert.Equal(HoleSeat.Countersink, vm.Seat);
+        Assert.Equal("TFLAT", vm.Fastener);
+        Assert.Equal(HoleSeat.Countersink, vm.Geometry!.Seat);
+    }
+
+    [Fact]
+    public void ASeatSetToNoneByTheUser_StaysNone_WhenTheSizeChangesBack()
+    {
+        var vm = NewHole();
+        vm.Type = HoleStandards.TappedType;
+        vm.Size = "M5";
+        vm.Seat = HoleSeat.Countersink;
+        vm.Size = "M3";
+
+        vm.Seat = HoleSeat.None;
+        vm.Size = "M5";
+
+        Assert.Equal(HoleSeat.None, vm.Seat);
+    }
+
+    [Fact]
+    public void Tapped_CounterboreToClearanceAndBack_KeepsTheCounterbore()
+    {
+        // Task 123 (PR #29 check 099-3): a tapped hole with a counterbore keeps it on Clearance and back on Tapped.
+        var vm = NewHole();
+        vm.Type = HoleStandards.TappedType;
+        vm.Size = "M5";
+        vm.Seat = HoleSeat.Counterbore;
+
+        vm.Type = HoleStandards.ClearanceType;
+
+        Assert.Equal(HoleSeat.Counterbore, vm.Seat);
+        Assert.Equal(HoleKind.Clearance, vm.Kind);
+        Assert.True(vm.ShowsFastener);
+        Assert.Equal("TCAP", vm.Fastener);
+        Assert.Equal(HoleSeat.Counterbore, vm.Geometry!.Seat);
+
+        vm.Type = HoleStandards.TappedType;
+
+        Assert.Equal(HoleSeat.Counterbore, vm.Seat);
+        Assert.Equal(HoleKind.Tapped, vm.Kind);
+        Assert.Equal(HoleSeat.Counterbore, vm.Geometry!.Seat);
+        Assert.Null(vm.SeatProblem);
+    }
+
+    [Fact]
+    public void Tapped_ASeatTheNewTypeCannotTake_ComesBackWhenTheTypeChangesBack()
+    {
+        // Clearance T5 with a countersink; Tapped starts on M3, which has no countersink row.
+        var vm = NewHole();
+        vm.Seat = HoleSeat.Countersink;
+        Assert.Equal("T5", vm.Size);
+
+        vm.Type = HoleStandards.TappedType;
+
+        Assert.Equal("M3", vm.Size);
+        Assert.Equal(HoleSeat.None, vm.Seat);
+        Assert.Null(vm.SeatProblem);
+
+        vm.Type = HoleStandards.ClearanceType;
+
+        Assert.Equal(HoleSeat.Countersink, vm.Seat);
+        Assert.Equal("TFLAT", vm.Fastener);
+    }
+
+    [Fact]
+    public void Dowel_CounterboreToClearanceAndBack_KeepsTheCounterbore()
+    {
+        // Task 123 (PR #29 check 099-3): a dowel with a counterbore keeps it on AWB Clearance and back on AWB Dowel.
+        var vm = NewHole();
+        vm.Standard = HoleStandards.DowelStandard;
+        vm.Size = "5 mm";
+        vm.Seat = HoleSeat.Counterbore;
+        Assert.True(vm.ShowsCounterboreSizes);
+
+        vm.Standard = HoleStandards.ClearanceStandard;
+
+        Assert.Equal(HoleSeat.Counterbore, vm.Seat);
+        Assert.True(vm.ShowsFastener);
+        Assert.Equal(HoleSeat.Counterbore, vm.Geometry!.Seat);
+
+        vm.Standard = HoleStandards.DowelStandard;
+
+        Assert.Equal(HoleSeat.Counterbore, vm.Seat);
+        Assert.True(vm.ShowsCounterboreSizes);
+        Assert.Equal(HoleSeat.Counterbore, vm.Spec.Seat);
+    }
+
+    [Fact]
+    public void Dowel_ASeatKeptAcrossATypeChange_ComesBackOnTheDowel()
+    {
+        var vm = NewHole();
+        vm.Standard = HoleStandards.DowelStandard;
+        vm.Seat = HoleSeat.Countersink;
+
+        vm.Type = HoleStandards.TappedType;          // M3 has no countersink row
+        Assert.Equal(HoleSeat.None, vm.Seat);
+
+        vm.Type = HoleStandards.ClearanceType;
+        vm.Standard = HoleStandards.DowelStandard;
+
+        Assert.Equal(HoleSeat.Countersink, vm.Seat);
+        Assert.True(vm.ShowsCountersinkSizes);
     }
 
     [Fact]
@@ -466,16 +567,17 @@ public sealed class AwbHoleViewModelTests
     }
 
     [Fact]
-    public void ChangingTheType_PutsTheSeatBackToNone()
+    public void ChangingTheType_KeepsASeatTheNewTypeOffers()
     {
         var vm = NewHole();
         vm.Seat = HoleSeat.Counterbore;
 
         vm.Type = HoleStandards.TappedType;
 
-        Assert.Equal(HoleSeat.None, vm.Seat);
-        Assert.Null(vm.Fastener);
+        // M3 has a counterbore row of its size (T3, TCAP), so the seat is kept (task 123).
         Assert.Equal("M3", vm.Size);
+        Assert.Equal(HoleSeat.Counterbore, vm.Seat);
+        Assert.Equal("TCAP", vm.Fastener);
     }
 
     [Fact]
@@ -870,6 +972,29 @@ public sealed class AwbHoleViewModelTests
 
         Assert.Equal(HoleSeat.Countersink, vm.Seat);
         Assert.NotNull(vm.SeatProblem);
+    }
+
+    [Fact]
+    public void Edit_ASeatTheSizeHasNoRowFor_StaysUntilTheSizeChanges_AndComesBackWithASizeThatHasOne()
+    {
+        var spec = MetricSpec(HoleKind.Tapped, "M3") with { Seat = HoleSeat.Countersink };
+        var vm = AwbHoleViewModel.ForEdit(Workbook, PartName, spec);
+
+        vm.Flip = true;
+
+        Assert.Equal(HoleSeat.Countersink, vm.Seat);
+        Assert.Equal(["None", "Counterbore", "Countersink"], Values(vm.SeatOptions));
+
+        vm.Size = "M5";
+
+        Assert.Equal(HoleSeat.Countersink, vm.Seat);
+        Assert.Null(vm.SeatProblem);
+
+        vm.Size = "M3";
+
+        Assert.Equal(HoleSeat.None, vm.Seat);
+        Assert.Equal(["None", "Counterbore"], Values(vm.SeatOptions));
+        Assert.Null(vm.SeatProblem);
     }
 
     [Fact]

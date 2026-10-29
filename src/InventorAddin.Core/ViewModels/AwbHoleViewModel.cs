@@ -114,10 +114,15 @@ public sealed record HoleToleranceOption(string Value, string Text, string? Deta
 /// holds it and otherwise takes its default: the first entry, Normal for a fit, the Default = Y row for a tolerance or
 /// drill point (the first such row in workbook order, <see cref="HoleRules.FindTolerance"/> and
 /// <see cref="HoleRules.FindDrillPoint"/>), and the Tapped row's depths for a tapped hole. A Units switch keeps the size
-/// with the nearest nominal diameter in the other units, else the first. Changing the Type puts the seat back to None
-/// (spike 081 round 5: a seat is kept unless the user changes the type). A tapped hole's Seat and Fastener type lists
+/// with the nearest nominal diameter in the other units, else the first. A tapped hole's Seat and Fastener type lists
 /// follow its Size instead (task 099): the seats and Screw values of the Counterbore and Countersink rows of the same
 /// size (<see cref="HoleRules.SameSizeCounterbores"/>).
+/// </para>
+/// <para>
+/// The seat is kept when the units, type, standard or size change, as long as the new choice offers it (task 123,
+/// Aidan 2026-10-25; this replaces task 085's reset to None on a change of type). When it does not, the seat is None,
+/// with no message, and the seat the user chose last is remembered for the window's life: a change back to a choice
+/// that offers it brings it back. Choosing a seat, None included, is what is remembered; a cascade never changes it.
 /// </para>
 /// <para>
 /// A dowel hole lists every seat and has no Fastener type; its seat is sized in its own boxes (spec 09, "Dowel and
@@ -238,6 +243,12 @@ public sealed class AwbHoleViewModel : ObservableObject
     private HoleUnits _units;
     private string _type = HoleStandards.ClearanceType;
     private HoleSeat _seat;
+
+    // The seat the user chose last (or the edited hole's own): the seat shown whenever the current choice offers it,
+    // else None (task 123). Task 124 keeps typed values across the same cascades in the same way: what the user chose
+    // is held apart from what the cascade shows.
+    private HoleSeat _wantedSeat;
+    private ListContext? _seatContext;
     private string _standard = HoleStandards.ClearanceStandard;
     private string? _fastener;
     private string? _size;
@@ -356,6 +367,7 @@ public sealed class AwbHoleViewModel : ObservableObject
             _type = HoleStandards.TypeName(spec.Kind);
             _standard = HoleStandards.StandardName(spec.Kind);
             _seat = spec.Seat;
+            _wantedSeat = spec.Seat;
             _fastener = spec.Fastener;
             _size = spec.Size;
             _fit = spec.Kind == HoleKind.Dowel ? spec.PrecisionFit.ToString() : spec.ClearanceFit.ToString();
@@ -573,7 +585,7 @@ public sealed class AwbHoleViewModel : ObservableObject
         }
     }
 
-    /// <summary>Clearance or Tapped. Changing it puts the seat back to None.</summary>
+    /// <summary>Clearance or Tapped. The seat is kept when the new type offers it (task 123).</summary>
     public string Type
     {
         get => _type;
@@ -585,19 +597,13 @@ public sealed class AwbHoleViewModel : ObservableObject
                 return;
             }
 
-            Change(() =>
-            {
-                if (Set(ref _type, type, nameof(Type)))
-                {
-                    Set(ref _seat, HoleSeat.None, nameof(Seat));
-                }
-            });
+            Change(() => Set(ref _type, type, nameof(Type)));
         }
     }
 
     /// <summary>
     /// The seats: None, Counterbore, Countersink for a clearance or dowel hole; for a tapped hole, None and the seats
-    /// with a row of the same size in their tab, and the seat already chosen (task 099).
+    /// with a row of the same size in their tab (task 099), and an edited hole's own seat until a field above it changes.
     /// </summary>
     public IReadOnlyList<HoleOption<HoleSeat>> SeatOptions => _seatOptions;
 
@@ -612,7 +618,11 @@ public sealed class AwbHoleViewModel : ObservableObject
                 return;
             }
 
-            Change(() => Set(ref _seat, value, nameof(Seat)));
+            Change(() =>
+            {
+                _wantedSeat = value;
+                Set(ref _seat, value, nameof(Seat));
+            });
         }
     }
 
@@ -1268,14 +1278,14 @@ public sealed class AwbHoleViewModel : ObservableObject
         // hole's seats and fasteners depend on its size, which comes from its own tab (task 099).
         if (kind == HoleKind.Clearance)
         {
-            RefreshSeats(kind);
+            RefreshSeats(kind, keepExact);
             RefreshFasteners(kind, keepExact);
             RefreshSizes(kind, keepExact);
         }
         else
         {
             RefreshSizes(kind, keepExact);
-            RefreshSeats(kind);
+            RefreshSeats(kind, keepExact);
             RefreshFasteners(kind, keepExact);
         }
 
@@ -1459,12 +1469,17 @@ public sealed class AwbHoleViewModel : ObservableObject
 
     /// <summary>
     /// The seats: all three for a clearance hole, and for a dowel, whose seat is sized in the window (task 106). A
-    /// tapped hole lists None, each seat whose tab has a shown row of the same size
-    /// (<see cref="HoleRules.SameSizeCounterbores"/>), and the seat already chosen, which <see cref="HoleRules"/> then
-    /// says cannot be kept when its tab has no row of the size.
+    /// tapped hole lists None and each seat whose tab has a shown row of the same size
+    /// (<see cref="HoleRules.SameSizeCounterbores"/>); an edited hole's own seat stays listed until the units, kind or
+    /// size change, and <see cref="HoleRules"/> then says it cannot be kept when its tab has no row of the size. The
+    /// seat shown is the one the user chose last when the list offers it, else None (task 123).
     /// </summary>
-    private void RefreshSeats(HoleKind kind)
+    private void RefreshSeats(HoleKind kind, bool keepExact)
     {
+        var seatContext = new ListContext(_units, kind, HoleSeat.None, null, null, kind == HoleKind.Tapped ? _size : null);
+        var keepSeat = keepExact || seatContext == _seatContext;
+        _seatContext = seatContext;
+
         List<HoleOption<HoleSeat>> seats;
         if (kind != HoleKind.Tapped)
         {
@@ -1474,16 +1489,13 @@ public sealed class AwbHoleViewModel : ObservableObject
         {
             var nominal = HoleRules.SeatNominal(_workbook, _units, kind, _size);
             seats = AllSeats
-                .Where(o => o.Value == HoleSeat.None || o.Value == _seat
+                .Where(o => o.Value == HoleSeat.None || (keepSeat && o.Value == _seat)
                     || (nominal is { } n && SameSizeSeatRows(o.Value, n).Any(r => !r.Hidden)))
                 .ToList();
         }
 
         SetList(ref _seatOptions, seats, nameof(SeatOptions));
-        if (!_seatOptions.Any(o => o.Value == _seat))
-        {
-            Set(ref _seat, HoleSeat.None, nameof(Seat));
-        }
+        Set(ref _seat, _seatOptions.Any(o => o.Value == _wantedSeat) ? _wantedSeat : HoleSeat.None, nameof(Seat));
     }
 
     /// <summary>

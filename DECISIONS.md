@@ -282,3 +282,6 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-10-28 | If either dropdown command fails to register, or Inventor refuses the split button, AWB Hole is a plain button on that panel, with a warning in the log | Default | task 129 |
 | 2026-10-28 | Inventor Hole runs `PartHoleCmd` on the Sheet Metal tab too; picking it cancels an open AWB Hole window, as any other command does; a failed save of the toggle changes nothing and shows a message | Default | task 129 |
 | 2026-10-28 | While "Use Inventor's Hole command" is on, the split button is hidden; the setting is then turned off from AWB Settings | Default | task 129 |
+| 2026-10-28 | The seat remembered across Type, Standard, Size and Units changes is the one the user chose last, None included; only a fallback to None keeps the earlier seat. Replaces, for a new choice, task 099's "a chosen seat with no row at a new size is kept with a message and OK disabled": it now falls back to None with no message | Default | task 123 |
+| 2026-10-28 | An edited hole's own seat stays listed (with its message if it has no row) until the units, type, standard or size change | Default | task 123 |
+| 2026-10-28 | Only the seat is remembered, not the Fastener type | Default | task 123 |

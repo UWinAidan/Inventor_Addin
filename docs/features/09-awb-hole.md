@@ -50,7 +50,7 @@ It follows Inventor's Hole panel, with a **Metric or Imperial** selector on the 
 - **A typed value is kept when the size, type, standard or units change** (Aidan, 2026-10-25; task 124): a number or expression the user typed stays; only values the user has not typed follow the table. This overrides task 100's Default that a size change turns an expression into a number.
 - **The diagram stays** (Aidan, 2026-10-25: he loves it).
 - **OK** keeps the hole as one Undo step; **Cancel** leaves the part as it was, for a new hole and for an edited one.
-- **Editing reads the hole first**: type, seat, size, fit, tolerance, depths, termination, drill point and the dowel setting are loaded from the hole and its stored AWB data before the first preview, and a seat is kept unless the user changes the type (Aidan, spike round 5). **The seat is kept when the type, standard or size changes, as long as the new choice can take it**, and comes back when the user changes back (Aidan, 2026-10-25; task 123).
+- **Editing reads the hole first**: type, seat, size, fit, tolerance, depths, termination, drill point and the dowel setting are loaded from the hole and its stored AWB data before the first preview (Aidan, spike round 5). **The seat is kept when the type, standard or size changes, as long as the new choice can take it**, and comes back when the user changes back (Aidan, 2026-10-25; task 123).
 
 ## Types and seats
 
