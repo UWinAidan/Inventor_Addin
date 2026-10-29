@@ -2,29 +2,23 @@
 
 Where each big item stands. One line per item, kept current by the parent session. For the order of work and the task lists see `docs/PLAN.md`; for what needs doing next see `TODO.md`.
 
-Last updated: 2026-10-28
+Last updated: 2026-10-29
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-10-28 20:45. Branch `claude/m4-hole-generator` at `de4231d`, not pushed; PR #29 open against `main`. Spike branches (local only, never merged): `spike/107-client-graphics` (`b56f0db`), `spike/108-hole-types` (`f0a2f33`).
-- Goal: run the M4 part 1 round in `docs/PLAN.md` order, one implementer and one reviewer per task, one commit per task.
-- Done this session:
-  - `4e8de5c`: spike 107 final result (round 4 passed in Inventor: drill point, seats off the edge, end caps); tasks 107 and 108 ticked; task 110 confirmed (edge samples, vertex fallback, 0.001 cm tip).
-  - `d2c2460` task 135 (Rename renames any AWB-format occurrence name; Save As and Replace keeps task 134's rule).
-  - `e81fdac` task 120 (H after a shortcut reset: waits for the Customize dialog to close, then gives back and takes over; capped at 3 re-applies).
-  - `c22a4f3` task 121 (reload: tab and Modify-panel button deleted on load and unload; command definitions kept, a Default in DECISIONS).
-  - `task 128` (AWB Hole on the Sheet Metal tab) committed after a second review; the tab and panel ids are unconfirmed (log shows them).
-- State:
-  - Nothing from 135, 120 or 121 has been run in Inventor. The installed add-in is still the spike 108 round 4 build: Inventor was open all session, so every build used `-p:DeployToInventor=false`.
-  - Two Core tests flaked once each (in `TODO.md`).
+- Updated: 2026-10-29. Branch `claude/m4-hole-generator`, pushed; PR #29 open against `main`. Spike branches (local only, never merged): `spike/107-client-graphics` (`b56f0db`), `spike/108-hole-types` (`f0a2f33`).
+- Goal: run the M4 part 1 round in `docs/PLAN.md` order, one implementer and one reviewer per task, one commit per task. Aidan asked (2026-10-28) not to stop for Inventor checks: collect each task's checklist and he does them together at the end.
+- Done this session (2026-10-28/29): task 129 (`af55a1a`, AWB Hole split button with Inventor Hole and the default toggle) and task 123 (seat kept across Type, Standard, Size and Units changes), each reviewed PASS. Both were built on Windows with Inventor closed, so the deployed add-in is this branch at task 124's working tree.
+- **In progress, uncommitted:** task 124 (typed values kept) is implemented and in the working tree, not reviewed. Its implementer: build 0 errors, 3817 Core tests passed; it rewrote 8 older tests (tasks 100 and 106) whose behaviour 124 overrides. Its Defaults and Follow-ups are in `docs/tasks/124-typed-values-kept.md`. Next session: run the reviewer on 124, then commit it with its tracking updates (Defaults to `DECISIONS.md`; spec 09's dowel section still says a typed dowel seat value is kept only while units and size stay the same).
 - Next steps:
-  1. Follow the PLAN order: 129, 123, 124, 125, 122, 126, 111, 112, 113, 119, 131, 132, 127, 130, 110, 117, 114, 115, 116, 136, 118.
-  2. When Inventor is closed, run `dotnet build InventorAddin.slnx -tl:off` on this branch so the installed add-in is this branch's again.
+  1. Review and commit 124 (above).
+  2. Then the PLAN order: 125, 122, 126, 111, 112, 113, 119, 131, 132, 127, 130, 110, 117, 114, 115, 116, 136, 118.
+  3. At the end, give Aidan one combined checklist from the task files (135, 120, 121, 128, 129, 123, 124, and on), plus the older 105, 109, 133, 134.
 - Gotchas:
   - Check `tasklist //FI "IMAGENAME eq Inventor.exe"` before building. If Inventor is open, pass `-p:DeployToInventor=false`.
-  - Task 128 must list its Sheet Metal button in Core `AddinUi.ForeignButtons`, so unload removes it.
+  - In shell scripts that edit tracking files, chain the commit with `&&` after the edit script, or a failed edit still commits.
   - Spike 107's preview code is read with `git show spike/108-hole-types:src/InventorAddin/Spike107.cs` (task 110).
-- Read first: `docs/PLAN.md` ("Round after PR #29's first look"), `TODO.md` Next up, the next task file.
+- Read first: `docs/PLAN.md` ("Round after PR #29's first look"), `TODO.md` Next up, `docs/tasks/124-typed-values-kept.md`.
 
 ## Big items
 
