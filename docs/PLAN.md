@@ -371,7 +371,7 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 - [x] 121 The AWB Addin tab and AWB Hole button come back after the add-in is reloaded
 - [ ] 122 A hand colour on a hole face survives the hole being remade
 - [x] 123 The seat is kept when type, standard or size changes
-- [ ] 124 Typed values and expressions are kept when size, type, standard or units change
+- [x] 124 Typed values and expressions are kept when size, type, standard or units change
 - [ ] 125 A dowel seat starts at the last values used for its size
 - [ ] 126 Editable seat boxes on clearance and tapped holes
 - [ ] 127 Centre-drill spot: a small countersink on any hole, and a seat depth of 0

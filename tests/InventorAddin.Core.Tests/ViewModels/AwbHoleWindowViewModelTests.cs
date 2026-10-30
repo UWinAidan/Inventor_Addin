@@ -239,7 +239,9 @@ public sealed class AwbHoleWindowViewModelTests
 
         vm.Units = HoleUnits.Imperial;
 
-        Assert.Equal("1", vm.DepthText);
+        // A typed number keeps its length and is written with its unit (task 124).
+        Assert.Equal("25.4 mm", vm.DepthText);
+        Assert.Equal("= 1 in", vm.DepthValueText);
         Assert.Contains(nameof(AwbHoleViewModel.DepthText), changed);
         Assert.Contains(nameof(AwbHoleViewModel.LengthUnitText), changed);
     }

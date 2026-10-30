@@ -130,16 +130,25 @@ public sealed record HoleToleranceOption(string Value, string Text, string? Deta
 /// window opens on a dowel, and whenever its units or size change, the boxes take that size's start values: the last
 /// values kept with OK for the units and size (<see cref="HoleLastDowelSeats"/>), else the Dowel row's seat columns or
 /// the same-size Counterbore or Countersink row (<see cref="HoleRules.DowelSeatStart"/>), value by value, else empty,
-/// which <see cref="HoleRules"/> asks to be filled. A value typed in the window is kept while the units and size stay,
-/// also across a change of seat; an edited dowel opens on its own values. Leaving AWB Dowel drops them. The counterbore
-/// depth takes Inventor expressions like the depth; the diameters and the angle take numbers.
+/// which <see cref="HoleRules"/> asks to be filled. An edited dowel opens on its own values. The counterbore depth takes
+/// Inventor expressions like the depth; the diameters and the angle take numbers.
 /// </para>
 /// <para>
 /// A blind clearance or dowel hole whose depth was not typed in this window starts at the last depth used in its units
 /// (<see cref="HoleLastDepths"/>), else at the Settings tab's "Blind depth multiplier" x the size's nominal diameter
-/// (spec 09 question 7), and follows that rule when it becomes blind or its size or units change. A depth typed in this
-/// window, or an edited hole's own depth, is kept (and converted when the units change). Emptying the depth box leaves
-/// it empty, so OK is disabled, until the next change the rule follows.
+/// (spec 09 question 7), and follows that rule when it becomes blind or its size or units change. Emptying the depth box
+/// leaves it empty, so OK is disabled, until the next change the rule follows.
+/// </para>
+/// <para>
+/// A value typed in a box is kept when the units, type, standard, size or seat change (task 124, Aidan 2026-10-25; this
+/// replaces task 100's Default that a new size turns an expression into a number, and task 106's start values for a
+/// typed dowel seat box): the depth, the thread and drill depths and a dowel's seat boxes. Only a box not typed follows
+/// the table. A box the hole does not use is hidden and its typed value comes back with it. An edited hole's own values
+/// count as typed (Default). Emptying a box makes it untyped: the thread and drill depths take the Tapped row's at once,
+/// the others when the next change the rule follows. On a units switch an expression is kept as written and read again
+/// in the new units, and a typed number keeps its length: a box that takes expressions shows it with its unit
+/// (<c>12 mm</c>, with its inch value beside it), a box for numbers only shows it converted (Defaults). Switching back
+/// shows it as typed.
 /// </para>
 /// <para>
 /// A choice that is not in the workbook, or is hidden, is kept and listed while the fields above it are unchanged, so
@@ -245,8 +254,7 @@ public sealed class AwbHoleViewModel : ObservableObject
     private HoleSeat _seat;
 
     // The seat the user chose last (or the edited hole's own): the seat shown whenever the current choice offers it,
-    // else None (task 123). Task 124 keeps typed values across the same cascades in the same way: what the user chose
-    // is held apart from what the cascade shows.
+    // else None (task 123). Typed values are held apart from what the cascade shows in the same way (task 124).
     private HoleSeat _wantedSeat;
     private ListContext? _seatContext;
     private string _standard = HoleStandards.ClearanceStandard;
@@ -282,13 +290,15 @@ public sealed class AwbHoleViewModel : ObservableObject
     private ListContext? _fastenerContext;
     private ListContext? _sizeContext;
     private ListContext? _toleranceContext;
-    private ListContext? _depthsContext;
     private HoleUnits _depthUnits;
 
-    // The blind depth: whether the user typed it in this window (or it is the edited hole's own), and what the rule's
-    // depth was last worked out for.
-    private bool _depthKept;
+    // What the blind depth rule's depth was last worked out for.
     private ListContext? _blindDepthContext;
+
+    // The boxes whose value the user typed in this window, or an edited hole's own (task 124), as typed: the number in
+    // the units it was typed in, and the expression when it was one. A cascade replaces only the boxes not in here;
+    // emptying a box takes it out, so it follows the table again.
+    private readonly Dictionary<HoleField, TypedBox> _typed = [];
 
     private int _centreCount;
     private bool _canPickCentres = true;
@@ -303,8 +313,8 @@ public sealed class AwbHoleViewModel : ObservableObject
     private readonly Dictionary<HoleField, string> _invalidText = [];
     private readonly Dictionary<HoleField, string> _invalidReason = [];
 
-    // The expression each depth was typed as (task 100), with the value it came to. It holds only while the depth
-    // still has that value: a depth changed any other way (a units switch, a new size's defaults) is a plain number.
+    // The expression each box shows (task 100), with the value it comes to. It holds only while the box still has
+    // that value: a box the cascade fills from the table is a plain number. A typed box sets it from _typed.
     private readonly Dictionary<HoleField, (string Text, decimal Value)> _expressions = [];
 
     private HoleSpec _spec;
@@ -376,7 +386,6 @@ public sealed class AwbHoleViewModel : ObservableObject
             _drillDepth = spec.DrillDepth;
             _termination = spec.Termination;
             _depth = spec.Depth;
-            _depthKept = spec.Depth is not null;
             _drillPoint = spec.DrillPoint;
             _flip = spec.Flip;
             _cboreDiameter = spec.CboreDiameter;
@@ -388,6 +397,15 @@ public sealed class AwbHoleViewModel : ObservableObject
             OpenExpression(HoleField.DrillDepth, spec.DrillDepthExpression, ref _drillDepth);
             OpenExpression(HoleField.Depth, spec.DepthExpression, ref _depth);
             OpenExpression(HoleField.CounterboreDepth, spec.CboreDepthExpression, ref _cboreDepth);
+
+            // The hole's own values count as typed, so a change in the window never resets them (task 124, Default).
+            OpenTyped(HoleField.ThreadDepth, _threadDepth);
+            OpenTyped(HoleField.DrillDepth, _drillDepth);
+            OpenTyped(HoleField.Depth, _depth);
+            OpenTyped(HoleField.CounterboreDiameter, _cboreDiameter);
+            OpenTyped(HoleField.CounterboreDepth, _cboreDepth);
+            OpenTyped(HoleField.CountersinkDiameter, _csinkDiameter);
+            OpenTyped(HoleField.CountersinkAngle, _csinkAngle);
             Refresh(keepExact: true);
         }
 
@@ -682,7 +700,11 @@ public sealed class AwbHoleViewModel : ObservableObject
                 return;
             }
 
-            Change(() => Set(ref _cboreDiameter, value, nameof(CounterboreDiameter)));
+            Change(() =>
+            {
+                MarkTyped(HoleField.CounterboreDiameter, value);
+                Set(ref _cboreDiameter, value, nameof(CounterboreDiameter));
+            });
         }
     }
 
@@ -698,7 +720,11 @@ public sealed class AwbHoleViewModel : ObservableObject
                 return;
             }
 
-            Change(() => Set(ref _cboreDepth, value, nameof(CounterboreDepth)));
+            Change(() =>
+            {
+                MarkTyped(HoleField.CounterboreDepth, value);
+                Set(ref _cboreDepth, value, nameof(CounterboreDepth));
+            });
         }
     }
 
@@ -714,7 +740,11 @@ public sealed class AwbHoleViewModel : ObservableObject
                 return;
             }
 
-            Change(() => Set(ref _csinkDiameter, value, nameof(CountersinkDiameter)));
+            Change(() =>
+            {
+                MarkTyped(HoleField.CountersinkDiameter, value);
+                Set(ref _csinkDiameter, value, nameof(CountersinkDiameter));
+            });
         }
     }
 
@@ -730,7 +760,11 @@ public sealed class AwbHoleViewModel : ObservableObject
                 return;
             }
 
-            Change(() => Set(ref _csinkAngle, value, nameof(CountersinkAngle)));
+            Change(() =>
+            {
+                MarkTyped(HoleField.CountersinkAngle, value);
+                Set(ref _csinkAngle, value, nameof(CountersinkAngle));
+            });
         }
     }
 
@@ -810,7 +844,11 @@ public sealed class AwbHoleViewModel : ObservableObject
                 return;
             }
 
-            Change(() => Set(ref _threadDepth, value ?? TappedRow()?.ThreadDepth, nameof(ThreadDepth)));
+            Change(() =>
+            {
+                MarkTyped(HoleField.ThreadDepth, value);
+                Set(ref _threadDepth, value ?? TappedRow()?.ThreadDepth, nameof(ThreadDepth));
+            });
         }
     }
 
@@ -826,7 +864,11 @@ public sealed class AwbHoleViewModel : ObservableObject
                 return;
             }
 
-            Change(() => Set(ref _drillDepth, value ?? TappedRow()?.DrillDepth, nameof(DrillDepth)));
+            Change(() =>
+            {
+                MarkTyped(HoleField.DrillDepth, value);
+                Set(ref _drillDepth, value ?? TappedRow()?.DrillDepth, nameof(DrillDepth));
+            });
         }
     }
 
@@ -858,16 +900,16 @@ public sealed class AwbHoleViewModel : ObservableObject
     public bool ShowsDepth => Kind != HoleKind.Tapped && IsBlind;
 
     /// <summary>
-    /// Clearance and dowel holes ending at a distance: the depth, in the units' length; converted when the units
-    /// change, and kept while the hole is through. Starts at the last depth used, else the blind depth multiplier x D
-    /// (see the remarks). A number set here is kept; null empties it until the next change the rule follows.
+    /// Clearance and dowel holes ending at a distance: the depth, in the units' length, kept while the hole is through.
+    /// Starts at the last depth used, else the blind depth multiplier x D (see the remarks). A number set here is typed
+    /// and kept across units, size and type changes (task 124); null empties it until the next change the rule follows.
     /// </summary>
     public decimal? Depth
     {
         get => _depth;
         set => Change(() =>
         {
-            _depthKept = value is not null;
+            MarkTyped(HoleField.Depth, value);
             Set(ref _depth, value, nameof(Depth));
         });
     }
@@ -1333,76 +1375,66 @@ public sealed class AwbHoleViewModel : ObservableObject
             Set(ref _tolerance, null, nameof(Tolerance));
         }
 
-        // Thread and drill depths.
+        // Thread and drill depths: a typed depth is kept (task 124), the others are the Tapped row's.
         if (kind == HoleKind.Tapped)
         {
-            var depthsContext = new ListContext(_units, kind, HoleSeat.None, null, null, _size);
             var row = TappedRow();
-            if (keepExact)
-            {
-                Set(ref _threadDepth, _threadDepth ?? row?.ThreadDepth, nameof(ThreadDepth));
-                Set(ref _drillDepth, _drillDepth ?? row?.DrillDepth, nameof(DrillDepth));
-            }
-            else if (depthsContext != _depthsContext)
-            {
-                Set(ref _threadDepth, row?.ThreadDepth, nameof(ThreadDepth));
-                Set(ref _drillDepth, row?.DrillDepth, nameof(DrillDepth));
-            }
-
-            _depthsContext = depthsContext;
+            SettleBox(HoleField.ThreadDepth, ref _threadDepth, nameof(ThreadDepth), row?.ThreadDepth, true);
+            SettleBox(HoleField.DrillDepth, ref _drillDepth, nameof(DrillDepth), row?.DrillDepth, true);
         }
         else
         {
-            _depthsContext = null;
-            Set(ref _threadDepth, null, nameof(ThreadDepth));
-            Set(ref _drillDepth, null, nameof(DrillDepth));
+            HideBox(HoleField.ThreadDepth, ref _threadDepth, nameof(ThreadDepth));
+            HideBox(HoleField.DrillDepth, ref _drillDepth, nameof(DrillDepth));
         }
 
-        // A dowel's seat sizes: the size's start values when the units or size change, else kept (task 106).
+        // A dowel's seat sizes: a typed value is kept (task 124); the others take the size's start values when the
+        // units or size change (task 106), and an emptied box stays empty until then.
         if (kind == HoleKind.Dowel)
         {
             var seatContext = new ListContext(_units, kind, HoleSeat.None, null, null, _size);
             var start = _lastDowelSeats.For(_units, _size).Or(HoleRules.DowelSeatStart(_workbook, _units, _size));
-            if (keepExact)
-            {
-                // An edited dowel keeps its own values; the seat it does not have starts as a new one would.
-                Set(ref _cboreDiameter, _cboreDiameter ?? start.CboreDiameter, nameof(CounterboreDiameter));
-                Set(ref _cboreDepth, _cboreDepth ?? start.CboreDepth, nameof(CounterboreDepth));
-                Set(ref _csinkDiameter, _csinkDiameter ?? start.CsinkDiameter, nameof(CountersinkDiameter));
-                Set(ref _csinkAngle, _csinkAngle ?? start.CsinkAngleDeg, nameof(CountersinkAngle));
-            }
-            else if (seatContext != _dowelSeatContext)
-            {
-                _expressions.Remove(HoleField.CounterboreDepth);
-                SetDowelSeat(start);
-            }
-
+            var restart = keepExact || seatContext != _dowelSeatContext;
+            SettleBox(
+                HoleField.CounterboreDiameter, ref _cboreDiameter, nameof(CounterboreDiameter), start.CboreDiameter,
+                restart);
+            SettleBox(HoleField.CounterboreDepth, ref _cboreDepth, nameof(CounterboreDepth), start.CboreDepth, restart);
+            SettleBox(
+                HoleField.CountersinkDiameter, ref _csinkDiameter, nameof(CountersinkDiameter), start.CsinkDiameter,
+                restart);
+            SettleBox(
+                HoleField.CountersinkAngle, ref _csinkAngle, nameof(CountersinkAngle), start.CsinkAngleDeg, restart);
             _dowelSeatContext = seatContext;
         }
         else
         {
             _dowelSeatContext = null;
-            _expressions.Remove(HoleField.CounterboreDepth);
-            SetDowelSeat(HoleDowelSeat.Empty);
+            HideBox(HoleField.CounterboreDiameter, ref _cboreDiameter, nameof(CounterboreDiameter));
+            HideBox(HoleField.CounterboreDepth, ref _cboreDepth, nameof(CounterboreDepth));
+            HideBox(HoleField.CountersinkDiameter, ref _csinkDiameter, nameof(CountersinkDiameter));
+            HideBox(HoleField.CountersinkAngle, ref _csinkAngle, nameof(CountersinkAngle));
         }
 
-        // Depth: converted when the units change; kept when typed, else the blind depth rule.
-        if (_depthUnits != _units)
+        // Depth: a typed depth is kept, as typed, whatever the hole (task 124). One not typed is converted when the
+        // units change and follows the blind depth rule.
+        if (_typed.TryGetValue(HoleField.Depth, out var typedDepth))
         {
-            if (_depth is { } depth)
-            {
-                Set(ref _depth, ConvertLength(depth, _depthUnits, _units), nameof(Depth));
-            }
-
-            _depthUnits = _units;
+            ApplyTyped(HoleField.Depth, typedDepth, ref _depth, nameof(Depth));
         }
+        else if (_depthUnits != _units && _depth is { } depth)
+        {
+            Set(ref _depth, ConvertLength(depth, _depthUnits, _units), nameof(Depth));
+        }
+
+        _depthUnits = _units;
 
         if (kind != HoleKind.Tapped && IsBlind)
         {
             var blindContext = new ListContext(_units, kind, HoleSeat.None, null, null, _size);
-            if (!keepExact && !_depthKept && blindContext != _blindDepthContext
+            if (!keepExact && !_typed.ContainsKey(HoleField.Depth) && blindContext != _blindDepthContext
                 && DefaultBlindDepth(kind) is { } defaultDepth)
             {
+                _expressions.Remove(HoleField.Depth);
                 Set(ref _depth, defaultDepth, nameof(Depth));
             }
 
@@ -1459,12 +1491,136 @@ public sealed class AwbHoleViewModel : ObservableObject
         return text.Contains("flat", StringComparison.OrdinalIgnoreCase) ? null : 118m;
     }
 
-    private void SetDowelSeat(HoleDowelSeat seat)
+    // Typed values (task 124).
+
+    /// <summary>A box's value as the user typed it: in the units it was typed in, with its expression if it was one.</summary>
+    private sealed class TypedBox(decimal value, HoleUnits units, string? expression)
     {
-        Set(ref _cboreDiameter, seat.CboreDiameter, nameof(CounterboreDiameter));
-        Set(ref _cboreDepth, seat.CboreDepth, nameof(CounterboreDepth));
-        Set(ref _csinkDiameter, seat.CsinkDiameter, nameof(CountersinkDiameter));
-        Set(ref _csinkAngle, seat.CsinkAngleDeg, nameof(CountersinkAngle));
+        public decimal Value { get; } = value;
+
+        public HoleUnits Units { get; } = units;
+
+        public string? Expression { get; } = expression;
+
+        /// <summary>What the box shows in <see cref="ShownUnits"/>, worked out once for each units switch.</summary>
+        public TypedShown Shown { get; set; } = new(value, expression, null, null);
+
+        public HoleUnits ShownUnits { get; set; } = units;
+    }
+
+    /// <summary>
+    /// What a typed box shows in the window's units: its value, the expression it holds, and, when Inventor cannot read
+    /// the typed expression in these units, that text and Inventor's reason.
+    /// </summary>
+    private readonly record struct TypedShown(decimal Value, string? Expression, string? InvalidText, string? InvalidReason);
+
+    /// <summary>The user set a box: a value makes it typed, as the box now holds it; null (an emptied box) untyped.</summary>
+    private void MarkTyped(HoleField field, decimal? value)
+    {
+        if (value is { } v)
+        {
+            _typed[field] = new TypedBox(v, _units, ExpressionOf(field, v));
+        }
+        else
+        {
+            _typed.Remove(field);
+        }
+    }
+
+    /// <summary>An edited hole's own value counts as typed; an expression Inventor can no longer read as its number.</summary>
+    private void OpenTyped(HoleField field, decimal? value)
+    {
+        if (value is { } v)
+        {
+            _typed[field] = new TypedBox(v, _units, ExpressionOf(field, v));
+        }
+    }
+
+    /// <summary>
+    /// A box the cascade settles: a typed one keeps its value (<see cref="ApplyTyped"/>); one not typed takes
+    /// <paramref name="untyped"/> when <paramref name="replace"/>, as a plain number.
+    /// </summary>
+    private void SettleBox(HoleField field, ref decimal? target, string name, decimal? untyped, bool replace)
+    {
+        if (_typed.TryGetValue(field, out var box))
+        {
+            ApplyTyped(field, box, ref target, name);
+        }
+        else if (replace)
+        {
+            _expressions.Remove(field);
+            Set(ref target, untyped, name);
+        }
+    }
+
+    /// <summary>A box the hole does not use is empty; a typed value stays in <see cref="_typed"/> for when it comes back.</summary>
+    private void HideBox(HoleField field, ref decimal? target, string name)
+    {
+        _expressions.Remove(field);
+        Set(ref target, null, name);
+    }
+
+    /// <summary>Puts a typed box's value, as shown in the window's units, in its field and its expression.</summary>
+    private void ApplyTyped(HoleField field, TypedBox box, ref decimal? target, string name)
+    {
+        if (box.ShownUnits != _units)
+        {
+            box.Shown = ShownIn(field, box, _units);
+            box.ShownUnits = _units;
+        }
+
+        var shown = box.Shown;
+        if (shown.Expression is { } expression)
+        {
+            _expressions[field] = (expression, shown.Value);
+        }
+        else
+        {
+            _expressions.Remove(field);
+        }
+
+        if (shown.InvalidText is { } text)
+        {
+            _invalidText[field] = text;
+            if (shown.InvalidReason is { } reason)
+            {
+                _invalidReason[field] = reason;
+            }
+        }
+
+        Set(ref target, shown.Value, name);
+    }
+
+    /// <summary>
+    /// What a typed box shows in <paramref name="units"/> (task 124, Defaults): as typed in its own units. In the other
+    /// units an expression is kept as written and read again in them, as Inventor reads a number with no unit in it;
+    /// a number keeps its length, written with its unit in a box that takes expressions (<c>12 mm</c>, with its inch
+    /// value beside it) and converted in one that takes numbers only. The angle has no units.
+    /// </summary>
+    private TypedShown ShownIn(HoleField field, TypedBox box, HoleUnits units)
+    {
+        if (box.Units == units || field == HoleField.CountersinkAngle)
+        {
+            return new TypedShown(box.Value, box.Expression, null, null);
+        }
+
+        var converted = HoleReadBack.FromCm(HoleRules.ToCm(box.Value, box.Units), units);
+        if (box.Expression is { } expression)
+        {
+            if (_expressionChecker is null)
+            {
+                return new TypedShown(converted, expression, null, null);
+            }
+
+            var check = _expressionChecker.Check(expression, units);
+            return check is { IsValid: true, ValueCm: { } cm }
+                ? new TypedShown(HoleReadBack.FromCm(cm, units), expression, null, null)
+                : new TypedShown(converted, null, expression, check.Reason);
+        }
+
+        return TakesExpressions(field)
+            ? new TypedShown(converted, $"{FormatNumber(box.Value)} {HoleExpressions.UnitName(box.Units)}", null, null)
+            : new TypedShown(ConvertLength(box.Value, box.Units, units), null, null, null);
     }
 
     /// <summary>

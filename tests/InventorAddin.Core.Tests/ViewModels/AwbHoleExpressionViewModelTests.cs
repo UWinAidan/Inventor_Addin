@@ -204,31 +204,45 @@ public sealed class AwbHoleExpressionViewModelTests
     }
 
     [Fact]
-    public void AUnitsSwitch_TurnsTheExpressionIntoANumber()
+    public void AUnitsSwitch_KeepsTheExpression_ReadAgainInTheNewUnits()
     {
         using var culture = new CultureScope("en-US");
-        var vm = BlindClearance(new FakeChecker());
-        vm.DepthText = "d0";
+        var checker = new FakeChecker();
+        var vm = BlindClearance(checker);
+        vm.DepthText = "d0+1";
 
         vm.Units = HoleUnits.Imperial;
 
-        Assert.Equal(0.7874m, vm.Depth);
-        Assert.Equal("0.7874", vm.DepthText);
-        Assert.Null(vm.Spec.DepthExpression);
+        Assert.Equal(("d0+1", HoleUnits.Imperial), checker.Calls.Last());
+        Assert.Equal(1.7874m, vm.Depth);
+        Assert.Equal("d0+1", vm.DepthText);
+        Assert.Equal("d0+1", vm.Spec.DepthExpression);
+        Assert.Equal("= 1.7874 in", vm.DepthValueText);
+
+        vm.Units = HoleUnits.Metric;
+
+        Assert.Equal(21m, vm.Depth);
+        Assert.Equal("d0+1", vm.DepthText);
     }
 
     [Fact]
-    public void ANewSize_PutsBackTheTappedRowsDepths_WithoutTheExpressions()
+    public void ANewSize_KeepsTheTypedExpressions()
     {
+        // PR #29 check 100-7 (task 124): the expressions stay and the hole stays parametric.
         using var culture = new CultureScope("en-US");
         var vm = BlindTapped(new FakeChecker());
         vm.ThreadDepthText = "d0";
+        vm.DrillDepthText = "d0+5 mm";
 
         vm.Size = "M3";
 
-        Assert.Equal(4.5m, vm.ThreadDepth);
-        Assert.Equal("4.5", vm.ThreadDepthText);
-        Assert.Null(vm.Spec.ThreadDepthExpression);
+        Assert.Equal("d0", vm.ThreadDepthText);
+        Assert.Equal("d0+5 mm", vm.DrillDepthText);
+        Assert.Equal(20m, vm.ThreadDepth);
+        Assert.Equal(25m, vm.DrillDepth);
+        Assert.Equal("d0", vm.Spec.ThreadDepthExpression);
+        Assert.Equal("d0+5 mm", vm.Geometry!.DepthExpression);
+        Assert.Equal("d0", vm.Geometry.Thread!.ThreadDepthExpression);
     }
 
     [Fact]

@@ -596,7 +596,7 @@ public sealed class AwbHoleViewModelTests
     }
 
     [Fact]
-    public void ChangingTheSize_PutsTheTappedDepthsBackToTheRowsDefaults()
+    public void ChangingTheSize_KeepsATypedTappedDepth_AndPutsTheOtherToTheRowsDefault()
     {
         var vm = NewHole();
         vm.Type = HoleStandards.TappedType;
@@ -608,7 +608,7 @@ public sealed class AwbHoleViewModelTests
 
         vm.Size = "M5";
 
-        Assert.Equal(7.5m, vm.ThreadDepth);
+        Assert.Equal(5m, vm.ThreadDepth);
         Assert.Equal(10m, vm.DrillDepth);
     }
 
@@ -1204,8 +1204,14 @@ public sealed class AwbHoleViewModelTests
         vm.Termination = HoleTermination.Distance;
         Assert.Equal(7m, vm.Depth);
 
+        // Task 124: the typed 7 mm stays 7 mm, written with its unit in the inch window.
         vm.Units = HoleUnits.Imperial;
-        Assert.Equal(0.2756m, vm.Depth);
+        Assert.Equal(0.27559m, vm.Depth);
+        Assert.Equal("7 mm", vm.DepthText);
+
+        vm.Units = HoleUnits.Metric;
+        Assert.Equal(7m, vm.Depth);
+        Assert.Equal("7", vm.DepthText);
     }
 
     [Fact]

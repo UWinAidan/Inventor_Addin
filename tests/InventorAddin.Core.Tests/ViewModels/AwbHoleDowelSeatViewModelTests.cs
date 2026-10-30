@@ -163,7 +163,7 @@ public sealed class AwbHoleDowelSeatViewModelTests : IDisposable
     }
 
     [Fact]
-    public void TypedValues_AreKept_AcrossASeatOrFitChange_ButASizeChangeTakesThatSizesStartValues()
+    public void TypedValues_AreKept_AcrossSeatFitAndSizeChanges_WhileUntypedBoxesTakeTheSizesStartValues()
     {
         var vm = Dowel(HoleSeat.Counterbore);
         vm.CounterboreDiameterText = "11";
@@ -174,13 +174,14 @@ public sealed class AwbHoleDowelSeatViewModelTests : IDisposable
 
         Assert.Equal(11m, vm.CounterboreDiameter);
 
+        // Task 124: the typed diameter stays; the depth, not typed, follows the size.
         vm.Size = "3 mm";
 
-        Assert.Equal((6m, 3m), (vm.CounterboreDiameter, vm.CounterboreDepth));
+        Assert.Equal((11m, 3m), (vm.CounterboreDiameter, vm.CounterboreDepth));
 
         vm.Size = "5 mm";
 
-        Assert.Equal((9.5m, 5m), (vm.CounterboreDiameter, vm.CounterboreDepth));
+        Assert.Equal((11m, 5m), (vm.CounterboreDiameter, vm.CounterboreDepth));
     }
 
     [Fact]
@@ -201,7 +202,7 @@ public sealed class AwbHoleDowelSeatViewModelTests : IDisposable
     }
 
     [Fact]
-    public void LeavingAwbDowel_DropsTheTypedValues()
+    public void LeavingAwbDowel_HidesTheTypedValues_AndComingBackBringsThemBack()
     {
         var vm = Dowel(HoleSeat.Counterbore);
         vm.CounterboreDiameterText = "11";
@@ -216,7 +217,8 @@ public sealed class AwbHoleDowelSeatViewModelTests : IDisposable
         vm.Standard = HoleStandards.DowelStandard;
         vm.Size = "5 mm";
 
-        Assert.Equal(9.5m, vm.CounterboreDiameter);
+        // Task 124: the typed diameter comes back; the depth, not typed, takes the size's start value.
+        Assert.Equal((11m, 5m), (vm.CounterboreDiameter, vm.CounterboreDepth));
     }
 
     [Fact]
@@ -265,15 +267,17 @@ public sealed class AwbHoleDowelSeatViewModelTests : IDisposable
     }
 
     [Fact]
-    public void ASizeChange_DropsACounterboreDepthExpression()
+    public void ASizeChange_KeepsACounterboreDepthExpression()
     {
         var vm = Dowel(HoleSeat.Counterbore, checker: new FakeChecker());
         vm.CounterboreDepthText = "d0/8";
 
         vm.Size = "3 mm";
 
-        Assert.Equal("3", vm.CounterboreDepthText);
-        Assert.Null(vm.Spec.CboreDepthExpression);
+        Assert.Equal("d0/8", vm.CounterboreDepthText);
+        Assert.Equal(2.5m, vm.CounterboreDepth);
+        Assert.Equal("d0/8", vm.Spec.CboreDepthExpression);
+        Assert.Equal(6m, vm.CounterboreDiameter);
     }
 
     [Fact]
