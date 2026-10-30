@@ -6,21 +6,21 @@ Last updated: 2026-10-29
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-10-30 11:11. Branch `claude/m4-hole-generator`, latest commit `4edbf72`. PR #29 open against `main`. Local commits **not pushed**: `3bf3af4` (124), `ff8949c` (125), `9db5f74` (122), `96b8680` (handoff), `38e866e` (126), `4edbf72` (handoff), and task 111 (the commit after `4edbf72`). Spike branches (local only): `spike/107-client-graphics` (`b56f0db`), `spike/108-hole-types` (`f0a2f33`).
-- Goal: run the M4 part 1 round in `docs/PLAN.md` order, one implementer and one reviewer per task, one commit per task. Aidan asked (2026-10-28) not to stop for Inventor checks: collect each task's checklist for one combined check at the end.
-- Done 2026-10-30: tasks 124, 125, 122, 126, 111, each reviewed PASS and committed with tracking updates (`DECISIONS.md` Defaults, `TODO.md` follow-ups, spec 09 text and new open questions 23 to 26). Each was built on Windows with 0 errors. The last Core test count observed was 3888 passed, after 126.
-- Task 111 (Spotface and Taper Tapped workbook tabs) finished after three stalled implementer runs, reviewed PASS and committed. Core tests 3903 passed. Aidan stopped the session after 111 (5-hour limit); nothing is in progress.
+- Updated: 2026-10-30 (second session). Branch `claude/m4-hole-generator`, PR #29 open against `main`. Aidan pushed everything up to `c6bfd8f` (task 111). Local commits **not pushed**: `b5a8f8d` (questions 23 to 26, task 137 planned), `da14106` (112), `ce38884` (137), `53223e2` (113), `892ce36` (119), and this handoff. Spike branches (local only): `spike/107-client-graphics` (`b56f0db`), `spike/108-hole-types` (`f0a2f33`).
+- Goal: run the M4 part 1 round in `docs/PLAN.md` order, one implementer and one reviewer per task, one commit per task. Aidan asked (2026-10-28, again 2026-10-30) not to stop for Inventor checks: collect each task's checklist for one combined check at the end.
+- Done this session: Aidan answered spec 09 questions 23 to 26 (logged as Aidan; 26 overturned the Default and became task 137). Aidan opened the starter workbook in Excel: no repair prompt (111 step 1 passed). Tasks 112, 137, 113, 119 each reviewed PASS, built on Windows with 0 errors, committed with Defaults in `DECISIONS.md` and follow-ups in `TODO.md`. Core tests 4113 passed after 119. Nothing is in progress.
+- Before task 114/115: the window shows Simple, Taper Tapped, Spotface and Custom (dowel tolerance) but they are not wired into Inventor or bound in the window yet; the follow-ups listing what 114 and 115 must bind are in `TODO.md` (tasks 112, 113, 137 entries).
 - Next steps:
-  1. Push the local commits to PR #29 (Aidan has not yet been asked; ask first).
-  2. Then the PLAN order: 112, 113, 119, 131, 132, 127, 130, 110, 117, 114, 115, 116, 136, 118.
-  3. At the end, update `STATUS.md` and `TODO.md`, push, and give Aidan one combined checklist from the task files (135, 120, 121, 128, 129, 123, 124, 125, 122, 126, and on), plus the older 105, 109, 133, 134.
-- New questions for Aidan this session (spec 09, listed in `TODO.md`): 23 (should the remembered blind depth keep its expression?), 24 (should hand colours be kept on a dowel that becomes another kind?), 25 (should an edited seat equal to its row follow a size change?), 26 (should a clearance seat be allowed with no row of its size?).
+  1. The PLAN order: 131, 132, 127, 130, 110, 117, 114, 115, 116, 136, 118.
+  2. At the end, update `STATUS.md` and `TODO.md`, push (ask Aidan first), and give Aidan one combined checklist from the task files (135, 120, 121, 128, 129, 123, 124, 125, 122, 126, 111 from step 2, 112, 137, 113, 119, and on), plus the older 105, 109, 133, 134.
 - Gotchas:
   - Check `tasklist //FI "IMAGENAME eq Inventor.exe"` before building. If Inventor is open, pass `-p:DeployToInventor=false`.
   - In shell scripts that edit tracking files, chain the commit with `&&` after the edit script, or a failed edit still commits. Python `str.replace` edits with an `assert old in s` guard worked well.
-  - An implementer that stalls leaves the tree as it was or partly edited. Check `git status` before starting it again, and tell the new implementer what is already there.
+  - An implementer cut off (stall or usage limit) leaves the tree partly edited. Check `git status`; resuming the same agent with SendMessage worked well (task 113).
+  - Hole icons are XAML geometry in `src/InventorAddin/UI/Theme/Styles.xaml`, not PNGs; `tools/icons/render.py` is ribbon icons only.
+  - Stored hole data is version 4 (task 113).
   - Spike 107's preview code is read with `git show spike/108-hole-types:src/InventorAddin/Spike107.cs` (task 110).
-- Read first: `docs/WORKFLOW.md` (run mode), `docs/PLAN.md` ("Round after PR #29's first look"), `TODO.md` Next up, `docs/tasks/112-core-simple-taper-spotface.md`.
+- Read first: `docs/WORKFLOW.md` (run mode), `docs/PLAN.md` ("Round after PR #29's first look"), `TODO.md` Next up, `docs/tasks/131-drill-point-60.md`.
 
 ## Big items
 
