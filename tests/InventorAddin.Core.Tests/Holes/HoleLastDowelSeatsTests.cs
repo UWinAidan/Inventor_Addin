@@ -206,4 +206,56 @@ public sealed class HoleLastDowelSeatsTests
         Assert.Equal(new HoleDowelSeat(8m, null, null, null), new HoleDowelSeat(8m, null, null, null).Or(null));
         Assert.False(seat.IsEmpty);
     }
+
+    // ---- Tapped seats (task 126) ----
+
+    [Fact]
+    public void Remember_ATappedSeat_KeepsItForItsUnitsAndThread_ApartFromTheDowels()
+    {
+        var kept = Tapped() with { Seat = HoleSeat.Countersink, CsinkDiameter = 7m, CsinkAngleDeg = 90m };
+
+        var updated = HoleLastDowelSeats.Remember(new AddinSettings(), kept)!;
+
+        Assert.Equal(new HoleDowelSeat(null, null, 7m, 90m), updated.LastTappedSeatsMm["M5"]);
+        Assert.Empty(updated.LastDowelSeatsMm);
+        var seats = HoleLastDowelSeats.From(updated);
+        Assert.Equal(new HoleDowelSeat(null, null, 7m, 90m), seats.ForTapped(HoleUnits.Metric, " m5 "));
+        Assert.Equal(HoleDowelSeat.Empty, seats.For(HoleUnits.Metric, "M5"));
+        Assert.Equal(HoleDowelSeat.Empty, seats.ForTapped(HoleUnits.Imperial, "M5"));
+    }
+
+    [Fact]
+    public void Remember_AnImperialTappedCounterbore_KeepsItsExpression()
+    {
+        var kept = Tapped("#7-36 UNF") with
+        {
+            Units = HoleUnits.Imperial,
+            Seat = HoleSeat.Counterbore,
+            CboreDiameter = 0.3m,
+            CboreDepth = 0.1m,
+            CboreDepthExpression = "d0 / 4",
+        };
+
+        var updated = HoleLastDowelSeats.Remember(new AddinSettings(), kept)!;
+
+        var seat = updated.LastTappedSeatsIn["#7-36 UNF"];
+        Assert.Equal((0.3m, 0.1m, "d0 / 4"), (seat.CboreDiameter, seat.CboreDepth, seat.CboreDepthExpression));
+        Assert.Empty(updated.LastTappedSeatsMm);
+    }
+
+    [Fact]
+    public void RememberedText_SaysATappedHole()
+    {
+        var kept = Tapped() with { Seat = HoleSeat.Countersink, CsinkDiameter = 7m, CsinkAngleDeg = 90m };
+
+        Assert.Equal("M5 tapped hole (Metric): countersink 7 mm at 90 deg", HoleLastDowelSeats.RememberedText(kept));
+    }
+
+    [Fact]
+    public void Remember_NothingForAClearanceSeat()
+    {
+        var kept = Clearance() with { Seat = HoleSeat.Counterbore, Fastener = "TCAP", CboreDiameter = 9m, CboreDepth = 5m };
+
+        Assert.Null(HoleLastDowelSeats.Remember(new AddinSettings(), kept));
+    }
 }

@@ -28,8 +28,8 @@ public sealed record HoleReapplyOffer(IReadOnlyList<string> Differences)
 /// diameter, which its thread sets and the add-in does not write;</item>
 /// <item>the seat (none, counterbore, countersink) and how the hole ends;</item>
 /// <item>a blind hole's depths: the depth, or a tapped hole's drill and thread depths;</item>
-/// <item>a dowel's own seat sizes (task 106): the counterbore diameter and depth, or the countersink diameter and
-/// angle.</item>
+/// <item>the seat's own sizes, on every kind (task 106 for a dowel, task 126 for clearance and tapped holes): the
+/// counterbore diameter and depth, or the countersink diameter and angle.</item>
 /// </list>
 /// <para>
 /// A depth stored as an Inventor expression (task 100) is compared by what the expression comes to today, read by the
@@ -111,7 +111,9 @@ public static class HoleReapplyRules
             }
         }
 
-        if (sameSeat && spec.Kind == HoleKind.Dowel)
+        // The seat's own dimensions, on every kind (task 106 for a dowel, task 126 for the others). Data stored before a
+        // kind's seat had them holds none, and is not compared.
+        if (sameSeat)
         {
             if (spec.Seat == HoleSeat.Counterbore)
             {

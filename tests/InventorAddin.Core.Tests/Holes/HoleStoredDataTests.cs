@@ -87,7 +87,7 @@ public sealed class HoleStoredDataTests
         var attributes = Stored(Dowel() with { Termination = HoleTermination.Distance, Depth = 14m }).ToAttributes();
 
         Assert.Equal("AWB_Hole", HoleStoredData.AttributeSetName);
-        Assert.Equal(new HoleAttribute("Version", 1), attributes[0]);
+        Assert.Equal(new HoleAttribute("Version", 2), attributes[0]);
         Assert.All(attributes, a => Assert.True(a.Value is string or int or double, a.Name));
         Assert.Equal(attributes.Count, attributes.Select(a => a.Name).Distinct().Count());
 
@@ -121,7 +121,7 @@ public sealed class HoleStoredDataTests
     }
 
     [Theory]
-    [InlineData(2)]
+    [InlineData(3)]
     [InlineData(0)]
     public void UnknownVersion_CannotBeRead(int version)
     {
@@ -220,10 +220,12 @@ public sealed class HoleStoredDataTests
 
     public static TheoryData<HoleSpec, string> UnresolvedSpecs() => new()
     {
-        { Clearance() with { Seat = HoleSeat.Counterbore }, HoleStoredData.FastenerName },
-        { Clearance() with { Seat = HoleSeat.Countersink, Fastener = " " }, HoleStoredData.FastenerName },
+        { Clearance() with { Seat = HoleSeat.Counterbore }, HoleStoredData.CboreDiameterName },
+        { Clearance() with { Seat = HoleSeat.Counterbore, CboreDiameter = 9.5m, CboreDepth = 5.2m }, HoleStoredData.FastenerName },
+        { Clearance() with { Seat = HoleSeat.Countersink, Fastener = " ", CsinkDiameter = 10.4m, CsinkAngleDeg = 90m }, HoleStoredData.FastenerName },
         { Dowel(), HoleStoredData.ToleranceName },
-        { Tapped() with { Seat = HoleSeat.Counterbore }, HoleStoredData.FastenerName },
+        { Tapped() with { Seat = HoleSeat.Counterbore }, HoleStoredData.CboreDiameterName },
+        { Tapped() with { Seat = HoleSeat.Countersink, CsinkDiameter = 7m }, HoleStoredData.CsinkAngleName },
         { CsunkDowel() with { CsinkDiameter = null, Tolerance = "Test bore" }, HoleStoredData.CsinkDiameterName },
         { CsunkDowel() with { CsinkAngleDeg = null, Tolerance = "Test bore" }, HoleStoredData.CsinkAngleName },
         { CboredDowel() with { CboreDiameter = null, Tolerance = "Test bore" }, HoleStoredData.CboreDiameterName },
@@ -289,17 +291,109 @@ public sealed class HoleStoredDataTests
     }
 
     [Fact]
-    public void SeatSizes_OfAnotherKindOrSeat_AreNotRead()
+    public void SeatSizes_OfAnotherSeat_AreNotRead()
     {
         var attributes = Stored(Tapped() with { Seat = HoleSeat.Counterbore }).ToAttributes()
-            .Append(new HoleAttribute(HoleStoredData.CboreDiameterName, 9.0))
-            .Append(new HoleAttribute(HoleStoredData.CsinkDiameterName, 9.0));
+            .Append(new HoleAttribute(HoleStoredData.CsinkDiameterName, 9.0))
+            .Append(new HoleAttribute(HoleStoredData.CsinkAngleName, 90.0));
 
         var read = HoleStoredData.Read(attributes);
 
         Assert.True(read.Succeeded, read.Message);
-        Assert.Null(read.Data!.Spec.CboreDiameter);
+        Assert.Equal(9.5m, read.Data!.Spec.CboreDiameter);
         Assert.Null(read.Data.Spec.CsinkDiameter);
+        Assert.Null(read.Data.Spec.CsinkAngleDeg);
+    }
+
+    [Theory]
+    [InlineData(HoleKind.Clearance, "T5", HoleSeat.Counterbore)]
+    [InlineData(HoleKind.Clearance, "T5", HoleSeat.Countersink)]
+    [InlineData(HoleKind.Tapped, "M5", HoleSeat.Counterbore)]
+    public void EverySeatedHole_StoresItsSeatDimensions(HoleKind kind, string size, HoleSeat seat)
+    {
+        // Task 126: the seat is described by its dimensions on every kind, typed or from the row.
+        var spec = (kind == HoleKind.Tapped ? Tapped(size) : Clearance(size)) with { Seat = seat };
+        var byName = Stored(spec).ToAttributes().ToDictionary(a => a.Name, a => a.Value);
+
+        if (seat == HoleSeat.Counterbore)
+        {
+            Assert.Equal(9.5, byName[HoleStoredData.CboreDiameterName]);
+            Assert.Equal(5.2, byName[HoleStoredData.CboreDepthName]);
+        }
+        else
+        {
+            Assert.Equal(10.4, byName[HoleStoredData.CsinkDiameterName]);
+            Assert.Equal(90.0, byName[HoleStoredData.CsinkAngleName]);
+        }
+
+        Assert.True(byName.ContainsKey(HoleStoredData.FastenerName));
+    }
+
+    [Fact]
+    public void ATypedClearanceCounterbore_RoundTrips_WithItsExpression()
+    {
+        var stored = Stored(Clearance() with
+        {
+            Seat = HoleSeat.Counterbore,
+            CboreDiameter = 11m,
+            CboreDepth = 4m,
+            CboreDepthExpression = "d0 / 2",
+        });
+
+        var read = HoleStoredData.Read(stored.ToAttributes());
+
+        Assert.True(read.Succeeded, read.Message);
+        Assert.Equal(11m, read.Data!.Spec.CboreDiameter);
+        Assert.Equal(4m, read.Data.Spec.CboreDepth);
+        Assert.Equal("d0 / 2", read.Data.Spec.CboreDepthExpression);
+        Assert.Equal("TCAP", read.Data.Spec.Fastener);
+    }
+
+    [Fact]
+    public void ATappedSeatWithNoRowOfItsSize_StoresNoFastener_AndReadsBack()
+    {
+        var spec = Tapped() with { Seat = HoleSeat.Countersink, Fastener = null, CsinkDiameter = 7m, CsinkAngleDeg = 90m };
+        var stored = new HoleStoredData(
+            spec with { DrillDepth = 10m, ThreadDepth = 7.5m, DrillPoint = "90 deg" },
+            new HoleAppliedState(0.42, null, null, null, false));
+
+        var attributes = stored.ToAttributes();
+        var read = HoleStoredData.Read(attributes);
+
+        Assert.DoesNotContain(attributes, a => a.Name == HoleStoredData.FastenerName);
+        Assert.True(read.Succeeded, read.Message);
+        Assert.Null(read.Data!.Spec.Fastener);
+        Assert.Equal(7m, read.Data.Spec.CsinkDiameter);
+    }
+
+    [Fact]
+    public void Version1_ASeatedClearanceHole_ReadsWithItsRowAndNoDimensions_AndResolvesToTheRow()
+    {
+        // Data written before task 126: version 1, a fastener, and no seat dimensions.
+        var attributes = Stored(Clearance() with { Seat = HoleSeat.Counterbore, Fastener = "TLOW" }).ToAttributes()
+            .Where(a => a.Name is not (HoleStoredData.CboreDiameterName or HoleStoredData.CboreDepthName))
+            .Select(a => a.Name == HoleStoredData.VersionName ? new HoleAttribute(a.Name, 1) : a);
+
+        var read = HoleStoredData.Read(attributes);
+
+        Assert.True(read.Succeeded, read.Message);
+        Assert.Equal("TLOW", read.Data!.Spec.Fastener);
+        Assert.Null(read.Data.Spec.CboreDiameter);
+        var rebuilt = HoleRules.Build(read.Data.Spec, Workbook, 1);
+        Assert.Equal(8.5m, rebuilt.Resolved.CboreDiameter);
+        Assert.Equal(3.1m, rebuilt.Resolved.CboreDepth);
+    }
+
+    [Fact]
+    public void Version1_ASeatedTappedHoleWithoutFastener_CannotBeRead_ButVersion2_Can()
+    {
+        var attributes = Stored(Tapped() with { Seat = HoleSeat.Counterbore }).ToAttributes()
+            .Where(a => a.Name != HoleStoredData.FastenerName)
+            .ToList();
+
+        Assert.True(HoleStoredData.Read(attributes).Succeeded);
+        var version1 = attributes.Select(a => a.Name == HoleStoredData.VersionName ? new HoleAttribute(a.Name, 1) : a);
+        Assert.False(HoleStoredData.Read(version1).Succeeded);
     }
 
     [Fact]

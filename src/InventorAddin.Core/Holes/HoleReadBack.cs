@@ -127,14 +127,28 @@ public static class HoleReadBack
     /// <summary>
     /// A seated dowel's spec with every seat size it does not store taken from the hole (task 106): a dowel stored before
     /// its seat had its own sizes took them from a same-size row, and opens on the sizes the hole has. The counterbore
-    /// depth's expression comes with its depth. Any other spec is returned as it is.
+    /// depth's expression comes with its depth. Any other spec is returned as it is: a clearance or tapped hole stored
+    /// before task 126 names its seat's row, and resolves to the row's dimensions (<see cref="HoleRules"/>).
     /// </summary>
     public static HoleSpec WithDowelSeatFromHole(HoleSpec spec, InventorHoleFacts facts)
     {
         ArgumentNullException.ThrowIfNull(spec);
         ArgumentNullException.ThrowIfNull(facts);
 
-        if (spec.Kind != HoleKind.Dowel || spec.Seat == HoleSeat.None)
+        return spec.Kind == HoleKind.Dowel ? WithSeatFromHole(spec, facts) : spec;
+    }
+
+    /// <summary>
+    /// A seated spec with every seat size it does not hold taken from the hole, whatever its kind (task 126): a hole
+    /// made by Inventor's command opens on the seat it has, not on a row's. The counterbore depth's expression comes with
+    /// its depth. A spec with no seat is returned as it is.
+    /// </summary>
+    public static HoleSpec WithSeatFromHole(HoleSpec spec, InventorHoleFacts facts)
+    {
+        ArgumentNullException.ThrowIfNull(spec);
+        ArgumentNullException.ThrowIfNull(facts);
+
+        if (spec.Seat == HoleSeat.None)
         {
             return spec;
         }
@@ -210,7 +224,8 @@ public static class HoleReadBack
                     _ => Countersink(termination),
                 };
 
-            spec = spec with { Flip = facts.Flip };
+            // The seat's own dimensions, on every kind (task 126): the window opens on the seat the hole has.
+            spec = WithSeatFromHole(spec, facts) with { Flip = facts.Flip };
             if (spec.IsBlind)
             {
                 spec = spec with { DrillPoint = DrillPoint() };
@@ -371,7 +386,7 @@ public static class HoleReadBack
                 notes.Add(row is null
                     ? $"No Counterbore row has a {Mm(facts.CounterboreDiameterCm)} counterbore; pick a size."
                     : $"No Counterbore row has a {Mm(facts.CounterboreDiameterCm)} counterbore; the closest, " +
-                      $"{row.Size} {row.Screw}, is picked.");
+                      $"{row.Size} {row.Screw}, is picked, and the hole's own counterbore is kept.");
             }
 
             return Blank(row?.Units ?? defaultUnits, HoleKind.Clearance, HoleSeat.Counterbore, termination) with
@@ -399,7 +414,7 @@ public static class HoleReadBack
                 notes.Add(row is null
                     ? $"No Countersink row has a {Mm(facts.CountersinkDiameterCm)} countersink; pick a size."
                     : $"No Countersink row has a {Mm(facts.CountersinkDiameterCm)} countersink; the closest, " +
-                      $"{row.Size} {row.Screw}, is picked.");
+                      $"{row.Size} {row.Screw}, is picked, and the hole's own countersink is kept.");
             }
 
             return Blank(row?.Units ?? defaultUnits, HoleKind.Clearance, HoleSeat.Countersink, termination) with
@@ -412,7 +427,8 @@ public static class HoleReadBack
         /// <summary>
         /// The fastener of a tapped hole's seat (task 099): the Screw of the Counterbore or Countersink row of
         /// the same size whose seat matches the hole's. When none matches, a note says so and the first row of the same
-        /// size is picked; with no row of the same size, null (the window says why the seat cannot be kept).
+        /// size is picked as Fastener type; the hole keeps its own seat either way (task 126). With no row of the same
+        /// size, null: the seat needs none.
         /// </summary>
         private string? SameSizeFastener(HoleSeat seat, HoleUnits units, string? size, decimal? nominal)
         {
@@ -441,7 +457,9 @@ public static class HoleReadBack
             if (match is null && first is not null)
             {
                 var tab = seat == HoleSeat.Counterbore ? HoleWorkbookReader.CounterboreTab : HoleWorkbookReader.CountersinkTab;
-                notes.Add($"No {tab} row the size of {size} matches the hole's {tab.ToLowerInvariant()}; the first, {first}, is picked.");
+                notes.Add(
+                    $"No {tab} row the size of {size} matches the hole's {tab.ToLowerInvariant()}; the first, {first}, " +
+                    $"is picked as Fastener type, and the hole's own {tab.ToLowerInvariant()} is kept.");
             }
 
             return match ?? first;

@@ -285,11 +285,11 @@ namespace InventorAddin.Holes
                     {
                         SetParameter(hole.CBoreDiameter, Required(g.CounterboreDiameterCm), HoleStateComparison.LengthToleranceCm);
                         // A depth that was an expression and is now a plain number is written even when its value
-                        // is the same, so the expression goes (task 106); a new expression is written afterwards. Dowels
-                        // only: a clearance or tapped counterbore keeps an expression set in Inventor, as before.
+                        // is the same, so the expression goes (task 106); a new expression is written afterwards. On
+                        // every kind since the counterbore boxes show on every type (task 126).
                         SetParameter(
                             hole.CBoreDepth, Required(g.CounterboreDepthCm), HoleStateComparison.LengthToleranceCm,
-                            force: g.Kind == HoleKind.Dowel && g.CounterboreDepthExpression == null
+                            force: g.CounterboreDepthExpression == null
                                 && ComSafe.Get(() => hole.CBoreDepth.DrivenBy.Count > 0));
                     }
                     else
@@ -361,8 +361,9 @@ namespace InventorAddin.Holes
         /// number with no unit in the expression reads as the window read it (spike 100). A depth typed as a plain
         /// number is left as the value in centimetres written above: writing a value replaces an earlier expression
         /// (spike 100), and it keeps the hole's parameters in the units they were in. Inventor refuses an expression
-        /// that refers to the hole's own parameters; that throws, and the caller refuses the change. A dowel's
-        /// counterbore depth typed as an expression (task 106) is written the same way, whatever the termination.
+        /// that refers to the hole's own parameters; that throws, and the caller refuses the change. A counterbore
+        /// depth typed as an expression (task 106 for a dowel, task 126 for every kind) is written the same way,
+        /// whatever the termination.
         /// </summary>
         private static void WriteExpressions(HoleFeature hole, HoleGeometry g)
         {

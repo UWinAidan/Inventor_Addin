@@ -10,7 +10,8 @@ namespace InventorAddin.Core.Settings;
 /// <remarks>
 /// A record so that two instances with the same values compare equal. <see cref="Equals(AddinSettings?)"/> is
 /// written out because <see cref="OtherCadFolders"/> and <see cref="PreferredMaterials"/> are lists, and
-/// <see cref="LastDowelSeatsMm"/> and <see cref="LastDowelSeatsIn"/> maps, which a record would compare by reference: a
+/// <see cref="LastDowelSeatsMm"/>, <see cref="LastDowelSeatsIn"/>, <see cref="LastTappedSeatsMm"/> and
+/// <see cref="LastTappedSeatsIn"/> maps, which a record would compare by reference: a
 /// new setting must be added there and to <see cref="GetHashCode"/>.
 /// </remarks>
 public sealed record AddinSettings
@@ -198,6 +199,29 @@ public sealed record AddinSettings
     private IReadOnlyDictionary<string, HoleDowelSeat> _lastDowelSeatsIn = DowelSeatMap(null);
 
     /// <summary>
+    /// The seat of the last tapped hole kept with OK in Metric, by thread, in mm (task 126): written as
+    /// <see cref="LastDowelSeatsMm"/> is, keyed by the Tapped tab's Thread (<c>"M6"</c>). A new seat on a tapped hole of
+    /// that thread with no Counterbore or Countersink row of its size starts at it. Not shown in the Settings window.
+    /// Kept as <see cref="LastDowelSeatsMm"/> is; changed through <see cref="HoleLastDowelSeats.Remember"/>.
+    /// </summary>
+    public IReadOnlyDictionary<string, HoleDowelSeat> LastTappedSeatsMm
+    {
+        get => _lastTappedSeatsMm;
+        set => _lastTappedSeatsMm = DowelSeatMap(value);
+    }
+
+    private IReadOnlyDictionary<string, HoleDowelSeat> _lastTappedSeatsMm = DowelSeatMap(null);
+
+    /// <summary>As <see cref="LastTappedSeatsMm"/>, in inches, for Imperial.</summary>
+    public IReadOnlyDictionary<string, HoleDowelSeat> LastTappedSeatsIn
+    {
+        get => _lastTappedSeatsIn;
+        set => _lastTappedSeatsIn = DowelSeatMap(value);
+    }
+
+    private IReadOnlyDictionary<string, HoleDowelSeat> _lastTappedSeatsIn = DowelSeatMap(null);
+
+    /// <summary>
     /// Whether the AWB Hole window's diagram is open (task 104; mockup choice 12): true, the default, shows it; false
     /// shows only its header line with a summary. Remembered across windows and restarts. Not shown in the Settings
     /// window. Changed through <see cref="HoleDiagramState.Remember"/>.
@@ -262,6 +286,8 @@ public sealed record AddinSettings
         && LastBlindDepthIn == other.LastBlindDepthIn
         && SameDowelSeats(LastDowelSeatsMm, other.LastDowelSeatsMm)
         && SameDowelSeats(LastDowelSeatsIn, other.LastDowelSeatsIn)
+        && SameDowelSeats(LastTappedSeatsMm, other.LastTappedSeatsMm)
+        && SameDowelSeats(LastTappedSeatsIn, other.LastTappedSeatsIn)
         && HoleDiagramExpanded == other.HoleDiagramExpanded
         && PreferredMaterials.SequenceEqual(other.PreferredMaterials, StringComparer.Ordinal);
 
@@ -285,6 +311,8 @@ public sealed record AddinSettings
         hash.Add(LastBlindDepthIn);
         hash.Add(LastDowelSeatsMm.Count);
         hash.Add(LastDowelSeatsIn.Count);
+        hash.Add(LastTappedSeatsMm.Count);
+        hash.Add(LastTappedSeatsIn.Count);
         hash.Add(HoleDiagramExpanded);
         foreach (var material in PreferredMaterials)
             hash.Add(material, StringComparer.Ordinal);

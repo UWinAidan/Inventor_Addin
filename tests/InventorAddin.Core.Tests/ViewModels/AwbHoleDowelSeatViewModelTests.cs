@@ -87,25 +87,28 @@ public sealed class AwbHoleDowelSeatViewModelTests : IDisposable
     }
 
     [Fact]
-    public void ClearanceAndTappedHoles_KeepFastenerType_AndHaveNoSeatBoxes()
+    public void ClearanceAndTappedHoles_KeepFastenerType_AboveTheirSeatBoxes()
     {
+        // Task 126: the seat boxes show on every type; Fastener type picks their starting values.
         var vm = new AwbHoleViewModel(Workbook, PartName) { Size = "T5" };
         vm.Seat = HoleSeat.Counterbore;
 
         Assert.True(vm.ShowsFastener);
-        Assert.False(vm.ShowsCounterboreSizes);
-        Assert.Null(vm.CounterboreDiameter);
+        Assert.True(vm.ShowsCounterboreSizes);
+        Assert.Equal((9.5m, 5m), (vm.CounterboreDiameter, vm.CounterboreDepth));
 
-        vm.CounterboreDiameter = 12m;   // not a dowel: ignored
-        Assert.Null(vm.CounterboreDiameter);
+        vm.CounterboreDiameter = 12m;
+        Assert.Equal(12m, vm.CounterboreDiameter);
+        Assert.Equal(12m, vm.Spec.CboreDiameter);
 
         vm.Type = HoleStandards.TappedType;
         vm.Size = "M5";
         vm.Seat = HoleSeat.Countersink;
 
         Assert.True(vm.ShowsFastener);
-        Assert.False(vm.ShowsCountersinkSizes);
+        Assert.True(vm.ShowsCountersinkSizes);
         Assert.Equal("TFLAT", vm.Fastener);
+        Assert.Equal((10.4m, 90m), (vm.CountersinkDiameter, vm.CountersinkAngle));
     }
 
     [Fact]
@@ -301,17 +304,18 @@ public sealed class AwbHoleDowelSeatViewModelTests : IDisposable
     }
 
     [Fact]
-    public void LeavingAwbDowel_HidesTheTypedValues_AndComingBackBringsThemBack()
+    public void LeavingAwbDowel_KeepsTheTypedValues_AndComingBackKeepsThem()
     {
         var vm = Dowel(HoleSeat.Counterbore);
         vm.CounterboreDiameterText = "11";
 
         vm.Standard = HoleStandards.ClearanceStandard;
 
-        Assert.Null(vm.CounterboreDiameter);
+        // Task 126: the clearance hole has seat boxes too, and the typed diameter is kept on it (task 124).
+        Assert.Equal(11m, vm.CounterboreDiameter);
         Assert.Equal(HoleSeat.Counterbore, vm.Seat);
         Assert.True(vm.ShowsFastener);
-        Assert.Null(vm.Spec.CboreDiameter);
+        Assert.Equal(11m, vm.Spec.CboreDiameter);
 
         vm.Standard = HoleStandards.DowelStandard;
         vm.Size = "5 mm";
@@ -395,7 +399,7 @@ public sealed class AwbHoleDowelSeatViewModelTests : IDisposable
 
         vm.Seat = HoleSeat.Countersink;
         vm.CountersinkAngleText = "180";
-        Assert.Contains("between 0 and 180", vm.CountersinkAngleProblem);
+        Assert.Contains("between 1 and 179", vm.CountersinkAngleProblem);
         Assert.False(vm.CanOk);
 
         vm.CountersinkAngleText = "";

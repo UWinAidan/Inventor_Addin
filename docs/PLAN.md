@@ -373,7 +373,7 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 - [x] 123 The seat is kept when type, standard or size changes
 - [x] 124 Typed values and expressions are kept when size, type, standard or units change
 - [x] 125 A dowel seat starts at the last values used for its size
-- [ ] 126 Editable seat boxes on clearance and tapped holes
+- [x] 126 Editable seat boxes on clearance and tapped holes
 - [ ] 127 Centre-drill spot: a small countersink on any hole, and a seat depth of 0
 - [x] 128 AWB Hole replaces Inventor's Hole on the Sheet Metal tab
 - [x] 129 AWB Hole as a split button with Inventor Hole and the default toggle

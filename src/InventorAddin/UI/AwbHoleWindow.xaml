@@ -18,7 +18,8 @@
 
         Body, top to bottom: the note for a hole made by Inventor's Hole command; Units, a two-part toggle; section Hole:
         Type and Seat as icon buttons with the chosen name after them, the diagram (collapsible, remembered by the
-        add-in), Standard, Size, Fastener type (seated clearance and tapped holes) or a dowel's seat boxes, Fit with its
+        add-in), Standard, Size, Fastener type (seated clearance and tapped holes with a row of their size), the seat
+        boxes (every seated hole, task 126), Fit with its
         colour on the same row, Tolerance; section Depth and direction: Termination as icon buttons, Thread depth and
         Drill depth (blind tapped) or Depth, Drill point as icon buttons, Flip; section Centres. A field that does not
         apply is not shown. Each field's problem from HoleRules is shown under it in the error style. The body scrolls
@@ -183,9 +184,10 @@
                         </StackPanel>
                     </controls:FieldRow>
                     <!--
-                        A dowel's seat follows no fastener (task 106; mockup choices 14 and 15): its sizes are typed here
-                        instead of Fastener type. The counterbore depth takes Inventor expressions like Depth; the
-                        diameters and the angle take numbers. The labels follow the Dowel tab's column names.
+                        The seat boxes, for every seated hole (task 106 for a dowel, task 126 for every type; mockup
+                        choices 14 and 15). A clearance or tapped hole starts them from the row Fastener type above picks;
+                        a dowel's seat follows no fastener. The counterbore depth takes Inventor expressions like Depth;
+                        the diameters and the angle take numbers. The labels follow the Dowel tab's column names.
                     -->
                     <controls:FieldRow Label="Cbore di_a"
                                        Target="{Binding ElementName=CounterboreDiameterBox}"

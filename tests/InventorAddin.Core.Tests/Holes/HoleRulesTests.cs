@@ -179,7 +179,7 @@ public sealed class HoleRulesTests
     public void HoleNotSmallerThanCounterbore_IsAProblem()
     {
         // TBIG at Loose is 14 mm; its counterbore is 13 mm.
-        var problem = OneProblem(Clearance("TBIG") with { Seat = HoleSeat.Counterbore }, HoleField.Size);
+        var problem = OneProblem(Clearance("TBIG") with { Seat = HoleSeat.Counterbore }, HoleField.CounterboreDiameter);
 
         Assert.Contains("counterbore", problem.Message);
     }
@@ -217,7 +217,7 @@ public sealed class HoleRulesTests
 
         var result = HoleRules.Build(Clearance() with { Seat = HoleSeat.Countersink }, workbook, 1);
 
-        Assert.Equal(HoleField.Size, Assert.Single(result.Problems).Field);
+        Assert.Equal(HoleField.CountersinkDiameter, Assert.Single(result.Problems).Field);
         Assert.Contains("countersink", result.Problems[0].Message);
     }
 
@@ -441,25 +441,149 @@ public sealed class HoleRulesTests
         Assert.Equal("7-36 UNF", geometry.Thread!.Designation);
     }
 
-    [Theory]
-    [InlineData(HoleKind.Tapped, "M7")]
-    public void ASizeWithNoSeatRowOfTheSameSize_SaysWhyTheSeatCannotBeKept(HoleKind kind, string size)
+    private static readonly HoleWorkbook WithM7 = Workbook with
     {
-        var workbook = Workbook with
-        {
-            Tapped = [.. Workbook.Tapped, new TappedRow(9, HoleUnits.Metric, "M7", 7m, 1m, 6m, "6H", 10.5m, 14m, false)],
-        };
-        var spec = (kind == HoleKind.Tapped ? Tapped(size) : Dowel(size)) with { Seat = HoleSeat.Countersink };
+        Tapped = [.. Workbook.Tapped, new TappedRow(9, HoleUnits.Metric, "M7", 7m, 1m, 6m, "6H", 10.5m, 14m, false)],
+    };
 
-        var result = HoleRules.Build(spec, workbook, 1);
+    [Fact]
+    public void Tapped_ASeatWithNoRowOfTheSameSize_AsksForItsValuesUnderTheBoxes()
+    {
+        // Task 126: a seat needs no row of its size; its boxes are asked for instead.
+        var result = HoleRules.Build(Tapped("M7") with { Seat = HoleSeat.Countersink }, WithM7, 1);
 
         Assert.False(result.Succeeded);
-        var problem = Assert.Single(result.Problems);
-        Assert.Equal(HoleField.Seat, problem.Field);
-        Assert.Contains(size, problem.Message);
-        Assert.Contains("Countersink", problem.Message);
-        Assert.Contains("7 mm", problem.Message);
-        Assert.Contains("Set Seat to None", problem.Message);
+        Assert.Equal(
+            [HoleField.CountersinkDiameter, HoleField.CountersinkAngle],
+            result.Problems.Select(p => p.Field).ToArray());
+        Assert.Equal("Enter a countersink diameter.", result.Problems[0].Message);
+    }
+
+    [Fact]
+    public void Tapped_ASeatWithNoRowOfTheSameSize_BuildsFromItsTypedValues_WithNoFastener()
+    {
+        var result = HoleRules.Build(
+            Tapped("M7") with { Seat = HoleSeat.Countersink, Fastener = "TFLAT", CsinkDiameter = 8m, CsinkAngleDeg = 90m },
+            WithM7,
+            1);
+
+        Assert.True(result.Succeeded, string.Join(" | ", result.Problems));
+        Assert.Equal(0.8, result.Geometry!.CountersinkDiameterCm!.Value, 12);
+        Assert.Equal(90, result.Geometry.CountersinkAngleDeg!.Value, 12);
+        Assert.Null(result.Resolved.Fastener);
+        Assert.Equal((8m, 90m), (result.Resolved.CsinkDiameter, result.Resolved.CsinkAngleDeg));
+    }
+
+    [Fact]
+    public void Tapped_ACounterboreWithNoRow_TakesItsDepthExpression()
+    {
+        var result = HoleRules.Build(
+            Tapped("M7") with
+            {
+                Seat = HoleSeat.Counterbore,
+                CboreDiameter = 11m,
+                CboreDepth = 3m,
+                CboreDepthExpression = "d0 / 2",
+                ThreadDepth = 8m,
+                DrillDepth = 12m,
+            },
+            WithM7,
+            1);
+
+        Assert.True(result.Succeeded, string.Join(" | ", result.Problems));
+        Assert.Equal("d0 / 2", result.Geometry!.CounterboreDepthExpression);
+    }
+
+    [Fact]
+    public void Tapped_TypedSeatValues_ComeBeforeTheRow_AndAMissingOneIsTheRows()
+    {
+        // M5 has the T5 TCAP counterbore, 9.5 x 5.2.
+        var result = HoleRules.Build(
+            Tapped() with { Seat = HoleSeat.Counterbore, CboreDiameter = 8m, ThreadDepth = 4m, DrillDepth = 9m },
+            Workbook,
+            1);
+
+        Assert.True(result.Succeeded, string.Join(" | ", result.Problems));
+        Assert.Equal((8m, 5.2m), (result.Resolved.CboreDiameter, result.Resolved.CboreDepth));
+        Assert.Equal("TCAP", result.Resolved.Fastener);
+    }
+
+    [Fact]
+    public void Tapped_AFastenerWithNoRow_IsNoProblem_WhenEveryValueIsTyped()
+    {
+        var spec = Tapped() with
+        {
+            Seat = HoleSeat.Countersink,
+            Fastener = "TNOPE",
+            CsinkDiameter = 7m,
+            CsinkAngleDeg = 90m,
+            ThreadDepth = 4m,
+            DrillDepth = 9m,
+        };
+
+        var result = HoleRules.Build(spec, Workbook, 1);
+
+        Assert.True(result.Succeeded, string.Join(" | ", result.Problems));
+        Assert.Equal("TNOPE", result.Resolved.Fastener);
+    }
+
+    [Fact]
+    public void Clearance_TypedSeatValues_ComeBeforeTheRow_AndTheThroughHoleStaysTheRows()
+    {
+        // T5 TLOW: counterbore 8.5 x 3.1, through hole at Close (5.3 mm).
+        var result = HoleRules.Build(
+            Clearance() with
+            {
+                Seat = HoleSeat.Counterbore,
+                Fastener = "TLOW",
+                CboreDiameter = 11m,
+                CboreDepth = 4m,
+                CboreDepthExpression = "d0",
+            },
+            Workbook,
+            1);
+
+        Assert.True(result.Succeeded, string.Join(" | ", result.Problems));
+        Assert.Equal(1.1, result.Geometry!.CounterboreDiameterCm!.Value, 12);
+        Assert.Equal(0.4, result.Geometry.CounterboreDepthCm!.Value, 12);
+        Assert.Equal(0.53, result.Geometry.HoleDiameterCm, 12);
+        Assert.Equal("d0", result.Geometry.CounterboreDepthExpression);
+        Assert.Equal((11m, 4m, "TLOW"), (result.Resolved.CboreDiameter, result.Resolved.CboreDepth, result.Resolved.Fastener));
+    }
+
+    [Fact]
+    public void Clearance_SeatValuesLeftNull_AreTheRows_InTheResolvedSpec()
+    {
+        var result = HoleRules.Build(Clearance() with { Seat = HoleSeat.Countersink }, Workbook, 1);
+
+        Assert.True(result.Succeeded, string.Join(" | ", result.Problems));
+        Assert.Equal((10.4m, 90m, "TFLAT"), (result.Resolved.CsinkDiameter, result.Resolved.CsinkAngleDeg, result.Resolved.Fastener));
+    }
+
+    [Theory]
+    [InlineData(0.5, true)]
+    [InlineData(1, false)]
+    [InlineData(179, false)]
+    [InlineData(179.5, true)]
+    public void CountersinkAngle_MustBeBetween1And179Degrees(double angle, bool problem)
+    {
+        var spec = Clearance() with { Seat = HoleSeat.Countersink, CsinkAngleDeg = (decimal)angle };
+
+        var result = HoleRules.Build(spec, Workbook, 1);
+
+        Assert.Equal(problem, result.Problems.Any(p => p.Field == HoleField.CountersinkAngle));
+        if (problem)
+        {
+            Assert.Contains("between 1 and 179 degrees", result.Problems[0].Message);
+        }
+    }
+
+    [Fact]
+    public void Clearance_ACounterboreDepthOfZero_IsAProblemUnderItsBox()
+    {
+        var spec = Clearance() with { Seat = HoleSeat.Counterbore, CboreDepth = 0m };
+
+        OneProblem(spec, HoleField.CounterboreDepth);
     }
 
     [Fact]
@@ -483,7 +607,7 @@ public sealed class HoleRulesTests
         var result = HoleRules.Build(Tapped() with { Seat = HoleSeat.Counterbore }, workbook, 1);
 
         var problem = Assert.Single(result.Problems);
-        Assert.Equal(HoleField.Size, problem.Field);
+        Assert.Equal(HoleField.CounterboreDiameter, problem.Field);
         Assert.Equal("The thread M5 (5 mm) is not smaller than its counterbore (4.8 mm).", problem.Message);
     }
 
@@ -648,10 +772,9 @@ public sealed class HoleRulesTests
         Assert.Null(unseated.CboreDepth);
         Assert.Null(unseated.CboreDepthExpression);
 
-        // Any other kind has no dowel seat values; its seat comes from its fastener's row.
+        // Every kind keeps its seat's values (task 126), beside its fastener.
         Assert.Equal("TCAP", clearance.Fastener);
-        Assert.Null(clearance.CboreDiameter);
-        Assert.Null(clearance.CboreDepth);
+        Assert.Equal((9.5m, 5.2m), (clearance.CboreDiameter, clearance.CboreDepth));
     }
 
     // ---- Dowel seats (task 106) ----

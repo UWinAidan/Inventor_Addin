@@ -5,10 +5,11 @@ using InventorAddin.Core.Settings;
 namespace InventorAddin.Core.Holes;
 
 /// <summary>
-/// The sizes of a dowel's seat (spec 09, "Dowel and precision holes"; task 106): the counterbore diameter and depth and
-/// the countersink diameter and included angle, in the units of the dowel's row (the angle in degrees). Null when not
-/// known. Where the seat boxes start (<see cref="HoleRules.DowelSeatStart"/>) and what the settings file remembers
-/// (<see cref="HoleLastDowelSeats"/>). In the settings file a value that is not known is left out.
+/// The sizes of a seat (spec 09, "Dowel and precision holes"; task 106): the counterbore diameter and depth and the
+/// countersink diameter and included angle, in the units of the hole's row (the angle in degrees). Null when not known.
+/// Named for the dowel seat it was made for; since task 126 it holds any hole's seat boxes too. Where the seat boxes
+/// start (<see cref="HoleRules.DowelSeatStart"/>, <see cref="HoleRules.SeatRowStart"/>) and what the settings file
+/// remembers (<see cref="HoleLastDowelSeats"/>). In the settings file a value that is not known is left out.
 /// <para>
 /// <see cref="CboreDepthExpression"/> is the expression the counterbore depth was typed as (task 125), kept with
 /// <see cref="CboreDepth"/>, the value it came to: it travels with that value and is dropped when there is none.
@@ -65,7 +66,10 @@ public sealed record HoleDowelSeat(
 }
 
 /// <summary>
-/// The seat of the last dowel hole kept with OK, for each units and dowel size (spec 09 question 14, Aidan; task 106).
+/// The seat of the last dowel hole kept with OK, for each units and dowel size (spec 09 question 14, Aidan; task 106),
+/// and of the last tapped hole, for each units and thread (task 126, Default): a tapped hole whose thread has no
+/// Counterbore or Countersink row of its size starts its seat boxes at it (<see cref="ForTapped"/>,
+/// <see cref="AddinSettings.LastTappedSeatsMm"/>). A clearance hole's seat always has its row, so none is kept for it.
 /// A new dowel seat starts at it, value by value, before the Dowel tab's seat columns and the same-size Counterbore or
 /// Countersink row. A counterbore depth typed as an expression is kept as that expression with the value it came to
 /// (task 125), so the next seat of the size starts at the expression where the part can read it. Kept in the add-in's settings file (<see cref="AddinSettings.LastDowelSeatsMm"/>,
@@ -77,12 +81,23 @@ public sealed class HoleLastDowelSeats
 {
     private readonly IReadOnlyDictionary<string, HoleDowelSeat> _metric;
     private readonly IReadOnlyDictionary<string, HoleDowelSeat> _imperial;
+    private readonly IReadOnlyDictionary<string, HoleDowelSeat> _tappedMetric;
+    private readonly IReadOnlyDictionary<string, HoleDowelSeat> _tappedImperial;
 
+    /// <param name="metric">Dowel seats by Metric dowel size.</param>
+    /// <param name="imperial">Dowel seats by Imperial dowel size.</param>
+    /// <param name="tappedMetric">Tapped seats by Metric thread (task 126).</param>
+    /// <param name="tappedImperial">Tapped seats by Imperial thread (task 126).</param>
     public HoleLastDowelSeats(
-        IReadOnlyDictionary<string, HoleDowelSeat>? metric, IReadOnlyDictionary<string, HoleDowelSeat>? imperial)
+        IReadOnlyDictionary<string, HoleDowelSeat>? metric,
+        IReadOnlyDictionary<string, HoleDowelSeat>? imperial,
+        IReadOnlyDictionary<string, HoleDowelSeat>? tappedMetric = null,
+        IReadOnlyDictionary<string, HoleDowelSeat>? tappedImperial = null)
     {
         _metric = AddinSettings.DowelSeatMap(metric);
         _imperial = AddinSettings.DowelSeatMap(imperial);
+        _tappedMetric = AddinSettings.DowelSeatMap(tappedMetric);
+        _tappedImperial = AddinSettings.DowelSeatMap(tappedImperial);
     }
 
     /// <summary>No seat used yet in either units.</summary>
@@ -92,31 +107,41 @@ public sealed class HoleLastDowelSeats
     public static HoleLastDowelSeats From(AddinSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
-        return new HoleLastDowelSeats(settings.LastDowelSeatsMm, settings.LastDowelSeatsIn);
+        return new HoleLastDowelSeats(
+            settings.LastDowelSeatsMm, settings.LastDowelSeatsIn, settings.LastTappedSeatsMm, settings.LastTappedSeatsIn);
     }
 
     /// <summary>
     /// The last seat used on a dowel of <paramref name="size"/> in <paramref name="units"/>, with only the values a
     /// seat can take; <see cref="HoleDowelSeat.Empty"/> when there is none.
     /// </summary>
-    public HoleDowelSeat For(HoleUnits units, string? size)
+    public HoleDowelSeat For(HoleUnits units, string? size) =>
+        Find(units == HoleUnits.Imperial ? _imperial : _metric, size);
+
+    /// <summary>
+    /// The last seat used on a tapped hole of <paramref name="thread"/> in <paramref name="units"/> (task 126), as
+    /// <see cref="For"/> gives a dowel's.
+    /// </summary>
+    public HoleDowelSeat ForTapped(HoleUnits units, string? thread) =>
+        Find(units == HoleUnits.Imperial ? _tappedImperial : _tappedMetric, thread);
+
+    private static HoleDowelSeat Find(IReadOnlyDictionary<string, HoleDowelSeat> map, string? size)
     {
         var key = (size ?? "").Trim();
-        var map = units == HoleUnits.Imperial ? _imperial : _metric;
         return key.Length > 0 && map.TryGetValue(key, out var seat) ? seat.Valid() : HoleDowelSeat.Empty;
     }
 
     /// <summary>
-    /// The seat a kept hole leaves to remember, with its units and size: a dowel with a counterbore (its diameter and
-    /// depth, and the expression the depth was typed as; task 125) or a countersink (its diameter and angle), each
-    /// value greater than zero. The other seat's values are null. Null for any other hole, or when the seat has no
-    /// value to keep.
+    /// The seat a kept hole leaves to remember, with its units and size: a dowel or tapped hole (task 126) with a
+    /// counterbore (its diameter and depth, and the expression the depth was typed as; task 125) or a countersink (its
+    /// diameter and angle), each value greater than zero. The other seat's values are null. Null for any other hole, or
+    /// when the seat has no value to keep.
     /// </summary>
     public static (HoleUnits Units, string Size, HoleDowelSeat Seat)? SeatToRemember(HoleSpec kept)
     {
         ArgumentNullException.ThrowIfNull(kept);
         var spec = kept.Normalised();
-        if (spec.Kind != HoleKind.Dowel || spec.Seat == HoleSeat.None || spec.Size.Length == 0)
+        if (spec.Kind is not (HoleKind.Dowel or HoleKind.Tapped) || spec.Seat == HoleSeat.None || spec.Size.Length == 0)
         {
             return null;
         }
@@ -130,7 +155,8 @@ public sealed class HoleLastDowelSeats
 
     /// <summary>
     /// What <see cref="Remember"/> keeps for <paramref name="kept"/>, for the log, so a manual check can see the seat
-    /// the next one of the size starts at (task 125): <c>6 mm dowel (Metric): counterbore 9 mm x d0/8 (= 3 mm)</c>.
+    /// the next one of the size starts at (task 125): <c>6 mm dowel (Metric): counterbore 9 mm x d0/8 (= 3 mm)</c>, or
+    /// <c>M6 tapped hole (Metric): countersink 7 mm at 90 deg</c> (task 126).
     /// Null when the hole leaves no seat to remember.
     /// </summary>
     public static string? RememberedText(HoleSpec kept)
@@ -158,7 +184,8 @@ public sealed class HoleLastDowelSeats
             parts.Add($"countersink {Number(seat.CsinkDiameter)}{unit} at {Number(seat.CsinkAngleDeg)} deg");
         }
 
-        return $"{size.Trim()} dowel ({units}): {string.Join(", ", parts)}";
+        var what = kept.Kind == HoleKind.Tapped ? "tapped hole" : "dowel";
+        return $"{size.Trim()} {what} ({units}): {string.Join(", ", parts)}";
     }
 
     /// <summary>
@@ -175,22 +202,34 @@ public sealed class HoleLastDowelSeats
         }
 
         var (units, size, seat) = remembered;
-        var current = units == HoleUnits.Imperial ? settings.LastDowelSeatsIn : settings.LastDowelSeatsMm;
+        var tapped = kept.Kind == HoleKind.Tapped;
+        var current = (tapped, units) switch
+        {
+            (true, HoleUnits.Imperial) => settings.LastTappedSeatsIn,
+            (true, _) => settings.LastTappedSeatsMm,
+            (false, HoleUnits.Imperial) => settings.LastDowelSeatsIn,
+            _ => settings.LastDowelSeatsMm,
+        };
         var map = new Dictionary<string, HoleDowelSeat>(current, StringComparer.OrdinalIgnoreCase);
 
         // An existing key keeps its spelling; the values of the seat kept replace the old ones.
         var key = map.Keys.FirstOrDefault(k => string.Equals(k, size, StringComparison.OrdinalIgnoreCase)) ?? size;
         map[key] = seat.Or(map.TryGetValue(key, out var old) ? old : null);
 
-        var updated = units == HoleUnits.Imperial
-            ? settings with { LastDowelSeatsIn = map }
-            : settings with { LastDowelSeatsMm = map };
+        var updated = (tapped, units) switch
+        {
+            (true, HoleUnits.Imperial) => settings with { LastTappedSeatsIn = map },
+            (true, _) => settings with { LastTappedSeatsMm = map },
+            (false, HoleUnits.Imperial) => settings with { LastDowelSeatsIn = map },
+            _ => settings with { LastDowelSeatsMm = map },
+        };
         return updated == settings ? null : updated;
     }
 
     /// <summary>
     /// Everything a hole kept with OK leaves to remember, in one settings change for one save: its blind depth
-    /// (<see cref="HoleLastDepths.Remember"/>) and its dowel seat (<see cref="Remember"/>). Null when there is nothing new.
+    /// (<see cref="HoleLastDepths.Remember"/>) and its dowel or tapped seat (<see cref="Remember"/>). Null when there is
+    /// nothing new.
     /// </summary>
     public static AddinSettings? RememberKept(AddinSettings settings, HoleSpec kept)
     {

@@ -162,19 +162,36 @@ public sealed class AwbHoleViewModelTests
     }
 
     [Fact]
-    public void Seat_ForATappedSizeWithNoRowOfTheSameSize_IsNoneOnly_WhileADowelListsEverySeat()
+    public void Seat_ForATappedSizeWithNoRowOfTheSameSize_ListsEverySeat_SizedInItsBoxes()
     {
+        // Task 126: a seat needs no row of its size, so every seat is offered on every type.
         var vm = NewHole();
+        vm.CentreCount = 1;
         vm.Units = HoleUnits.Imperial;
         vm.Type = HoleStandards.TappedType;
 
         Assert.Equal("#5-40 UNC", vm.Size);
-        Assert.Equal(["None"], Values(vm.SeatOptions));
+        Assert.Equal(["None", "Counterbore", "Countersink"], Values(vm.SeatOptions));
+
+        vm.Seat = HoleSeat.Countersink;
+
+        Assert.False(vm.ShowsFastener);
+        Assert.Empty(vm.FastenerOptions);
+        Assert.True(vm.ShowsCountersinkSizes);
+        Assert.Null(vm.CountersinkDiameter);
+        Assert.Equal("Enter a countersink diameter.", vm.CountersinkDiameterProblem);
+        Assert.False(vm.CanOk);
+
+        vm.CountersinkDiameterText = "0.2";
+        vm.CountersinkAngleText = "90";
+
+        Assert.True(vm.CanOk);
+        Assert.Equal(0.2 * 2.54, vm.Geometry!.CountersinkDiameterCm!.Value, 12);
+        Assert.Null(vm.Spec.Fastener);
 
         vm.Type = HoleStandards.ClearanceType;
         vm.Standard = HoleStandards.DowelStandard;
 
-        // 1/8" has no row of its size either; a dowel's seat is sized in the window (task 106).
         Assert.Equal(["None", "Counterbore", "Countersink"], Values(vm.SeatOptions));
     }
 
@@ -221,30 +238,33 @@ public sealed class AwbHoleViewModelTests
     }
 
     [Fact]
-    public void Tapped_ASeatTheNewSizeHasNoRowFor_FallsBackToNone_WithNoMessage_AndComesBackWithTheSize()
+    public void Tapped_ASeatTheNewSizeHasNoRowFor_IsKept_WithItsBoxesEmpty_AndTheRowComesBackWithTheSize()
     {
-        // Task 123: a size with no row for the seat shows None and says nothing; the seat comes back with a size
-        // that has a row for it.
+        // Task 126: a size with no row for the seat keeps the seat; its boxes, not typed, start empty and ask for
+        // values, and take the row again with a size that has one.
         var vm = NewHole();
         vm.Type = HoleStandards.TappedType;
         vm.Size = "M5";
         vm.Seat = HoleSeat.Countersink;
         Assert.Equal("TFLAT", vm.Fastener);
+        Assert.Equal((10.4m, 90m), (vm.CountersinkDiameter, vm.CountersinkAngle));
 
         vm.Size = "M3";
 
-        Assert.Equal(HoleSeat.None, vm.Seat);
-        Assert.Equal(["None", "Counterbore"], Values(vm.SeatOptions));
+        Assert.Equal(HoleSeat.Countersink, vm.Seat);
+        Assert.Equal(["None", "Counterbore", "Countersink"], Values(vm.SeatOptions));
         Assert.Null(vm.SeatProblem);
         Assert.False(vm.ShowsFastener);
         Assert.Null(vm.Fastener);
-        Assert.NotNull(vm.Geometry);
-        Assert.Equal(HoleSeat.None, vm.Spec.Seat);
+        Assert.Null(vm.CountersinkDiameter);
+        Assert.Equal("Enter a countersink diameter.", vm.CountersinkDiameterProblem);
+        Assert.Null(vm.Geometry);
 
         vm.Size = "M5";
 
         Assert.Equal(HoleSeat.Countersink, vm.Seat);
         Assert.Equal("TFLAT", vm.Fastener);
+        Assert.Equal((10.4m, 90m), (vm.CountersinkDiameter, vm.CountersinkAngle));
         Assert.Equal(HoleSeat.Countersink, vm.Geometry!.Seat);
     }
 
@@ -289,9 +309,9 @@ public sealed class AwbHoleViewModelTests
     }
 
     [Fact]
-    public void Tapped_ASeatTheNewTypeCannotTake_ComesBackWhenTheTypeChangesBack()
+    public void Tapped_ASizeWithNoRowForTheSeat_KeepsTheSeat_AcrossATypeChange()
     {
-        // Clearance T5 with a countersink; Tapped starts on M3, which has no countersink row.
+        // Clearance T5 with a countersink; Tapped starts on M3, which has no countersink row (task 126: kept).
         var vm = NewHole();
         vm.Seat = HoleSeat.Countersink;
         Assert.Equal("T5", vm.Size);
@@ -299,13 +319,15 @@ public sealed class AwbHoleViewModelTests
         vm.Type = HoleStandards.TappedType;
 
         Assert.Equal("M3", vm.Size);
-        Assert.Equal(HoleSeat.None, vm.Seat);
+        Assert.Equal(HoleSeat.Countersink, vm.Seat);
         Assert.Null(vm.SeatProblem);
+        Assert.Null(vm.CountersinkDiameter);
 
         vm.Type = HoleStandards.ClearanceType;
 
         Assert.Equal(HoleSeat.Countersink, vm.Seat);
         Assert.Equal("TFLAT", vm.Fastener);
+        Assert.Equal((10.4m, 90m), (vm.CountersinkDiameter, vm.CountersinkAngle));
     }
 
     [Fact]
@@ -338,8 +360,8 @@ public sealed class AwbHoleViewModelTests
         vm.Standard = HoleStandards.DowelStandard;
         vm.Seat = HoleSeat.Countersink;
 
-        vm.Type = HoleStandards.TappedType;          // M3 has no countersink row
-        Assert.Equal(HoleSeat.None, vm.Seat);
+        vm.Type = HoleStandards.TappedType;          // M3 has no countersink row, and keeps the seat (task 126)
+        Assert.Equal(HoleSeat.Countersink, vm.Seat);
 
         vm.Type = HoleStandards.ClearanceType;
         vm.Standard = HoleStandards.DowelStandard;
@@ -376,9 +398,10 @@ public sealed class AwbHoleViewModelTests
 
         vm.Standard = HoleStandards.ClearanceStandard;
 
+        // The boxes were not typed, so they take the clearance row's values (task 126).
         Assert.Equal(HoleSeat.Countersink, vm.Seat);
         Assert.Equal("TFLAT", vm.Fastener);
-        Assert.Null(vm.CountersinkDiameter);
+        Assert.Equal((10.4m, 90m), (vm.CountersinkDiameter, vm.CountersinkAngle));
         Assert.NotNull(vm.Geometry);
     }
 
@@ -964,37 +987,55 @@ public sealed class AwbHoleViewModelTests
     }
 
     [Fact]
-    public void Edit_ShowsASeatTheSizeHasNoRowFor_WithItsProblem()
+    public void Edit_ASeatTheSizeHasNoRowFor_OpensOnItsOwnValues_AndKeepsThemAcrossSizeChanges()
     {
-        var spec = MetricSpec(HoleKind.Tapped, "M3") with { Seat = HoleSeat.Countersink };
-
+        // Task 126: the seat needs no row; its stored values differ from any row, so they count as typed.
+        var spec = MetricSpec(HoleKind.Tapped, "M3") with { Seat = HoleSeat.Countersink, CsinkDiameter = 5m, CsinkAngleDeg = 90m };
         var vm = AwbHoleViewModel.ForEdit(Workbook, PartName, spec);
 
         Assert.Equal(HoleSeat.Countersink, vm.Seat);
-        Assert.NotNull(vm.SeatProblem);
-    }
-
-    [Fact]
-    public void Edit_ASeatTheSizeHasNoRowFor_StaysUntilTheSizeChanges_AndComesBackWithASizeThatHasOne()
-    {
-        var spec = MetricSpec(HoleKind.Tapped, "M3") with { Seat = HoleSeat.Countersink };
-        var vm = AwbHoleViewModel.ForEdit(Workbook, PartName, spec);
-
-        vm.Flip = true;
-
-        Assert.Equal(HoleSeat.Countersink, vm.Seat);
-        Assert.Equal(["None", "Counterbore", "Countersink"], Values(vm.SeatOptions));
+        Assert.Null(vm.SeatProblem);
+        Assert.NotNull(vm.Geometry);
+        Assert.Equal((5m, 90m), (vm.Spec.CsinkDiameter, vm.Spec.CsinkAngleDeg));
 
         vm.Size = "M5";
 
         Assert.Equal(HoleSeat.Countersink, vm.Seat);
-        Assert.Null(vm.SeatProblem);
+        Assert.Equal((5m, 90m), (vm.CountersinkDiameter, vm.CountersinkAngle));
+        Assert.Equal("TFLAT", vm.Fastener);
+    }
+
+    [Fact]
+    public void Edit_AStoredSeatWithoutDimensions_OpensOnItsRow_AndFollowsASizeChange()
+    {
+        // Data stored before task 126 names the row only: the boxes show the row and are not typed (task 093).
+        var spec = MetricSpec(HoleKind.Tapped, "M5") with { Seat = HoleSeat.Counterbore, Fastener = "TLOW" };
+        var vm = AwbHoleViewModel.ForEdit(Workbook, PartName, spec);
+
+        Assert.Equal((8.5m, 3m), (vm.CounterboreDiameter, vm.CounterboreDepth));
+        Assert.Equal((8.5m, 3m), (vm.Spec.CboreDiameter, vm.Spec.CboreDepth));
 
         vm.Size = "M3";
 
-        Assert.Equal(HoleSeat.None, vm.Seat);
-        Assert.Equal(["None", "Counterbore"], Values(vm.SeatOptions));
-        Assert.Null(vm.SeatProblem);
+        Assert.Equal((6m, 3m), (vm.CounterboreDiameter, vm.CounterboreDepth));
+    }
+
+    [Fact]
+    public void Edit_ASeatEqualToItsRow_FollowsASizeChange_AndOneThatDiffers_IsKept()
+    {
+        var fromRow = MetricSpec(HoleKind.Clearance, "T5") with
+        {
+            Seat = HoleSeat.Counterbore, Fastener = "TCAP", CboreDiameter = 9.5m, CboreDepth = 5m,
+        };
+        var vm = AwbHoleViewModel.ForEdit(Workbook, PartName, fromRow);
+        vm.Size = "T3";
+        Assert.Equal((6m, 3m), (vm.CounterboreDiameter, vm.CounterboreDepth));
+
+        var changed = fromRow with { CboreDiameter = 11m };
+        vm = AwbHoleViewModel.ForEdit(Workbook, PartName, changed);
+        Assert.Equal(11m, vm.CounterboreDiameter);
+        vm.Size = "T3";
+        Assert.Equal((11m, 3m), (vm.CounterboreDiameter, vm.CounterboreDepth));
     }
 
     [Fact]

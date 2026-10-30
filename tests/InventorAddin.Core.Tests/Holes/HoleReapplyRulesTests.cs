@@ -284,12 +284,36 @@ public sealed class HoleReapplyRulesTests
     }
 
     [Fact]
-    public void AClearanceCounterbore_IsNotComparedBySize()
+    public void AClearanceCounterbore_IsComparedBySize()
     {
-        // Its sizes come from the workbook row, which the stored data does not hold.
+        // Task 126: the stored data holds the seat's dimensions on every kind.
         var hole = Applied(Clearance() with { Seat = HoleSeat.Counterbore, Fastener = "TLOW" });
 
-        Assert.False(Check(hole with { Facts = hole.Facts with { CounterboreDiameterCm = 2.0 } }).IsOffered);
+        var offer = Check(hole with { Facts = hole.Facts with { CounterboreDiameterCm = 2.0 } });
+
+        Assert.True(offer.IsOffered);
+        Assert.Equal("The counterbore diameter is 20 mm; AWB Hole set 8.5 mm.", Assert.Single(offer.Differences));
+    }
+
+    [Fact]
+    public void ATappedCountersink_IsComparedBySizeAndAngle()
+    {
+        var hole = Applied(Tapped() with { Seat = HoleSeat.Countersink });
+
+        var offer = Check(hole with { Facts = hole.Facts with { CountersinkAngleDeg = 82 } });
+
+        Assert.Equal("The countersink angle is 82 deg; AWB Hole set 90 deg.", Assert.Single(offer.Differences));
+    }
+
+    [Fact]
+    public void AClearanceCounterboreStoredBeforeTask126_IsNotComparedBySize()
+    {
+        // Version 1 data holds only the row, so its seat sizes are not compared.
+        var hole = Applied(Clearance() with { Seat = HoleSeat.Counterbore, Fastener = "TLOW" });
+        var oldSpec = hole.Stored.Spec with { CboreDiameter = null, CboreDepth = null };
+        var old = hole with { Stored = hole.Stored with { Spec = oldSpec } };
+
+        Assert.False(Check(old with { Facts = old.Facts with { CounterboreDiameterCm = 2.0 } }).IsOffered);
     }
 
     [Fact]

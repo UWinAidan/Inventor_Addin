@@ -219,8 +219,10 @@ public sealed class HoleReadBackTests
         Assert.Equal(HoleSeat.Counterbore, result.Spec.Seat);
         Assert.Equal("M5", result.Spec.Size);
         Assert.Equal("TCAP", result.Spec.Fastener);
+        Assert.Equal((9.2m, 5m), (result.Spec.CboreDiameter, result.Spec.CboreDepth));
         Assert.Equal(
-            "No Counterbore row the size of M5 matches the hole's counterbore; the first, TCAP, is picked.",
+            "No Counterbore row the size of M5 matches the hole's counterbore; the first, TCAP, is picked as " +
+            "Fastener type, and the hole's own counterbore is kept.",
             Assert.Single(result.Notes));
     }
 
@@ -235,7 +237,27 @@ public sealed class HoleReadBackTests
         Assert.Equal(HoleSeat.Countersink, result.Spec.Seat);
         Assert.Null(result.Spec.Fastener);
         Assert.Empty(result.Notes);
-        Assert.Contains(HoleRules.Build(result.Spec, workbook, 1).Problems, p => p.Field == HoleField.Seat);
+
+        // Task 126: the seat needs no row; the hole's own countersink builds.
+        Assert.Equal((10.4m, 90m), (result.Spec.CsinkDiameter, result.Spec.CsinkAngleDeg));
+        Assert.True(HoleRules.Build(result.Spec, workbook, 1).Succeeded);
+    }
+
+    [Fact]
+    public void AStoredClearanceSeat_OpensOnItsStoredDimensions_AndOneStoredBeforeTask126_HasNone()
+    {
+        var built = Build(Clearance() with { Seat = HoleSeat.Counterbore, CboreDiameter = 11m, CboreDepth = 4m });
+        var stored = new HoleStoredData(built.Resolved, HoleAppliedState.From(built.Geometry!));
+        var facts = FactsOf(built.Geometry!) with { CounterboreDiameterCm = 1.2 };
+
+        var result = HoleReadBack.Read(new HoleStoredDataReadResult(stored, ""), facts, Workbook, HoleUnits.Metric);
+        Assert.Equal((11m, 4m), (result.Spec.CboreDiameter, result.Spec.CboreDepth));
+
+        // A version 1 spec names only its row; it is not filled from the hole, and resolves to the row.
+        var old = stored with { Spec = stored.Spec with { CboreDiameter = null, CboreDepth = null } };
+        var oldResult = HoleReadBack.Read(new HoleStoredDataReadResult(old, ""), facts, Workbook, HoleUnits.Metric);
+        Assert.Null(oldResult.Spec.CboreDiameter);
+        Assert.Equal(9.5m, HoleRules.Build(oldResult.Spec, Workbook, 1).Resolved.CboreDiameter);
     }
 
     [Fact]
@@ -361,8 +383,10 @@ public sealed class HoleReadBackTests
         Assert.Equal(HoleSeat.Counterbore, result.Spec.Seat);
         Assert.Equal("T5", result.Spec.Size);
         Assert.Equal("TCAP", result.Spec.Fastener);
+        Assert.Equal((9.2m, 5m), (result.Spec.CboreDiameter, result.Spec.CboreDepth));
         Assert.Equal(
-            "No Counterbore row has a 9.2 mm counterbore; the closest, T5 TCAP, is picked.",
+            "No Counterbore row has a 9.2 mm counterbore; the closest, T5 TCAP, is picked, and the hole's own " +
+            "counterbore is kept.",
             Assert.Single(result.Notes));
     }
 

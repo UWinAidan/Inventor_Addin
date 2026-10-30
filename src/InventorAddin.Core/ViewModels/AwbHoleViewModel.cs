@@ -114,9 +114,10 @@ public sealed record HoleToleranceOption(string Value, string Text, string? Deta
 /// holds it and otherwise takes its default: the first entry, Normal for a fit, the Default = Y row for a tolerance or
 /// drill point (the first such row in workbook order, <see cref="HoleRules.FindTolerance"/> and
 /// <see cref="HoleRules.FindDrillPoint"/>), and the Tapped row's depths for a tapped hole. A Units switch keeps the size
-/// with the nearest nominal diameter in the other units, else the first. A tapped hole's Seat and Fastener type lists
-/// follow its Size instead (task 099): the seats and Screw values of the Counterbore and Countersink rows of the same
-/// size (<see cref="HoleRules.SameSizeCounterbores"/>).
+/// with the nearest nominal diameter in the other units, else the first. A tapped hole's Fastener type list follows its
+/// Size instead (task 099): the Screw values of the Counterbore or Countersink rows of the same size
+/// (<see cref="HoleRules.SameSizeCounterbores"/>). Every seat is offered on every kind (task 126): a seat needs no row
+/// of its size.
 /// </para>
 /// <para>
 /// The seat is kept when the units, type, standard or size change, as long as the new choice offers it (task 123,
@@ -125,8 +126,16 @@ public sealed record HoleToleranceOption(string Value, string Text, string? Deta
 /// that offers it brings it back. Choosing a seat, None included, is what is remembered; a cascade never changes it.
 /// </para>
 /// <para>
-/// A dowel hole lists every seat and has no Fastener type; its seat is sized in its own boxes (spec 09, "Dowel and
-/// precision holes"; task 106): the counterbore diameter and depth, or the countersink diameter and angle. When the
+/// Every seat is sized in its own boxes, on every kind (task 126, Aidan 2026-10-25): the counterbore diameter and depth,
+/// or the countersink diameter and angle. A clearance or tapped hole's boxes start from the Counterbore or Countersink
+/// row for its Fastener type and size (<see cref="HoleRules.SeatRowStart"/>), and follow a change of units, size or
+/// Fastener type while not typed. A tapped hole with no row of its size has no Fastener type; its boxes start from the
+/// last values kept with OK for its units and thread (<see cref="HoleLastDowelSeats.ForTapped"/>), else empty, which
+/// <see cref="HoleRules"/> asks to be filled (Default). An edited clearance or tapped hole's seat values count as typed
+/// only where they differ from that row, so a seat made from its row still follows a size change (task 093; Default).
+/// </para>
+/// <para>
+/// A dowel hole has no Fastener type; its seat boxes (spec 09, "Dowel and precision holes"; task 106) work so. When the
 /// window opens on a dowel, and whenever its units or size change, the boxes take that size's start values: the last
 /// values kept with OK for the units and size (<see cref="HoleLastDowelSeats"/>), else the Dowel row's seat columns or
 /// the same-size Counterbore or Countersink row (<see cref="HoleRules.DowelSeatStart"/>), value by value, else empty,
@@ -257,7 +266,6 @@ public sealed class AwbHoleViewModel : ObservableObject
     // The seat the user chose last (or the edited hole's own): the seat shown whenever the current choice offers it,
     // else None (task 123). Typed values are held apart from what the cascade shows in the same way (task 124).
     private HoleSeat _wantedSeat;
-    private ListContext? _seatContext;
     private string _standard = HoleStandards.ClearanceStandard;
     private string? _fastener;
     private string? _size;
@@ -270,13 +278,13 @@ public sealed class AwbHoleViewModel : ObservableObject
     private string? _drillPoint;
     private bool _flip;
 
-    // A dowel's seat sizes (task 106), in the units' length (the angle in degrees), and the units and size they were
-    // started for.
+    // The seat boxes (a dowel's since task 106, every kind's since task 126), in the units' length (the angle in
+    // degrees), and what they were last started for: the units, kind and size, and a clearance or tapped hole's fastener.
     private decimal? _cboreDiameter;
     private decimal? _cboreDepth;
     private decimal? _csinkDiameter;
     private decimal? _csinkAngle;
-    private ListContext? _dowelSeatContext;
+    private ListContext? _seatBoxContext;
 
     // The lists that depend on other fields.
     private IReadOnlyList<HoleOption<HoleSeat>> _seatOptions = AllSeats;
@@ -403,10 +411,16 @@ public sealed class AwbHoleViewModel : ObservableObject
             OpenTyped(HoleField.ThreadDepth, _threadDepth);
             OpenTyped(HoleField.DrillDepth, _drillDepth);
             OpenTyped(HoleField.Depth, _depth);
-            OpenTyped(HoleField.CounterboreDiameter, _cboreDiameter);
-            OpenTyped(HoleField.CounterboreDepth, _cboreDepth);
-            OpenTyped(HoleField.CountersinkDiameter, _csinkDiameter);
-            OpenTyped(HoleField.CountersinkAngle, _csinkAngle);
+            // A clearance or tapped hole's seat counts as typed only where it differs from its row (task 126, Default),
+            // so a seat made from its row follows a size change as it did before (task 093).
+            var row = spec.Kind == HoleKind.Dowel
+                ? HoleDowelSeat.Empty
+                : HoleRules.SeatRowStart(workbook, spec.Units, spec.Kind, spec.Size, spec.Fastener);
+            var typedAlways = spec.Kind == HoleKind.Dowel;
+            OpenTypedSeat(HoleField.CounterboreDiameter, _cboreDiameter, row.CboreDiameter, typedAlways);
+            OpenTypedSeat(HoleField.CounterboreDepth, _cboreDepth, row.CboreDepth, typedAlways);
+            OpenTypedSeat(HoleField.CountersinkDiameter, _csinkDiameter, row.CsinkDiameter, typedAlways);
+            OpenTypedSeat(HoleField.CountersinkAngle, _csinkAngle, row.CsinkAngleDeg, typedAlways);
             Refresh(keepExact: true);
         }
 
@@ -621,8 +635,8 @@ public sealed class AwbHoleViewModel : ObservableObject
     }
 
     /// <summary>
-    /// The seats: None, Counterbore, Countersink for a clearance or dowel hole; for a tapped hole, None and the seats
-    /// with a row of the same size in their tab (task 099), and an edited hole's own seat until a field above it changes.
+    /// The seats: None, Counterbore, Countersink, on every kind (task 126; this widens task 099's tapped list, which held
+    /// only the seats with a row of the same size).
     /// </summary>
     public IReadOnlyList<HoleOption<HoleSeat>> SeatOptions => _seatOptions;
 
@@ -668,12 +682,16 @@ public sealed class AwbHoleViewModel : ObservableObject
 
     /// <summary>
     /// The Screw values of the seat's tab for the units, in workbook order (for a tapped hole, of the rows of the same
-    /// size); empty unless the hole is seated, and for a dowel, whose seat follows no fastener (task 106).
+    /// size); empty unless the hole is seated, and for a dowel, whose seat follows no fastener (task 106). The fastener
+    /// picks where the seat boxes start (task 126).
     /// </summary>
     public IReadOnlyList<HoleOption<string>> FastenerOptions => _fastenerOptions;
 
-    /// <summary>True for a seated clearance or tapped hole; never for a dowel (task 106).</summary>
-    public bool ShowsFastener => _seat != HoleSeat.None && Kind != HoleKind.Dowel;
+    /// <summary>
+    /// True for a seated clearance or tapped hole with a fastener to pick; never for a dowel (task 106), nor for a tapped
+    /// hole with no row of its size (task 126).
+    /// </summary>
+    public bool ShowsFastener => _seat != HoleSeat.None && Kind != HoleKind.Dowel && _fastenerOptions.Count > 0;
 
     public string? Fastener
     {
@@ -681,26 +699,20 @@ public sealed class AwbHoleViewModel : ObservableObject
         set => SetFromList(_fastenerOptions, value, nameof(Fastener), v => Set(ref _fastener, v, nameof(Fastener)));
     }
 
-    // A dowel's seat sizes (task 106). The window binds the text properties further down.
+    // The seat boxes, on every kind (tasks 106 and 126). The window binds the text properties further down.
 
-    /// <summary>True for a dowel with a counterbore: its diameter and depth boxes show.</summary>
-    public bool ShowsCounterboreSizes => Kind == HoleKind.Dowel && _seat == HoleSeat.Counterbore;
+    /// <summary>True for a hole with a counterbore: its diameter and depth boxes show.</summary>
+    public bool ShowsCounterboreSizes => _seat == HoleSeat.Counterbore;
 
-    /// <summary>True for a dowel with a countersink: its diameter and angle boxes show.</summary>
-    public bool ShowsCountersinkSizes => Kind == HoleKind.Dowel && _seat == HoleSeat.Countersink;
+    /// <summary>True for a hole with a countersink: its diameter and angle boxes show.</summary>
+    public bool ShowsCountersinkSizes => _seat == HoleSeat.Countersink;
 
-    /// <summary>A dowel's counterbore diameter, in the units' length. Null empties the box.</summary>
+    /// <summary>The counterbore diameter, in the units' length. Null empties the box.</summary>
     public decimal? CounterboreDiameter
     {
         get => _cboreDiameter;
         set
         {
-            if (Kind != HoleKind.Dowel)
-            {
-                OnPropertyChanged();
-                return;
-            }
-
             Change(() =>
             {
                 MarkTyped(HoleField.CounterboreDiameter, value);
@@ -709,18 +721,12 @@ public sealed class AwbHoleViewModel : ObservableObject
         }
     }
 
-    /// <summary>A dowel's counterbore depth, in the units' length. Null empties the box.</summary>
+    /// <summary>The counterbore depth, in the units' length. Null empties the box.</summary>
     public decimal? CounterboreDepth
     {
         get => _cboreDepth;
         set
         {
-            if (Kind != HoleKind.Dowel)
-            {
-                OnPropertyChanged();
-                return;
-            }
-
             Change(() =>
             {
                 MarkTyped(HoleField.CounterboreDepth, value);
@@ -729,18 +735,12 @@ public sealed class AwbHoleViewModel : ObservableObject
         }
     }
 
-    /// <summary>A dowel's countersink diameter, in the units' length. Null empties the box.</summary>
+    /// <summary>The countersink diameter, in the units' length. Null empties the box.</summary>
     public decimal? CountersinkDiameter
     {
         get => _csinkDiameter;
         set
         {
-            if (Kind != HoleKind.Dowel)
-            {
-                OnPropertyChanged();
-                return;
-            }
-
             Change(() =>
             {
                 MarkTyped(HoleField.CountersinkDiameter, value);
@@ -749,18 +749,12 @@ public sealed class AwbHoleViewModel : ObservableObject
         }
     }
 
-    /// <summary>A dowel's countersink included angle, in degrees. Null empties the box.</summary>
+    /// <summary>The countersink included angle, in degrees. Null empties the box.</summary>
     public decimal? CountersinkAngle
     {
         get => _csinkAngle;
         set
         {
-            if (Kind != HoleKind.Dowel)
-            {
-                OnPropertyChanged();
-                return;
-            }
-
             Change(() =>
             {
                 MarkTyped(HoleField.CountersinkAngle, value);
@@ -987,7 +981,7 @@ public sealed class AwbHoleViewModel : ObservableObject
     /// <summary>The value of the drill depth box's expression; null unless the box holds one.</summary>
     public string? DrillDepthValueText => ValueTextOf(HoleField.DrillDepth, _drillDepth);
 
-    /// <summary>The value of a dowel's counterbore depth box's expression; null unless the box holds one.</summary>
+    /// <summary>The value of the counterbore depth box's expression; null unless the box holds one.</summary>
     public string? CounterboreDepthValueText => ValueTextOf(HoleField.CounterboreDepth, _cboreDepth);
 
     /// <summary>
@@ -1321,14 +1315,14 @@ public sealed class AwbHoleViewModel : ObservableObject
         // hole's seats and fasteners depend on its size, which comes from its own tab (task 099).
         if (kind == HoleKind.Clearance)
         {
-            RefreshSeats(kind, keepExact);
+            RefreshSeats();
             RefreshFasteners(kind, keepExact);
             RefreshSizes(kind, keepExact);
         }
         else
         {
             RefreshSizes(kind, keepExact);
-            RefreshSeats(kind, keepExact);
+            RefreshSeats();
             RefreshFasteners(kind, keepExact);
         }
 
@@ -1389,13 +1383,21 @@ public sealed class AwbHoleViewModel : ObservableObject
             HideBox(HoleField.DrillDepth, ref _drillDepth, nameof(DrillDepth));
         }
 
-        // A dowel's seat sizes: a typed value is kept (task 124); the others take the size's start values when the
-        // units or size change (task 106), and an emptied box stays empty until then.
-        if (kind == HoleKind.Dowel)
+        // The seat boxes, on every kind (task 126): a typed value is kept (task 124); the others take the start values
+        // when the units, kind or size change, or a clearance or tapped hole's fastener (task 126), and an emptied box
+        // stays empty until then. A dowel starts at the last seat used for its size, then its row (task 106); a
+        // clearance or tapped hole at its row for the fastener, and a tapped hole with no row at the last seat used.
         {
-            var seatContext = new ListContext(_units, kind, HoleSeat.None, null, null, _size);
-            var start = _lastDowelSeats.For(_units, _size).Or(HoleRules.DowelSeatStart(_workbook, _units, _size));
-            var restart = keepExact || seatContext != _dowelSeatContext;
+            var dowel = kind == HoleKind.Dowel;
+            var seatContext = new ListContext(_units, kind, HoleSeat.None, dowel ? null : _fastener, null, _size);
+            var start = kind switch
+            {
+                HoleKind.Dowel => _lastDowelSeats.For(_units, _size).Or(HoleRules.DowelSeatStart(_workbook, _units, _size)),
+                HoleKind.Tapped => HoleRules.SeatRowStart(_workbook, _units, kind, _size, _fastener)
+                    .Or(_lastDowelSeats.ForTapped(_units, _size)),
+                _ => HoleRules.SeatRowStart(_workbook, _units, kind, _size, _fastener),
+            };
+            var restart = keepExact || seatContext != _seatBoxContext;
             SettleBox(
                 HoleField.CounterboreDiameter, ref _cboreDiameter, nameof(CounterboreDiameter), start.CboreDiameter,
                 restart);
@@ -1410,15 +1412,7 @@ public sealed class AwbHoleViewModel : ObservableObject
                 restart);
             SettleBox(
                 HoleField.CountersinkAngle, ref _csinkAngle, nameof(CountersinkAngle), start.CsinkAngleDeg, restart);
-            _dowelSeatContext = seatContext;
-        }
-        else
-        {
-            _dowelSeatContext = null;
-            HideBox(HoleField.CounterboreDiameter, ref _cboreDiameter, nameof(CounterboreDiameter));
-            HideBox(HoleField.CounterboreDepth, ref _cboreDepth, nameof(CounterboreDepth));
-            HideBox(HoleField.CountersinkDiameter, ref _csinkDiameter, nameof(CountersinkDiameter));
-            HideBox(HoleField.CountersinkAngle, ref _csinkAngle, nameof(CountersinkAngle));
+            _seatBoxContext = seatContext;
         }
 
         // Depth: a typed depth is kept, as typed, whatever the hole (task 124). One not typed is converted when the
@@ -1530,6 +1524,18 @@ public sealed class AwbHoleViewModel : ObservableObject
         else
         {
             _typed.Remove(field);
+        }
+    }
+
+    /// <summary>
+    /// An edited hole's seat value counts as typed when <paramref name="always"/> (a dowel's), when it is an expression,
+    /// or when its row gives no value or another one (task 126, Default); a value equal to its row's follows the row.
+    /// </summary>
+    private void OpenTypedSeat(HoleField field, decimal? value, decimal? rowValue, bool always)
+    {
+        if (always || value != rowValue || ExpressionOf(field, value) is not null || _invalidText.ContainsKey(field))
+        {
+            OpenTyped(field, value);
         }
     }
 
@@ -1660,33 +1666,13 @@ public sealed class AwbHoleViewModel : ObservableObject
     }
 
     /// <summary>
-    /// The seats: all three for a clearance hole, and for a dowel, whose seat is sized in the window (task 106). A
-    /// tapped hole lists None and each seat whose tab has a shown row of the same size
-    /// (<see cref="HoleRules.SameSizeCounterbores"/>); an edited hole's own seat stays listed until the units, kind or
-    /// size change, and <see cref="HoleRules"/> then says it cannot be kept when its tab has no row of the size. The
-    /// seat shown is the one the user chose last when the list offers it, else None (task 123).
+    /// The seats: all three on every kind, since every seat is sized in the window (tasks 106 and 126; this widens task
+    /// 099, which listed on a tapped hole only the seats with a shown row of the same size). The seat shown is the one
+    /// the user chose last when the list offers it, else None (task 123).
     /// </summary>
-    private void RefreshSeats(HoleKind kind, bool keepExact)
+    private void RefreshSeats()
     {
-        var seatContext = new ListContext(_units, kind, HoleSeat.None, null, null, kind == HoleKind.Tapped ? _size : null);
-        var keepSeat = keepExact || seatContext == _seatContext;
-        _seatContext = seatContext;
-
-        List<HoleOption<HoleSeat>> seats;
-        if (kind != HoleKind.Tapped)
-        {
-            seats = AllSeats.ToList();
-        }
-        else
-        {
-            var nominal = HoleRules.SeatNominal(_workbook, _units, kind, _size);
-            seats = AllSeats
-                .Where(o => o.Value == HoleSeat.None || (keepSeat && o.Value == _seat)
-                    || (nominal is { } n && SameSizeSeatRows(o.Value, n).Any(r => !r.Hidden)))
-                .ToList();
-        }
-
-        SetList(ref _seatOptions, seats, nameof(SeatOptions));
+        SetList(ref _seatOptions, AllSeats.ToList(), nameof(SeatOptions));
         Set(ref _seat, _seatOptions.Any(o => o.Value == _wantedSeat) ? _wantedSeat : HoleSeat.None, nameof(Seat));
     }
 
@@ -1969,7 +1955,7 @@ public sealed class AwbHoleViewModel : ObservableObject
 
     /// <summary>
     /// The diagram's values from the fields: the hole and seat sizes as the hole is built when it builds (a clearance
-    /// hole's diameter depends on its fit and seat), else from the workbook row; a dowel's seat from its boxes; the
+    /// hole's diameter depends on its fit and seat), else from the workbook row; the seat from its boxes (task 126); the
     /// depths as they stand, marked when typed as expressions; a dowel's tolerance as its ISO code or its limits.
     /// </summary>
     private HoleDiagramInput BuildDiagramInput()
@@ -1983,20 +1969,8 @@ public sealed class AwbHoleViewModel : ObservableObject
             ? Length(geometry.HoleDiameterCm)
             : kind == HoleKind.Tapped ? tapped?.TapDrill : Nominal(_units, kind, _size);
 
-        decimal? cboreDiameter, cboreDepth, csinkDiameter, csinkAngle;
-        if (kind == HoleKind.Dowel)
-        {
-            (cboreDiameter, cboreDepth, csinkDiameter, csinkAngle) = (_cboreDiameter, _cboreDepth, _csinkDiameter, _csinkAngle);
-        }
-        else
-        {
-            cboreDiameter = Length(geometry?.CounterboreDiameterCm);
-            cboreDepth = Length(geometry?.CounterboreDepthCm);
-            csinkDiameter = Length(geometry?.CountersinkDiameterCm);
-            csinkAngle = geometry?.CountersinkAngleDeg is { } angle && double.IsFinite(angle)
-                ? Math.Round((decimal)angle, 4)
-                : null;
-        }
+        // The seat from its boxes, on every kind (task 126).
+        var (cboreDiameter, cboreDepth, csinkDiameter, csinkAngle) = (_cboreDiameter, _cboreDepth, _csinkDiameter, _csinkAngle);
 
         string? tolerance = null;
         if (kind == HoleKind.Dowel && Enum.TryParse<PrecisionFit>(_fit, out var fit)
@@ -2025,8 +1999,7 @@ public sealed class AwbHoleViewModel : ObservableObject
             PointAngleDeg = DrillPointAngle(_drillPoint),
             CounterboreDiameter = cboreDiameter,
             CounterboreDepth = cboreDepth,
-            CounterboreDepthIsExpression =
-                kind == HoleKind.Dowel && ExpressionOf(HoleField.CounterboreDepth, _cboreDepth) is not null,
+            CounterboreDepthIsExpression = ExpressionOf(HoleField.CounterboreDepth, _cboreDepth) is not null,
             CountersinkDiameter = csinkDiameter,
             CountersinkAngleDeg = csinkAngle,
             ThreadName = kind == HoleKind.Tapped ? geometry?.Thread?.Designation ?? _size : null,
@@ -2193,7 +2166,7 @@ public sealed class AwbHoleViewModel : ObservableObject
         : _expressionChecker is null || !TakesExpressions(field) ? NotANumberText
         : HoleExpressions.NotALengthText;
 
-    /// <summary>The boxes that take Inventor expressions: the depths (task 100) and a dowel's counterbore depth (task 106).</summary>
+    /// <summary>The boxes that take Inventor expressions: the depths (task 100) and the counterbore depth (tasks 106, 126).</summary>
     private static bool TakesExpressions(HoleField field) =>
         field is HoleField.ThreadDepth or HoleField.DrillDepth or HoleField.Depth or HoleField.CounterboreDepth;
 
