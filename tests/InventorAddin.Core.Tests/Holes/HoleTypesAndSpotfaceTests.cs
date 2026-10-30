@@ -450,12 +450,12 @@ public sealed class HoleTypesAndSpotfaceTests
     }
 
     [Fact]
-    public void StoredData_ASimpleHole_StoresItsDiameterAndNoSize_AtVersion3()
+    public void StoredData_ASimpleHole_StoresItsDiameterAndNoSize_AtTheCurrentVersion()
     {
         var attributes = new HoleStoredData(Simple(), new HoleAppliedState(0.65, null, null, null, false)).ToAttributes();
         var byName = attributes.ToDictionary(a => a.Name, a => a.Value);
 
-        Assert.Equal(3, byName[HoleStoredData.VersionName]);
+        Assert.Equal(HoleStoredData.CurrentVersion, byName[HoleStoredData.VersionName]);
         Assert.Equal("Simple", byName[HoleStoredData.KindName]);
         Assert.Equal(6.5, byName[HoleStoredData.DiameterName]);
         Assert.False(byName.ContainsKey(HoleStoredData.SizeName));

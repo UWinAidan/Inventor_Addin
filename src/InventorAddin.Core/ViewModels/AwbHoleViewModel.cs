@@ -36,6 +36,18 @@ public sealed record HoleFitOption(string Value, string Text, string? Swatch)
 /// </summary>
 public sealed record HoleToleranceOption(string Value, string Text, string? Detail)
 {
+    /// <summary>
+    /// The value of the Custom entry, last in the list (task 113; spec 09 questions 17 and 18, Default). Not a name a
+    /// Precision Tol row is expected to have; a row named so is left out of the list.
+    /// </summary>
+    public const string CustomValue = "<Custom>";
+
+    /// <summary>The Custom entry's text.</summary>
+    public const string CustomText = HolePrecision.CustomName;
+
+    /// <summary>The Custom entry: typed Upper and Lower limits.</summary>
+    public static HoleToleranceOption Custom { get; } = new(CustomValue, CustomText, null);
+
     /// <summary>After the code of an ISO row whose size ISO 286 does not cover.</summary>
     public const string NotInIso286Text = "not in ISO 286";
 
@@ -272,6 +284,11 @@ public sealed class AwbHoleViewModel : ObservableObject
     private string? _size;
     private string? _fit;
     private string? _tolerance;
+
+    // The Toleranced checkbox (task 113) and a Custom tolerance's limits, in the units' length.
+    private bool _toleranced;
+    private decimal? _toleranceUpper;
+    private decimal? _toleranceLower;
     private decimal? _threadDepth;
     private decimal? _drillDepth;
     private HoleTermination _termination;
@@ -397,7 +414,10 @@ public sealed class AwbHoleViewModel : ObservableObject
             _fastener = spec.Fastener;
             _size = spec.Size;
             _fit = spec.Kind == HoleKind.Dowel ? spec.PrecisionFit.ToString() : spec.ClearanceFit.ToString();
-            _tolerance = spec.Tolerance;
+            _tolerance = spec.CustomTolerance ? HoleToleranceOption.CustomValue : spec.Tolerance;
+            _toleranced = spec.Toleranced;
+            _toleranceUpper = spec.CustomUpper;
+            _toleranceLower = spec.CustomLower;
             _threadDepth = spec.ThreadDepth;
             _drillDepth = spec.DrillDepth;
             _termination = spec.Termination;
@@ -424,6 +444,8 @@ public sealed class AwbHoleViewModel : ObservableObject
             OpenTyped(HoleField.DrillDepth, _drillDepth);
             OpenTyped(HoleField.Depth, _depth);
             OpenTyped(HoleField.Diameter, _diameter);
+            OpenTyped(HoleField.ToleranceUpper, _toleranceUpper);
+            OpenTyped(HoleField.ToleranceLower, _toleranceLower);
             // A clearance or tapped hole's seat counts as typed only where it differs from its row (task 126, Default),
             // so a seat made from its row follows a size change as it did before (task 093). A seat that follows no
             // fastener standard (a dowel's, a Simple or taper tapped hole's) is always the hole's own.
@@ -906,12 +928,83 @@ public sealed class AwbHoleViewModel : ObservableObject
     public string? FitColourText => ShowsFitColour && _fit is { } fit ? fit + " fit" : null;
 
     /// <summary>
-    /// The Precision Tol rows for the units and fit, each with its tolerance at the chosen size (task 098); empty unless
-    /// the hole is a dowel. Rebuilt when the size, units or fit change; the selection is kept.
+    /// True for a Clearance (AWB Clearance) or Simple hole: the Toleranced checkbox shows, on one row (task 113; spec
+    /// 09, "Toleranced clearance and Simple holes").
+    /// </summary>
+    public bool ShowsToleranced => HolePrecision.CanBeToleranced(Kind);
+
+    /// <summary>
+    /// The Toleranced checkbox: off by default; ticked, the Tolerance row shows. Ignored on a kind that cannot be
+    /// toleranced; a change to such a kind unticks it, which removes the tolerance and the colour (spec 09, Default).
+    /// </summary>
+    public bool Toleranced
+    {
+        get => _toleranced;
+        set
+        {
+            if (!ShowsToleranced)
+            {
+                OnPropertyChanged();
+                return;
+            }
+
+            Change(() => Set(ref _toleranced, value, nameof(Toleranced)));
+        }
+    }
+
+    /// <summary>
+    /// The Tolerance list (task 098): for a dowel, the Precision Tol rows for the units and fit; for a toleranced
+    /// Clearance or Simple hole, every Precision Tol row for the units (task 113; spec 09 question 17, Default); each with
+    /// its tolerance at the hole's modelled diameter (the dowel's size, the Clearance size at its fit, or the Simple
+    /// diameter), then <see cref="HoleToleranceOption.Custom"/> (questions 17 and 18, Default). Empty otherwise. Rebuilt
+    /// when the size, units or fit change; the selection is kept.
     /// </summary>
     public IReadOnlyList<HoleToleranceOption> ToleranceOptions => _toleranceOptions;
 
-    public bool ShowsTolerance => Kind == HoleKind.Dowel;
+    /// <summary>True for a dowel, and for a toleranced Clearance or Simple hole (task 113).</summary>
+    public bool ShowsTolerance => Kind == HoleKind.Dowel || (ShowsToleranced && _toleranced);
+
+    /// <summary>True while Custom is the tolerance chosen: the Upper and Lower boxes show (task 113).</summary>
+    public bool ShowsCustomTolerance => ShowsTolerance && SameText(_tolerance, HoleToleranceOption.CustomValue);
+
+    /// <summary>
+    /// A Custom tolerance's upper limit, in the units' length, relative to the modelled diameter (task 113). A value set
+    /// here is typed (task 124) and kept across units, size and type changes; null empties it, and OK waits.
+    /// </summary>
+    public decimal? ToleranceUpper
+    {
+        get => _toleranceUpper;
+        set => Change(() =>
+        {
+            MarkTyped(HoleField.ToleranceUpper, value);
+            Set(ref _toleranceUpper, value, nameof(ToleranceUpper));
+        });
+    }
+
+    /// <summary>A Custom tolerance's lower limit, as <see cref="ToleranceUpper"/>.</summary>
+    public decimal? ToleranceLower
+    {
+        get => _toleranceLower;
+        set => Change(() =>
+        {
+            MarkTyped(HoleField.ToleranceLower, value);
+            Set(ref _toleranceLower, value, nameof(ToleranceLower));
+        });
+    }
+
+    /// <summary><see cref="ToleranceUpper"/> as text: a number, signed or not, in the units' length; blank empties it.</summary>
+    public string ToleranceUpperText
+    {
+        get => TextOf(HoleField.ToleranceUpper, _toleranceUpper);
+        set => SetText(HoleField.ToleranceUpper, value, nameof(ToleranceUpperText), v => ToleranceUpper = v);
+    }
+
+    /// <summary><see cref="ToleranceLower"/> as text: a number, signed or not, in the units' length; blank empties it.</summary>
+    public string ToleranceLowerText
+    {
+        get => TextOf(HoleField.ToleranceLower, _toleranceLower);
+        set => SetText(HoleField.ToleranceLower, value, nameof(ToleranceLowerText), v => ToleranceLower = v);
+    }
 
     public string? Tolerance
     {
@@ -1259,6 +1352,12 @@ public sealed class AwbHoleViewModel : ObservableObject
 
     public string? ToleranceProblem => ProblemFor(HoleField.Tolerance);
 
+    /// <summary>Why the Upper box's text is not a number while it is not one, else the field's checks (task 113).</summary>
+    public string? ToleranceUpperProblem => NotANumber(HoleField.ToleranceUpper) ?? ProblemFor(HoleField.ToleranceUpper);
+
+    /// <summary>Why the Lower box's text is not a number while it is not one, else the field's checks (task 113).</summary>
+    public string? ToleranceLowerProblem => NotANumber(HoleField.ToleranceLower) ?? ProblemFor(HoleField.ToleranceLower);
+
     /// <summary>Why the box's text is not a length while it is not one, else the field's checks.</summary>
     public string? ThreadDepthProblem => NotANumber(HoleField.ThreadDepth) ?? ProblemFor(HoleField.ThreadDepth);
 
@@ -1502,21 +1601,51 @@ public sealed class AwbHoleViewModel : ObservableObject
             ?? _fitOptions.FirstOrDefault();
         Set(ref _fit, fit?.Value, nameof(Fit));
 
-        // Tolerance.
-        if (kind == HoleKind.Dowel && Enum.TryParse<PrecisionFit>(_fit, out var precisionFit))
+        // Diameter (task 112): a Simple hole's; a typed one is kept (task 124), else it starts at the last Simple
+        // diameter kept in the units, else empty, and follows the units when they change.
+        if (kind == HoleKind.Simple)
         {
-            var toleranceContext = new ListContext(_units, kind, HoleSeat.None, null, _fit, null);
+            var diameterContext = new ListContext(_units, kind, HoleSeat.None, null, null, null);
+            SettleBox(
+                HoleField.Diameter, ref _diameter, nameof(Diameter), _lastDepths.SimpleDiameterFor(_units),
+                !keepExact && diameterContext != _diameterContext);
+            _diameterContext = diameterContext;
+        }
+        else
+        {
+            _diameterContext = null;
+            HideBox(HoleField.Diameter, ref _diameter, nameof(Diameter));
+        }
+
+        // Tolerance: a dowel's rows of its fit, or a toleranced Clearance or Simple hole's rows of every fit (task 113;
+        // spec 09 question 17, Default), then Custom (questions 17 and 18, Default). Toleranced is unticked on a kind
+        // that cannot take it, which removes the tolerance and the colour (spec 09, Default).
+        if (!HolePrecision.CanBeToleranced(kind))
+        {
+            Set(ref _toleranced, false, nameof(Toleranced));
+        }
+
+        var dowelFit = kind == HoleKind.Dowel && Enum.TryParse<PrecisionFit>(_fit, out var precisionFit)
+            ? precisionFit
+            : (PrecisionFit?)null;
+        if (dowelFit is not null || _toleranced)
+        {
+            // A toleranced hole's list does not depend on its kind or fit, so a choice is kept from Clearance to Simple.
+            var toleranceContext = dowelFit is not null
+                ? new ListContext(_units, kind, HoleSeat.None, null, _fit, null)
+                : new ListContext(_units, HoleKind.Clearance, HoleSeat.None, null, null, null);
             var keepTolerance = keepExact || toleranceContext == _toleranceContext;
             _toleranceContext = toleranceContext;
-            var rows = _workbook.PrecisionTolerances.Where(r => r.Units == _units && r.Fit == precisionFit);
-            SetList(
-                ref _toleranceOptions,
-                ToleranceOptionsFor(rows, keepTolerance ? _tolerance : null, Nominal(_units, kind, _size)),
-                nameof(ToleranceOptions));
+            var rows = _workbook.PrecisionTolerances.Where(r => r.Units == _units && (dowelFit is null || r.Fit == dowelFit));
+            var options = ToleranceOptionsFor(rows, keepTolerance ? _tolerance : null, ToleranceNominal(kind));
+            options.Add(HoleToleranceOption.Custom);
+            SetList(ref _toleranceOptions, options, nameof(ToleranceOptions));
+            var defaultRow = dowelFit is { } f
+                ? HoleRules.FindTolerance(_workbook, _units, f, null)
+                : HoleRules.FindAnyTolerance(_workbook, _units, null);
             Set(
                 ref _tolerance,
-                _toleranceOptions.FirstOrDefault(o => SameText(o.Value, _tolerance))?.Value
-                    ?? HoleRules.FindTolerance(_workbook, _units, precisionFit, null)?.Name.Trim(),
+                _toleranceOptions.FirstOrDefault(o => SameText(o.Value, _tolerance))?.Value ?? defaultRow?.Name.Trim(),
                 nameof(Tolerance));
         }
         else
@@ -1524,6 +1653,19 @@ public sealed class AwbHoleViewModel : ObservableObject
             _toleranceContext = null;
             SetList(ref _toleranceOptions, [], nameof(ToleranceOptions));
             Set(ref _tolerance, null, nameof(Tolerance));
+        }
+
+        // A Custom tolerance's boxes (task 113): a typed value is kept (task 124), shown in the units chosen; one not
+        // typed is empty, and OK waits for it.
+        if (ShowsCustomTolerance)
+        {
+            SettleBox(HoleField.ToleranceUpper, ref _toleranceUpper, nameof(ToleranceUpper), null, true);
+            SettleBox(HoleField.ToleranceLower, ref _toleranceLower, nameof(ToleranceLower), null, true);
+        }
+        else
+        {
+            HideBox(HoleField.ToleranceUpper, ref _toleranceUpper, nameof(ToleranceUpper));
+            HideBox(HoleField.ToleranceLower, ref _toleranceLower, nameof(ToleranceLower));
         }
 
         // Thread and drill depths: a typed depth is kept (task 124), the others are the Tapped row's. A taper tapped
@@ -1543,22 +1685,6 @@ public sealed class AwbHoleViewModel : ObservableObject
         {
             HideBox(HoleField.ThreadDepth, ref _threadDepth, nameof(ThreadDepth));
             HideBox(HoleField.DrillDepth, ref _drillDepth, nameof(DrillDepth));
-        }
-
-        // Diameter (task 112): a Simple hole's; a typed one is kept (task 124), else it starts at the last Simple
-        // diameter kept in the units, else empty, and follows the units when they change.
-        if (kind == HoleKind.Simple)
-        {
-            var diameterContext = new ListContext(_units, kind, HoleSeat.None, null, null, null);
-            SettleBox(
-                HoleField.Diameter, ref _diameter, nameof(Diameter), _lastDepths.SimpleDiameterFor(_units),
-                !keepExact && diameterContext != _diameterContext);
-            _diameterContext = diameterContext;
-        }
-        else
-        {
-            _diameterContext = null;
-            HideBox(HoleField.Diameter, ref _diameter, nameof(Diameter));
         }
 
         // The seat boxes, on every kind (task 126): a typed value is kept (task 124); the others take the start values
@@ -1857,9 +1983,12 @@ public sealed class AwbHoleViewModel : ObservableObject
                 : new TypedShown(converted, null, expression, check.Reason);
         }
 
+        // A Custom tolerance's limits are small: they keep 4 decimals of a mm or 5 of an inch (task 113).
         return TakesExpressions(field)
             ? new TypedShown(converted, $"{FormatNumber(box.Value)} {HoleExpressions.UnitName(box.Units)}", null, null)
-            : new TypedShown(ConvertLength(box.Value, box.Units, units), null, null, null);
+            : field is HoleField.ToleranceUpper or HoleField.ToleranceLower
+                ? new TypedShown(converted, null, null, null)
+                : new TypedShown(ConvertLength(box.Value, box.Units, units), null, null, null);
     }
 
     /// <summary>
@@ -1996,7 +2125,8 @@ public sealed class AwbHoleViewModel : ObservableObject
         foreach (var row in rows)
         {
             var name = (row.Name ?? "").Trim();
-            if (name.Length == 0 || options.Any(o => SameText(o.Value, name)))
+            if (name.Length == 0 || SameText(name, HoleToleranceOption.CustomValue)
+                || options.Any(o => SameText(o.Value, name)))
             {
                 continue;
             }
@@ -2005,7 +2135,8 @@ public sealed class AwbHoleViewModel : ObservableObject
             options.Add(new HoleToleranceOption(name, text, SameText(text, name) ? null : name));
         }
 
-        if (!string.IsNullOrWhiteSpace(keep) && !options.Any(o => SameText(o.Value, keep)))
+        if (!string.IsNullOrWhiteSpace(keep) && !SameText(keep, HoleToleranceOption.CustomValue)
+            && !options.Any(o => SameText(o.Value, keep)))
         {
             options.Add(new HoleToleranceOption(keep.Trim(), keep.Trim(), null));
         }
@@ -2052,6 +2183,57 @@ public sealed class AwbHoleViewModel : ObservableObject
             _ => _workbook.Clearance
                 .FirstOrDefault(r => r.Units == units && SameText(r.Size, size))?.Nominal,
         };
+    }
+
+    /// <summary>
+    /// The diameter a tolerance is shown at in the Tolerance list (task 113): the modelled diameter, which is the
+    /// dowel's nominal, a Simple hole's Diameter, or a clearance hole's Clearance diameter at its fit (a seat row's Hole
+    /// fit when its size has a row of the seat, picked by Fastener type, else the Fit). Null when it is not known.
+    /// </summary>
+    private decimal? ToleranceNominal(HoleKind kind)
+    {
+        switch (kind)
+        {
+            case HoleKind.Dowel:
+                return Nominal(_units, kind, _size);
+            case HoleKind.Simple:
+                return _diameter;
+            case HoleKind.Clearance:
+                break;
+            default:
+                return null;
+        }
+
+        if (_workbook.Clearance.FirstOrDefault(r => r.Units == _units && SameText(r.Size, _size)) is not { } row)
+        {
+            return null;
+        }
+
+        IReadOnlyList<(string Screw, ClearanceFit Fit)> seatRows = _seat switch
+        {
+            HoleSeat.Counterbore => _workbook.Counterbore
+                .Where(r => r.Units == _units && SameText(r.Size, _size))
+                .Select(r => (r.Screw, r.HoleFit))
+                .ToList(),
+            HoleSeat.Countersink => _workbook.Countersink
+                .Where(r => r.Units == _units && SameText(r.Size, _size))
+                .Select(r => (r.Screw, r.HoleFit))
+                .ToList(),
+            _ => [],
+        };
+        ClearanceFit fit;
+        if (seatRows.Count > 0)
+        {
+            fit = (string.IsNullOrWhiteSpace(_fastener)
+                ? seatRows[0]
+                : seatRows.FirstOrDefault(r => SameText(r.Screw, _fastener))).Fit;
+        }
+        else if (!Enum.TryParse(_fit, out fit))
+        {
+            fit = ClearanceFit.Normal;
+        }
+
+        return row.Diameter(fit);
     }
 
     /// <summary>
@@ -2118,6 +2300,8 @@ public sealed class AwbHoleViewModel : ObservableObject
     private (HoleSpec Spec, HoleBuildResult Build, IReadOnlyList<HoleCheck> Checks) Evaluate()
     {
         var kind = Kind;
+        var toleranced = _toleranced && HolePrecision.CanBeToleranced(kind);
+        var custom = ShowsCustomTolerance;
         var spec = new HoleSpec(
             _units,
             kind,
@@ -2129,8 +2313,10 @@ public sealed class AwbHoleViewModel : ObservableObject
                 : ClearanceFit.Normal,
             kind == HoleKind.Dowel && Enum.TryParse<PrecisionFit>(_fit, out var precisionFit)
                 ? precisionFit
-                : PrecisionFit.Normal,
-            _tolerance,
+                : toleranced && !custom
+                    ? HoleRules.FindAnyTolerance(_workbook, _units, _tolerance)?.Fit ?? PrecisionFit.Normal
+                    : PrecisionFit.Normal,
+            custom ? null : _tolerance,
             _threadDepth,
             _drillDepth,
             _termination,
@@ -2151,6 +2337,10 @@ public sealed class AwbHoleViewModel : ObservableObject
             SpotfaceDepthExpression = ExpressionOf(HoleField.SpotfaceDepth, _spotfaceDepth),
             Diameter = _diameter,
             DiameterExpression = ExpressionOf(HoleField.Diameter, _diameter),
+            Toleranced = toleranced,
+            CustomTolerance = custom,
+            CustomUpper = custom ? _toleranceUpper : null,
+            CustomLower = custom ? _toleranceLower : null,
         }.Normalised();
 
         var build = HoleRules.Build(spec, _workbook, Math.Max(1, _centreCount));
@@ -2178,7 +2368,8 @@ public sealed class AwbHoleViewModel : ObservableObject
         nameof(DiameterText), nameof(DiameterValueText), nameof(DiameterProblem), nameof(ShowsSpotfaceSizes),
         nameof(SpotfaceDiameterText), nameof(SpotfaceDepthText), nameof(SpotfaceDepthValueText),
         nameof(SpotfaceDiameterProblem), nameof(SpotfaceDepthProblem), nameof(ShowsThreadDepth),
-        nameof(ShowsDrillDepth),
+        nameof(ShowsDrillDepth), nameof(ShowsToleranced), nameof(ShowsCustomTolerance), nameof(ToleranceUpperText),
+        nameof(ToleranceLowerText), nameof(ToleranceUpperProblem), nameof(ToleranceLowerProblem),
     ];
 
     private void Reevaluate()
@@ -2219,10 +2410,24 @@ public sealed class AwbHoleViewModel : ObservableObject
         // The seat from its boxes, on every kind (task 126).
         var (cboreDiameter, cboreDepth, csinkDiameter, csinkAngle) = (_cboreDiameter, _cboreDepth, _csinkDiameter, _csinkAngle);
 
+        // The tolerance after the diameter, on a dowel and a toleranced hole (task 113): a row's ISO code or limits, or
+        // a Custom tolerance's limits.
         string? tolerance = null;
-        if (kind == HoleKind.Dowel && Enum.TryParse<PrecisionFit>(_fit, out var fit)
-            && _workbook.PrecisionTolerances.FirstOrDefault(
-                r => r.Units == _units && r.Fit == fit && SameText(r.Name, _tolerance)) is { } row)
+        var toleranceRow = !ShowsTolerance || ShowsCustomTolerance
+            ? null
+            : kind == HoleKind.Dowel
+                ? Enum.TryParse<PrecisionFit>(_fit, out var fit)
+                    ? _workbook.PrecisionTolerances.FirstOrDefault(
+                        r => r.Units == _units && r.Fit == fit && SameText(r.Name, _tolerance))
+                    : null
+                : HoleRules.FindAnyTolerance(_workbook, _units, _tolerance) is { } any && SameText(any.Name, _tolerance)
+                    ? any
+                    : null;
+        if (ShowsCustomTolerance && _toleranceUpper is { } customUpper && _toleranceLower is { } customLower)
+        {
+            tolerance = HoleToleranceOption.LimitsText(customUpper, customLower, _units);
+        }
+        else if (toleranceRow is { } row)
         {
             tolerance = row.Kind == ToleranceKind.Limits
                 ? row.Upper is { } upper && row.Lower is { } lower
@@ -2446,6 +2651,8 @@ public sealed class AwbHoleViewModel : ObservableObject
         HoleField.SpotfaceDiameter => nameof(SpotfaceDiameterProblem),
         HoleField.SpotfaceDepth => nameof(SpotfaceDepthProblem),
         HoleField.Diameter => nameof(DiameterProblem),
+        HoleField.ToleranceUpper => nameof(ToleranceUpperProblem),
+        HoleField.ToleranceLower => nameof(ToleranceLowerProblem),
         _ => nameof(DepthProblem),
     };
 

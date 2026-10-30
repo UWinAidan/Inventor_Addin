@@ -35,6 +35,12 @@ public enum HoleField
 
     /// <summary>The spotface depth box (task 112).</summary>
     SpotfaceDepth,
+
+    /// <summary>A Custom tolerance's Upper box (task 113).</summary>
+    ToleranceUpper,
+
+    /// <summary>A Custom tolerance's Lower box (task 113).</summary>
+    ToleranceLower,
 }
 
 /// <summary>One reason a hole cannot be built, with the message the window shows.</summary>
@@ -105,6 +111,27 @@ public static class HoleRules
         if (!string.IsNullOrWhiteSpace(name))
         {
             return rows.FirstOrDefault(r => Same(r.Name, name));
+        }
+
+        return rows.FirstOrDefault(r => r.IsDefault) ?? rows.FirstOrDefault();
+    }
+
+    /// <summary>
+    /// The Precision Tol row of a toleranced Clearance or Simple hole (task 113; spec 09 question 17, Default): any row
+    /// for the units, whatever its fit. A name takes the row of that name, the one of <paramref name="fit"/> first when
+    /// two rows share it; a null or blank name takes the first row marked Default, else the first. Null when there is
+    /// none.
+    /// </summary>
+    public static PrecisionToleranceRow? FindAnyTolerance(
+        HoleWorkbook workbook, HoleUnits units, string? name, PrecisionFit? fit = null)
+    {
+        ArgumentNullException.ThrowIfNull(workbook);
+
+        var rows = workbook.PrecisionTolerances.Where(r => r.Units == units).ToList();
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            var named = rows.Where(r => Same(r.Name, name)).ToList();
+            return named.FirstOrDefault(r => r.Fit == fit) ?? named.FirstOrDefault();
         }
 
         return rows.FirstOrDefault(r => r.IsDefault) ?? rows.FirstOrDefault();
@@ -324,6 +351,16 @@ public static class HoleRules
     public const string TaperCounterboreText =
         "A taper tapped hole cannot have a counterbore; Inventor does not allow one. Choose another seat.";
 
+    /// <summary>Under the Upper box when a Custom tolerance has no upper limit (task 113).</summary>
+    public const string CustomUpperMissingText = "Enter an upper limit.";
+
+    /// <summary>Under the Lower box when a Custom tolerance has no lower limit (task 113).</summary>
+    public const string CustomLowerMissingText = "Enter a lower limit.";
+
+    /// <summary>A signed limit with its unit, for a message: <c>+0.02 mm</c>, <c>-0.0005 in</c>, <c>0 mm</c>.</summary>
+    private static string Limit(decimal value, HoleUnits units) =>
+        value.ToString("+0.######;-0.######;0", CultureInfo.InvariantCulture) + (units == HoleUnits.Metric ? " mm" : " in");
+
     private static string UnitsName(HoleUnits units) => units == HoleUnits.Metric ? "Metric" : "Imperial";
 
     private static string Length(decimal value, HoleUnits units) =>
@@ -402,6 +439,13 @@ public static class HoleRules
                     default:
                         throw new ArgumentOutOfRangeException(nameof(spec), spec.Kind, null);
                 }
+            }
+
+            // A toleranced Clearance or Simple hole (task 113): the tolerance goes on the modelled diameter, the through
+            // hole's, never the seat's (spec 09, Default). The spec is normalised, so only those kinds carry the flag.
+            if (spec.Toleranced)
+            {
+                ResolveTolerance(_holeDiameter, dowel: false);
             }
 
             if (spec.IsBlind)
@@ -841,21 +885,56 @@ public static class HoleRules
                 BuildDowelSeat(row.Nominal);
             }
 
-            _colour = workbook.Settings.FitColour(spec.PrecisionFit);
+            ResolveTolerance(row?.Nominal, dowel: true);
+        }
 
-            var tolerance = FindTolerance(workbook, Units, spec.PrecisionFit, spec.Tolerance);
+        /// <summary>
+        /// The tolerance on a precision hole's diameter and its colour (<see cref="HolePrecision.Colour"/>). A dowel's
+        /// row is the Precision Tol row of its fit (task 098); a toleranced Clearance or Simple hole's any row for the
+        /// units (task 113; spec 09 question 17, Default), and its resolved PrecisionFit is the row's fit. A Custom
+        /// tolerance (questions 17 and 18, Default) takes the typed Upper and Lower, Upper above Lower. ISO limits are
+        /// worked out at <paramref name="nominal"/>, the modelled diameter; none when it is not known.
+        /// </summary>
+        private void ResolveTolerance(decimal? nominal, bool dowel)
+        {
+            if (spec.CustomTolerance)
+            {
+                _colour = HolePrecision.Colour(spec, null, workbook.Settings);
+                ResolveCustomTolerance();
+                return;
+            }
+
+            if (dowel)
+            {
+                // A dowel's colour is its fit's whatever its tolerance row (task 096).
+                _colour = HolePrecision.Colour(spec, null, workbook.Settings);
+            }
+
+            var tolerance = dowel
+                ? FindTolerance(workbook, Units, spec.PrecisionFit, spec.Tolerance)
+                : FindAnyTolerance(workbook, Units, spec.Tolerance, spec.PrecisionFit);
             if (tolerance is null)
             {
                 Problem(
                     HoleField.Tolerance,
-                    string.IsNullOrWhiteSpace(spec.Tolerance)
-                        ? $"The Precision Tol tab has no {spec.PrecisionFit} rows for {UnitsText} holes."
-                        : $"The Precision Tol tab has no \"{spec.Tolerance.Trim()}\" row for {spec.PrecisionFit} fit " +
-                          $"and {UnitsText} holes.");
+                    (string.IsNullOrWhiteSpace(spec.Tolerance), dowel) switch
+                    {
+                        (true, true) => $"The Precision Tol tab has no {spec.PrecisionFit} rows for {UnitsText} holes.",
+                        (false, true) => $"The Precision Tol tab has no \"{spec.Tolerance!.Trim()}\" row for " +
+                                         $"{spec.PrecisionFit} fit and {UnitsText} holes.",
+                        (true, false) => $"The Precision Tol tab has no rows for {UnitsText} holes.",
+                        (false, false) => $"The Precision Tol tab has no \"{spec.Tolerance!.Trim()}\" row for " +
+                                          $"{UnitsText} holes.",
+                    });
                 return;
             }
 
             _resolved = _resolved with { Tolerance = tolerance.Name };
+            if (!dowel)
+            {
+                _resolved = _resolved with { PrecisionFit = tolerance.Fit };
+                _colour = HolePrecision.Colour(_resolved, tolerance, workbook.Settings);
+            }
 
             if (tolerance.Kind == ToleranceKind.Limits)
             {
@@ -871,12 +950,12 @@ public static class HoleRules
                 return;
             }
 
-            if (row is null)
+            if (nominal is not { } size || size <= 0)
             {
                 return;
             }
 
-            var limits = Iso286.HoleLimits(IsoNominalMm(row.Nominal, Units), tolerance.IsoCode);
+            var limits = Iso286.HoleLimits(IsoNominalMm(size, Units), tolerance.IsoCode);
             if (!limits.Succeeded)
             {
                 Problem(HoleField.Tolerance, limits.Message);
@@ -884,6 +963,38 @@ public static class HoleRules
             }
 
             _tolerance = new HoleTolerance(tolerance.Name, limits.Code, limits.UpperMm / 10, limits.LowerMm / 10);
+        }
+
+        /// <summary>
+        /// A Custom tolerance (task 113): the Upper and Lower typed, in the spec's units, relative to the modelled
+        /// diameter; both are needed and Upper must be above Lower. Inventor takes them as deviations.
+        /// </summary>
+        private void ResolveCustomTolerance()
+        {
+            if (spec.CustomUpper is null)
+            {
+                Problem(HoleField.ToleranceUpper, CustomUpperMissingText);
+            }
+
+            if (spec.CustomLower is null)
+            {
+                Problem(HoleField.ToleranceLower, CustomLowerMissingText);
+            }
+
+            if (spec.CustomUpper is not { } upper || spec.CustomLower is not { } lower)
+            {
+                return;
+            }
+
+            if (upper <= lower)
+            {
+                Problem(
+                    HoleField.ToleranceUpper,
+                    $"The upper limit ({Limit(upper, Units)}) is not above the lower limit ({Limit(lower, Units)}).");
+                return;
+            }
+
+            _tolerance = new HoleTolerance(HolePrecision.CustomName, null, ToCm(upper, Units), ToCm(lower, Units));
         }
 
         private void ResolveDepthAndDrillPoint()

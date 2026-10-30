@@ -264,6 +264,13 @@ public static class HoleReadBack
 
             // The seat's own dimensions, on every kind (task 126): the window opens on the seat the hole has.
             spec = WithSeatFromHole(spec, facts) with { Flip = facts.Flip };
+
+            // A Clearance or Simple hole with a tolerance on its diameter opens toleranced (task 113).
+            if (facts.HasTolerance && HolePrecision.CanBeToleranced(spec.Kind))
+            {
+                spec = Toleranced(spec);
+            }
+
             if (spec.IsBlind)
             {
                 spec = spec with { DrillPoint = DrillPoint() };
@@ -451,24 +458,88 @@ public static class HoleReadBack
                 }
 
                 var tolerance = workbook.PrecisionTolerances.FirstOrDefault(t => t.Units == units && MatchesTolerance(t, units));
+                var custom = tolerance is null ? CustomLimits(units) : null;
                 if (tolerance is null)
                 {
-                    notes.Add("The hole's tolerance is not in the Precision Tol tab; the default tolerance is picked.");
+                    notes.Add(custom is null ? NotInTabDefaultText : NotInTabCustomText);
                 }
 
-                // A dowel's seat is its own (task 106): the hole's sizes, not a same-size row's.
+                // A dowel's seat is its own (task 106): the hole's sizes, not a same-size row's. Limits no row has open as
+                // a Custom tolerance (task 113).
                 return WithDowelSeatFromHole(
                     Blank(units, HoleKind.Dowel, seat, termination) with
                     {
                         Size = row.Size,
                         PrecisionFit = tolerance?.Fit ?? PrecisionFit.Normal,
                         Tolerance = tolerance?.Name,
+                        CustomTolerance = custom is not null,
+                        CustomUpper = custom?.Upper,
+                        CustomLower = custom?.Lower,
                     },
                     facts);
             }
 
             return null;
         }
+
+        private const string NotInTabDefaultText =
+            "The hole's tolerance is not in the Precision Tol tab; the default tolerance is picked.";
+
+        private const string NotInTabCustomText =
+            "The hole's tolerance is not in the Precision Tol tab; it is shown as a Custom tolerance.";
+
+        /// <summary>
+        /// A Clearance or Simple hole with a tolerance on its diameter (task 113): toleranced, with the Precision Tol row
+        /// of its units, any fit, whose code or limits it has; else, when Inventor gives both deviations and no ISO code
+        /// no row has, a Custom tolerance of them; else the default row, with a note.
+        /// </summary>
+        private HoleSpec Toleranced(HoleSpec spec)
+        {
+            var units = spec.Units;
+            var row = workbook.PrecisionTolerances.FirstOrDefault(t => t.Units == units && MatchesTolerance(t, units));
+            if (row is not null)
+            {
+                return spec with { Toleranced = true, Tolerance = row.Name, PrecisionFit = row.Fit };
+            }
+
+            if (CustomLimits(units) is { } custom)
+            {
+                notes.Add(NotInTabCustomText);
+                return spec with
+                {
+                    Toleranced = true,
+                    CustomTolerance = true,
+                    CustomUpper = custom.Upper,
+                    CustomLower = custom.Lower,
+                };
+            }
+
+            notes.Add(NotInTabDefaultText);
+            var fallback = HoleRules.FindAnyTolerance(workbook, units, null);
+            return spec with { Toleranced = true, Tolerance = fallback?.Name, PrecisionFit = fallback?.Fit ?? PrecisionFit.Normal };
+        }
+
+        /// <summary>
+        /// The hole's deviations in <paramref name="units"/>, for a Custom tolerance: only when Inventor reports both
+        /// and no ISO code, and the upper is above the lower; else null.
+        /// </summary>
+        private (decimal Upper, decimal Lower)? CustomLimits(HoleUnits units)
+        {
+            if (facts.ToleranceIsoCode is not null
+                || facts.ToleranceUpperCm is not { } upperCm || facts.ToleranceLowerCm is not { } lowerCm)
+            {
+                return null;
+            }
+
+            var upper = LimitFromCm(upperCm, units);
+            var lower = LimitFromCm(lowerCm, units);
+            return upper > lower ? (upper, lower) : null;
+        }
+
+        /// <summary>A deviation in centimetres in a row's units: millimetres to 6 decimals, inches to 7.</summary>
+        private static decimal LimitFromCm(double cm, HoleUnits units) => units == HoleUnits.Metric
+            ? Math.Round((decimal)(cm * 10), 6)
+            : Math.Round((decimal)(cm / 2.54), 7);
 
         private bool MatchesTolerance(PrecisionToleranceRow row, HoleUnits units)
         {

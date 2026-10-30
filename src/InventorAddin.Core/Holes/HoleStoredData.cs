@@ -170,14 +170,21 @@ public sealed record HoleStoredDataReadResult(HoleStoredData? Data, string Messa
 /// <see cref="DiameterName"/> (and the expression it was typed as) and no size; a spotface stores its diameter and depth;
 /// a taper tapped hole its drill depth. Versions 1 and 2 hold none of these, and read as before.
 /// </para>
+/// <para>
+/// Version 4 (task 113): a toleranced Clearance or Simple hole stores <see cref="TolerancedName"/>, its
+/// <see cref="ToleranceName"/> row and the row's <see cref="PrecisionFitName"/>; a Custom tolerance, on a dowel or a
+/// toleranced hole, stores <see cref="CustomToleranceName"/> and its <see cref="CustomUpperName"/> and
+/// <see cref="CustomLowerName"/> instead of a row. The version is bumped so an add-in from before reads no toleranced
+/// hole as an untoleranced one. Versions 1 to 3 hold none of these, and read as untoleranced, with a dowel's row.
+/// </para>
 /// </summary>
 public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
 {
     /// <summary>The attribute set's name on the hole feature.</summary>
     public const string AttributeSetName = Branding.ShortName + "_Hole";
 
-    /// <summary>The version written now (task 112).</summary>
-    public const int CurrentVersion = 3;
+    /// <summary>The version written now (task 113).</summary>
+    public const int CurrentVersion = 4;
 
     /// <summary>The oldest version read. Data with a version outside this and <see cref="CurrentVersion"/> is not read.</summary>
     public const int OldestVersion = 1;
@@ -210,6 +217,10 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
     public const string SpotfaceDiameterName = "SpotfaceDiameter";
     public const string SpotfaceDepthName = "SpotfaceDepth";
     public const string SpotfaceDepthExpressionName = "SpotfaceDepthExpression";
+    public const string TolerancedName = "Toleranced";
+    public const string CustomToleranceName = "CustomTolerance";
+    public const string CustomUpperName = "CustomUpper";
+    public const string CustomLowerName = "CustomLower";
     public const string AppliedDiameterName = "AppliedDiameterCm";
     public const string AppliedIsoCodeName = "AppliedToleranceIsoCode";
     public const string AppliedUpperName = "AppliedToleranceUpperCm";
@@ -264,12 +275,24 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
             attributes.Add(new HoleAttribute(ClearanceFitName, spec.ClearanceFit.ToString()));
         }
 
-        if (spec.Kind == HoleKind.Dowel)
+        if (spec.Toleranced)
+        {
+            attributes.Add(new HoleAttribute(TolerancedName, 1));
+        }
+
+        if (spec.IsPrecision)
         {
             attributes.Add(new HoleAttribute(PrecisionFitName, spec.PrecisionFit.ToString()));
         }
 
         AddText(ToleranceName, spec.Tolerance);
+        if (spec.CustomTolerance)
+        {
+            attributes.Add(new HoleAttribute(CustomToleranceName, 1));
+        }
+
+        AddNumber(CustomUpperName, spec.CustomUpper);
+        AddNumber(CustomLowerName, spec.CustomLower);
         AddNumber(ThreadDepthName, spec.ThreadDepth);
         AddNumber(DrillDepthName, spec.DrillDepth);
         attributes.Add(new HoleAttribute(TerminationName, spec.Termination.ToString()));
@@ -376,7 +399,13 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
             Require(spec.SpotfaceDepth is not null, SpotfaceDepthName);
         }
 
-        if (spec.Kind == HoleKind.Dowel)
+        // A precision hole has its row, or a Custom tolerance with both limits (task 113).
+        if (spec.CustomTolerance)
+        {
+            Require(spec.CustomUpper is not null, CustomUpperName);
+            Require(spec.CustomLower is not null, CustomLowerName);
+        }
+        else if (spec.IsPrecision)
         {
             Require(!string.IsNullOrWhiteSpace(spec.Tolerance), ToleranceName);
         }
@@ -416,6 +445,11 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
             // the seat, and it stores the Clearance fit of its through hole instead. Data stored before always has one.
             var fastenerRequired = seated && version < 2;
             var fastener = fastenerRequired ? RequiredText(FastenerName) : seated ? OptionalText(FastenerName) : null;
+            // From version 4 (task 113) a Clearance or Simple hole may be toleranced, and a precision hole's tolerance may
+            // be Custom; data stored before has neither.
+            var toleranced = version >= 4 && HolePrecision.CanBeToleranced(kind) && OptionalFlag(TolerancedName);
+            var precise = kind == HoleKind.Dowel || toleranced;
+            var custom = precise && version >= 4 && OptionalFlag(CustomToleranceName);
             var clearanceFitStored = kind == HoleKind.Clearance
                 && (seat is HoleSeat.None or HoleSeat.Spotface || string.IsNullOrWhiteSpace(fastener));
 
@@ -426,8 +460,8 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
                 simple ? OptionalText(SizeName) ?? "" : RequiredText(SizeName),
                 fastener,
                 clearanceFitStored ? RequiredEnum<ClearanceFit>(ClearanceFitName) : ClearanceFit.Normal,
-                kind == HoleKind.Dowel ? RequiredEnum<PrecisionFit>(PrecisionFitName) : PrecisionFit.Normal,
-                kind == HoleKind.Dowel ? RequiredText(ToleranceName) : null,
+                precise ? RequiredEnum<PrecisionFit>(PrecisionFitName) : PrecisionFit.Normal,
+                precise && !custom ? RequiredText(ToleranceName) : null,
                 kind == HoleKind.Tapped ? OptionalDecimal(ThreadDepthName) : null,
                 threaded ? OptionalDecimal(DrillDepthName) : null,
                 termination,
@@ -448,6 +482,10 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
                 SpotfaceDepthExpression = spotface ? OptionalText(SpotfaceDepthExpressionName) : null,
                 Diameter = simple ? RequiredDecimal(DiameterName) : null,
                 DiameterExpression = simple ? OptionalText(DiameterExpressionName) : null,
+                Toleranced = toleranced,
+                CustomTolerance = custom,
+                CustomUpper = custom ? RequiredDecimal(CustomUpperName) : null,
+                CustomLower = custom ? RequiredDecimal(CustomLowerName) : null,
             };
 
             var applied = new HoleAppliedState(
@@ -522,6 +560,9 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
                 ? (int)number
                 : throw Wrong(name, number, "a whole number");
         }
+
+        /// <summary>A flag that is written only when set: missing reads as false.</summary>
+        public bool OptionalFlag(string name) => values.ContainsKey(name) && RequiredFlag(name);
 
         public bool RequiredFlag(string name) => RequiredInt(name) switch
         {

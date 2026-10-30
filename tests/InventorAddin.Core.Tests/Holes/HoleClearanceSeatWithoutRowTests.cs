@@ -164,7 +164,7 @@ public sealed class HoleClearanceSeatWithoutRowTests
         Assert.Contains(attributes, a => a.Name == HoleStoredData.ClearanceFitName && Equals(a.Value, "Close"));
         Assert.True(read.Succeeded, read.Message);
         Assert.Equal(stored.Spec.Normalised(), read.Data!.Spec);
-        Assert.Equal(3, HoleStoredData.CurrentVersion);
+        Assert.Equal(4, HoleStoredData.CurrentVersion);
 
         var rebuilt = HoleRules.Build(read.Data.Spec, Workbook, 1);
         Assert.Equal(HoleAppliedState.From(rebuilt.Geometry!), stored.Applied);

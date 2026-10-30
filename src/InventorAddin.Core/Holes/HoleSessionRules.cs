@@ -95,7 +95,21 @@ public static class HoleSessionRules
     /// <param name="openedFitColoured">A face of the hole carried a fit appearance when the window opened.</param>
     /// <param name="keptKind">The kind the hole is kept as.</param>
     public static bool ResetsFaceAppearances(bool edit, HoleKind openedKind, bool openedFitColoured, HoleKind keptKind) =>
-        edit && (openedKind == HoleKind.Dowel || openedFitColoured) && keptKind != HoleKind.Dowel;
+        ResetsFaceAppearances(edit, openedKind == HoleKind.Dowel, openedFitColoured, keptKind == HoleKind.Dowel);
+
+    /// <summary>
+    /// As <see cref="ResetsFaceAppearances(bool, HoleKind, bool, HoleKind)"/>, by the precision rule (task 113;
+    /// <see cref="HolePrecision.IsPrecision(HoleSpec)"/>): an edited hole that was a precision hole (a dowel, or a
+    /// toleranced Clearance or Simple hole), or carried a fit colour, when the window opened, and is kept as a hole that
+    /// is not one, has every face put back to the part's appearance. Unticking Toleranced is such a change, as is moving
+    /// a toleranced hole to a type that cannot be toleranced.
+    /// </summary>
+    /// <param name="edit">The session edits an existing hole.</param>
+    /// <param name="openedPrecision">The hole the window opened on was a precision hole.</param>
+    /// <param name="openedFitColoured">A face of the hole carried a fit appearance when the window opened.</param>
+    /// <param name="keptPrecision">The hole is kept as a precision hole.</param>
+    public static bool ResetsFaceAppearances(bool edit, bool openedPrecision, bool openedFitColoured, bool keptPrecision) =>
+        edit && (openedPrecision || openedFitColoured) && !keptPrecision;
 
     /// <summary>
     /// Whether a document being deactivated ends the session as Cancel does (spec 09, "The command"; spike 103 round

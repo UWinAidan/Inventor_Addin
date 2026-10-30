@@ -25,8 +25,11 @@ namespace InventorAddin.Core.Holes;
 /// <param name="CountersinkAngleDeg">Countersink seats only: the included angle.</param>
 /// <param name="DrillPoint">Blind holes only: the bottom.</param>
 /// <param name="Thread">Tapped and taper tapped holes only.</param>
-/// <param name="Tolerance">Dowel holes only: the tolerance on the hole diameter.</param>
-/// <param name="FitColour">Dowel holes only: the colour every face of the hole takes.</param>
+/// <param name="Tolerance">
+/// Precision holes only (<see cref="HolePrecision"/>): dowels, and toleranced Clearance and Simple holes (task 113): the
+/// tolerance on the hole diameter, the through hole's and never the seat's.
+/// </param>
+/// <param name="FitColour">Precision holes only: the colour every face of the hole takes (<see cref="HolePrecision.Colour"/>).</param>
 public sealed record HoleGeometry(
     HoleKind Kind,
     HoleSeat Seat,
@@ -43,7 +46,7 @@ public sealed record HoleGeometry(
     HoleTolerance? Tolerance,
     HoleColour? FitColour)
 {
-    /// <summary>True when the hole's faces are coloured by fit (dowel and precision holes only).</summary>
+    /// <summary>True when the hole's faces are coloured by fit (dowels and toleranced Clearance and Simple holes).</summary>
     public bool IsColoured => FitColour is not null;
 
     /// <summary>
@@ -136,10 +139,11 @@ public sealed record HoleThread(
 }
 
 /// <summary>
-/// The tolerance on a dowel hole's diameter, from a Precision Tol row. ISO rows carry the code, which Inventor
-/// applies as a fit and works out itself; the limits are worked out by <see cref="Iso286"/> for showing and checking.
-/// Limits rows carry no code; Inventor takes the limits as upper and lower deviations. Deviations are relative to the
-/// nominal size, in centimetres.
+/// The tolerance on a precision hole's diameter, from a Precision Tol row or a Custom tolerance (task 113). ISO rows
+/// carry the code, which Inventor applies as a fit and works out itself; the limits are worked out by
+/// <see cref="Iso286"/> for showing and checking. Limits rows and Custom carry no code; Inventor takes the limits as
+/// upper and lower deviations. Deviations are relative to the modelled diameter, in centimetres. A Custom tolerance is
+/// named <see cref="HolePrecision.CustomName"/>.
 /// </summary>
 public sealed record HoleTolerance(string Name, string? IsoCode, double UpperCm, double LowerCm)
 {

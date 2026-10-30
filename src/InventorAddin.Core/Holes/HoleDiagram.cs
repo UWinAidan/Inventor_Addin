@@ -20,7 +20,10 @@ public sealed record HoleDiagramInput
     /// <summary>The hole diameter as modelled: the clearance diameter, the tap drill, or the dowel's nominal.</summary>
     public decimal? HoleDiameter { get; init; }
 
-    /// <summary>A dowel's tolerance after the diameter, for example <c>H7</c>; null for none.</summary>
+    /// <summary>
+    /// A precision hole's tolerance after the diameter, for example <c>H7</c>, or a Limits row's or Custom tolerance's
+    /// <c>+0.010 / -0.005</c>: a dowel's, or a toleranced Clearance or Simple hole's (task 113); null for none.
+    /// </summary>
     public string? Tolerance { get; init; }
 
     /// <summary>A blind hole's depth (the drill depth when tapped); ignored when the hole is not blind.</summary>

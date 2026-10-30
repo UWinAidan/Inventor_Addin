@@ -150,10 +150,14 @@ public static class HoleStandards
 /// Clearance holes with no seat or a spotface, and seated clearance holes with no Fastener because their size has no
 /// row of the seat (task 137): the Clearance column used. A seated hole with a row takes the row's Hole fit.
 /// </param>
-/// <param name="PrecisionFit">Dowel holes: Slip, Normal or Press.</param>
+/// <param name="PrecisionFit">
+/// Dowel holes: Slip, Normal or Press. Toleranced Clearance and Simple holes (task 113): the fit of the Precision Tol
+/// row chosen, which picks its colour and, when two rows of the units share a name, the row; Normal for Custom.
+/// </param>
 /// <param name="Tolerance">
-/// Dowel holes: the Name of the Precision Tol row, for the units and fit. Null takes the row marked Default, else
-/// the first.
+/// Dowel holes: the Name of the Precision Tol row, for the units and fit. Toleranced Clearance and Simple holes (task
+/// 113): the Name of any Precision Tol row for the units. Null takes the row marked Default, else the first; null too
+/// for a Custom tolerance (<see cref="CustomTolerance"/>).
 /// </param>
 /// <param name="ThreadDepth">Tapped holes: the thread depth; null takes the Tapped row's default. Not on a taper
 /// tapped hole, whose thread Inventor sets (spec 09 question 22).</param>
@@ -240,6 +244,28 @@ public sealed record HoleSpec(
     /// <summary>Holes with a spotface: the expression <see cref="SpotfaceDepth"/> came from, or null for a number.</summary>
     public string? SpotfaceDepthExpression { get; init; }
 
+    /// <summary>
+    /// Clearance (AWB Clearance) and Simple holes: the Toleranced checkbox (task 113; spec 09, "Toleranced clearance
+    /// and Simple holes"). A toleranced hole takes a <see cref="Tolerance"/> row from any fit, or a Custom tolerance,
+    /// on its modelled diameter, and is a precision hole (<see cref="HolePrecision"/>). Ignored on other kinds.
+    /// </summary>
+    public bool Toleranced { get; init; }
+
+    /// <summary>
+    /// Dowels and toleranced holes: the Custom tolerance is chosen (task 113; spec 09 questions 17 and 18, Default), with
+    /// its limits in <see cref="CustomUpper"/> and <see cref="CustomLower"/>; <see cref="Tolerance"/> is then null.
+    /// </summary>
+    public bool CustomTolerance { get; init; }
+
+    /// <summary>A Custom tolerance's upper limit, in the spec's units, relative to the modelled diameter.</summary>
+    public decimal? CustomUpper { get; init; }
+
+    /// <summary>A Custom tolerance's lower limit, in the spec's units, relative to the modelled diameter.</summary>
+    public decimal? CustomLower { get; init; }
+
+    /// <summary>True for a hole with a tolerance on its diameter: a dowel, or a toleranced Clearance or Simple hole.</summary>
+    public bool IsPrecision => HolePrecision.IsPrecision(this);
+
     /// <summary>True when the hole ends at a distance and so has a bottom.</summary>
     public bool IsBlind => Termination == HoleTermination.Distance;
 
@@ -269,6 +295,9 @@ public sealed record HoleSpec(
         var spotface = Seat == HoleSeat.Spotface;
         var takesFastener = (cbore || csink) && Kind is HoleKind.Clearance or HoleKind.Tapped;
         var depthApplies = IsBlind && !threaded;
+        var toleranced = Toleranced && HolePrecision.CanBeToleranced(Kind);
+        var precise = Kind == HoleKind.Dowel || toleranced;
+        var custom = precise && CustomTolerance;
         return this with
         {
             Size = simple ? "" : Size.Trim(),
@@ -284,8 +313,14 @@ public sealed record HoleSpec(
                 ? HoleExpressions.Clean(SpotfaceDepthExpression)
                 : null,
             ClearanceFit = UsesClearanceFit ? ClearanceFit : ClearanceFit.Normal,
-            PrecisionFit = Kind == HoleKind.Dowel ? PrecisionFit : PrecisionFit.Normal,
-            Tolerance = Kind == HoleKind.Dowel ? Tolerance?.Trim() : null,
+            // A toleranced hole's PrecisionFit is its Precision Tol row's fit, which gives its colour (task 113); Normal
+            // for Custom on a toleranced hole. A dowel keeps its own Fit.
+            PrecisionFit = Kind == HoleKind.Dowel || (toleranced && !custom) ? PrecisionFit : PrecisionFit.Normal,
+            Tolerance = precise && !custom ? Tolerance?.Trim() : null,
+            Toleranced = toleranced,
+            CustomTolerance = custom,
+            CustomUpper = custom ? CustomUpper : null,
+            CustomLower = custom ? CustomLower : null,
             ThreadDepth = tapped ? ThreadDepth : null,
             DrillDepth = threaded ? DrillDepth : null,
             Depth = depthApplies ? Depth : null,

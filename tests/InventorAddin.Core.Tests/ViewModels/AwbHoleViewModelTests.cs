@@ -510,7 +510,7 @@ public sealed class AwbHoleViewModelTests
         vm.Standard = HoleStandards.DowelStandard;
 
         Assert.True(vm.ShowsTolerance);
-        Assert.Equal(["N bore", "N loc", "N second"], ToleranceNames(vm.ToleranceOptions));
+        Assert.Equal(["N bore", "N loc", "N second", HoleToleranceOption.CustomValue], ToleranceNames(vm.ToleranceOptions));
         Assert.Equal("N loc", vm.Tolerance);
     }
 
@@ -521,7 +521,7 @@ public sealed class AwbHoleViewModelTests
         vm.Standard = HoleStandards.DowelStandard;
 
         vm.Fit = "Press";
-        Assert.Equal(["P press"], ToleranceNames(vm.ToleranceOptions));
+        Assert.Equal(["P press", HoleToleranceOption.CustomValue], ToleranceNames(vm.ToleranceOptions));
         Assert.Equal("P press", vm.Tolerance);
 
         vm.Fit = "Normal";
@@ -1421,7 +1421,7 @@ public sealed class AwbHoleViewModelTests
     {
         var vm = Dowel("3 mm");
         vm.Fit = "Slip";
-        Assert.Equal(["S slip"], ToleranceNames(vm.ToleranceOptions));
+        Assert.Equal(["S slip", HoleToleranceOption.CustomValue], ToleranceNames(vm.ToleranceOptions));
 
         vm.Fit = "Normal";
         vm.Units = HoleUnits.Imperial;
