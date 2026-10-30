@@ -295,3 +295,7 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-10-30 | Stored hole data version 2 records every seat's dimensions and makes a tapped hole's fastener optional; version 1 still reads, its seat taken from the row | Default | task 126 |
 | 2026-10-30 | A clearance or tapped counterbore depth is written from the window on every OK, so an expression set in Inventor's own dialog is replaced by its number, as for dowels since task 106 | Default | task 126 |
 | 2026-10-30 | Workbook tabs Spotface and Taper Tapped are optional (a missing one is noted, not a problem); a blank Taper Tapped depth uses the tap drill as D; Spotface is keyed by Size only; starter BSPT rows are Metric, NPT rows Imperial | Default | task 111 |
+| 2026-10-30 | The last blind depth is remembered as a number, not its expression (confirms the Default) | Aidan | spec 09 question 23 |
+| 2026-10-30 | A dowel that becomes another kind of hole resets every face to the part's colour, hand colours included, as now (confirms the Default) | Aidan | spec 09 question 24 |
+| 2026-10-30 | An edited seat value equal to its row's value follows a size change; only values that differ from the row count as typed (confirms task 126's Default) | Aidan | spec 09 question 25 |
+| 2026-10-30 | A seat is allowed on a clearance size with no row of its size: its boxes start empty and OK waits for values (overturns the Default) | Aidan | spec 09 question 26, task 137 |
