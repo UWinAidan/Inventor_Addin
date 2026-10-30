@@ -1036,14 +1036,37 @@ public sealed class HoleRulesTests
             [HoleStandards.ClearanceStandard, HoleStandards.DowelStandard],
             HoleStandards.StandardsFor(HoleStandards.ClearanceType));
         Assert.Equal([HoleStandards.TappedStandard], HoleStandards.StandardsFor("tapped"));
+        Assert.Equal("Simple", HoleStandards.TypeName(HoleKind.Simple));
+        Assert.Equal("Taper Tapped", HoleStandards.TypeName(HoleKind.TaperTapped));
+        Assert.Equal([HoleStandards.TaperTappedStandard], HoleStandards.StandardsFor("taper tapped"));
+        Assert.Empty(HoleStandards.StandardsFor(HoleStandards.SimpleType));
+        Assert.Equal("", HoleStandards.StandardName(HoleKind.Simple));
+        Assert.Equal(["Clearance", "Tapped", "Simple", "Taper Tapped"], HoleStandards.Types);
 
-        foreach (var kind in Enum.GetValues<HoleKind>())
+        foreach (var kind in Enum.GetValues<HoleKind>().Where(k => k != HoleKind.Simple))
         {
             Assert.Equal(kind, HoleStandards.KindFor(HoleStandards.StandardName(kind)));
+            Assert.Equal(kind, HoleStandards.KindFor(HoleStandards.TypeName(kind), HoleStandards.StandardName(kind)));
         }
 
+        Assert.Equal(HoleKind.Simple, HoleStandards.KindFor(HoleStandards.SimpleType, null));
+        Assert.Equal(HoleKind.Simple, HoleStandards.KindFor("simple", HoleStandards.ClearanceStandard));
         Assert.Null(HoleStandards.KindFor("ISO"));
         Assert.Null(HoleStandards.KindFor(null));
+        Assert.Null(HoleStandards.KindFor(""));
+    }
+
+    [Theory]
+    [InlineData(HoleKind.TaperTapped, HoleSeat.Counterbore, false)]
+    [InlineData(HoleKind.TaperTapped, HoleSeat.Countersink, true)]
+    [InlineData(HoleKind.TaperTapped, HoleSeat.Spotface, true)]
+    [InlineData(HoleKind.TaperTapped, HoleSeat.None, true)]
+    [InlineData(HoleKind.Simple, HoleSeat.Counterbore, true)]
+    [InlineData(HoleKind.Tapped, HoleSeat.Spotface, true)]
+    [InlineData(HoleKind.Dowel, HoleSeat.Counterbore, true)]
+    public void Takes_EverySeatOnEveryKind_ButCounterboreOnTaperTapped(HoleKind kind, HoleSeat seat, bool takes)
+    {
+        Assert.Equal(takes, HoleStandards.Takes(kind, seat));
     }
 
     [Fact]

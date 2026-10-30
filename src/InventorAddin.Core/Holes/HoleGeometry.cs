@@ -6,12 +6,17 @@ namespace InventorAddin.Core.Holes;
 /// units (<see cref="HoleThread.TapDrillInTableUnits"/>). The add-in copies these values into Inventor and decides
 /// nothing itself.
 /// </summary>
-/// <param name="Kind">Clearance, Tapped or Dowel. Inventor models a dowel as a plain drilled hole.</param>
-/// <param name="Seat">None, Counterbore or Countersink.</param>
+/// <param name="Kind">
+/// Clearance, Tapped, Dowel, Simple or Taper Tapped. Inventor models a dowel and a Simple hole as plain drilled holes.
+/// </param>
+/// <param name="Seat">None, Counterbore, Countersink or Spotface (its sizes in <see cref="SpotfaceDiameterCm"/> and
+/// <see cref="SpotfaceDepthCm"/>).</param>
 /// <param name="Termination">Distance, Through All or To a face.</param>
 /// <param name="Flip">The direction is flipped.</param>
 /// <param name="HoleDiameterCm">
-/// The modelled hole diameter: the clearance diameter, the tap drill for a tapped hole, the nominal for a dowel.
+/// The modelled hole diameter: the clearance diameter, the tap drill for a tapped hole, the nominal for a dowel, the
+/// Diameter for a Simple hole. For a taper tapped hole, the Taper Tapped row's tap drill, for the checks and the
+/// diagram only: Inventor models its own thread-table tap drill and the add-in does not write it (spec 09 question 21).
 /// </param>
 /// <param name="DepthCm">The hole depth when <see cref="Termination"/> is Distance (the drill depth when tapped); else null.</param>
 /// <param name="CounterboreDiameterCm">Counterbore seats only.</param>
@@ -19,7 +24,7 @@ namespace InventorAddin.Core.Holes;
 /// <param name="CountersinkDiameterCm">Countersink seats only.</param>
 /// <param name="CountersinkAngleDeg">Countersink seats only: the included angle.</param>
 /// <param name="DrillPoint">Blind holes only: the bottom.</param>
-/// <param name="Thread">Tapped holes only.</param>
+/// <param name="Thread">Tapped and taper tapped holes only.</param>
 /// <param name="Tolerance">Dowel holes only: the tolerance on the hole diameter.</param>
 /// <param name="FitColour">Dowel holes only: the colour every face of the hole takes.</param>
 public sealed record HoleGeometry(
@@ -62,6 +67,25 @@ public sealed record HoleGeometry(
     /// (<see cref="HoleExpressions.UnitName"/>), so Inventor reads the expression as the window did.
     /// </summary>
     public HoleUnits ExpressionUnits { get; init; }
+
+    /// <summary>Spotface seats only (task 112): the spotface diameter.</summary>
+    public double? SpotfaceDiameterCm { get; init; }
+
+    /// <summary>Spotface seats only (task 112): the spotface depth; 0 is allowed (spike 108).</summary>
+    public double? SpotfaceDepthCm { get; init; }
+
+    /// <summary>
+    /// The Inventor expression the spotface depth comes from, when it was typed as one (task 112); null for a plain
+    /// number and for any other seat.
+    /// </summary>
+    public string? SpotfaceDepthExpression { get; init; }
+
+    /// <summary>
+    /// The Inventor expression a Simple hole's diameter comes from, when it was typed as one (task 112): written into the
+    /// hole's diameter parameter after <see cref="HoleDiameterCm"/>, so the hole stays parametric. Null for a plain
+    /// number and for every other kind.
+    /// </summary>
+    public string? DiameterExpression { get; init; }
 }
 
 /// <summary>
@@ -74,7 +98,8 @@ public sealed record HoleDrillPoint(string Name, double? AngleDeg)
 }
 
 /// <summary>
-/// The thread of a tapped hole, named as Inventor's thread table names it (spike 081).
+/// The thread of a tapped or taper tapped hole, named as Inventor's thread table names it (spike 081; spike 108 for a
+/// taper thread: thread type <c>NPT</c> with designation <c>1/4</c>).
 /// </summary>
 /// <param name="Designation">Inventor's designation: <c>M6x1</c>, <c>10-32 UNF</c>.</param>
 /// <param name="ThreadType">Inventor's thread type: <c>ISO Metric profile</c> or <c>ANSI Unified Screw Threads</c>.</param>
@@ -101,6 +126,13 @@ public sealed record HoleThread(
     /// (task 100); written into the thread depth parameter after <see cref="ThreadDepthCm"/>. Else null.
     /// </summary>
     public string? ThreadDepthExpression { get; init; }
+
+    /// <summary>
+    /// True for a tapered pipe thread (task 112): Inventor makes it with <c>CreateTaperedTapInfo</c>, threads the
+    /// table's effective length and models its own tap drill (spike 108), so <see cref="Class"/> is empty,
+    /// <see cref="FullDepth"/> is false and <see cref="ThreadDepthCm"/> is 0, and none of them is written.
+    /// </summary>
+    public bool IsTapered { get; init; }
 }
 
 /// <summary>

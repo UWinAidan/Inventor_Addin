@@ -28,8 +28,9 @@ public sealed record HoleReapplyOffer(IReadOnlyList<string> Differences)
 /// diameter, which its thread sets and the add-in does not write;</item>
 /// <item>the seat (none, counterbore, countersink) and how the hole ends;</item>
 /// <item>a blind hole's depths: the depth, or a tapped hole's drill and thread depths;</item>
-/// <item>the seat's own sizes, on every kind (task 106 for a dowel, task 126 for clearance and tapped holes): the
-/// counterbore diameter and depth, or the countersink diameter and angle.</item>
+/// <item>the seat's own sizes, on every kind (task 106 for a dowel, task 126 for clearance and tapped holes, task 112
+/// for Simple and taper tapped holes): the counterbore diameter and depth, the countersink diameter and angle, or the
+/// spotface diameter and depth.</item>
 /// </list>
 /// <para>
 /// A depth stored as an Inventor expression (task 100) is compared by what the expression comes to today, read by the
@@ -70,7 +71,7 @@ public static class HoleReapplyRules
 
         // A tapped hole's diameter is its thread's (the writer never sets it), and a diameter the hole does not report
         // cannot be compared: both take the stored one.
-        var diameter = spec.Kind == HoleKind.Tapped || facts.HoleDiameterCm is null
+        var diameter = HoleStandards.IsThreaded(spec.Kind) || facts.HoleDiameterCm is null
             ? stored.Applied.HoleDiameterCm
             : facts.HoleDiameterCm.Value;
         var current = new HoleAppliedState(
@@ -105,6 +106,11 @@ public static class HoleReapplyRules
                     lengths.Compare("thread depth", spec.ThreadDepth, spec.ThreadDepthExpression, facts.ThreadDepthCm);
                 }
             }
+            else if (spec.Kind == HoleKind.TaperTapped)
+            {
+                // Inventor sets a taper thread's length itself (spec 09 question 22): only the drill depth is compared.
+                lengths.Compare("drill depth", spec.DrillDepth, spec.DrillDepthExpression, facts.DepthCm);
+            }
             else
             {
                 lengths.Compare("depth", spec.Depth, spec.DepthExpression, facts.DepthCm);
@@ -130,6 +136,11 @@ public static class HoleReapplyRules
                         $"The countersink angle is {Degrees(now)}; {CommandName} set {Degrees((double)angle)}.");
                 }
             }
+            else if (spec.Seat == HoleSeat.Spotface)
+            {
+                lengths.Compare("spotface diameter", spec.SpotfaceDiameter, null, facts.SpotfaceDiameterCm);
+                lengths.Compare("spotface depth", spec.SpotfaceDepth, spec.SpotfaceDepthExpression, facts.SpotfaceDepthCm);
+            }
         }
 
         return differences.Count == 0 ? HoleReapplyOffer.None : new HoleReapplyOffer(differences.AsReadOnly());
@@ -140,6 +151,7 @@ public static class HoleReapplyRules
         HoleSeat.None => "no seat",
         HoleSeat.Counterbore => "a counterbore",
         HoleSeat.Countersink => "a countersink",
+        HoleSeat.Spotface => "a spotface",
         _ => "a seat " + CommandName + " does not offer",
     };
 

@@ -81,7 +81,7 @@ public sealed class AwbHoleViewModelTests
     public void FixedLists_AreInTheWindowsOrder()
     {
         Assert.Equal(["Metric", "Imperial"], Values(AwbHoleViewModel.UnitsOptions));
-        Assert.Equal(["Clearance", "Tapped"], Values(AwbHoleViewModel.TypeOptions));
+        Assert.Equal(["Clearance", "Tapped", "Simple", "Taper Tapped"], Values(AwbHoleViewModel.TypeOptions));
         Assert.Equal(["Distance", "Through All"], Values(NewHole().TerminationOptions));
     }
 
@@ -127,7 +127,7 @@ public sealed class AwbHoleViewModelTests
     public void Seat_ForADowel_ListsEverySeat_HasNoFastener_AndStartsFromTheRowOfTheSameSize()
     {
         var vm = NewHole();
-        Assert.Equal(["None", "Counterbore", "Countersink"], Values(vm.SeatOptions));
+        Assert.Equal(["None", "Counterbore", "Countersink", "Spotface"], Values(vm.SeatOptions));
 
         vm.Seat = HoleSeat.Counterbore;
         vm.Standard = HoleStandards.DowelStandard;
@@ -135,7 +135,7 @@ public sealed class AwbHoleViewModelTests
         // 3 mm is the size of T3, which has a counterbore row (6 x 3) and no countersink row. A dowel's seat follows no
         // fastener (task 106): every seat is listed and the boxes start from the row of the same size.
         Assert.Equal("3 mm", vm.Size);
-        Assert.Equal(["None", "Counterbore", "Countersink"], Values(vm.SeatOptions));
+        Assert.Equal(["None", "Counterbore", "Countersink", "Spotface"], Values(vm.SeatOptions));
         Assert.Equal(HoleSeat.Counterbore, vm.Seat);
         Assert.False(vm.ShowsFastener);
         Assert.Empty(vm.FastenerOptions);
@@ -155,7 +155,7 @@ public sealed class AwbHoleViewModelTests
 
         vm.Size = "5 mm";
 
-        Assert.Equal(["None", "Counterbore", "Countersink"], Values(vm.SeatOptions));
+        Assert.Equal(["None", "Counterbore", "Countersink", "Spotface"], Values(vm.SeatOptions));
         Assert.Empty(vm.FastenerOptions);
         Assert.Equal((9.5m, 5m), (vm.CounterboreDiameter, vm.CounterboreDepth));
         Assert.Equal(0.95, vm.Geometry!.CounterboreDiameterCm!.Value, 12);
@@ -171,7 +171,7 @@ public sealed class AwbHoleViewModelTests
         vm.Type = HoleStandards.TappedType;
 
         Assert.Equal("#5-40 UNC", vm.Size);
-        Assert.Equal(["None", "Counterbore", "Countersink"], Values(vm.SeatOptions));
+        Assert.Equal(["None", "Counterbore", "Countersink", "Spotface"], Values(vm.SeatOptions));
 
         vm.Seat = HoleSeat.Countersink;
 
@@ -192,7 +192,7 @@ public sealed class AwbHoleViewModelTests
         vm.Type = HoleStandards.ClearanceType;
         vm.Standard = HoleStandards.DowelStandard;
 
-        Assert.Equal(["None", "Counterbore", "Countersink"], Values(vm.SeatOptions));
+        Assert.Equal(["None", "Counterbore", "Countersink", "Spotface"], Values(vm.SeatOptions));
     }
 
     [Fact]
@@ -252,7 +252,7 @@ public sealed class AwbHoleViewModelTests
         vm.Size = "M3";
 
         Assert.Equal(HoleSeat.Countersink, vm.Seat);
-        Assert.Equal(["None", "Counterbore", "Countersink"], Values(vm.SeatOptions));
+        Assert.Equal(["None", "Counterbore", "Countersink", "Spotface"], Values(vm.SeatOptions));
         Assert.Null(vm.SeatProblem);
         Assert.False(vm.ShowsFastener);
         Assert.Null(vm.Fastener);

@@ -60,9 +60,12 @@ public sealed class AwbHoleDiagramViewModelTests
     {
         var vm = NewHole();
 
-        Assert.Equal([HoleIcons.Clearance, HoleIcons.Tapped], AwbHoleViewModel.TypeOptions.Select(o => o.Icon));
         Assert.Equal(
-            [HoleIcons.SeatNone, HoleIcons.Counterbore, HoleIcons.Countersink], vm.SeatOptions.Select(o => o.Icon));
+            [HoleIcons.Clearance, HoleIcons.Tapped, HoleIcons.Simple, HoleIcons.TaperTapped],
+            AwbHoleViewModel.TypeOptions.Select(o => o.Icon));
+        Assert.Equal(
+            [HoleIcons.SeatNone, HoleIcons.Counterbore, HoleIcons.Countersink, HoleIcons.Spotface],
+            vm.SeatOptions.Select(o => o.Icon));
         Assert.Equal([HoleIcons.Distance, HoleIcons.ThroughAll], vm.TerminationOptions.Select(o => o.Icon));
     }
 

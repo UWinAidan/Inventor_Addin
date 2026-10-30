@@ -32,6 +32,10 @@ public static class HoleSeatCheck
                 CheckLength("countersink diameter", geometry.CountersinkDiameterCm, facts.CountersinkDiameterCm, differences);
                 CheckAngle("countersink angle", geometry.CountersinkAngleDeg, facts.CountersinkAngleDeg, differences);
                 break;
+            case HoleSeat.Spotface:
+                CheckLength("spotface diameter", geometry.SpotfaceDiameterCm, facts.SpotfaceDiameterCm, differences);
+                CheckLength("spotface depth", geometry.SpotfaceDepthCm, facts.SpotfaceDepthCm, differences);
+                break;
         }
 
         return differences.AsReadOnly();
@@ -60,7 +64,8 @@ public static class HoleSeatCheck
         HoleSeat.None => "none",
         HoleSeat.Counterbore => "a counterbore",
         HoleSeat.Countersink => "a countersink",
-        _ => "another kind (a spot face)",
+        HoleSeat.Spotface => "a spotface",
+        _ => "another kind",
     };
 
     private static string Mm(double? cm) =>

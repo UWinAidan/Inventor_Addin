@@ -120,14 +120,15 @@ public static class HoleFaceColours
             double narrowest = cylinders.Count == 0 ? 0 : cylinders.Min(i => faces[i]!.RadiusCm);
             foreach (int i in cylinders)
             {
-                bool wall = seat == HoleSeat.Counterbore && faces[i]!.RadiusCm > narrowest + RadiusToleranceCm;
+                bool wall = (seat is HoleSeat.Counterbore or HoleSeat.Spotface)
+                    && faces[i]!.RadiusCm > narrowest + RadiusToleranceCm;
                 keys[i] = new HoleFaceKey(wall ? HoleFaceRole.SeatWall : HoleFaceRole.Bore, c);
             }
 
             var planes = here.Where(i => faces[i]!.Surface == HoleFaceSurface.Plane).OrderBy(i => depthOf[i]).ToList();
             for (int n = 0; n < planes.Count; n++)
             {
-                bool floor = seat == HoleSeat.Counterbore && n == 0;
+                bool floor = (seat is HoleSeat.Counterbore or HoleSeat.Spotface) && n == 0;
                 keys[planes[n]] = new HoleFaceKey(floor ? HoleFaceRole.SeatFloor : HoleFaceRole.Bottom, c);
             }
 

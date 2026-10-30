@@ -6,8 +6,11 @@ namespace InventorAddin.Core.Holes;
 /// What the add-in reads from a hole feature in Inventor, for edit mode (task 088). Lengths are in centimetres and
 /// angles in degrees; a value Inventor does not report for the hole is null.
 /// </summary>
-/// <param name="Seat">None, Counterbore or Countersink; null for a seat AWB Hole does not offer (a spot face).</param>
-/// <param name="Tapped">The hole is threaded.</param>
+/// <param name="Seat">
+/// None, Counterbore, Countersink or Spotface (task 112; the add-in reads a spotface from task 114); null for a seat AWB
+/// Hole does not offer.
+/// </param>
+/// <param name="Tapped">The hole is threaded, with a straight or a tapered thread (<see cref="TaperedThread"/>).</param>
 /// <param name="ThreadDesignation">Tapped holes: Inventor's designation (<c>M6x1</c>).</param>
 /// <param name="ThreadType">Tapped holes: Inventor's thread type.</param>
 /// <param name="ThreadDepthCm">Tapped holes: the thread depth, when the thread is not full depth.</param>
@@ -60,6 +63,28 @@ public sealed record InventorHoleFacts(
     /// when it is a plain length.
     /// </summary>
     public string? CounterboreDepthExpression { get; init; }
+
+    /// <summary>
+    /// The thread is a tapered pipe thread (task 112; the add-in reads Inventor's <c>TaperedThreadInfo</c> from task
+    /// 114): <see cref="ThreadType"/> and <see cref="ThreadDesignation"/> are then the Taper Tapped tab's Thread type
+    /// and Size (<c>NPT</c>, <c>1/4</c>).
+    /// </summary>
+    public bool TaperedThread { get; init; }
+
+    /// <summary>Spotface seats (task 112): the spotface diameter.</summary>
+    public double? SpotfaceDiameterCm { get; init; }
+
+    /// <summary>Spotface seats (task 112): the spotface depth.</summary>
+    public double? SpotfaceDepthCm { get; init; }
+
+    /// <summary>Spotface seats: the spotface depth parameter's expression when other parameters drive it; else null.</summary>
+    public string? SpotfaceDepthExpression { get; init; }
+
+    /// <summary>
+    /// The hole diameter parameter's expression when other parameters drive it (task 112: a Simple hole's diameter typed
+    /// as an expression); null when it is a plain length.
+    /// </summary>
+    public string? DiameterExpression { get; init; }
 }
 
 /// <summary>Where the spec of a hole read back came from.</summary>
@@ -154,20 +179,30 @@ public static class HoleReadBack
         }
 
         var units = spec.Units;
-        var filled = spec.Seat == HoleSeat.Counterbore
-            ? spec with
+        var filled = spec.Seat switch
+        {
+            HoleSeat.Counterbore => spec with
             {
                 CboreDiameter = spec.CboreDiameter ?? Length(facts.CounterboreDiameterCm, units),
                 CboreDepth = spec.CboreDepth ?? Length(facts.CounterboreDepthCm, units),
                 CboreDepthExpression = spec.CboreDepth is null && facts.CounterboreDepthCm is not null
                     ? facts.CounterboreDepthExpression
                     : spec.CboreDepthExpression,
-            }
-            : spec with
+            },
+            HoleSeat.Spotface => spec with
+            {
+                SpotfaceDiameter = spec.SpotfaceDiameter ?? Length(facts.SpotfaceDiameterCm, units),
+                SpotfaceDepth = spec.SpotfaceDepth ?? Length(facts.SpotfaceDepthCm, units),
+                SpotfaceDepthExpression = spec.SpotfaceDepth is null && facts.SpotfaceDepthCm is not null
+                    ? facts.SpotfaceDepthExpression
+                    : spec.SpotfaceDepthExpression,
+            },
+            _ => spec with
             {
                 CsinkDiameter = spec.CsinkDiameter ?? Length(facts.CountersinkDiameterCm, units),
                 CsinkAngleDeg = spec.CsinkAngleDeg ?? Angle(facts.CountersinkAngleDeg),
-            };
+            },
+        };
         return filled.Normalised();
     }
 
@@ -213,12 +248,15 @@ public static class HoleReadBack
                 notes.Add(HoleFeatureMessages.SpotFaceNotOffered);
             }
 
-            // A seated hole with a tolerance on its diameter is read as a seated dowel first (task 099).
-            var spec = facts.Tapped
+            // A seated hole with a tolerance on its diameter is read as a seated dowel first (task 099). A spotface
+            // follows no fastener, so its hole is read as a hole with no seat is (task 112).
+            var spec = facts.Tapped && facts.TaperedThread
+                ? TaperTapped(seat, termination)
+                : facts.Tapped
                 ? Tapped(seat, termination)
                 : seat switch
                 {
-                    HoleSeat.None => DowelOrClearance(termination),
+                    HoleSeat.None or HoleSeat.Spotface => DowelOrClearance(termination, seat),
                     _ when facts.HasTolerance && Dowel(termination, seat) is { } dowel => dowel,
                     HoleSeat.Counterbore => Counterbore(termination),
                     _ => Countersink(termination),
@@ -229,7 +267,7 @@ public static class HoleReadBack
             if (spec.IsBlind)
             {
                 spec = spec with { DrillPoint = DrillPoint() };
-                if (spec.Kind != HoleKind.Tapped && facts.DepthCm is { } depth)
+                if (!HoleStandards.IsThreaded(spec.Kind) && facts.DepthCm is { } depth)
                 {
                     spec = spec with { Depth = FromCm(depth, spec.Units), DepthExpression = facts.DepthExpression };
                 }
@@ -277,9 +315,14 @@ public static class HoleReadBack
             };
         }
 
-        private HoleSpec DowelOrClearance(HoleTermination termination)
+        /// <summary>
+        /// A plain hole, with no seat or a spotface: a dowel when it has a tolerance and a Dowel row of its diameter, a
+        /// clearance hole when a Clearance row at some fit has its diameter, else a Simple hole of its own diameter (task
+        /// 112, Default), with a note. A hole whose diameter cannot be read is a Simple hole with an empty Diameter.
+        /// </summary>
+        private HoleSpec DowelOrClearance(HoleTermination termination, HoleSeat seat)
         {
-            if (facts.HasTolerance && Dowel(termination, HoleSeat.None) is { } dowel)
+            if (facts.HasTolerance && Dowel(termination, seat) is { } dowel)
             {
                 return dowel;
             }
@@ -292,7 +335,7 @@ public static class HoleReadBack
                     {
                         if (Same(facts.HoleDiameterCm, row.Diameter(fit), units))
                         {
-                            return Blank(units, HoleKind.Clearance, HoleSeat.None, termination) with
+                            return Blank(units, HoleKind.Clearance, seat, termination) with
                             {
                                 Size = row.Size,
                                 ClearanceFit = fit,
@@ -302,25 +345,46 @@ public static class HoleReadBack
                 }
             }
 
-            var closest = workbook.Clearance
-                .Where(r => r.Units == defaultUnits && !r.Hidden)
-                .SelectMany(r => Enum.GetValues<ClearanceFit>().Select(f => (Row: r, Fit: f)))
-                .OrderBy(c => Distance(facts.HoleDiameterCm, c.Row.Diameter(c.Fit), defaultUnits))
-                .FirstOrDefault();
-
-            if (closest.Row is null)
+            notes.Add(facts.HoleDiameterCm is null
+                ? "The hole's diameter could not be read; it is shown as a Simple hole. Enter a diameter."
+                : $"No Clearance row has a {Mm(facts.HoleDiameterCm)} hole; it is shown as a Simple hole of its own " +
+                  "diameter.");
+            return Blank(defaultUnits, HoleKind.Simple, seat, termination) with
             {
-                notes.Add($"No Clearance row has a {Mm(facts.HoleDiameterCm)} hole; pick a size.");
-                return Blank(defaultUnits, HoleKind.Clearance, HoleSeat.None, termination);
+                Diameter = Length(facts.HoleDiameterCm, defaultUnits),
+                DiameterExpression = facts.DiameterExpression,
+            };
+        }
+
+        /// <summary>
+        /// A taper tapped hole (task 112): the Taper Tapped row whose Thread type and Size are the hole's thread type and
+        /// designation (as Inventor's thread table names them), in either units, the default units first. With no such
+        /// row, a note and an empty size. The drill depth is the hole's when blind, else the row's.
+        /// </summary>
+        private HoleSpec TaperTapped(HoleSeat seat, HoleTermination termination)
+        {
+            var designation = facts.ThreadDesignation?.Trim() ?? "";
+            var threadType = facts.ThreadType?.Trim();
+            var row = UnitsOrder
+                .SelectMany(u => workbook.TaperTapped.Where(r => r.Units == u))
+                .FirstOrDefault(r =>
+                    string.Equals(r.Size.Trim(), designation, StringComparison.OrdinalIgnoreCase)
+                    && (threadType is null
+                        || string.Equals(r.ThreadType.Trim(), threadType, StringComparison.OrdinalIgnoreCase)));
+            if (row is null)
+            {
+                notes.Add(designation.Length == 0
+                    ? "The hole's taper thread could not be read; pick a size."
+                    : $"The taper thread {designation} is not in the Taper Tapped tab; pick a size.");
             }
 
-            notes.Add(
-                $"No Clearance row has a {Mm(facts.HoleDiameterCm)} hole; the closest, {closest.Row.Size} " +
-                $"{closest.Fit}, is picked.");
-            return Blank(defaultUnits, HoleKind.Clearance, HoleSeat.None, termination) with
+            var units = row?.Units ?? defaultUnits;
+            var blind = termination == HoleTermination.Distance;
+            return Blank(units, HoleKind.TaperTapped, seat, termination) with
             {
-                Size = closest.Row.Size,
-                ClearanceFit = closest.Fit,
+                Size = row?.Size ?? "",
+                DrillDepth = blind && facts.DepthCm is { } drill ? FromCm(drill, units) : row?.DrillDepth,
+                DrillDepthExpression = blind && facts.DepthCm is not null ? facts.DepthExpression : null,
             };
         }
 

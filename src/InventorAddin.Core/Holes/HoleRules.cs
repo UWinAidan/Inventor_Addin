@@ -26,6 +26,15 @@ public enum HoleField
 
     /// <summary>The countersink angle box (tasks 106 and 126).</summary>
     CountersinkAngle,
+
+    /// <summary>A Simple hole's Diameter box (task 112).</summary>
+    Diameter,
+
+    /// <summary>The spotface diameter box (task 112).</summary>
+    SpotfaceDiameter,
+
+    /// <summary>The spotface depth box (task 112).</summary>
+    SpotfaceDepth,
 }
 
 /// <summary>One reason a hole cannot be built, with the message the window shows.</summary>
@@ -184,6 +193,46 @@ public static class HoleRules
             .AsReadOnly();
     }
 
+    /// <summary>The Spotface rows of the same size, as <see cref="SameSizeCounterbores"/> (task 112).</summary>
+    public static IReadOnlyList<SpotfaceRow> SameSizeSpotfaces(HoleWorkbook workbook, HoleUnits units, decimal nominal)
+    {
+        ArgumentNullException.ThrowIfNull(workbook);
+        return workbook.Spotface
+            .Where(r => r.Units == units && IsSameSize(workbook, units, r.Size, nominal))
+            .ToList()
+            .AsReadOnly();
+    }
+
+    /// <summary>
+    /// The Spotface row a hole's spotface starts from (task 112; spec 09, "Seat boxes"): for a clearance hole the row of
+    /// its Size, for a tapped or dowel hole the row of the same size as its thread or dowel (<see cref="IsSameSize"/>),
+    /// the first shown one, else the first. Null for a Simple or taper tapped hole, whose spotface follows no row, and
+    /// when there is no such row (a workbook without the Spotface tab has none).
+    /// </summary>
+    public static SpotfaceRow? SpotfaceRowFor(HoleWorkbook workbook, HoleUnits units, HoleKind kind, string? size)
+    {
+        ArgumentNullException.ThrowIfNull(workbook);
+
+        if (string.IsNullOrWhiteSpace(size))
+        {
+            return null;
+        }
+
+        IReadOnlyList<SpotfaceRow> rows = kind switch
+        {
+            HoleKind.Clearance => workbook.Spotface.Where(r => r.Units == units && Same(r.Size, size)).ToList(),
+            HoleKind.Tapped or HoleKind.Dowel when SeatNominal(workbook, units, kind, size) is { } nominal =>
+                SameSizeSpotfaces(workbook, units, nominal),
+            _ => [],
+        };
+        return rows.FirstOrDefault(r => !r.Hidden) ?? rows.FirstOrDefault();
+    }
+
+    /// <summary>A seat with only the spotface values of <paramref name="row"/>; empty for none.</summary>
+    public static HoleDowelSeat SpotfaceStart(SpotfaceRow? row) => row is null
+        ? HoleDowelSeat.Empty
+        : HoleDowelSeat.Empty with { SpotfaceDiameter = row.SpotfaceDiameter, SpotfaceDepth = row.SpotfaceDepth };
+
     /// <summary>
     /// Where a dowel's seat boxes start from the workbook (spec 09, "Dowel and precision holes"; task 106), value by
     /// value: the Dowel row's <c>Cbore dia</c>, <c>Cbore depth</c>, <c>Csink dia</c> and <c>Csink angle</c>, and for a
@@ -209,7 +258,7 @@ public static class HoleRules
             row.CboreDiameter ?? cbore?.CboreDiameter,
             row.CboreDepth ?? cbore?.CboreDepth,
             row.CsinkDiameter ?? csink?.CsinkDiameter,
-            row.CsinkAngleDeg ?? csink?.AngleDeg);
+            row.CsinkAngleDeg ?? csink?.AngleDeg).Or(SpotfaceStart(SpotfaceRowFor(workbook, units, HoleKind.Dowel, size)));
     }
 
     /// <summary>
@@ -218,7 +267,9 @@ public static class HoleRules
     /// <see cref="Build"/> picks them: a blank fastener takes the first row, hidden rows included. Each seat's values
     /// come from its own tab, so only the chosen seat's matter. <see cref="HoleDowelSeat.Empty"/> for a dowel, a blank
     /// size, or a size with no row; a value the row does not give is null. A tapped hole with no row starts from the last
-    /// values used (<see cref="HoleLastDowelSeats.ForTapped"/>); the view-model puts those after these.
+    /// values used (<see cref="HoleLastDowelSeats.ForTapped"/>); the view-model puts those after these. The spotface
+    /// values come from the Spotface row of the same size (<see cref="SpotfaceRowFor"/>; task 112), which follows no
+    /// fastener.
     /// </summary>
     public static HoleDowelSeat SeatRowStart(
         HoleWorkbook workbook, HoleUnits units, HoleKind kind, string? size, string? fastener)
@@ -248,7 +299,8 @@ public static class HoleRules
 
         var cbore = PickByFastener(cbores, r => r.Screw, fastener);
         var csink = PickByFastener(csinks, r => r.Screw, fastener);
-        return new HoleDowelSeat(cbore?.CboreDiameter, cbore?.CboreDepth, csink?.CsinkDiameter, csink?.AngleDeg);
+        return new HoleDowelSeat(cbore?.CboreDiameter, cbore?.CboreDepth, csink?.CsinkDiameter, csink?.AngleDeg)
+            .Or(SpotfaceStart(SpotfaceRowFor(workbook, units, kind, size)));
     }
 
     /// <summary>The row whose Screw is <paramref name="fastener"/>; a blank fastener takes the first. Null for none.</summary>
@@ -266,6 +318,10 @@ public static class HoleRules
 
     private static bool Same(string a, string? b) =>
         string.Equals(a.Trim(), b?.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Under Seat when a taper tapped hole has a counterbore, which Inventor does not allow (spike 108).</summary>
+    public const string TaperCounterboreText =
+        "A taper tapped hole cannot have a counterbore; Inventor does not allow one. Choose another seat.";
 
     private static string UnitsName(HoleUnits units) => units == HoleUnits.Metric ? "Metric" : "Imperial";
 
@@ -290,6 +346,8 @@ public static class HoleRules
         private decimal? _cboreDepth;
         private decimal? _csinkDiameter;
         private decimal? _csinkAngleDeg;
+        private decimal? _spotfaceDiameter;
+        private decimal? _spotfaceDepth;
         private HoleDrillPoint? _drillPoint;
         private HoleThread? _thread;
         private HoleTolerance? _tolerance;
@@ -310,7 +368,11 @@ public static class HoleRules
 
         public HoleBuildResult Build()
         {
-            if (string.IsNullOrWhiteSpace(spec.Size))
+            if (spec.Kind == HoleKind.Simple)
+            {
+                BuildSimple();
+            }
+            else if (string.IsNullOrWhiteSpace(spec.Size))
             {
                 Problem(HoleField.Size, "Pick a size.");
             }
@@ -318,7 +380,7 @@ public static class HoleRules
             {
                 switch (spec.Kind)
                 {
-                    case HoleKind.Clearance when spec.Seat == HoleSeat.None:
+                    case HoleKind.Clearance when spec.Seat is HoleSeat.None or HoleSeat.Spotface:
                         BuildClearance();
                         break;
                     case HoleKind.Clearance when spec.Seat == HoleSeat.Counterbore:
@@ -332,6 +394,9 @@ public static class HoleRules
                         break;
                     case HoleKind.Dowel:
                         BuildDowel();
+                        break;
+                    case HoleKind.TaperTapped:
+                        BuildTaperTapped();
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(spec), spec.Kind, null);
@@ -368,10 +433,14 @@ public static class HoleRules
             {
                 // Checks above use the depths' values; the expressions go to Inventor as they were typed (task 100).
                 DepthExpression = spec.IsBlind
-                    ? spec.Kind == HoleKind.Tapped ? spec.DrillDepthExpression : spec.DepthExpression
+                    ? HoleStandards.IsThreaded(spec.Kind) ? spec.DrillDepthExpression : spec.DepthExpression
                     : null,
                 // A counterbore depth typed as an expression, on every kind (task 126).
                 CounterboreDepthExpression = spec.Seat == HoleSeat.Counterbore ? spec.CboreDepthExpression : null,
+                SpotfaceDiameterCm = Cm(_spotfaceDiameter),
+                SpotfaceDepthCm = Cm(_spotfaceDepth),
+                SpotfaceDepthExpression = spec.Seat == HoleSeat.Spotface ? spec.SpotfaceDepthExpression : null,
+                DiameterExpression = spec.Kind == HoleKind.Simple ? spec.DiameterExpression : null,
                 ExpressionUnits = Units,
             };
 
@@ -396,6 +465,74 @@ public static class HoleRules
             }
 
             _holeDiameter = row.Diameter(spec.ClearanceFit);
+
+            // A spotface on a clearance hole (task 112): the through hole at the chosen fit, the spotface from its boxes,
+            // and for a value they leave null the Spotface row of the size.
+            if (spec.Seat == HoleSeat.Spotface)
+            {
+                TakeSeat(SpotfaceStart(SpotfaceRowFor(workbook, Units, HoleKind.Clearance, spec.Size)));
+            }
+        }
+
+        /// <summary>
+        /// A Simple hole (task 112; spec 09, "Simple holes"): the Diameter typed, no size, no row. Its seat follows no
+        /// row: every value comes from the seat boxes, and one left empty is asked for under its box.
+        /// </summary>
+        private void BuildSimple()
+        {
+            if (spec.Diameter is not { } diameter)
+            {
+                Problem(HoleField.Diameter, "Enter a diameter.");
+            }
+            else if (diameter <= 0)
+            {
+                Problem(HoleField.Diameter, "Enter a diameter greater than zero.");
+            }
+            else
+            {
+                _holeDiameter = diameter;
+            }
+
+            if (spec.Seat != HoleSeat.None)
+            {
+                TakeSeat(HoleDowelSeat.Empty);
+            }
+        }
+
+        /// <summary>
+        /// A taper tapped hole (task 112; spec 09, "Taper tapped holes"): the Taper Tapped row of the size. The hole is
+        /// the row's tap drill for the checks and the diagram; Inventor models its own thread-table tap drill (spec 09
+        /// question 21) and threads the table's effective length, so there is no thread depth (question 22). The drill
+        /// depth is the spec's, else the row's. No counterbore (Aidan, 2026-10-28); any other seat follows no row.
+        /// </summary>
+        private void BuildTaperTapped()
+        {
+            var row = FindRow(workbook.TaperTapped, r => r.Units, r => r.Size, spec.Size);
+            if (row is null)
+            {
+                Problem(HoleField.Size, NotInTab(HoleWorkbookReader.TaperTappedTab));
+                return;
+            }
+
+            var drillDepth = spec.DrillDepth ?? row.DrillDepth;
+            _resolved = _resolved with { DrillDepth = drillDepth };
+            _holeDiameter = row.TapDrill;
+            _thread = new HoleThread(
+                row.Size.Trim(), row.ThreadType.Trim(), "", (double)row.TapDrill, row.Units, FullDepth: false, 0)
+            {
+                IsTapered = true,
+            };
+
+            if (!HoleStandards.Takes(spec.Kind, spec.Seat))
+            {
+                Problem(HoleField.Seat, TaperCounterboreText);
+                return;
+            }
+
+            if (spec.Seat != HoleSeat.None)
+            {
+                TakeSeat(HoleDowelSeat.Empty);
+            }
         }
 
         /// <summary>The through hole of a seated hole: the Clearance row of the seat's size, at the seat's Hole fit.</summary>
@@ -452,7 +589,7 @@ public static class HoleRules
             }
 
             _resolved = _resolved with { Fastener = row.Screw };
-            TakeSeat(row.CboreDiameter, row.CboreDepth, null, null);
+            TakeSeat(new HoleDowelSeat(row.CboreDiameter, row.CboreDepth, null, null));
             ThroughHole(tab, row.Size, row.Screw, row.HoleFit);
         }
 
@@ -466,7 +603,7 @@ public static class HoleRules
             }
 
             _resolved = _resolved with { Fastener = row.Screw };
-            TakeSeat(null, null, row.CsinkDiameter, row.AngleDeg);
+            TakeSeat(new HoleDowelSeat(null, null, row.CsinkDiameter, row.AngleDeg));
             ThroughHole(tab, row.Size, row.Screw, row.HoleFit);
         }
 
@@ -490,7 +627,12 @@ public static class HoleRules
                 var needed = spec.CboreDiameter is null || spec.CboreDepth is null;
                 var row = PickSameSize(rows, r => r.Screw, HoleWorkbookReader.CounterboreTab, needed, out var fastenerMissing);
                 _resolved = _resolved with { Fastener = row?.Screw ?? (rows.Count > 0 ? spec.Fastener : null) };
-                TakeSeat(row?.CboreDiameter, row?.CboreDepth, null, null, ask: !fastenerMissing);
+                TakeSeat(new HoleDowelSeat(row?.CboreDiameter, row?.CboreDepth, null, null), ask: !fastenerMissing);
+            }
+            else if (spec.Seat == HoleSeat.Spotface)
+            {
+                // A spotface follows no fastener: the Spotface row of the same size (task 112).
+                TakeSeat(SpotfaceStart(SpotfaceRowFor(workbook, Units, HoleKind.Tapped, spec.Size)));
             }
             else
             {
@@ -498,7 +640,7 @@ public static class HoleRules
                 var needed = spec.CsinkDiameter is null || spec.CsinkAngleDeg is null;
                 var row = PickSameSize(rows, r => r.Screw, HoleWorkbookReader.CountersinkTab, needed, out var fastenerMissing);
                 _resolved = _resolved with { Fastener = row?.Screw ?? (rows.Count > 0 ? spec.Fastener : null) };
-                TakeSeat(null, null, row?.CsinkDiameter, row?.AngleDeg, ask: !fastenerMissing);
+                TakeSeat(new HoleDowelSeat(null, null, row?.CsinkDiameter, row?.AngleDeg), ask: !fastenerMissing);
             }
         }
 
@@ -535,19 +677,17 @@ public static class HoleRules
         }
 
         /// <summary>
-        /// The seat's values (tasks 106 and 126): the spec's own, from the seat boxes, and for one the spec leaves null
-        /// the row's value given here. Only the chosen seat's values are taken, and they go into the resolved spec, so
-        /// the hole's stored data records the dimensions it was made with. A value neither gives is asked for under its
-        /// box, unless <paramref name="ask"/> is false because another problem already says why.
+        /// The seat's values (tasks 106, 112 and 126): the spec's own, from the seat boxes, and for one the spec leaves
+        /// null the row's value given in <paramref name="row"/>. Only the chosen seat's values are taken, and they go into
+        /// the resolved spec, so the hole's stored data records the dimensions it was made with. A value neither gives is
+        /// asked for under its box, unless <paramref name="ask"/> is false because another problem already says why.
         /// </summary>
-        private void TakeSeat(
-            decimal? rowCboreDiameter, decimal? rowCboreDepth, decimal? rowCsinkDiameter, decimal? rowCsinkAngle,
-            bool ask = true)
+        private void TakeSeat(HoleDowelSeat row, bool ask = true)
         {
             if (spec.Seat == HoleSeat.Counterbore)
             {
-                _cboreDiameter = spec.CboreDiameter ?? rowCboreDiameter;
-                _cboreDepth = spec.CboreDepth ?? rowCboreDepth;
+                _cboreDiameter = spec.CboreDiameter ?? row.CboreDiameter;
+                _cboreDepth = spec.CboreDepth ?? row.CboreDepth;
                 _resolved = _resolved with { CboreDiameter = _cboreDiameter, CboreDepth = _cboreDepth };
                 if (_cboreDiameter is null && ask)
                 {
@@ -561,8 +701,8 @@ public static class HoleRules
             }
             else if (spec.Seat == HoleSeat.Countersink)
             {
-                _csinkDiameter = spec.CsinkDiameter ?? rowCsinkDiameter;
-                _csinkAngleDeg = spec.CsinkAngleDeg ?? rowCsinkAngle;
+                _csinkDiameter = spec.CsinkDiameter ?? row.CsinkDiameter;
+                _csinkAngleDeg = spec.CsinkAngleDeg ?? row.CsinkAngleDeg;
                 _resolved = _resolved with { CsinkDiameter = _csinkDiameter, CsinkAngleDeg = _csinkAngleDeg };
                 if (_csinkDiameter is null && ask)
                 {
@@ -572,6 +712,21 @@ public static class HoleRules
                 if (_csinkAngleDeg is null && ask)
                 {
                     Problem(HoleField.CountersinkAngle, "Enter a countersink angle.");
+                }
+            }
+            else if (spec.Seat == HoleSeat.Spotface)
+            {
+                _spotfaceDiameter = spec.SpotfaceDiameter ?? row.SpotfaceDiameter;
+                _spotfaceDepth = spec.SpotfaceDepth ?? row.SpotfaceDepth;
+                _resolved = _resolved with { SpotfaceDiameter = _spotfaceDiameter, SpotfaceDepth = _spotfaceDepth };
+                if (_spotfaceDiameter is null && ask)
+                {
+                    Problem(HoleField.SpotfaceDiameter, "Enter a spotface diameter.");
+                }
+
+                if (_spotfaceDepth is null && ask)
+                {
+                    Problem(HoleField.SpotfaceDepth, "Enter a spotface depth.");
                 }
             }
         }
@@ -588,7 +743,12 @@ public static class HoleRules
             }
 
             _seatBound = nominal;
-            TakeSeat(null, null, null, null);
+
+            // A counterbore or countersink is the dowel's own; a spotface starts from the Spotface row of the same size
+            // for a value left null (task 112).
+            TakeSeat(spec.Seat == HoleSeat.Spotface
+                ? SpotfaceStart(SpotfaceRowFor(workbook, Units, HoleKind.Dowel, spec.Size))
+                : HoleDowelSeat.Empty);
         }
 
         private void BuildTapped()
@@ -696,15 +856,16 @@ public static class HoleRules
 
         private void ResolveDepthAndDrillPoint()
         {
-            _depth = spec.Kind == HoleKind.Tapped ? _resolved.DrillDepth : spec.Depth;
+            var threaded = HoleStandards.IsThreaded(spec.Kind);
+            _depth = threaded ? _resolved.DrillDepth : spec.Depth;
             if (_depth is not > 0)
             {
-                // A tapped hole whose thread was not found has no drill depth yet; its Size problem says why.
-                if (spec.Kind != HoleKind.Tapped || _thread is not null)
+                // A threaded hole whose thread was not found has no drill depth yet; its Size problem says why.
+                if (!threaded || _thread is not null)
                 {
                     Problem(
-                        spec.Kind == HoleKind.Tapped ? HoleField.DrillDepth : HoleField.Depth,
-                        spec.Kind == HoleKind.Tapped
+                        threaded ? HoleField.DrillDepth : HoleField.Depth,
+                        threaded
                             ? "Enter a drill depth greater than zero."
                             : "Enter a depth greater than zero.");
                 }
@@ -728,7 +889,9 @@ public static class HoleRules
         /// <summary>What the seat must be wider than, for a message: the thread and its nominal, or the hole.</summary>
         private string SeatBoundText(decimal value) => spec.Kind == HoleKind.Tapped && _seatBound is not null
             ? $"The thread {spec.Size.Trim()} ({Length(value, Units)})"
-            : $"The hole ({Length(value, Units)})";
+            : spec.Kind == HoleKind.TaperTapped
+                ? $"The tap drill ({Length(value, Units)})"
+                : $"The hole ({Length(value, Units)})";
 
         private void CheckSizes()
         {
@@ -737,6 +900,30 @@ public static class HoleRules
             {
                 Problem(HoleField.Size, $"The hole diameter for {spec.Size.Trim()} is not greater than zero.");
                 return;
+            }
+
+            if (_spotfaceDiameter is { } spotfaceDiameter && (_seatBound ?? _holeDiameter) is { } spotHole
+                && spotHole >= spotfaceDiameter)
+            {
+                Problem(
+                    HoleField.SpotfaceDiameter,
+                    $"{SeatBoundText(spotHole)} is not smaller than its spotface ({Length(spotfaceDiameter, Units)}).");
+            }
+
+            // A spotface depth of 0 is allowed (spike 108; Aidan, 2026-10-28): Inventor models only the hole.
+            if (_spotfaceDepth is { } spotfaceDepth)
+            {
+                if (spotfaceDepth < 0)
+                {
+                    Problem(HoleField.SpotfaceDepth, "The spotface depth is less than zero.");
+                }
+                else if (_depth is { } blind && blind > 0 && spotfaceDepth >= blind)
+                {
+                    Problem(
+                        HoleField.Depth,
+                        $"The spotface depth ({Length(spotfaceDepth, Units)}) is not less than the hole depth " +
+                        $"({Length(blind, Units)}).");
+                }
             }
 
             if (_cboreDiameter is { } cboreDiameter && (_seatBound ?? _holeDiameter) is { } hole)

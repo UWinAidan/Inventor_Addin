@@ -10,9 +10,10 @@ namespace InventorAddin.Core.Settings;
 /// <remarks>
 /// A record so that two instances with the same values compare equal. <see cref="Equals(AddinSettings?)"/> is
 /// written out because <see cref="OtherCadFolders"/> and <see cref="PreferredMaterials"/> are lists, and
-/// <see cref="LastDowelSeatsMm"/>, <see cref="LastDowelSeatsIn"/>, <see cref="LastTappedSeatsMm"/> and
-/// <see cref="LastTappedSeatsIn"/> maps, which a record would compare by reference: a
-/// new setting must be added there and to <see cref="GetHashCode"/>.
+/// <see cref="LastDowelSeatsMm"/>, <see cref="LastDowelSeatsIn"/>, <see cref="LastTappedSeatsMm"/>,
+/// <see cref="LastTappedSeatsIn"/>, <see cref="LastTaperTappedSeatsMm"/> and <see cref="LastTaperTappedSeatsIn"/>
+/// maps, which a record would compare by reference: a new setting must be added there and to
+/// <see cref="GetHashCode"/>.
 /// </remarks>
 public sealed record AddinSettings
 {
@@ -222,6 +223,62 @@ public sealed record AddinSettings
     private IReadOnlyDictionary<string, HoleDowelSeat> _lastTappedSeatsIn = DowelSeatMap(null);
 
     /// <summary>
+    /// The seat of the last taper tapped hole kept with OK in Metric, by size, in mm (task 112; spec 09 question 19,
+    /// Default): written as <see cref="LastDowelSeatsMm"/> is, keyed by the Taper Tapped tab's Size (<c>"Rc 1/4"</c>).
+    /// Each seat's values are kept apart (a countersink kept leaves the spotface values as they were), so this is the
+    /// last seat per units, size and seat. Changed through <see cref="HoleLastDowelSeats.Remember"/>.
+    /// </summary>
+    public IReadOnlyDictionary<string, HoleDowelSeat> LastTaperTappedSeatsMm
+    {
+        get => _lastTaperTappedSeatsMm;
+        set => _lastTaperTappedSeatsMm = DowelSeatMap(value);
+    }
+
+    private IReadOnlyDictionary<string, HoleDowelSeat> _lastTaperTappedSeatsMm = DowelSeatMap(null);
+
+    /// <summary>As <see cref="LastTaperTappedSeatsMm"/>, in inches, for Imperial.</summary>
+    public IReadOnlyDictionary<string, HoleDowelSeat> LastTaperTappedSeatsIn
+    {
+        get => _lastTaperTappedSeatsIn;
+        set => _lastTaperTappedSeatsIn = DowelSeatMap(value);
+    }
+
+    private IReadOnlyDictionary<string, HoleDowelSeat> _lastTaperTappedSeatsIn = DowelSeatMap(null);
+
+    /// <summary>
+    /// The seat of the last Simple hole kept with OK in Metric, in mm (task 112; spec 09 question 19, Default): each
+    /// seat's values kept apart, so this is the last seat per units and seat. Null until one is kept. Changed through
+    /// <see cref="HoleLastDowelSeats.Remember"/>.
+    /// </summary>
+    public HoleDowelSeat? LastSimpleSeatMm { get; set; }
+
+    /// <summary>As <see cref="LastSimpleSeatMm"/>, in inches, for Imperial.</summary>
+    public HoleDowelSeat? LastSimpleSeatIn { get; set; }
+
+    /// <summary>
+    /// The diameter, in mm, of the last Simple hole kept with OK in Metric (task 112; spec 09 "Simple holes", Default): a
+    /// new Simple hole starts at it. Kept as a number, not the expression it was typed as (as the blind depth, spec 09
+    /// question 23). Null until one is kept; a value that is not greater than zero is stored as null. Changed through
+    /// <see cref="Holes.HoleLastDepths.Remember"/>.
+    /// </summary>
+    public decimal? LastSimpleDiameterMm
+    {
+        get => _lastSimpleDiameterMm;
+        set => _lastSimpleDiameterMm = value is > 0 ? value : null;
+    }
+
+    private decimal? _lastSimpleDiameterMm;
+
+    /// <summary>As <see cref="LastSimpleDiameterMm"/>, in inches, for Imperial.</summary>
+    public decimal? LastSimpleDiameterIn
+    {
+        get => _lastSimpleDiameterIn;
+        set => _lastSimpleDiameterIn = value is > 0 ? value : null;
+    }
+
+    private decimal? _lastSimpleDiameterIn;
+
+    /// <summary>
     /// Whether the AWB Hole window's diagram is open (task 104; mockup choice 12): true, the default, shows it; false
     /// shows only its header line with a summary. Remembered across windows and restarts. Not shown in the Settings
     /// window. Changed through <see cref="HoleDiagramState.Remember"/>.
@@ -288,6 +345,12 @@ public sealed record AddinSettings
         && SameDowelSeats(LastDowelSeatsIn, other.LastDowelSeatsIn)
         && SameDowelSeats(LastTappedSeatsMm, other.LastTappedSeatsMm)
         && SameDowelSeats(LastTappedSeatsIn, other.LastTappedSeatsIn)
+        && SameDowelSeats(LastTaperTappedSeatsMm, other.LastTaperTappedSeatsMm)
+        && SameDowelSeats(LastTaperTappedSeatsIn, other.LastTaperTappedSeatsIn)
+        && LastSimpleSeatMm == other.LastSimpleSeatMm
+        && LastSimpleSeatIn == other.LastSimpleSeatIn
+        && LastSimpleDiameterMm == other.LastSimpleDiameterMm
+        && LastSimpleDiameterIn == other.LastSimpleDiameterIn
         && HoleDiagramExpanded == other.HoleDiagramExpanded
         && PreferredMaterials.SequenceEqual(other.PreferredMaterials, StringComparer.Ordinal);
 
@@ -313,6 +376,12 @@ public sealed record AddinSettings
         hash.Add(LastDowelSeatsIn.Count);
         hash.Add(LastTappedSeatsMm.Count);
         hash.Add(LastTappedSeatsIn.Count);
+        hash.Add(LastTaperTappedSeatsMm.Count);
+        hash.Add(LastTaperTappedSeatsIn.Count);
+        hash.Add(LastSimpleSeatMm);
+        hash.Add(LastSimpleSeatIn);
+        hash.Add(LastSimpleDiameterMm);
+        hash.Add(LastSimpleDiameterIn);
         hash.Add(HoleDiagramExpanded);
         foreach (var material in PreferredMaterials)
             hash.Add(material, StringComparer.Ordinal);

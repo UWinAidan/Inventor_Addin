@@ -10,7 +10,7 @@ public sealed class HoleIconsAndDiagramStateTests
     public void Icons_AreAllDifferent()
     {
         Assert.Equal(HoleIcons.All.Count, HoleIcons.All.Distinct(StringComparer.Ordinal).Count());
-        Assert.Equal(11, HoleIcons.All.Count);
+        Assert.Equal(14, HoleIcons.All.Count);
     }
 
     [Theory]

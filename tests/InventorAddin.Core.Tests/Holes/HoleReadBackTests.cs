@@ -122,24 +122,28 @@ public sealed class HoleReadBackTests
     }
 
     [Fact]
-    public void UnknownDiameter_TakesTheClosestClearance_InTheDefaultUnits()
+    public void UnknownDiameter_IsASimpleHoleOfItsDiameter_InTheDefaultUnits()
     {
+        // Task 112 (Default): a plain hole no Clearance row has is a Simple hole of its own diameter, not the closest row.
         var result = HoleReadBack.Read(null, PlainFacts(0.57), Workbook, HoleUnits.Metric);
 
-        Assert.Equal(HoleKind.Clearance, result.Spec.Kind);
-        Assert.Equal("T5", result.Spec.Size);
-        Assert.Equal(ClearanceFit.Loose, result.Spec.ClearanceFit);
-        Assert.Equal("No Clearance row has a 5.7 mm hole; the closest, T5 Loose, is picked.", Assert.Single(result.Notes));
+        Assert.Equal(HoleKind.Simple, result.Spec.Kind);
+        Assert.Equal("", result.Spec.Size);
+        Assert.Equal(5.7m, result.Spec.Diameter);
+        Assert.Equal(
+            "No Clearance row has a 5.7 mm hole; it is shown as a Simple hole of its own diameter.",
+            Assert.Single(result.Notes));
     }
 
     [Fact]
-    public void EmptyWorkbook_GivesABlankSize_WithANote()
+    public void EmptyWorkbook_GivesASimpleHole_WithANote()
     {
         var result = HoleReadBack.Read(null, PlainFacts(0.57), HoleWorkbook.Empty, HoleUnits.Imperial);
 
         Assert.Equal(HoleUnits.Imperial, result.Spec.Units);
-        Assert.Equal("", result.Spec.Size);
-        Assert.Equal("No Clearance row has a 5.7 mm hole; pick a size.", Assert.Single(result.Notes));
+        Assert.Equal(HoleKind.Simple, result.Spec.Kind);
+        Assert.Equal(Math.Round(0.57m / 2.54m, 5), result.Spec.Diameter);
+        Assert.Single(result.Notes);
     }
 
     [Fact]

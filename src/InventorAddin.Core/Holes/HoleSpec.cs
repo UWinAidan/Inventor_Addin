@@ -9,14 +9,21 @@ public enum HoleKind
     Clearance,
     Tapped,
     Dowel,
+
+    /// <summary>A plain hole of a typed diameter, with no standard or size (task 112; spec 09, "Simple holes").</summary>
+    Simple,
+
+    /// <summary>A tapered pipe thread from the Taper Tapped tab (task 112; spec 09, "Taper tapped holes").</summary>
+    TaperTapped,
 }
 
-/// <summary>The seat of a hole, as Inventor's: none, a counterbore or a countersink.</summary>
+/// <summary>The seat of a hole, as Inventor's: none, a counterbore, a countersink or a spotface (task 112).</summary>
 public enum HoleSeat
 {
     None,
     Counterbore,
     Countersink,
+    Spotface,
 }
 
 /// <summary>How the hole ends, as Inventor's: at a depth, through everything, or at a face picked in Inventor.</summary>
@@ -29,41 +36,69 @@ public enum HoleTermination
 
 /// <summary>
 /// The Type and Standard names the window shows (spec 09, "The window"), and how they map onto <see cref="HoleKind"/>.
-/// Type Clearance lists AWB Clearance and AWB Dowel; Type Tapped lists AWB Tapped.
+/// Type Clearance lists AWB Clearance and AWB Dowel; Type Tapped lists AWB Tapped; Type Taper Tapped lists AWB Taper
+/// Tapped; Type Simple has no standard (task 112).
 /// </summary>
 public static class HoleStandards
 {
     public const string ClearanceType = "Clearance";
     public const string TappedType = "Tapped";
+    public const string SimpleType = "Simple";
+    public const string TaperTappedType = "Taper Tapped";
 
     public const string ClearanceStandard = Branding.ShortName + " Clearance";
     public const string TappedStandard = Branding.ShortName + " Tapped";
     public const string DowelStandard = Branding.ShortName + " Dowel";
+    public const string TaperTappedStandard = Branding.ShortName + " Taper Tapped";
 
-    /// <summary>The window's Type for a kind: Tapped for tapped holes, Clearance for clearance and dowel holes.</summary>
-    public static string TypeName(HoleKind kind) => kind == HoleKind.Tapped ? TappedType : ClearanceType;
+    /// <summary>The window's Types, in window order (spec 09, "The window").</summary>
+    public static IReadOnlyList<string> Types { get; } = [ClearanceType, TappedType, SimpleType, TaperTappedType];
 
-    /// <summary>The window's Standard for a kind.</summary>
+    /// <summary>The window's Type for a kind: a dowel is the Clearance type (spec 09 question 3).</summary>
+    public static string TypeName(HoleKind kind) => kind switch
+    {
+        HoleKind.Tapped => TappedType,
+        HoleKind.Simple => SimpleType,
+        HoleKind.TaperTapped => TaperTappedType,
+        _ => ClearanceType,
+    };
+
+    /// <summary>The window's Standard for a kind; <c>""</c> for a Simple hole, which has none.</summary>
     public static string StandardName(HoleKind kind) => kind switch
     {
         HoleKind.Clearance => ClearanceStandard,
         HoleKind.Tapped => TappedStandard,
         HoleKind.Dowel => DowelStandard,
+        HoleKind.TaperTapped => TaperTappedStandard,
+        HoleKind.Simple => "",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };
 
-    /// <summary>The Standards listed for a Type, in window order.</summary>
-    public static IReadOnlyList<string> StandardsFor(string type) =>
-        string.Equals(type, TappedType, StringComparison.OrdinalIgnoreCase)
-            ? [TappedStandard]
-            : [ClearanceStandard, DowelStandard];
+    /// <summary>The Standards listed for a Type, in window order; none for Simple.</summary>
+    public static IReadOnlyList<string> StandardsFor(string type) => (type ?? "").Trim() switch
+    {
+        var t when Same(t, TappedType) => [TappedStandard],
+        var t when Same(t, TaperTappedType) => [TaperTappedStandard],
+        var t when Same(t, SimpleType) => [],
+        _ => [ClearanceStandard, DowelStandard],
+    };
+
+    /// <summary>The kind for a Type and Standard: Simple for the Simple type, else the Standard's kind.</summary>
+    public static HoleKind? KindFor(string? type, string? standard) =>
+        Same(type?.Trim(), SimpleType) ? HoleKind.Simple : KindFor(standard);
 
     /// <summary>The kind for a Standard name, or null when it is not one of ours.</summary>
     public static HoleKind? KindFor(string? standard)
     {
+        if (string.IsNullOrWhiteSpace(standard))
+        {
+            return null;
+        }
+
         foreach (var kind in Enum.GetValues<HoleKind>())
         {
-            if (string.Equals(standard?.Trim(), StandardName(kind), StringComparison.OrdinalIgnoreCase))
+            if (kind != HoleKind.Simple
+                && string.Equals(standard.Trim(), StandardName(kind), StringComparison.OrdinalIgnoreCase))
             {
                 return kind;
             }
@@ -71,6 +106,18 @@ public static class HoleStandards
 
         return null;
     }
+
+    /// <summary>
+    /// True when a hole of <paramref name="kind"/> can take <paramref name="seat"/>: every seat on every kind, except a
+    /// counterbore on a taper tapped hole, which Inventor does not allow (Aidan, 2026-10-28; spike 108).
+    /// </summary>
+    public static bool Takes(HoleKind kind, HoleSeat seat) =>
+        !(kind == HoleKind.TaperTapped && seat == HoleSeat.Counterbore);
+
+    /// <summary>True for the threaded kinds: Tapped and Taper Tapped.</summary>
+    public static bool IsThreaded(HoleKind kind) => kind is HoleKind.Tapped or HoleKind.TaperTapped;
+
+    private static bool Same(string? a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
 }
 
 /// <summary>
@@ -79,7 +126,7 @@ public static class HoleStandards
 /// workbook. <see cref="HoleRules"/> turns a spec and the workbook into <see cref="HoleGeometry"/>.
 /// </summary>
 /// <param name="Units">Metric or Imperial; picks the workbook rows.</param>
-/// <param name="Kind">Clearance, Tapped or Dowel.</param>
+/// <param name="Kind">Clearance, Tapped, Dowel, Simple or Taper Tapped (task 112).</param>
 /// <param name="Seat">
 /// None, Counterbore or Countersink, for every kind (spec 09, "Types and seats"). The seat is described by its own
 /// <see cref="CboreDiameter"/>, <see cref="CboreDepth"/>, <see cref="CsinkDiameter"/> and <see cref="CsinkAngleDeg"/>,
@@ -89,8 +136,9 @@ public static class HoleStandards
 /// names only the row, resolves to the row's dimensions.
 /// </param>
 /// <param name="Size">
-/// The size key: the Size of a Clearance, Counterbore, Countersink or Dowel row, or the Thread of a Tapped row
-/// (as written in the workbook, <c>M6</c>, <c>#10-32 UNF</c>).
+/// The size key: the Size of a Clearance, Counterbore, Countersink, Dowel or Taper Tapped row, or the Thread of a
+/// Tapped row (as written in the workbook, <c>M6</c>, <c>#10-32 UNF</c>, <c>1/4</c>). <c>""</c> for a Simple hole,
+/// whose size is its <see cref="Diameter"/>.
 /// </param>
 /// <param name="Fastener">
 /// Seated clearance and tapped holes: the Screw of the Counterbore or Countersink row (<c>SHCS</c>), which gives the
@@ -104,10 +152,12 @@ public static class HoleStandards
 /// Dowel holes: the Name of the Precision Tol row, for the units and fit. Null takes the row marked Default, else
 /// the first.
 /// </param>
-/// <param name="ThreadDepth">Tapped holes: the thread depth; null takes the Tapped row's default.</param>
-/// <param name="DrillDepth">Tapped holes: the drill depth, the hole's depth when blind; null takes the row's default.</param>
+/// <param name="ThreadDepth">Tapped holes: the thread depth; null takes the Tapped row's default. Not on a taper
+/// tapped hole, whose thread Inventor sets (spec 09 question 22).</param>
+/// <param name="DrillDepth">Tapped and taper tapped holes: the drill depth, the hole's depth when blind; null takes the
+/// row's default.</param>
 /// <param name="Termination">Distance, Through All or To a face.</param>
-/// <param name="Depth">Clearance and dowel holes ending at a distance: the hole depth.</param>
+/// <param name="Depth">Clearance, dowel and Simple holes ending at a distance: the hole depth.</param>
 /// <param name="DrillPoint">
 /// Blind holes: the Name of the Drill Point row. Null takes the row marked Default, else the first.
 /// </param>
@@ -149,6 +199,15 @@ public sealed record HoleSpec(
     /// <summary>Clearance and dowel holes: the expression <see cref="Depth"/> came from, or null for a plain number.</summary>
     public string? DepthExpression { get; init; }
 
+    /// <summary>
+    /// Simple holes: the hole diameter typed in the Diameter box, in the spec's units (task 112; spec 09, "Simple
+    /// holes"). Null for every other kind, and while the box is empty.
+    /// </summary>
+    public decimal? Diameter { get; init; }
+
+    /// <summary>Simple holes: the expression <see cref="Diameter"/> came from, or null for a plain number.</summary>
+    public string? DiameterExpression { get; init; }
+
     // The seat's dimensions, the window's seat boxes (spec 09, "The window": Seat sizes): a dowel's since task 106,
     // every kind's since task 126. In the spec's units; the angle in degrees. A dowel has no Fastener, so a null leaves
     // its box empty and HoleRules asks for a value; a clearance or tapped hole takes a null from its row, and asks only
@@ -169,42 +228,63 @@ public sealed record HoleSpec(
     /// <summary>Holes with a countersink: its included angle, in degrees.</summary>
     public decimal? CsinkAngleDeg { get; init; }
 
+    /// <summary>Holes with a spotface (task 112): its diameter.</summary>
+    public decimal? SpotfaceDiameter { get; init; }
+
+    /// <summary>Holes with a spotface (task 112): its depth; 0 is allowed (spike 108).</summary>
+    public decimal? SpotfaceDepth { get; init; }
+
+    /// <summary>Holes with a spotface: the expression <see cref="SpotfaceDepth"/> came from, or null for a number.</summary>
+    public string? SpotfaceDepthExpression { get; init; }
+
     /// <summary>True when the hole ends at a distance and so has a bottom.</summary>
     public bool IsBlind => Termination == HoleTermination.Distance;
 
     /// <summary>
     /// The same spec with every choice that does not apply to its kind, seat and termination put back to its default
     /// (null, or Normal for the fits), so two specs that build the same hole compare equal. A depth's expression is
-    /// trimmed, and goes with its depth: null when the depth is. A dowel has no fastener; the seat's values apply only
-    /// to its seat, on every kind (tasks 106 and 126). This is what <see cref="HoleStoredData"/> stores.
+    /// trimmed, and goes with its depth: null when the depth is. A fastener applies only to a clearance or tapped hole's
+    /// counterbore or countersink; the seat's values apply only to its seat, on every kind (tasks 106, 112 and 126). A
+    /// Simple hole has no size, only its diameter (task 112). This is what <see cref="HoleStoredData"/> stores.
     /// </summary>
     public HoleSpec Normalised()
     {
-        var seated = Seat != HoleSeat.None;
         var tapped = Kind == HoleKind.Tapped;
-        var dowel = Kind == HoleKind.Dowel;
+        var threaded = HoleStandards.IsThreaded(Kind);
+        var simple = Kind == HoleKind.Simple;
         var cbore = Seat == HoleSeat.Counterbore;
         var csink = Seat == HoleSeat.Countersink;
-        var depthApplies = IsBlind && !tapped;
+        var spotface = Seat == HoleSeat.Spotface;
+        var takesFastener = (cbore || csink) && Kind is HoleKind.Clearance or HoleKind.Tapped;
+        var depthApplies = IsBlind && !threaded;
         return this with
         {
-            Size = Size.Trim(),
-            Fastener = seated && !dowel ? Fastener?.Trim() : null,
+            Size = simple ? "" : Size.Trim(),
+            Fastener = takesFastener ? Fastener?.Trim() : null,
             CboreDiameter = cbore ? CboreDiameter : null,
             CboreDepth = cbore ? CboreDepth : null,
             CboreDepthExpression = cbore && CboreDepth is not null ? HoleExpressions.Clean(CboreDepthExpression) : null,
             CsinkDiameter = csink ? CsinkDiameter : null,
             CsinkAngleDeg = csink ? CsinkAngleDeg : null,
-            ClearanceFit = Kind == HoleKind.Clearance && Seat == HoleSeat.None ? ClearanceFit : ClearanceFit.Normal,
+            SpotfaceDiameter = spotface ? SpotfaceDiameter : null,
+            SpotfaceDepth = spotface ? SpotfaceDepth : null,
+            SpotfaceDepthExpression = spotface && SpotfaceDepth is not null
+                ? HoleExpressions.Clean(SpotfaceDepthExpression)
+                : null,
+            ClearanceFit = Kind == HoleKind.Clearance && Seat is HoleSeat.None or HoleSeat.Spotface
+                ? ClearanceFit
+                : ClearanceFit.Normal,
             PrecisionFit = Kind == HoleKind.Dowel ? PrecisionFit : PrecisionFit.Normal,
             Tolerance = Kind == HoleKind.Dowel ? Tolerance?.Trim() : null,
             ThreadDepth = tapped ? ThreadDepth : null,
-            DrillDepth = tapped ? DrillDepth : null,
+            DrillDepth = threaded ? DrillDepth : null,
             Depth = depthApplies ? Depth : null,
             DrillPoint = IsBlind ? DrillPoint?.Trim() : null,
             ThreadDepthExpression = tapped && ThreadDepth is not null ? HoleExpressions.Clean(ThreadDepthExpression) : null,
-            DrillDepthExpression = tapped && DrillDepth is not null ? HoleExpressions.Clean(DrillDepthExpression) : null,
+            DrillDepthExpression = threaded && DrillDepth is not null ? HoleExpressions.Clean(DrillDepthExpression) : null,
             DepthExpression = depthApplies && Depth is not null ? HoleExpressions.Clean(DepthExpression) : null,
+            Diameter = simple ? Diameter : null,
+            DiameterExpression = simple && Diameter is not null ? HoleExpressions.Clean(DiameterExpression) : null,
         };
     }
 }

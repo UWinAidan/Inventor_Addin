@@ -360,7 +360,7 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 - [x] 109 Every AWB command works in a part edited in place
 - [ ] 110 The AWB Hole preview drawn with client graphics, no face paint
 - [x] 111 Hole workbook: Spotface and Taper Tapped tabs
-- [ ] 112 Core: Simple and Taper Tapped types, Spotface, any seat on any type
+- [x] 112 Core: Simple and Taper Tapped types, Spotface, any seat on any type
 - [ ] 113 Core: toleranced Clearance and Simple holes, Custom tolerance
 - [ ] 114 Simple and Taper Tapped holes and spotfaces in Inventor and the window
 - [ ] 115 Toleranced Clearance and Simple holes in Inventor and the window

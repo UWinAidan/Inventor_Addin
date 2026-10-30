@@ -43,6 +43,14 @@ public sealed class HoleFaceColoursTests
     }
 
     [Fact]
+    public void Classify_Spotface_CountsAsACounterbore()
+    {
+        // Task 112: the Spotface seat is classified as a counterbore is, as task 122 decided for a spot face.
+        var keys = HoleFaceColours.Classify(Counterbored, OneCentre, HoleSeat.Spotface);
+        Assert.Equal([Key(HoleFaceRole.Bore), Key(HoleFaceRole.SeatFloor), Key(HoleFaceRole.SeatWall)], keys);
+    }
+
+    [Fact]
     public void Classify_BlindCounterboreWithFlatBottom_FloorIsTheShallowerPlane()
     {
         HoleFaceShape?[] faces = [Plane(0, -2), Cylinder(0, 0.8, -0.3), Plane(0, -0.6), Cylinder(0, 0.45, -1.3)];

@@ -165,14 +165,19 @@ public sealed record HoleStoredDataReadResult(HoleStoredData? Data, string Messa
 /// <see cref="HoleRules"/> and the window take from the row the fastener names, so the stored row resolves to its
 /// dimensions.
 /// </para>
+/// <para>
+/// Version 3 (task 112): the Simple and Taper Tapped kinds and the Spotface seat. A Simple hole stores its
+/// <see cref="DiameterName"/> (and the expression it was typed as) and no size; a spotface stores its diameter and depth;
+/// a taper tapped hole its drill depth. Versions 1 and 2 hold none of these, and read as before.
+/// </para>
 /// </summary>
 public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
 {
     /// <summary>The attribute set's name on the hole feature.</summary>
     public const string AttributeSetName = Branding.ShortName + "_Hole";
 
-    /// <summary>The version written now (task 126).</summary>
-    public const int CurrentVersion = 2;
+    /// <summary>The version written now (task 112).</summary>
+    public const int CurrentVersion = 3;
 
     /// <summary>The oldest version read. Data with a version outside this and <see cref="CurrentVersion"/> is not read.</summary>
     public const int OldestVersion = 1;
@@ -200,6 +205,11 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
     public const string CboreDepthExpressionName = "CboreDepthExpression";
     public const string CsinkDiameterName = "CsinkDiameter";
     public const string CsinkAngleName = "CsinkAngleDeg";
+    public const string DiameterName = "Diameter";
+    public const string DiameterExpressionName = "DiameterExpression";
+    public const string SpotfaceDiameterName = "SpotfaceDiameter";
+    public const string SpotfaceDepthName = "SpotfaceDepth";
+    public const string SpotfaceDepthExpressionName = "SpotfaceDepthExpression";
     public const string AppliedDiameterName = "AppliedDiameterCm";
     public const string AppliedIsoCodeName = "AppliedToleranceIsoCode";
     public const string AppliedUpperName = "AppliedToleranceUpperCm";
@@ -223,8 +233,13 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
             new(UnitsName, spec.Units.ToString()),
             new(KindName, spec.Kind.ToString()),
             new(SeatName, spec.Seat.ToString()),
-            new(SizeName, spec.Size),
         };
+
+        // A Simple hole has no size (task 112).
+        if (spec.Size.Length > 0)
+        {
+            attributes.Add(new HoleAttribute(SizeName, spec.Size));
+        }
 
         void AddText(string name, string? value)
         {
@@ -268,6 +283,11 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
         AddText(CboreDepthExpressionName, spec.CboreDepthExpression);
         AddNumber(CsinkDiameterName, spec.CsinkDiameter);
         AddNumber(CsinkAngleName, spec.CsinkAngleDeg);
+        AddNumber(DiameterName, spec.Diameter);
+        AddText(DiameterExpressionName, spec.DiameterExpression);
+        AddNumber(SpotfaceDiameterName, spec.SpotfaceDiameter);
+        AddNumber(SpotfaceDepthName, spec.SpotfaceDepth);
+        AddText(SpotfaceDepthExpressionName, spec.SpotfaceDepthExpression);
 
         attributes.Add(new HoleAttribute(AppliedDiameterName, Applied.HoleDiameterCm));
         AddText(AppliedIsoCodeName, Applied.ToleranceIsoCode);
@@ -328,7 +348,14 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
             }
         }
 
-        Require(!string.IsNullOrWhiteSpace(spec.Size), SizeName);
+        if (spec.Kind == HoleKind.Simple)
+        {
+            Require(spec.Diameter is not null, DiameterName);
+        }
+        else
+        {
+            Require(!string.IsNullOrWhiteSpace(spec.Size), SizeName);
+        }
 
         // Every seat has its own dimensions (tasks 106 and 126). A clearance hole's seat also names its row, which gives
         // the through hole; a tapped hole's may have none (task 126), and a dowel's follows no fastener.
@@ -342,8 +369,13 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
             Require(spec.CsinkDiameter is not null, CsinkDiameterName);
             Require(spec.CsinkAngleDeg is not null, CsinkAngleName);
         }
+        else if (spec.Seat == HoleSeat.Spotface)
+        {
+            Require(spec.SpotfaceDiameter is not null, SpotfaceDiameterName);
+            Require(spec.SpotfaceDepth is not null, SpotfaceDepthName);
+        }
 
-        if (spec.Kind == HoleKind.Clearance && spec.Seat != HoleSeat.None)
+        if (spec.Kind == HoleKind.Clearance && spec.Seat is HoleSeat.Counterbore or HoleSeat.Countersink)
         {
             Require(!string.IsNullOrWhiteSpace(spec.Fastener), FastenerName);
         }
@@ -353,7 +385,7 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
             Require(!string.IsNullOrWhiteSpace(spec.Tolerance), ToleranceName);
         }
 
-        if (spec.IsBlind && spec.Kind != HoleKind.Tapped)
+        if (spec.IsBlind && !HoleStandards.IsThreaded(spec.Kind))
         {
             Require(spec.Depth is not null, DepthName);
         }
@@ -362,7 +394,8 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
     private static HoleStoredDataReadResult CannotRead(string reason) =>
         new(null, $"Cannot read the {Branding.ShortName} hole data on this hole: {reason}.");
 
-    private static bool UsesClearanceFit(HoleSpec spec) => spec.Kind == HoleKind.Clearance && spec.Seat == HoleSeat.None;
+    private static bool UsesClearanceFit(HoleSpec spec) =>
+        spec.Kind == HoleKind.Clearance && spec.Seat is HoleSeat.None or HoleSeat.Spotface;
 
     private sealed class StoredDataException(string message) : Exception(message);
 
@@ -378,38 +411,47 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
             // version 2 a tapped hole's seat may have no row of its size, and so no fastener (task 126). Every seat
             // stores its dimensions: a dowel's since task 106, every kind's since version 2. Ones stored before have
             // none, and read as null.
-            var dowel = kind == HoleKind.Dowel;
-            var seated = seat != HoleSeat.None && !dowel;
-            var fastenerRequired = seated && (kind == HoleKind.Clearance || version < 2);
+            // From version 3 (task 112) a Simple hole has no size but its diameter, a spotface follows no fastener, and a
+            // taper tapped hole has a drill depth and no thread depth.
             var cbore = seat == HoleSeat.Counterbore;
             var csink = seat == HoleSeat.Countersink;
+            var spotface = seat == HoleSeat.Spotface;
+            var simple = kind == HoleKind.Simple;
+            var threaded = HoleStandards.IsThreaded(kind);
+            var seated = (cbore || csink) && kind is HoleKind.Clearance or HoleKind.Tapped;
+            var fastenerRequired = seated && (kind == HoleKind.Clearance || version < 2);
 
             var spec = new HoleSpec(
                 RequiredEnum<HoleUnits>(UnitsName),
                 kind,
                 seat,
-                RequiredText(SizeName),
+                simple ? OptionalText(SizeName) ?? "" : RequiredText(SizeName),
                 fastenerRequired ? RequiredText(FastenerName) : seated ? OptionalText(FastenerName) : null,
-                kind == HoleKind.Clearance && seat == HoleSeat.None
+                kind == HoleKind.Clearance && seat is HoleSeat.None or HoleSeat.Spotface
                     ? RequiredEnum<ClearanceFit>(ClearanceFitName)
                     : ClearanceFit.Normal,
                 kind == HoleKind.Dowel ? RequiredEnum<PrecisionFit>(PrecisionFitName) : PrecisionFit.Normal,
                 kind == HoleKind.Dowel ? RequiredText(ToleranceName) : null,
                 kind == HoleKind.Tapped ? OptionalDecimal(ThreadDepthName) : null,
-                kind == HoleKind.Tapped ? OptionalDecimal(DrillDepthName) : null,
+                threaded ? OptionalDecimal(DrillDepthName) : null,
                 termination,
-                blind && kind != HoleKind.Tapped ? RequiredDecimal(DepthName) : null,
+                blind && !threaded ? RequiredDecimal(DepthName) : null,
                 blind ? OptionalText(DrillPointName) : null,
                 RequiredFlag(FlipName))
             {
                 ThreadDepthExpression = kind == HoleKind.Tapped ? OptionalText(ThreadDepthExpressionName) : null,
-                DrillDepthExpression = kind == HoleKind.Tapped ? OptionalText(DrillDepthExpressionName) : null,
-                DepthExpression = blind && kind != HoleKind.Tapped ? OptionalText(DepthExpressionName) : null,
+                DrillDepthExpression = threaded ? OptionalText(DrillDepthExpressionName) : null,
+                DepthExpression = blind && !threaded ? OptionalText(DepthExpressionName) : null,
                 CboreDiameter = cbore ? OptionalDecimal(CboreDiameterName) : null,
                 CboreDepth = cbore ? OptionalDecimal(CboreDepthName) : null,
                 CboreDepthExpression = cbore ? OptionalText(CboreDepthExpressionName) : null,
                 CsinkDiameter = csink ? OptionalDecimal(CsinkDiameterName) : null,
                 CsinkAngleDeg = csink ? OptionalDecimal(CsinkAngleName) : null,
+                SpotfaceDiameter = spotface ? OptionalDecimal(SpotfaceDiameterName) : null,
+                SpotfaceDepth = spotface ? OptionalDecimal(SpotfaceDepthName) : null,
+                SpotfaceDepthExpression = spotface ? OptionalText(SpotfaceDepthExpressionName) : null,
+                Diameter = simple ? RequiredDecimal(DiameterName) : null,
+                DiameterExpression = simple ? OptionalText(DiameterExpressionName) : null,
             };
 
             var applied = new HoleAppliedState(

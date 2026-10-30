@@ -87,7 +87,7 @@ public sealed class HoleStoredDataTests
         var attributes = Stored(Dowel() with { Termination = HoleTermination.Distance, Depth = 14m }).ToAttributes();
 
         Assert.Equal("AWB_Hole", HoleStoredData.AttributeSetName);
-        Assert.Equal(new HoleAttribute("Version", 2), attributes[0]);
+        Assert.Equal(new HoleAttribute("Version", 3), attributes[0]);
         Assert.All(attributes, a => Assert.True(a.Value is string or int or double, a.Name));
         Assert.Equal(attributes.Count, attributes.Select(a => a.Name).Distinct().Count());
 
@@ -121,7 +121,7 @@ public sealed class HoleStoredDataTests
     }
 
     [Theory]
-    [InlineData(3)]
+    [InlineData(4)]
     [InlineData(0)]
     public void UnknownVersion_CannotBeRead(int version)
     {
@@ -190,7 +190,7 @@ public sealed class HoleStoredDataTests
     }
 
     [Theory]
-    [InlineData("Kind", "Simple")]
+    [InlineData("Kind", "Conical")]
     [InlineData("Kind", "1")]
     [InlineData("Units", "")]
     [InlineData("Flip", "yes")]

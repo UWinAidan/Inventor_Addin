@@ -42,13 +42,27 @@ public sealed record HoleDiagramInput
 
     public decimal? CountersinkAngleDeg { get; init; }
 
-    /// <summary>A tapped hole's thread as Inventor names it, for example <c>M6x1</c>.</summary>
+    /// <summary>A spotface's diameter (task 112).</summary>
+    public decimal? SpotfaceDiameter { get; init; }
+
+    /// <summary>A spotface's depth (task 112); 0 draws the spotface flush with the top face.</summary>
+    public decimal? SpotfaceDepth { get; init; }
+
+    public bool SpotfaceDepthIsExpression { get; init; }
+
+    /// <summary>
+    /// A tapped or taper tapped hole's thread as Inventor names it, for example <c>M6x1</c> or <c>1/4</c> (a taper
+    /// thread shows its Taper Tapped Size; task 112).
+    /// </summary>
     public string? ThreadName { get; init; }
 
     /// <summary>A tapped hole's thread (major) diameter.</summary>
     public decimal? ThreadDiameter { get; init; }
 
-    /// <summary>A blind tapped hole's thread depth; a hole that is not blind is threaded its full depth.</summary>
+    /// <summary>
+    /// A blind tapped hole's thread depth; a hole that is not blind is threaded its full depth. Null for a taper tapped
+    /// hole, whose thread length Inventor sets (spec 09 question 22): its thread is drawn in proportion, with no dimension.
+    /// </summary>
     public decimal? ThreadDepth { get; init; }
 
     public bool ThreadDepthIsExpression { get; init; }
@@ -153,7 +167,7 @@ public sealed record HoleDiagram(
         string Len(decimal? value) => value is { } v ? FormatLength(v, units) : UnknownText;
 
         var parts = new List<string>();
-        if (input.Kind == HoleKind.Tapped)
+        if (HoleStandards.IsThreaded(input.Kind))
         {
             parts.Add(Clean(input.ThreadName) ?? UnknownText);
         }
@@ -167,6 +181,7 @@ public sealed record HoleDiagram(
         {
             HoleTermination.Distance when input.Kind == HoleKind.Tapped =>
                 $"thread {Len(input.ThreadDepth)}, drill {Len(input.Depth)}",
+            HoleTermination.Distance when input.Kind == HoleKind.TaperTapped => $"drill {Len(input.Depth)}",
             HoleTermination.Distance => $"{Len(input.Depth)} deep",
             HoleTermination.ToFace => "to a face",
             _ => "through all",
@@ -180,6 +195,10 @@ public sealed record HoleDiagram(
         {
             var angle = input.CountersinkAngleDeg is { } a ? FormatAngle(a) : UnknownText;
             parts.Add($"countersink {DiameterSign}{Len(input.CountersinkDiameter)} at {angle}");
+        }
+        else if (input.Seat == HoleSeat.Spotface)
+        {
+            parts.Add($"spotface {DiameterSign}{Len(input.SpotfaceDiameter)} by {Len(input.SpotfaceDepth)}");
         }
 
         return string.Join(", ", parts);
@@ -244,7 +263,19 @@ public sealed record HoleDiagram(
 
         private bool Blind => input.IsBlind;
 
-        private bool Tapped => input.Kind == HoleKind.Tapped;
+        // A taper thread is drawn as a tapped thread (task 112).
+        private bool Tapped => HoleStandards.IsThreaded(input.Kind);
+
+        // A spotface is drawn as a counterbore (task 112): a flat-bottomed step, from its own boxes.
+        private bool Bored => input.Seat is HoleSeat.Counterbore or HoleSeat.Spotface;
+
+        private decimal? BoreDiameter =>
+            input.Seat == HoleSeat.Spotface ? input.SpotfaceDiameter : input.CounterboreDiameter;
+
+        private decimal? BoreDepth => input.Seat == HoleSeat.Spotface ? input.SpotfaceDepth : input.CounterboreDepth;
+
+        private bool BoreDepthIsExpression =>
+            input.Seat == HoleSeat.Spotface ? input.SpotfaceDepthIsExpression : input.CounterboreDepthIsExpression;
 
         private double X(double value) => _cx + value * _scale;
 
@@ -271,10 +302,10 @@ public sealed record HoleDiagram(
             }
 
             var rightDimensions = new List<StackItem>();
-            if (input.Seat == HoleSeat.Counterbore && Positive(input.CounterboreDepth) is not null)
+            if (Bored && Positive(BoreDepth) is not null)
             {
                 rightDimensions.Add(StackItem.Dimension(
-                    0, _cboreDepth, _seatR, _seatR, Len(input.CounterboreDepth!.Value), input.CounterboreDepthIsExpression));
+                    0, _cboreDepth, _seatR, _seatR, Len(BoreDepth!.Value), BoreDepthIsExpression));
             }
 
             if (Tapped && Blind && Positive(input.ThreadDepth) is not null)
@@ -315,7 +346,7 @@ public sealed record HoleDiagram(
             var threadName = Tapped ? Clean(input.ThreadName) : null;
             var seatDiameter = input.Seat switch
             {
-                HoleSeat.Counterbore => Positive(input.CounterboreDiameter) is not null ? input.CounterboreDiameter : null,
+                HoleSeat.Counterbore or HoleSeat.Spotface => Positive(BoreDiameter) is not null ? BoreDiameter : null,
                 HoleSeat.Countersink => Positive(input.CountersinkDiameter) is not null ? input.CountersinkDiameter : null,
                 _ => null,
             };
@@ -377,17 +408,22 @@ public sealed record HoleDiagram(
         {
             var diameter = Positive(input.HoleDiameter)
                 ?? (Positive(input.ThreadDiameter) * 0.85)
-                ?? (Positive(input.CounterboreDiameter) * 0.55)
+                ?? (Positive(BoreDiameter) * 0.55)
                 ?? (Positive(input.CountersinkDiameter) * 0.55)
                 ?? 1.0;
             _r = diameter / 2;
 
             _seatR = _r;
             _seatBottom = 0;
-            if (input.Seat == HoleSeat.Counterbore)
+            if (Bored)
             {
-                _seatR = Math.Max((Positive(input.CounterboreDiameter) ?? diameter * 1.8) / 2, _r * 1.15);
-                _cboreDepth = Positive(input.CounterboreDepth) ?? diameter * 0.6;
+                _seatR = Math.Max((Positive(BoreDiameter) ?? diameter * 1.8) / 2, _r * 1.15);
+
+                // A spotface is shallow: one with no depth yet is drawn at a fifth of the hole's diameter, and one of
+                // depth 0 flush with the top face (spike 108).
+                _cboreDepth = input.Seat == HoleSeat.Spotface
+                    ? input.SpotfaceDepth is { } spot && spot >= 0 ? (double)spot : diameter * 0.2
+                    : Positive(input.CounterboreDepth) ?? diameter * 0.6;
                 _seatBottom = _cboreDepth;
             }
             else if (input.Seat == HoleSeat.Countersink)
@@ -473,7 +509,7 @@ public sealed record HoleDiagram(
         private List<(double X, double Y)> Profile()
         {
             var points = new List<(double X, double Y)>();
-            if (input.Seat == HoleSeat.Counterbore)
+            if (Bored)
             {
                 points.Add((_seatR, 0));
                 points.Add((_seatR, _cboreDepth));

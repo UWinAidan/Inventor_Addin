@@ -379,6 +379,12 @@ public sealed class SettingsStoreTests : IDisposable
             s => s with { LastDowelSeatsIn = new Dictionary<string, HoleDowelSeat> { ["1/4\""] = new(null, null, 0.3m, 90m) } },
             s => s with { LastTappedSeatsMm = new Dictionary<string, HoleDowelSeat> { ["M6"] = new(null, null, 7m, 90m) } },
             s => s with { LastTappedSeatsIn = new Dictionary<string, HoleDowelSeat> { ["1/4-20 UNC"] = new(0.4m, 0.1m, null, null) } },
+            s => s with { LastTaperTappedSeatsMm = new Dictionary<string, HoleDowelSeat> { ["Rc 1/4"] = new(null, null, 16m, 90m) } },
+            s => s with { LastTaperTappedSeatsIn = new Dictionary<string, HoleDowelSeat> { ["1/4"] = HoleDowelSeat.Empty with { SpotfaceDiameter = 0.8m } } },
+            s => s with { LastSimpleSeatMm = new HoleDowelSeat(9m, 2m, null, null) },
+            s => s with { LastSimpleSeatIn = HoleDowelSeat.Empty with { SpotfaceDepth = 0m } },
+            s => s with { LastSimpleDiameterMm = 5.5m },
+            s => s with { LastSimpleDiameterIn = 0.2m },
             s => s with { HoleDiagramExpanded = false },
             s => s with { PreferredMaterials = new[] { "Test Steel" } },
         };

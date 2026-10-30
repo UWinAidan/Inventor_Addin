@@ -81,11 +81,11 @@ public sealed class HoleSeatCheckTests
     }
 
     [Fact]
-    public void SpotFace_IsReportedAsAnotherSeat()
+    public void UnknownSeat_IsReportedAsAnotherSeat()
     {
         var facts = FactsOf(Plain) with { Seat = null };
 
-        Assert.Contains("spot face", Assert.Single(HoleSeatCheck.Differences(Plain, facts)));
+        Assert.Contains("another kind", Assert.Single(HoleSeatCheck.Differences(Plain, facts)));
     }
 
     [Fact]

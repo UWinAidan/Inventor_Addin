@@ -9,9 +9,19 @@ public static class HoleIcons
 {
     public const string Clearance = "Clearance";
     public const string Tapped = "Tapped";
+
+    /// <summary>Type Simple (task 112; drawn by task 119).</summary>
+    public const string Simple = "Simple";
+
+    /// <summary>Type Taper Tapped (task 112; drawn by task 119).</summary>
+    public const string TaperTapped = "TaperTapped";
+
     public const string SeatNone = "SeatNone";
     public const string Counterbore = "Counterbore";
     public const string Countersink = "Countersink";
+
+    /// <summary>Seat Spotface (task 112; drawn by task 119).</summary>
+    public const string Spotface = "Spotface";
     public const string Distance = "Distance";
     public const string ThroughAll = "ThroughAll";
     public const string ToFace = "ToFace";
@@ -34,21 +44,30 @@ public static class HoleIcons
     public static IReadOnlyList<string> All { get; } =
     [
         Clearance, Tapped, SeatNone, Counterbore, Countersink, Distance, ThroughAll, ToFace, PointShallow, PointSteep,
-        FlatBottom,
+        FlatBottom, Simple, TaperTapped, Spotface,
     ];
 
-    /// <summary>The icon for a Type: Tapped for a tapped hole, else Clearance (a dowel is the Clearance type).</summary>
-    public static string ForType(string? type) =>
-        string.Equals((type ?? "").Trim(), HoleStandards.TappedType, StringComparison.OrdinalIgnoreCase)
-            ? Tapped
-            : Clearance;
+    /// <summary>
+    /// The icon for a Type: Tapped, Simple and Taper Tapped their own, anything else Clearance (a dowel is the
+    /// Clearance type).
+    /// </summary>
+    public static string ForType(string? type) => (type ?? "").Trim() switch
+    {
+        var t when Same(t, HoleStandards.TappedType) => Tapped,
+        var t when Same(t, HoleStandards.SimpleType) => Simple,
+        var t when Same(t, HoleStandards.TaperTappedType) => TaperTapped,
+        _ => Clearance,
+    };
 
     public static string ForSeat(HoleSeat seat) => seat switch
     {
         HoleSeat.Counterbore => Counterbore,
         HoleSeat.Countersink => Countersink,
+        HoleSeat.Spotface => Spotface,
         _ => SeatNone,
     };
+
+    private static bool Same(string a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
 
     public static string ForTermination(HoleTermination termination) => termination switch
     {

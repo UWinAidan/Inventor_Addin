@@ -188,6 +188,7 @@ public sealed class AwbHoleViewModel : ObservableObject
     public const string NoneText = "None";
     public const string CounterboreText = "Counterbore";
     public const string CountersinkText = "Countersink";
+    public const string SpotfaceText = "Spotface";
     public const string DistanceText = "Distance";
     public const string ThroughAllText = "Through All";
     public const string ToText = "To";
@@ -200,11 +201,9 @@ public sealed class AwbHoleViewModel : ObservableObject
         new(HoleUnits.Imperial, ImperialText),
     ];
 
+    /// <summary>Clearance, Tapped, Simple and Taper Tapped (spec 09, "The window"; task 112).</summary>
     public static IReadOnlyList<HoleOption<string>> TypeOptions { get; } =
-    [
-        new(HoleStandards.ClearanceType, HoleStandards.ClearanceType) { Icon = HoleIcons.Clearance },
-        new(HoleStandards.TappedType, HoleStandards.TappedType) { Icon = HoleIcons.Tapped },
-    ];
+        HoleStandards.Types.Select(t => new HoleOption<string>(t, t) { Icon = HoleIcons.ForType(t) }).ToList().AsReadOnly();
 
     // Termination To needs the end face picked, which the window cannot do yet (task 090): To is listed only for an
     // edited hole that already ends at a face, so the window shows what the hole is.
@@ -250,6 +249,7 @@ public sealed class AwbHoleViewModel : ObservableObject
         new(HoleSeat.None, NoneText) { Icon = HoleIcons.SeatNone },
         new(HoleSeat.Counterbore, CounterboreText) { Icon = HoleIcons.Counterbore },
         new(HoleSeat.Countersink, CountersinkText) { Icon = HoleIcons.Countersink },
+        new(HoleSeat.Spotface, SpotfaceText) { Icon = HoleIcons.Spotface },
     ];
 
     private readonly HoleWorkbook _workbook;
@@ -284,7 +284,13 @@ public sealed class AwbHoleViewModel : ObservableObject
     private decimal? _cboreDepth;
     private decimal? _csinkDiameter;
     private decimal? _csinkAngle;
+    private decimal? _spotfaceDiameter;
+    private decimal? _spotfaceDepth;
     private ListContext? _seatBoxContext;
+
+    // A Simple hole's Diameter box (task 112), in the units' length, and what it was last started for.
+    private decimal? _diameter;
+    private ListContext? _diameterContext;
 
     // The lists that depend on other fields.
     private IReadOnlyList<HoleOption<HoleSeat>> _seatOptions = AllSeats;
@@ -401,26 +407,35 @@ public sealed class AwbHoleViewModel : ObservableObject
             _cboreDepth = spec.CboreDepth;
             _csinkDiameter = spec.CsinkDiameter;
             _csinkAngle = spec.CsinkAngleDeg;
+            _spotfaceDiameter = spec.SpotfaceDiameter;
+            _spotfaceDepth = spec.SpotfaceDepth;
+            _diameter = spec.Diameter;
             _depthUnits = _units;
             OpenExpression(HoleField.ThreadDepth, spec.ThreadDepthExpression, ref _threadDepth);
             OpenExpression(HoleField.DrillDepth, spec.DrillDepthExpression, ref _drillDepth);
             OpenExpression(HoleField.Depth, spec.DepthExpression, ref _depth);
             OpenExpression(HoleField.CounterboreDepth, spec.CboreDepthExpression, ref _cboreDepth);
+            OpenExpression(HoleField.SpotfaceDepth, spec.SpotfaceDepthExpression, ref _spotfaceDepth);
+            OpenExpression(HoleField.Diameter, spec.DiameterExpression, ref _diameter);
 
             // The hole's own values count as typed, so a change in the window never resets them (task 124, Default).
             OpenTyped(HoleField.ThreadDepth, _threadDepth);
             OpenTyped(HoleField.DrillDepth, _drillDepth);
             OpenTyped(HoleField.Depth, _depth);
+            OpenTyped(HoleField.Diameter, _diameter);
             // A clearance or tapped hole's seat counts as typed only where it differs from its row (task 126, Default),
-            // so a seat made from its row follows a size change as it did before (task 093).
-            var row = spec.Kind == HoleKind.Dowel
+            // so a seat made from its row follows a size change as it did before (task 093). A seat that follows no
+            // fastener standard (a dowel's, a Simple or taper tapped hole's) is always the hole's own.
+            var typedAlways = spec.Kind is HoleKind.Dowel or HoleKind.Simple or HoleKind.TaperTapped;
+            var row = typedAlways
                 ? HoleDowelSeat.Empty
                 : HoleRules.SeatRowStart(workbook, spec.Units, spec.Kind, spec.Size, spec.Fastener);
-            var typedAlways = spec.Kind == HoleKind.Dowel;
             OpenTypedSeat(HoleField.CounterboreDiameter, _cboreDiameter, row.CboreDiameter, typedAlways);
             OpenTypedSeat(HoleField.CounterboreDepth, _cboreDepth, row.CboreDepth, typedAlways);
             OpenTypedSeat(HoleField.CountersinkDiameter, _csinkDiameter, row.CsinkDiameter, typedAlways);
             OpenTypedSeat(HoleField.CountersinkAngle, _csinkAngle, row.CsinkAngleDeg, typedAlways);
+            OpenTypedSeat(HoleField.SpotfaceDiameter, _spotfaceDiameter, row.SpotfaceDiameter, typedAlways);
+            OpenTypedSeat(HoleField.SpotfaceDepth, _spotfaceDepth, row.SpotfaceDepth, typedAlways);
             Refresh(keepExact: true);
         }
 
@@ -618,7 +633,10 @@ public sealed class AwbHoleViewModel : ObservableObject
         }
     }
 
-    /// <summary>Clearance or Tapped. The seat is kept when the new type offers it (task 123).</summary>
+    /// <summary>
+    /// Clearance, Tapped, Simple or Taper Tapped (task 112). The seat is kept when the new type offers it (task 123);
+    /// a counterbore moved to Taper Tapped falls back to None and comes back on a type that takes it.
+    /// </summary>
     public string Type
     {
         get => _type;
@@ -635,8 +653,9 @@ public sealed class AwbHoleViewModel : ObservableObject
     }
 
     /// <summary>
-    /// The seats: None, Counterbore, Countersink, on every kind (task 126; this widens task 099's tapped list, which held
-    /// only the seats with a row of the same size).
+    /// The seats: None, Counterbore, Countersink, Spotface, on every kind (tasks 112 and 126; this widens task 099's
+    /// tapped list, which held only the seats with a row of the same size), except Counterbore on Taper Tapped
+    /// (Aidan, 2026-10-28).
     /// </summary>
     public IReadOnlyList<HoleOption<HoleSeat>> SeatOptions => _seatOptions;
 
@@ -659,8 +678,14 @@ public sealed class AwbHoleViewModel : ObservableObject
         }
     }
 
-    /// <summary>AWB Clearance and AWB Dowel for Clearance; AWB Tapped for Tapped (spec 09 question 2).</summary>
+    /// <summary>
+    /// AWB Clearance and AWB Dowel for Clearance; AWB Tapped for Tapped (spec 09 question 2); AWB Taper Tapped for
+    /// Taper Tapped; none for Simple (task 112).
+    /// </summary>
     public IReadOnlyList<HoleOption<string>> StandardOptions => _standardOptions;
+
+    /// <summary>False for a Simple hole, which has no standard (task 112).</summary>
+    public bool ShowsStandard => _standardOptions.Count > 0;
 
     public string Standard
     {
@@ -678,7 +703,7 @@ public sealed class AwbHoleViewModel : ObservableObject
     }
 
     /// <summary>The kind the Type and Standard give.</summary>
-    public HoleKind Kind => HoleStandards.KindFor(_standard) ?? HoleKind.Clearance;
+    public HoleKind Kind => HoleStandards.KindFor(_type, _standard) ?? HoleKind.Clearance;
 
     /// <summary>
     /// The Screw values of the seat's tab for the units, in workbook order (for a tapped hole, of the rows of the same
@@ -688,10 +713,11 @@ public sealed class AwbHoleViewModel : ObservableObject
     public IReadOnlyList<HoleOption<string>> FastenerOptions => _fastenerOptions;
 
     /// <summary>
-    /// True for a seated clearance or tapped hole with a fastener to pick; never for a dowel (task 106), nor for a tapped
-    /// hole with no row of its size (task 126).
+    /// True for a clearance or tapped hole with a counterbore or countersink and a fastener to pick; never for a dowel
+    /// (task 106), a Simple or taper tapped hole, or a spotface (task 112), nor for a tapped hole with no row of its size
+    /// (task 126).
     /// </summary>
-    public bool ShowsFastener => _seat != HoleSeat.None && Kind != HoleKind.Dowel && _fastenerOptions.Count > 0;
+    public bool ShowsFastener => TakesFastener(Kind, _seat) && _fastenerOptions.Count > 0;
 
     public string? Fastener
     {
@@ -706,6 +732,64 @@ public sealed class AwbHoleViewModel : ObservableObject
 
     /// <summary>True for a hole with a countersink: its diameter and angle boxes show.</summary>
     public bool ShowsCountersinkSizes => _seat == HoleSeat.Countersink;
+
+    /// <summary>True for a hole with a spotface: its diameter and depth boxes show (task 112).</summary>
+    public bool ShowsSpotfaceSizes => _seat == HoleSeat.Spotface;
+
+    /// <summary>The spotface diameter, in the units' length. Null empties the box.</summary>
+    public decimal? SpotfaceDiameter
+    {
+        get => _spotfaceDiameter;
+        set
+        {
+            Change(() =>
+            {
+                MarkTyped(HoleField.SpotfaceDiameter, value);
+                Set(ref _spotfaceDiameter, value, nameof(SpotfaceDiameter));
+            });
+        }
+    }
+
+    /// <summary>The spotface depth, in the units' length; 0 is allowed (spike 108). Null empties the box.</summary>
+    public decimal? SpotfaceDepth
+    {
+        get => _spotfaceDepth;
+        set
+        {
+            Change(() =>
+            {
+                MarkTyped(HoleField.SpotfaceDepth, value);
+                Set(ref _spotfaceDepth, value, nameof(SpotfaceDepth));
+            });
+        }
+    }
+
+    /// <summary>True for a Simple hole: the Diameter box shows (task 112).</summary>
+    public bool ShowsDiameter => Kind == HoleKind.Simple;
+
+    /// <summary>
+    /// A Simple hole's diameter, in the units' length (task 112; spec 09, "Simple holes"). Starts at the last Simple
+    /// diameter kept with OK in the units, else empty, and OK waits. A value set here is typed and kept across units and
+    /// type changes (task 124); null empties it.
+    /// </summary>
+    public decimal? Diameter
+    {
+        get => _diameter;
+        set
+        {
+            if (Kind != HoleKind.Simple)
+            {
+                OnPropertyChanged();
+                return;
+            }
+
+            Change(() =>
+            {
+                MarkTyped(HoleField.Diameter, value);
+                Set(ref _diameter, value, nameof(Diameter));
+            });
+        }
+    }
 
     /// <summary>The counterbore diameter, in the units' length. Null empties the box.</summary>
     public decimal? CounterboreDiameter
@@ -763,8 +847,21 @@ public sealed class AwbHoleViewModel : ObservableObject
         }
     }
 
-    /// <summary>The sizes of the tab for the kind, seat, fastener and units, in workbook order.</summary>
+    /// <summary>The sizes of the tab for the kind, seat, fastener and units, in workbook order; none for Simple.</summary>
     public IReadOnlyList<HoleOption<string>> SizeOptions => _sizeOptions;
+
+    /// <summary>False for a Simple hole, whose size is its Diameter (task 112).</summary>
+    public bool ShowsSize => Kind != HoleKind.Simple;
+
+    /// <summary>
+    /// Under Size when Taper Tapped lists no sizes because the workbook has no Taper Tapped tab (task 111's note,
+    /// <see cref="HoleWorkbookMessages.MissingOptionalTab"/>); else null.
+    /// </summary>
+    public string? SizeNote =>
+        Kind == HoleKind.TaperTapped && _sizeOptions.Count == 0
+        && _workbook.MissingOptionalTabs.Any(t => SameText(t, HoleWorkbookReader.TaperTappedTab))
+            ? HoleWorkbookMessages.MissingOptionalTab(HoleWorkbookReader.TaperTappedTab)
+            : null;
 
     public string? Size
     {
@@ -772,7 +869,10 @@ public sealed class AwbHoleViewModel : ObservableObject
         set => SetFromList(_sizeOptions, value, nameof(Size), v => Set(ref _size, v, nameof(Size)));
     }
 
-    /// <summary>Close, Normal, Loose for a clearance hole with no seat; Slip, Normal, Press for a dowel; else empty.</summary>
+    /// <summary>
+    /// Close, Normal, Loose for a clearance hole with no seat or a spotface (task 112); Slip, Normal, Press for a dowel;
+    /// else empty.
+    /// </summary>
     public IReadOnlyList<HoleFitOption> FitOptions => _fitOptions;
 
     public bool ShowsFit => _fitOptions.Count > 0;
@@ -824,8 +924,21 @@ public sealed class AwbHoleViewModel : ObservableObject
         }
     }
 
-    /// <summary>True for a tapped hole ending at a distance; through holes are threaded the full depth.</summary>
+    /// <summary>
+    /// True for a tapped hole ending at a distance; through holes are threaded the full depth. The thread and drill
+    /// depth rows as the window binds them before task 114; see <see cref="ShowsThreadDepth"/> and
+    /// <see cref="ShowsDrillDepth"/>.
+    /// </summary>
     public bool ShowsThreadDepths => Kind == HoleKind.Tapped && IsBlind;
+
+    /// <summary>
+    /// True for a blind tapped hole: the Thread depth box shows. Not on a taper tapped hole, whose thread length
+    /// Inventor sets (spec 09 question 22).
+    /// </summary>
+    public bool ShowsThreadDepth => Kind == HoleKind.Tapped && IsBlind;
+
+    /// <summary>True for a blind tapped or taper tapped hole: the Drill depth box shows (task 112).</summary>
+    public bool ShowsDrillDepth => HoleStandards.IsThreaded(Kind) && IsBlind;
 
     /// <summary>Tapped holes: the thread depth, in the units' length. Null puts back the Tapped row's default.</summary>
     public decimal? ThreadDepth
@@ -847,13 +960,16 @@ public sealed class AwbHoleViewModel : ObservableObject
         }
     }
 
-    /// <summary>Tapped holes: the drill depth, in the units' length. Null puts back the Tapped row's default.</summary>
+    /// <summary>
+    /// Tapped and taper tapped holes: the drill depth, in the units' length. Null puts back the Tapped or Taper Tapped
+    /// row's default.
+    /// </summary>
     public decimal? DrillDepth
     {
         get => _drillDepth;
         set
         {
-            if (Kind != HoleKind.Tapped)
+            if (!HoleStandards.IsThreaded(Kind))
             {
                 OnPropertyChanged();
                 return;
@@ -862,7 +978,7 @@ public sealed class AwbHoleViewModel : ObservableObject
             Change(() =>
             {
                 MarkTyped(HoleField.DrillDepth, value);
-                Set(ref _drillDepth, value ?? TappedRow()?.DrillDepth, nameof(DrillDepth));
+                Set(ref _drillDepth, value ?? RowDrillDepth(), nameof(DrillDepth));
             });
         }
     }
@@ -891,8 +1007,8 @@ public sealed class AwbHoleViewModel : ObservableObject
         }
     }
 
-    /// <summary>True for a clearance or dowel hole ending at a distance.</summary>
-    public bool ShowsDepth => Kind != HoleKind.Tapped && IsBlind;
+    /// <summary>True for a clearance, dowel or Simple hole ending at a distance.</summary>
+    public bool ShowsDepth => !HoleStandards.IsThreaded(Kind) && IsBlind;
 
     /// <summary>
     /// Clearance and dowel holes ending at a distance: the depth, in the units' length, kept while the hole is through.
@@ -969,6 +1085,31 @@ public sealed class AwbHoleViewModel : ObservableObject
         set => SetText(HoleField.CountersinkAngle, value, nameof(CountersinkAngleText), v => CountersinkAngle = v);
     }
 
+    /// <summary><see cref="SpotfaceDiameter"/> as text: a number in the units' length; blank empties it.</summary>
+    public string SpotfaceDiameterText
+    {
+        get => TextOf(HoleField.SpotfaceDiameter, _spotfaceDiameter);
+        set => SetText(HoleField.SpotfaceDiameter, value, nameof(SpotfaceDiameterText), v => SpotfaceDiameter = v);
+    }
+
+    /// <summary>
+    /// <see cref="SpotfaceDepth"/> as text: a number, or an Inventor expression as the depth takes; blank empties it.
+    /// </summary>
+    public string SpotfaceDepthText
+    {
+        get => TextOf(HoleField.SpotfaceDepth, _spotfaceDepth);
+        set => SetText(HoleField.SpotfaceDepth, value, nameof(SpotfaceDepthText), v => SpotfaceDepth = v);
+    }
+
+    /// <summary>
+    /// <see cref="Diameter"/> as text: a number, or an Inventor expression as Depth takes (task 112); blank empties it.
+    /// </summary>
+    public string DiameterText
+    {
+        get => TextOf(HoleField.Diameter, _diameter);
+        set => SetText(HoleField.Diameter, value, nameof(DiameterText), v => Diameter = v);
+    }
+
     // What an expression comes to (task 104; mockup choice 6): after the unit of a depth box holding an expression, in
     // muted text, for example "= 31 mm". Null for a plain number, an empty box and text Inventor cannot read.
 
@@ -983,6 +1124,12 @@ public sealed class AwbHoleViewModel : ObservableObject
 
     /// <summary>The value of the counterbore depth box's expression; null unless the box holds one.</summary>
     public string? CounterboreDepthValueText => ValueTextOf(HoleField.CounterboreDepth, _cboreDepth);
+
+    /// <summary>The value of the spotface depth box's expression; null unless the box holds one.</summary>
+    public string? SpotfaceDepthValueText => ValueTextOf(HoleField.SpotfaceDepth, _spotfaceDepth);
+
+    /// <summary>The value of the Diameter box's expression; null unless the box holds one.</summary>
+    public string? DiameterValueText => ValueTextOf(HoleField.Diameter, _diameter);
 
     /// <summary>
     /// True while a depth box holds text that is not a number, or an expression Inventor cannot read as a length; OK is
@@ -1134,6 +1281,16 @@ public sealed class AwbHoleViewModel : ObservableObject
     /// <summary>Why the box's text is not a number while it is not one, else the field's checks.</summary>
     public string? CountersinkAngleProblem =>
         NotANumber(HoleField.CountersinkAngle) ?? ProblemFor(HoleField.CountersinkAngle);
+
+    /// <summary>Why the box's text is not a number while it is not one, else the field's checks.</summary>
+    public string? SpotfaceDiameterProblem =>
+        NotANumber(HoleField.SpotfaceDiameter) ?? ProblemFor(HoleField.SpotfaceDiameter);
+
+    /// <summary>Why the box's text is not a length while it is not one, else the field's checks.</summary>
+    public string? SpotfaceDepthProblem => NotANumber(HoleField.SpotfaceDepth) ?? ProblemFor(HoleField.SpotfaceDepth);
+
+    /// <summary>Why the box's text is not a length while it is not one, else the field's checks.</summary>
+    public string? DiameterProblem => NotANumber(HoleField.Diameter) ?? ProblemFor(HoleField.Diameter);
 
     /// <summary>
     /// True when the spec builds, at least one centre is picked, and every depth box holds a number (or is blank).
@@ -1303,30 +1460,32 @@ public sealed class AwbHoleViewModel : ObservableObject
     /// <summary>Settles every field below the one that changed, top to bottom.</summary>
     private void Refresh(bool keepExact)
     {
-        // Standard.
+        // Standard: none for a Simple hole (task 112).
         SetList(
             ref _standardOptions,
             HoleStandards.StandardsFor(_type).Select(s => new HoleOption<string>(s, s)).ToList(),
             nameof(StandardOptions));
-        Set(ref _standard, Find(_standardOptions, _standard) ?? _standardOptions[0].Value, nameof(Standard));
+        Set(ref _standard, Find(_standardOptions, _standard) ?? FirstOf(_standardOptions) ?? "", nameof(Standard));
         var kind = Kind;
 
         // Seat, Fastener type and Size. A clearance hole's sizes depend on its seat and fastener; a tapped or dowel
         // hole's seats and fasteners depend on its size, which comes from its own tab (task 099).
         if (kind == HoleKind.Clearance)
         {
-            RefreshSeats();
+            RefreshSeats(kind);
             RefreshFasteners(kind, keepExact);
             RefreshSizes(kind, keepExact);
         }
         else
         {
             RefreshSizes(kind, keepExact);
-            RefreshSeats();
+            RefreshSeats(kind);
             RefreshFasteners(kind, keepExact);
         }
 
-        var seated = kind == HoleKind.Clearance && _seat != HoleSeat.None;
+        // A clearance hole's counterbore or countersink takes its through hole at the row's Hole fit; a spotface keeps
+        // the Fit (task 112).
+        var seated = kind == HoleKind.Clearance && _seat is HoleSeat.Counterbore or HoleSeat.Countersink;
 
         // Fit.
         var fits = kind switch
@@ -1370,12 +1529,18 @@ public sealed class AwbHoleViewModel : ObservableObject
             Set(ref _tolerance, null, nameof(Tolerance));
         }
 
-        // Thread and drill depths: a typed depth is kept (task 124), the others are the Tapped row's.
+        // Thread and drill depths: a typed depth is kept (task 124), the others are the Tapped row's. A taper tapped
+        // hole has a drill depth from its row and no thread depth (task 112; spec 09 question 22).
         if (kind == HoleKind.Tapped)
         {
             var row = TappedRow();
             SettleBox(HoleField.ThreadDepth, ref _threadDepth, nameof(ThreadDepth), row?.ThreadDepth, true);
             SettleBox(HoleField.DrillDepth, ref _drillDepth, nameof(DrillDepth), row?.DrillDepth, true);
+        }
+        else if (kind == HoleKind.TaperTapped)
+        {
+            HideBox(HoleField.ThreadDepth, ref _threadDepth, nameof(ThreadDepth));
+            SettleBox(HoleField.DrillDepth, ref _drillDepth, nameof(DrillDepth), TaperRow()?.DrillDepth, true);
         }
         else
         {
@@ -1383,18 +1548,40 @@ public sealed class AwbHoleViewModel : ObservableObject
             HideBox(HoleField.DrillDepth, ref _drillDepth, nameof(DrillDepth));
         }
 
+        // Diameter (task 112): a Simple hole's; a typed one is kept (task 124), else it starts at the last Simple
+        // diameter kept in the units, else empty, and follows the units when they change.
+        if (kind == HoleKind.Simple)
+        {
+            var diameterContext = new ListContext(_units, kind, HoleSeat.None, null, null, null);
+            SettleBox(
+                HoleField.Diameter, ref _diameter, nameof(Diameter), _lastDepths.SimpleDiameterFor(_units),
+                !keepExact && diameterContext != _diameterContext);
+            _diameterContext = diameterContext;
+        }
+        else
+        {
+            _diameterContext = null;
+            HideBox(HoleField.Diameter, ref _diameter, nameof(Diameter));
+        }
+
         // The seat boxes, on every kind (task 126): a typed value is kept (task 124); the others take the start values
         // when the units, kind or size change, or a clearance or tapped hole's fastener (task 126), and an emptied box
         // stays empty until then. A dowel starts at the last seat used for its size, then its row (task 106); a
         // clearance or tapped hole at its row for the fastener, and a tapped hole with no row at the last seat used.
+        // A spotface starts at the Spotface row of the same size, then (a dowel's or tapped hole's) the last spotface
+        // used; a Simple or taper tapped hole's seat at the last seat used (task 112; spec 09, "Seat boxes").
         {
-            var dowel = kind == HoleKind.Dowel;
-            var seatContext = new ListContext(_units, kind, HoleSeat.None, dowel ? null : _fastener, null, _size);
+            var withFastener = TakesFastener(kind, _seat);
+            var seatContext = new ListContext(_units, kind, HoleSeat.None, withFastener ? _fastener : null, null, _size);
             var start = kind switch
             {
-                HoleKind.Dowel => _lastDowelSeats.For(_units, _size).Or(HoleRules.DowelSeatStart(_workbook, _units, _size)),
+                HoleKind.Dowel => WithoutSpotface(_lastDowelSeats.For(_units, _size))
+                    .Or(HoleRules.DowelSeatStart(_workbook, _units, _size))
+                    .Or(_lastDowelSeats.For(_units, _size)),
                 HoleKind.Tapped => HoleRules.SeatRowStart(_workbook, _units, kind, _size, _fastener)
                     .Or(_lastDowelSeats.ForTapped(_units, _size)),
+                HoleKind.Simple => _lastDowelSeats.ForSimple(_units),
+                HoleKind.TaperTapped => _lastDowelSeats.ForTaperTapped(_units, _size),
                 _ => HoleRules.SeatRowStart(_workbook, _units, kind, _size, _fastener),
             };
             var restart = keepExact || seatContext != _seatBoxContext;
@@ -1412,6 +1599,15 @@ public sealed class AwbHoleViewModel : ObservableObject
                 restart);
             SettleBox(
                 HoleField.CountersinkAngle, ref _csinkAngle, nameof(CountersinkAngle), start.CsinkAngleDeg, restart);
+            SettleBox(
+                HoleField.SpotfaceDiameter, ref _spotfaceDiameter, nameof(SpotfaceDiameter), start.SpotfaceDiameter,
+                restart);
+            var spotfaceDepthStart = restart && !_typed.ContainsKey(HoleField.SpotfaceDepth)
+                ? StartExpression(start.SpotfaceDepth, start.SpotfaceDepthExpression, allowZero: true)
+                : (start.SpotfaceDepth, null);
+            SettleBox(
+                HoleField.SpotfaceDepth, ref _spotfaceDepth, nameof(SpotfaceDepth), spotfaceDepthStart.Value, restart,
+                spotfaceDepthStart.Expression);
             _seatBoxContext = seatContext;
         }
 
@@ -1428,9 +1624,11 @@ public sealed class AwbHoleViewModel : ObservableObject
 
         _depthUnits = _units;
 
-        if (kind != HoleKind.Tapped && IsBlind)
+        if (!HoleStandards.IsThreaded(kind) && IsBlind)
         {
-            var blindContext = new ListContext(_units, kind, HoleSeat.None, null, null, _size);
+            // A Simple hole's first depth follows its diameter as another hole's follows its size (task 112).
+            var blindContext = new ListContext(
+                _units, kind, HoleSeat.None, null, null, kind == HoleKind.Simple ? FormatNumber(_diameter) : _size);
             if (!keepExact && !_typed.ContainsKey(HoleField.Depth) && blindContext != _blindDepthContext
                 && DefaultBlindDepth(kind) is { } defaultDepth)
             {
@@ -1579,7 +1777,8 @@ public sealed class AwbHoleViewModel : ObservableObject
     /// else the remembered number, as a plain number, so a part without the expression's parameters starts at the
     /// number with no message. Without a checker, the number.
     /// </summary>
-    private (decimal? Value, string? Expression) StartExpression(decimal? value, string? expression)
+    private (decimal? Value, string? Expression) StartExpression(
+        decimal? value, string? expression, bool allowZero = false)
     {
         if (value is null || HoleExpressions.Clean(expression) is not { } text || _expressionChecker is null)
         {
@@ -1587,7 +1786,8 @@ public sealed class AwbHoleViewModel : ObservableObject
         }
 
         var check = _expressionChecker.Check(text, _units);
-        if (check is { IsValid: true, ValueCm: { } cm } && HoleReadBack.FromCm(cm, _units) is var now && now > 0)
+        if (check is { IsValid: true, ValueCm: { } cm } && HoleReadBack.FromCm(cm, _units) is var now
+            && (now > 0 || (allowZero && now == 0)))
         {
             return (now, text);
         }
@@ -1666,15 +1866,27 @@ public sealed class AwbHoleViewModel : ObservableObject
     }
 
     /// <summary>
-    /// The seats: all three on every kind, since every seat is sized in the window (tasks 106 and 126; this widens task
-    /// 099, which listed on a tapped hole only the seats with a shown row of the same size). The seat shown is the one
-    /// the user chose last when the list offers it, else None (task 123).
+    /// The seats: all four on every kind, since every seat is sized in the window (tasks 106, 112 and 126; this widens
+    /// task 099, which listed on a tapped hole only the seats with a shown row of the same size), except Counterbore on
+    /// Taper Tapped (Aidan, 2026-10-28). The seat shown is the one the user chose last when the list offers it, else
+    /// None (task 123).
     /// </summary>
-    private void RefreshSeats()
+    private void RefreshSeats(HoleKind kind)
     {
-        SetList(ref _seatOptions, AllSeats.ToList(), nameof(SeatOptions));
+        SetList(ref _seatOptions, AllSeats.Where(o => HoleStandards.Takes(kind, o.Value)).ToList(), nameof(SeatOptions));
         Set(ref _seat, _seatOptions.Any(o => o.Value == _wantedSeat) ? _wantedSeat : HoleSeat.None, nameof(Seat));
     }
+
+    /// <summary>
+    /// True when the seat follows a fastener's row: a counterbore or countersink on a clearance or tapped hole. A dowel,
+    /// Simple or taper tapped hole's seat and every spotface follow none (tasks 106 and 112).
+    /// </summary>
+    private static bool TakesFastener(HoleKind kind, HoleSeat seat) =>
+        kind is HoleKind.Clearance or HoleKind.Tapped && seat is HoleSeat.Counterbore or HoleSeat.Countersink;
+
+    /// <summary>A remembered seat without its spotface values, which come after the Spotface row (task 112).</summary>
+    private static HoleDowelSeat WithoutSpotface(HoleDowelSeat seat) =>
+        seat with { SpotfaceDiameter = null, SpotfaceDepth = null, SpotfaceDepthExpression = null };
 
     /// <summary>
     /// The Fastener type list: the Screw values of the seat's tab for the units (a clearance hole), or of its rows of
@@ -1686,7 +1898,7 @@ public sealed class AwbHoleViewModel : ObservableObject
             _units, kind, _seat, null, null, kind == HoleKind.Clearance ? null : _size);
         var keepFastener = keepExact || fastenerContext == _fastenerContext;
         _fastenerContext = fastenerContext;
-        if (_seat == HoleSeat.None || kind == HoleKind.Dowel)
+        if (!TakesFastener(kind, _seat))
         {
             SetList(ref _fastenerOptions, [], nameof(FastenerOptions));
             Set(ref _fastener, null, nameof(Fastener));
@@ -1799,6 +2011,10 @@ public sealed class AwbHoleViewModel : ObservableObject
     {
         (HoleKind.Tapped, _) => _workbook.Tapped.Where(r => r.Units == context.Units).Select(r => (r.Thread, r.Hidden)),
         (HoleKind.Dowel, _) => _workbook.Dowel.Where(r => r.Units == context.Units).Select(r => (r.Size, r.Hidden)),
+        (HoleKind.TaperTapped, _) => _workbook.TaperTapped
+            .Where(r => r.Units == context.Units)
+            .Select(r => (r.Size, r.Hidden)),
+        (HoleKind.Simple, _) => [],
         (_, HoleSeat.Counterbore) => _workbook.Counterbore
             .Where(r => r.Units == context.Units && SameText(r.Screw, context.Fastener))
             .Select(r => (r.Size, r.Hidden)),
@@ -1828,6 +2044,10 @@ public sealed class AwbHoleViewModel : ObservableObject
                 .FirstOrDefault(r => r.Units == units && SameText(r.Thread, size))?.Nominal,
             HoleKind.Dowel => _workbook.Dowel
                 .FirstOrDefault(r => r.Units == units && SameText(r.Size, size))?.Nominal,
+            // A taper thread's nearest size in the other units is by its tap drill: the tab has no nominal (task 112).
+            HoleKind.TaperTapped => _workbook.TaperTapped
+                .FirstOrDefault(r => r.Units == units && SameText(r.Size, size))?.TapDrill,
+            HoleKind.Simple => null,
             _ => _workbook.Clearance
                 .FirstOrDefault(r => r.Units == units && SameText(r.Size, size))?.Nominal,
         };
@@ -1839,7 +2059,7 @@ public sealed class AwbHoleViewModel : ObservableObject
     /// </summary>
     private decimal? DefaultBlindDepth(HoleKind kind) =>
         _lastDepths.For(_units)
-        ?? (Nominal(_units, kind, _size) is { } nominal && nominal > 0
+        ?? ((kind == HoleKind.Simple ? _diameter : Nominal(_units, kind, _size)) is { } nominal && nominal > 0
             ? _workbook.Settings.DefaultBlindDepth(nominal)
             : null);
 
@@ -1881,6 +2101,17 @@ public sealed class AwbHoleViewModel : ObservableObject
     private TappedRow? TappedRow() =>
         _workbook.Tapped.FirstOrDefault(r => r.Units == _units && SameText(r.Thread, _size));
 
+    private TaperTappedRow? TaperRow() =>
+        _workbook.TaperTapped.FirstOrDefault(r => r.Units == _units && SameText(r.Size, _size));
+
+    /// <summary>The drill depth of the Tapped or Taper Tapped row of the size; null for any other kind.</summary>
+    private decimal? RowDrillDepth() => Kind switch
+    {
+        HoleKind.Tapped => TappedRow()?.DrillDepth,
+        HoleKind.TaperTapped => TaperRow()?.DrillDepth,
+        _ => null,
+    };
+
     // Checks and geometry.
 
     private (HoleSpec Spec, HoleBuildResult Build, IReadOnlyList<HoleCheck> Checks) Evaluate()
@@ -1914,6 +2145,11 @@ public sealed class AwbHoleViewModel : ObservableObject
             CboreDepthExpression = ExpressionOf(HoleField.CounterboreDepth, _cboreDepth),
             CsinkDiameter = _csinkDiameter,
             CsinkAngleDeg = _csinkAngle,
+            SpotfaceDiameter = _spotfaceDiameter,
+            SpotfaceDepth = _spotfaceDepth,
+            SpotfaceDepthExpression = ExpressionOf(HoleField.SpotfaceDepth, _spotfaceDepth),
+            Diameter = _diameter,
+            DiameterExpression = ExpressionOf(HoleField.Diameter, _diameter),
         }.Normalised();
 
         var build = HoleRules.Build(spec, _workbook, Math.Max(1, _centreCount));
@@ -1937,7 +2173,11 @@ public sealed class AwbHoleViewModel : ObservableObject
         nameof(CounterboreDiameterProblem), nameof(CounterboreDepthProblem), nameof(CountersinkDiameterProblem),
         nameof(CountersinkAngleProblem), nameof(DepthValueText), nameof(ThreadDepthValueText),
         nameof(DrillDepthValueText), nameof(CounterboreDepthValueText), nameof(DiagramInput), nameof(Diagram),
-        nameof(DiagramSummary),
+        nameof(DiagramSummary), nameof(ShowsStandard), nameof(ShowsSize), nameof(SizeNote), nameof(ShowsDiameter),
+        nameof(DiameterText), nameof(DiameterValueText), nameof(DiameterProblem), nameof(ShowsSpotfaceSizes),
+        nameof(SpotfaceDiameterText), nameof(SpotfaceDepthText), nameof(SpotfaceDepthValueText),
+        nameof(SpotfaceDiameterProblem), nameof(SpotfaceDepthProblem), nameof(ShowsThreadDepth),
+        nameof(ShowsDrillDepth),
     ];
 
     private void Reevaluate()
@@ -1967,7 +2207,13 @@ public sealed class AwbHoleViewModel : ObservableObject
         var tapped = kind == HoleKind.Tapped ? TappedRow() : null;
         var holeDiameter = geometry is not null
             ? Length(geometry.HoleDiameterCm)
-            : kind == HoleKind.Tapped ? tapped?.TapDrill : Nominal(_units, kind, _size);
+            : kind switch
+            {
+                HoleKind.Tapped => tapped?.TapDrill,
+                HoleKind.TaperTapped => TaperRow()?.TapDrill,
+                HoleKind.Simple => _diameter,
+                _ => Nominal(_units, kind, _size),
+            };
 
         // The seat from its boxes, on every kind (task 126).
         var (cboreDiameter, cboreDepth, csinkDiameter, csinkAngle) = (_cboreDiameter, _cboreDepth, _csinkDiameter, _csinkAngle);
@@ -1984,8 +2230,9 @@ public sealed class AwbHoleViewModel : ObservableObject
                 : string.IsNullOrWhiteSpace(row.IsoCode) ? null : row.IsoCode.Trim();
         }
 
-        var depthField = kind == HoleKind.Tapped ? HoleField.DrillDepth : HoleField.Depth;
-        var depth = kind == HoleKind.Tapped ? _drillDepth : _depth;
+        var threaded = HoleStandards.IsThreaded(kind);
+        var depthField = threaded ? HoleField.DrillDepth : HoleField.Depth;
+        var depth = threaded ? _drillDepth : _depth;
         return new HoleDiagramInput
         {
             Units = _units,
@@ -2002,7 +2249,10 @@ public sealed class AwbHoleViewModel : ObservableObject
             CounterboreDepthIsExpression = ExpressionOf(HoleField.CounterboreDepth, _cboreDepth) is not null,
             CountersinkDiameter = csinkDiameter,
             CountersinkAngleDeg = csinkAngle,
-            ThreadName = kind == HoleKind.Tapped ? geometry?.Thread?.Designation ?? _size : null,
+            SpotfaceDiameter = _spotfaceDiameter,
+            SpotfaceDepth = _spotfaceDepth,
+            SpotfaceDepthIsExpression = ExpressionOf(HoleField.SpotfaceDepth, _spotfaceDepth) is not null,
+            ThreadName = threaded ? geometry?.Thread?.Designation ?? _size : null,
             ThreadDiameter = tapped?.Nominal,
             ThreadDepth = kind == HoleKind.Tapped ? _threadDepth : null,
             ThreadDepthIsExpression = kind == HoleKind.Tapped && ExpressionOf(HoleField.ThreadDepth, _threadDepth) is not null,
@@ -2166,15 +2416,21 @@ public sealed class AwbHoleViewModel : ObservableObject
         : _expressionChecker is null || !TakesExpressions(field) ? NotANumberText
         : HoleExpressions.NotALengthText;
 
-    /// <summary>The boxes that take Inventor expressions: the depths (task 100) and the counterbore depth (tasks 106, 126).</summary>
+    /// <summary>
+    /// The boxes that take Inventor expressions: the depths (task 100), the counterbore depth (tasks 106, 126), the
+    /// spotface depth and a Simple hole's diameter (task 112).
+    /// </summary>
     private static bool TakesExpressions(HoleField field) =>
-        field is HoleField.ThreadDepth or HoleField.DrillDepth or HoleField.Depth or HoleField.CounterboreDepth;
+        field is HoleField.ThreadDepth or HoleField.DrillDepth or HoleField.Depth or HoleField.CounterboreDepth
+            or HoleField.SpotfaceDepth or HoleField.Diameter;
 
     private static string ValueTextPropertyOf(HoleField field) => field switch
     {
         HoleField.ThreadDepth => nameof(ThreadDepthValueText),
         HoleField.DrillDepth => nameof(DrillDepthValueText),
         HoleField.CounterboreDepth => nameof(CounterboreDepthValueText),
+        HoleField.SpotfaceDepth => nameof(SpotfaceDepthValueText),
+        HoleField.Diameter => nameof(DiameterValueText),
         _ => nameof(DepthValueText),
     };
 
@@ -2186,6 +2442,9 @@ public sealed class AwbHoleViewModel : ObservableObject
         HoleField.CounterboreDepth => nameof(CounterboreDepthProblem),
         HoleField.CountersinkDiameter => nameof(CountersinkDiameterProblem),
         HoleField.CountersinkAngle => nameof(CountersinkAngleProblem),
+        HoleField.SpotfaceDiameter => nameof(SpotfaceDiameterProblem),
+        HoleField.SpotfaceDepth => nameof(SpotfaceDepthProblem),
+        HoleField.Diameter => nameof(DiameterProblem),
         _ => nameof(DepthProblem),
     };
 
