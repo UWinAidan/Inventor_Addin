@@ -6,19 +6,20 @@ Last updated: 2026-10-29
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-10-29. Branch `claude/m4-hole-generator`, pushed; PR #29 open against `main`. Spike branches (local only, never merged): `spike/107-client-graphics` (`b56f0db`), `spike/108-hole-types` (`f0a2f33`).
+- Updated: 2026-10-30. Branch `claude/m4-hole-generator`; PR #29 open against `main`. Local commits not yet pushed: 124 (`3bf3af4`), 125 (`ff8949c`), 122 (`9db5f74`). Spike branches (local only): `spike/107-client-graphics` (`b56f0db`), `spike/108-hole-types` (`f0a2f33`).
 - Goal: run the M4 part 1 round in `docs/PLAN.md` order, one implementer and one reviewer per task, one commit per task. Aidan asked (2026-10-28) not to stop for Inventor checks: collect each task's checklist and he does them together at the end.
-- Done this session (2026-10-28/29): task 129 (`af55a1a`, AWB Hole split button with Inventor Hole and the default toggle) and task 123 (seat kept across Type, Standard, Size and Units changes), each reviewed PASS. Both were built on Windows with Inventor closed, so the deployed add-in is this branch at task 124's working tree.
-- **In progress, uncommitted:** task 124 (typed values kept) is implemented and in the working tree, not reviewed. Its implementer: build 0 errors, 3817 Core tests passed; it rewrote 8 older tests (tasks 100 and 106) whose behaviour 124 overrides. Its Defaults and Follow-ups are in `docs/tasks/124-typed-values-kept.md`. Next session: run the reviewer on 124, then commit it with its tracking updates (Defaults to `DECISIONS.md`; spec 09's dowel section still says a typed dowel seat value is kept only while units and size stay the same).
+- Done 2026-10-30: tasks 124, 125, 122, each reviewed PASS and committed with tracking updates. All built on Windows.
+- **Interrupted:** task 126 (seat boxes on every type) was being implemented when Aidan closed the laptop. The working tree may hold partial changes. Next session: look at `git status` and `git diff`; either have a new implementer finish 126 from what is there, or `git stash` it and start 126 again. Then review and commit.
 - Next steps:
-  1. Review and commit 124 (above).
-  2. Then the PLAN order: 125, 122, 126, 111, 112, 113, 119, 131, 132, 127, 130, 110, 117, 114, 115, 116, 136, 118.
-  3. At the end, give Aidan one combined checklist from the task files (135, 120, 121, 128, 129, 123, 124, and on), plus the older 105, 109, 133, 134.
+  1. Finish, review and commit 126.
+  2. Then the PLAN order: 111, 112, 113, 119, 131, 132, 127, 130, 110, 117, 114, 115, 116, 136, 118.
+  3. At the end, push, and give Aidan one combined checklist from the task files (135, 120, 121, 128, 129, 123, 124, 125, 122, 126, and on), plus the older 105, 109, 133, 134.
+- New questions for Aidan this session: spec 09 questions 23 (remembered blind depth keeps its expression?) and 24 (hand colours on a dowel that becomes another kind).
 - Gotchas:
   - Check `tasklist //FI "IMAGENAME eq Inventor.exe"` before building. If Inventor is open, pass `-p:DeployToInventor=false`.
   - In shell scripts that edit tracking files, chain the commit with `&&` after the edit script, or a failed edit still commits.
   - Spike 107's preview code is read with `git show spike/108-hole-types:src/InventorAddin/Spike107.cs` (task 110).
-- Read first: `docs/PLAN.md` ("Round after PR #29's first look"), `TODO.md` Next up, `docs/tasks/124-typed-values-kept.md`.
+- Read first: `docs/PLAN.md` ("Round after PR #29's first look"), `TODO.md` Next up, `docs/tasks/126-seat-boxes-every-type.md`.
 
 ## Big items
 
