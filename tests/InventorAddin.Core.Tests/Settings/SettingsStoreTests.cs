@@ -679,6 +679,33 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
+    public void Save_WritesACounterboreDepthExpression_BesideItsValue_ThenRoundTrips_Task125()
+    {
+        var store = new SettingsStore(_folder);
+        var original = new AddinSettings
+        {
+            LastDowelSeatsMm = new Dictionary<string, HoleDowelSeat>
+            {
+                ["6 mm"] = new(9m, 3m, null, null) { CboreDepthExpression = "d0/8" },
+                ["8 mm"] = new(9m, 4m, null, null),
+            },
+        };
+
+        store.Save(original);
+
+        var json = JsonNode.Parse(File.ReadAllText(SettingsPath))!.AsObject();
+        var six = json["lastDowelSeatsMm"]!["6 mm"]!.AsObject();
+        Assert.Equal("d0/8", six["cboreDepthExpression"]!.GetValue<string>());
+        Assert.Equal(3m, six["cboreDepth"]!.GetValue<decimal>());
+        Assert.False(json["lastDowelSeatsMm"]!["8 mm"]!.AsObject().ContainsKey("cboreDepthExpression"));
+
+        var result = store.Load();
+        Assert.Empty(result.Warnings);
+        Assert.Equal(original, result.Settings);
+        Assert.Equal("d0/8", result.Settings.LastDowelSeatsMm["6 mm"].CboreDepthExpression);
+    }
+
+    [Fact]
     public void Load_FileWrittenBeforeLastDowelSeats_LoadsThemAsEmpty()
     {
         WriteSettingsFile("{ \"schemaVersion\": 1, \"lastBlindDepthMm\": 12 }");

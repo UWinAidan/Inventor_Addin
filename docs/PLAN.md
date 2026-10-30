@@ -372,7 +372,7 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 - [ ] 122 A hand colour on a hole face survives the hole being remade
 - [x] 123 The seat is kept when type, standard or size changes
 - [x] 124 Typed values and expressions are kept when size, type, standard or units change
-- [ ] 125 A dowel seat starts at the last values used for its size
+- [x] 125 A dowel seat starts at the last values used for its size
 - [ ] 126 Editable seat boxes on clearance and tapped holes
 - [ ] 127 Centre-drill spot: a small countersink on any hole, and a seat depth of 0
 - [x] 128 AWB Hole replaces Inventor's Hole on the Sheet Metal tab

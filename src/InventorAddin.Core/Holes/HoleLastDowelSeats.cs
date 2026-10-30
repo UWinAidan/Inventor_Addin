@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json.Serialization;
 using InventorAddin.Core.Settings;
 
@@ -8,6 +9,10 @@ namespace InventorAddin.Core.Holes;
 /// the countersink diameter and included angle, in the units of the dowel's row (the angle in degrees). Null when not
 /// known. Where the seat boxes start (<see cref="HoleRules.DowelSeatStart"/>) and what the settings file remembers
 /// (<see cref="HoleLastDowelSeats"/>). In the settings file a value that is not known is left out.
+/// <para>
+/// <see cref="CboreDepthExpression"/> is the expression the counterbore depth was typed as (task 125), kept with
+/// <see cref="CboreDepth"/>, the value it came to: it travels with that value and is dropped when there is none.
+/// </para>
 /// </summary>
 public sealed record HoleDowelSeat(
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] decimal? CboreDiameter,
@@ -18,34 +23,52 @@ public sealed record HoleDowelSeat(
     /// <summary>No value known.</summary>
     public static HoleDowelSeat Empty { get; } = new(null, null, null, null);
 
+    /// <summary>
+    /// The expression the counterbore depth was typed as, such as <c>d0/8</c> (task 125); null for a number. Kept only
+    /// beside a <see cref="CboreDepth"/>, which holds the value it came to.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? CboreDepthExpression { get; init; }
+
     /// <summary>True when no value is known.</summary>
     [JsonIgnore]
     public bool IsEmpty => this == Empty;
 
-    /// <summary>Each value of this seat, or <paramref name="fallback"/>'s where this one has none.</summary>
+    /// <summary>
+    /// Each value of this seat, or <paramref name="fallback"/>'s where this one has none. The counterbore depth's
+    /// expression goes with the depth it is taken from.
+    /// </summary>
     public HoleDowelSeat Or(HoleDowelSeat? fallback) => fallback is null
         ? this
         : new HoleDowelSeat(
             CboreDiameter ?? fallback.CboreDiameter,
             CboreDepth ?? fallback.CboreDepth,
             CsinkDiameter ?? fallback.CsinkDiameter,
-            CsinkAngleDeg ?? fallback.CsinkAngleDeg);
+            CsinkAngleDeg ?? fallback.CsinkAngleDeg)
+        {
+            CboreDepthExpression = CboreDepth is not null ? CboreDepthExpression : fallback.CboreDepthExpression,
+        };
 
     /// <summary>
     /// The seat with each value a seat can take: lengths greater than zero and an angle between 0 and 180 degrees.
-    /// Anything else, as a hand-edited settings file might hold, is dropped.
+    /// Anything else, as a hand-edited settings file might hold, is dropped. The counterbore depth's expression is
+    /// trimmed, and dropped with its depth or when blank.
     /// </summary>
     public HoleDowelSeat Valid() => new(
         CboreDiameter is > 0 ? CboreDiameter : null,
         CboreDepth is > 0 ? CboreDepth : null,
         CsinkDiameter is > 0 ? CsinkDiameter : null,
-        CsinkAngleDeg is > 0 and < 180 ? CsinkAngleDeg : null);
+        CsinkAngleDeg is > 0 and < 180 ? CsinkAngleDeg : null)
+    {
+        CboreDepthExpression = CboreDepth is > 0 ? HoleExpressions.Clean(CboreDepthExpression) : null,
+    };
 }
 
 /// <summary>
-/// The seat of the last dowel hole kept with OK, for each units and dowel size (spec 09 question 14, Default; task 106).
+/// The seat of the last dowel hole kept with OK, for each units and dowel size (spec 09 question 14, Aidan; task 106).
 /// A new dowel seat starts at it, value by value, before the Dowel tab's seat columns and the same-size Counterbore or
-/// Countersink row. Kept in the add-in's settings file (<see cref="AddinSettings.LastDowelSeatsMm"/>,
+/// Countersink row. A counterbore depth typed as an expression is kept as that expression with the value it came to
+/// (task 125), so the next seat of the size starts at the expression where the part can read it. Kept in the add-in's settings file (<see cref="AddinSettings.LastDowelSeatsMm"/>,
 /// <see cref="AddinSettings.LastDowelSeatsIn"/>), keyed by the dowel's Size as written in the workbook (ignoring case),
 /// so it survives a restart. A counterbore kept with OK leaves the countersink values of the size as they were, and the
 /// other way round.
@@ -85,8 +108,9 @@ public sealed class HoleLastDowelSeats
 
     /// <summary>
     /// The seat a kept hole leaves to remember, with its units and size: a dowel with a counterbore (its diameter and
-    /// depth) or a countersink (its diameter and angle), each value greater than zero. The other seat's values are
-    /// null. Null for any other hole, or when the seat has no value to keep.
+    /// depth, and the expression the depth was typed as; task 125) or a countersink (its diameter and angle), each
+    /// value greater than zero. The other seat's values are null. Null for any other hole, or when the seat has no
+    /// value to keep.
     /// </summary>
     public static (HoleUnits Units, string Size, HoleDowelSeat Seat)? SeatToRemember(HoleSpec kept)
     {
@@ -97,8 +121,44 @@ public sealed class HoleLastDowelSeats
             return null;
         }
 
-        var seat = new HoleDowelSeat(spec.CboreDiameter, spec.CboreDepth, spec.CsinkDiameter, spec.CsinkAngleDeg).Valid();
+        var seat = new HoleDowelSeat(spec.CboreDiameter, spec.CboreDepth, spec.CsinkDiameter, spec.CsinkAngleDeg)
+        {
+            CboreDepthExpression = spec.CboreDepthExpression,
+        }.Valid();
         return seat.IsEmpty ? null : (spec.Units, spec.Size, seat);
+    }
+
+    /// <summary>
+    /// What <see cref="Remember"/> keeps for <paramref name="kept"/>, for the log, so a manual check can see the seat
+    /// the next one of the size starts at (task 125): <c>6 mm dowel (Metric): counterbore 9 mm x d0/8 (= 3 mm)</c>.
+    /// Null when the hole leaves no seat to remember.
+    /// </summary>
+    public static string? RememberedText(HoleSpec kept)
+    {
+        ArgumentNullException.ThrowIfNull(kept);
+        if (SeatToRemember(kept) is not { } remembered)
+        {
+            return null;
+        }
+
+        var (units, size, seat) = remembered;
+        var unit = " " + HoleExpressions.UnitName(units);
+        string Number(decimal? value) => value is { } v ? v.ToString("0.######", CultureInfo.InvariantCulture) : "?";
+        var parts = new List<string>();
+        if (seat.CboreDiameter is not null || seat.CboreDepth is not null)
+        {
+            var depth = seat.CboreDepthExpression is { } expression
+                ? $"{expression} (= {Number(seat.CboreDepth)}{unit})"
+                : Number(seat.CboreDepth) + unit;
+            parts.Add($"counterbore {Number(seat.CboreDiameter)}{unit} x {depth}");
+        }
+
+        if (seat.CsinkDiameter is not null || seat.CsinkAngleDeg is not null)
+        {
+            parts.Add($"countersink {Number(seat.CsinkDiameter)}{unit} at {Number(seat.CsinkAngleDeg)} deg");
+        }
+
+        return $"{size.Trim()} dowel ({units}): {string.Join(", ", parts)}";
     }
 
     /// <summary>

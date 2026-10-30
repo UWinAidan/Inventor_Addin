@@ -130,7 +130,8 @@ public sealed record HoleToleranceOption(string Value, string Text, string? Deta
 /// window opens on a dowel, and whenever its units or size change, the boxes take that size's start values: the last
 /// values kept with OK for the units and size (<see cref="HoleLastDowelSeats"/>), else the Dowel row's seat columns or
 /// the same-size Counterbore or Countersink row (<see cref="HoleRules.DowelSeatStart"/>), value by value, else empty,
-/// which <see cref="HoleRules"/> asks to be filled. An edited dowel opens on its own values. The counterbore depth takes
+/// which <see cref="HoleRules"/> asks to be filled. A counterbore depth kept as an expression starts as that expression
+/// where the part reads it, else as the number it came to (task 125). An edited dowel opens on its own values. The counterbore depth takes
 /// Inventor expressions like the depth; the diameters and the angle take numbers.
 /// </para>
 /// <para>
@@ -1398,7 +1399,12 @@ public sealed class AwbHoleViewModel : ObservableObject
             SettleBox(
                 HoleField.CounterboreDiameter, ref _cboreDiameter, nameof(CounterboreDiameter), start.CboreDiameter,
                 restart);
-            SettleBox(HoleField.CounterboreDepth, ref _cboreDepth, nameof(CounterboreDepth), start.CboreDepth, restart);
+            var cboreDepthStart = restart && !_typed.ContainsKey(HoleField.CounterboreDepth)
+                ? StartExpression(start.CboreDepth, start.CboreDepthExpression)
+                : (start.CboreDepth, null);
+            SettleBox(
+                HoleField.CounterboreDepth, ref _cboreDepth, nameof(CounterboreDepth), cboreDepthStart.Value, restart,
+                cboreDepthStart.Expression);
             SettleBox(
                 HoleField.CountersinkDiameter, ref _csinkDiameter, nameof(CountersinkDiameter), start.CsinkDiameter,
                 restart);
@@ -1538,9 +1544,12 @@ public sealed class AwbHoleViewModel : ObservableObject
 
     /// <summary>
     /// A box the cascade settles: a typed one keeps its value (<see cref="ApplyTyped"/>); one not typed takes
-    /// <paramref name="untyped"/> when <paramref name="replace"/>, as a plain number.
+    /// <paramref name="untyped"/> when <paramref name="replace"/>, as a plain number, or as
+    /// <paramref name="untypedExpression"/> at that value when there is one (a remembered dowel seat; task 125).
     /// </summary>
-    private void SettleBox(HoleField field, ref decimal? target, string name, decimal? untyped, bool replace)
+    private void SettleBox(
+        HoleField field, ref decimal? target, string name, decimal? untyped, bool replace,
+        string? untypedExpression = null)
     {
         if (_typed.TryGetValue(field, out var box))
         {
@@ -1549,8 +1558,35 @@ public sealed class AwbHoleViewModel : ObservableObject
         else if (replace)
         {
             _expressions.Remove(field);
+            if (untypedExpression is { } expression && untyped is { } value)
+            {
+                _expressions[field] = (expression, value);
+            }
+
             Set(ref target, untyped, name);
         }
+    }
+
+    /// <summary>
+    /// A start value remembered with the expression it was typed as (a dowel's counterbore depth; task 125): the
+    /// expression, at the value it comes to in this part now, when Inventor reads it as a length greater than zero;
+    /// else the remembered number, as a plain number, so a part without the expression's parameters starts at the
+    /// number with no message. Without a checker, the number.
+    /// </summary>
+    private (decimal? Value, string? Expression) StartExpression(decimal? value, string? expression)
+    {
+        if (value is null || HoleExpressions.Clean(expression) is not { } text || _expressionChecker is null)
+        {
+            return (value, null);
+        }
+
+        var check = _expressionChecker.Check(text, _units);
+        if (check is { IsValid: true, ValueCm: { } cm } && HoleReadBack.FromCm(cm, _units) is var now && now > 0)
+        {
+            return (now, text);
+        }
+
+        return (value, null);
     }
 
     /// <summary>A box the hole does not use is empty; a typed value stays in <see cref="_typed"/> for when it comes back.</summary>

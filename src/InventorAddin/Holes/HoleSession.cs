@@ -255,6 +255,11 @@ namespace InventorAddin.Holes
 
                 new SettingsStore(folder).Save(updated);
                 AddinServices.UpdateSettings(updated);
+
+                // Task 125: say which seat the next dowel of the size starts at, so a manual check can follow it.
+                string? seat = HoleLastDowelSeats.RememberedText(kept);
+                if (seat != null)
+                    _log.Info(LogPrefix + "remembered the seat for the next " + seat + ".");
             }
             catch (Exception ex)
             {

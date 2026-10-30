@@ -102,9 +102,81 @@ public sealed class HoleLastDowelSeatsTests
     [Fact]
     public void SeatToRemember_IsTheSeatsValues_TheOtherSeatsNull()
     {
-        var remembered = HoleLastDowelSeats.SeatToRemember(CboredDowel() with { CsinkDiameter = 6m, CboreDepthExpression = "d0" });
+        var remembered = HoleLastDowelSeats.SeatToRemember(CboredDowel() with { CsinkDiameter = 6m });
 
         Assert.Equal((HoleUnits.Metric, "5 mm", new HoleDowelSeat(9.5m, 5.2m, null, null)), remembered);
+    }
+
+    [Fact]
+    public void SeatToRemember_KeepsACounterboreDepthExpression_WithTheValueItCameTo_Task125()
+    {
+        var remembered = HoleLastDowelSeats.SeatToRemember(CboredDowel() with { CboreDepthExpression = " d0/8 " });
+
+        Assert.Equal(
+            (HoleUnits.Metric, "5 mm", new HoleDowelSeat(9.5m, 5.2m, null, null) { CboreDepthExpression = "d0/8" }),
+            remembered);
+    }
+
+    [Fact]
+    public void Remember_ANumberOverAnExpression_DropsTheExpression_AndACountersinkKeepsIt()
+    {
+        var settings = HoleLastDowelSeats.Remember(new AddinSettings(), CboredDowel() with { CboreDepthExpression = "d0/8" })!;
+        Assert.Equal("d0/8", settings.LastDowelSeatsMm["5 mm"].CboreDepthExpression);
+
+        // A countersink kept with OK leaves the counterbore, with its expression, as it was.
+        var withCsink = HoleLastDowelSeats.Remember(settings, CsunkDowel() with { CsinkDiameter = 7m, CsinkAngleDeg = 90m })!;
+        Assert.Equal(
+            new HoleDowelSeat(9.5m, 5.2m, 7m, 90m) { CboreDepthExpression = "d0/8" },
+            withCsink.LastDowelSeatsMm["5 mm"]);
+
+        // The same depth typed as a number is a change to save: the next seat starts at the number.
+        var plain = HoleLastDowelSeats.Remember(withCsink, CboredDowel());
+        Assert.NotNull(plain);
+        Assert.Equal(new HoleDowelSeat(9.5m, 5.2m, 7m, 90m), plain.LastDowelSeatsMm["5 mm"]);
+    }
+
+    [Fact]
+    public void DowelSeat_TheExpression_GoesWithItsDepth()
+    {
+        var withExpression = new HoleDowelSeat(null, 2.5m, null, null) { CboreDepthExpression = "d0/8" };
+
+        // Taken with the depth it came with; a seat with its own depth keeps its own (no) expression.
+        Assert.Equal("d0/8", new HoleDowelSeat(8m, null, null, null).Or(withExpression).CboreDepthExpression);
+        Assert.Null(new HoleDowelSeat(8m, 3m, null, null).Or(withExpression).CboreDepthExpression);
+        Assert.Equal("d0/8", withExpression.Or(new HoleDowelSeat(9m, 3m, null, null) { CboreDepthExpression = "d1" }).CboreDepthExpression);
+
+        // Valid drops an expression with no depth, with a depth a seat cannot take, or a blank one.
+        Assert.Equal(HoleDowelSeat.Empty, new HoleDowelSeat(null, null, null, null) { CboreDepthExpression = "d0" }.Valid());
+        Assert.Null(new HoleDowelSeat(8m, 0m, null, null) { CboreDepthExpression = "d0" }.Valid().CboreDepthExpression);
+        Assert.Null(new HoleDowelSeat(8m, 2m, null, null) { CboreDepthExpression = "  " }.Valid().CboreDepthExpression);
+        Assert.Equal("d0", new HoleDowelSeat(8m, 2m, null, null) { CboreDepthExpression = " d0 " }.Valid().CboreDepthExpression);
+    }
+
+    [Fact]
+    public void For_GivesTheExpressionWithItsDepth()
+    {
+        var seats = new HoleLastDowelSeats(
+            Map("6 mm", new HoleDowelSeat(9m, 3m, null, null) { CboreDepthExpression = "d0/8" }), null);
+
+        Assert.Equal(
+            new HoleDowelSeat(9m, 3m, null, null) { CboreDepthExpression = "d0/8" },
+            seats.For(HoleUnits.Metric, "6 MM"));
+    }
+
+    [Fact]
+    public void RememberedText_SaysWhichSeatTheNextDowelOfTheSizeStartsAt()
+    {
+        Assert.Equal(
+            "5 mm dowel (Metric): counterbore 9.5 mm x d0/8 (= 5.2 mm)",
+            HoleLastDowelSeats.RememberedText(CboredDowel() with { CboreDepthExpression = "d0/8" }));
+        Assert.Equal(
+            "5 mm dowel (Metric): counterbore 9.5 mm x 5.2 mm",
+            HoleLastDowelSeats.RememberedText(CboredDowel()));
+        Assert.Equal(
+            "1/4\" dowel (Imperial): countersink 0.29 in at 90 deg",
+            HoleLastDowelSeats.RememberedText(
+                CsunkDowel("1/4\"") with { Units = HoleUnits.Imperial, CsinkDiameter = 0.29m, CsinkAngleDeg = 90m }));
+        Assert.Null(HoleLastDowelSeats.RememberedText(Dowel()));
     }
 
     [Fact]

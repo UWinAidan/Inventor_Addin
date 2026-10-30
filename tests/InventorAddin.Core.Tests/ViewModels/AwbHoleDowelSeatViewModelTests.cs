@@ -1,5 +1,6 @@
 using System.Globalization;
 using InventorAddin.Core.Holes;
+using InventorAddin.Core.Settings;
 using InventorAddin.Core.ViewModels;
 
 namespace InventorAddin.Core.Tests.ViewModels;
@@ -119,6 +120,104 @@ public sealed class AwbHoleDowelSeatViewModelTests : IDisposable
         Assert.Equal((10.4m, 100m), (vm.CountersinkDiameter, vm.CountersinkAngle));
         Assert.Equal(0.8, vm.Geometry!.CounterboreDiameterCm!.Value, 12);
         Assert.Equal(0.15, vm.Geometry.CounterboreDepthCm!.Value, 12);
+    }
+
+    /// <summary>A part where <c>d0/8</c> reads as <paramref name="cm"/>, or, with null, a part without <c>d0</c>.</summary>
+    private sealed class PartChecker(double? cm) : IHoleExpressionChecker
+    {
+        public int Calls { get; private set; }
+
+        public HoleExpressionCheck Check(string expression, HoleUnits units)
+        {
+            Calls++;
+            return expression == "d0/8" && cm is { } value
+                ? HoleExpressionCheck.Valid(value)
+                : HoleExpressionCheck.Invalid("Undefined parameter d0.");
+        }
+    }
+
+    /// <summary>OK on <paramref name="vm"/>: the settings the add-in saves, read back as the next window gets them.</summary>
+    private static HoleLastDowelSeats KeptWithOk(AwbHoleViewModel vm)
+    {
+        Assert.True(vm.CanOk);
+        var saved = HoleLastDowelSeats.RememberKept(new AddinSettings(), vm.BuildResult.Resolved);
+        Assert.NotNull(saved);
+        return HoleLastDowelSeats.From(saved);
+    }
+
+    [Fact]
+    public void TheSeatKeptWithOk_IsWhereTheNextDowelOfTheSizeStarts_ItsDepthExpressionToo_Task125()
+    {
+        // PR #29 check 106-5: a counterbore of 11 x d0/8, OK, then a new window on the same size.
+        var first = Dowel(HoleSeat.Counterbore, checker: new FakeChecker());
+        first.CounterboreDiameterText = "11";
+        first.CounterboreDepthText = "d0/8";
+        var last = KeptWithOk(first);
+
+        var next = Dowel(HoleSeat.Counterbore, last: last, checker: new FakeChecker());
+
+        Assert.Equal("11", next.CounterboreDiameterText);
+        Assert.Equal("d0/8", next.CounterboreDepthText);
+        Assert.Equal(2.5m, next.CounterboreDepth);
+        Assert.NotNull(next.CounterboreDepthValueText);
+        Assert.Equal((11m, 2.5m, "d0/8"), (next.Spec.CboreDiameter, next.Spec.CboreDepth, next.Spec.CboreDepthExpression));
+        Assert.Equal("d0/8", next.Geometry!.CounterboreDepthExpression);
+        Assert.True(next.CanOk);
+
+        // Another size has no last values: the workbook's (T3's counterbore row, 6 x 3).
+        next.Size = "3 mm";
+        Assert.Equal(("6", "3"), (next.CounterboreDiameterText, next.CounterboreDepthText));
+        Assert.Null(next.Spec.CboreDepthExpression);
+
+        // The start values are not typed: back on 5 mm, the last values again.
+        next.Size = "5 mm";
+        Assert.Equal(("11", "d0/8"), (next.CounterboreDiameterText, next.CounterboreDepthText));
+    }
+
+    [Fact]
+    public void ARememberedDepthExpression_IsReadAgainInThePart_AtTheValueItComesToNow()
+    {
+        var last = Last("5 mm", new HoleDowelSeat(11m, 2.5m, null, null) { CboreDepthExpression = "d0/8" });
+
+        var vm = Dowel(HoleSeat.Counterbore, last: last, checker: new PartChecker(0.4));
+
+        Assert.Equal("d0/8", vm.CounterboreDepthText);
+        Assert.Equal(4m, vm.CounterboreDepth);
+        Assert.Equal("d0/8", vm.Spec.CboreDepthExpression);
+        Assert.Equal(0.4, vm.Geometry!.CounterboreDepthCm!.Value, 12);
+    }
+
+    [Fact]
+    public void ARememberedDepthExpression_ThePartCannotRead_StartsAsTheNumberItCameTo_WithNoMessage()
+    {
+        var last = Last("5 mm", new HoleDowelSeat(11m, 2.5m, null, null) { CboreDepthExpression = "d0/8" });
+
+        var vm = Dowel(HoleSeat.Counterbore, last: last, checker: new PartChecker(null));
+
+        Assert.Equal(("11", "2.5"), (vm.CounterboreDiameterText, vm.CounterboreDepthText));
+        Assert.Null(vm.CounterboreDepthProblem);
+        Assert.Null(vm.Spec.CboreDepthExpression);
+        Assert.True(vm.CanOk);
+
+        // Without a checker, text that is not a number is refused, so the number is used too.
+        var noChecker = Dowel(HoleSeat.Counterbore, last: last);
+        Assert.Equal("2.5", noChecker.CounterboreDepthText);
+        Assert.Null(noChecker.Spec.CboreDepthExpression);
+    }
+
+    [Fact]
+    public void ATypedDepth_IsNotReplacedByTheRememberedExpression_AndTheExpressionIsCheckedOnlyWhenItIsUsed()
+    {
+        var last = Last("5 mm", new HoleDowelSeat(11m, 2.5m, null, null) { CboreDepthExpression = "d0/8" });
+        var checker = new PartChecker(0.25);
+        var vm = Dowel(HoleSeat.Counterbore, size: "3 mm", last: last, checker: checker);
+        vm.CounterboreDepthText = "1.5";
+        var calls = checker.Calls;
+
+        vm.Size = "5 mm";
+
+        Assert.Equal(("11", "1.5"), (vm.CounterboreDiameterText, vm.CounterboreDepthText));
+        Assert.Equal(calls, checker.Calls);
     }
 
     [Fact]
