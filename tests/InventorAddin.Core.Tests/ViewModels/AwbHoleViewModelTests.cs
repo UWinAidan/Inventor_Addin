@@ -313,8 +313,8 @@ public sealed class AwbHoleViewModelTests
     {
         // Clearance T5 with a countersink; Tapped starts on M3, which has no countersink row (task 126: kept).
         var vm = NewHole();
+        vm.Size = "T5";
         vm.Seat = HoleSeat.Countersink;
-        Assert.Equal("T5", vm.Size);
 
         vm.Type = HoleStandards.TappedType;
 
@@ -325,7 +325,14 @@ public sealed class AwbHoleViewModelTests
 
         vm.Type = HoleStandards.ClearanceType;
 
+        // Clearance starts on T3, which has no countersink row either (task 137: kept, empty).
+        Assert.Equal("T3", vm.Size);
         Assert.Equal(HoleSeat.Countersink, vm.Seat);
+        Assert.Null(vm.Fastener);
+        Assert.Null(vm.CountersinkDiameter);
+
+        vm.Size = "T5";
+
         Assert.Equal("TFLAT", vm.Fastener);
         Assert.Equal((10.4m, 90m), (vm.CountersinkDiameter, vm.CountersinkAngle));
     }
@@ -397,6 +404,7 @@ public sealed class AwbHoleViewModelTests
         Assert.NotNull(vm.Geometry);
 
         vm.Standard = HoleStandards.ClearanceStandard;
+        vm.Size = "T5";
 
         // The boxes were not typed, so they take the clearance row's values (task 126).
         Assert.Equal(HoleSeat.Countersink, vm.Seat);
@@ -414,30 +422,44 @@ public sealed class AwbHoleViewModelTests
 
         vm.Seat = HoleSeat.Counterbore;
 
+        // The Size list is the Clearance tab's whatever the seat, and the fasteners are the size's (task 137).
         Assert.True(vm.ShowsFastener);
+        Assert.Equal(["T3", "T5"], Values(vm.SizeOptions));
+        Assert.Equal("T3", vm.Size);
+        Assert.Equal(["TCAP"], Values(vm.FastenerOptions));
+        Assert.Equal("TCAP", vm.Fastener);
+
+        vm.Size = "T5";
+
         Assert.Equal(["TCAP", "TLOW"], Values(vm.FastenerOptions));
         Assert.Equal("TCAP", vm.Fastener);
-        Assert.Equal(["T3", "T5"], Values(vm.SizeOptions));
 
         vm.Seat = HoleSeat.Countersink;
 
         Assert.Equal(["TFLAT"], Values(vm.FastenerOptions));
         Assert.Equal("TFLAT", vm.Fastener);
-        Assert.Equal(["T5"], Values(vm.SizeOptions));
+        Assert.Equal(["T3", "T5"], Values(vm.SizeOptions));
         Assert.Equal("T5", vm.Size);
     }
 
     [Fact]
-    public void Fastener_PicksTheSizesListed()
+    public void Fastener_FollowsTheSize_AndTheSizeIsKept()
     {
+        // Task 137: a fastener no longer picks the sizes; the size's rows give the fasteners.
         var vm = NewHole();
         vm.Seat = HoleSeat.Counterbore;
-        Assert.Equal("T3", vm.Size);
+        vm.Size = "T5";
 
         vm.Fastener = "TLOW";
 
-        Assert.Equal(["T5"], Values(vm.SizeOptions));
+        Assert.Equal(["T3", "T5"], Values(vm.SizeOptions));
         Assert.Equal("T5", vm.Size);
+        Assert.Equal((8.5m, 3m), (vm.CounterboreDiameter, vm.CounterboreDepth));
+
+        vm.Size = "T3";
+
+        Assert.Equal("TCAP", vm.Fastener);
+        Assert.Equal((6m, 3m), (vm.CounterboreDiameter, vm.CounterboreDepth));
     }
 
     [Fact]
@@ -667,12 +689,21 @@ public sealed class AwbHoleViewModelTests
     {
         var vm = NewHole();
         vm.Seat = HoleSeat.Counterbore;
-        vm.Size = "T3";
+        vm.Size = "T5";
 
         vm.Units = HoleUnits.Imperial;
 
-        Assert.Equal("TCAP", vm.Fastener);
         Assert.Equal("#5", vm.Size);
+        Assert.Equal("TCAP", vm.Fastener);
+
+        // T3's nearest is #3, which has no counterbore row: kept, with no fastener (task 137).
+        vm.Units = HoleUnits.Metric;
+        vm.Size = "T3";
+        vm.Units = HoleUnits.Imperial;
+
+        Assert.Equal("#3", vm.Size);
+        Assert.Equal(HoleSeat.Counterbore, vm.Seat);
+        Assert.Null(vm.Fastener);
     }
 
     [Fact]

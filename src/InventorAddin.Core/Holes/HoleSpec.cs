@@ -144,9 +144,12 @@ public static class HoleStandards
 /// Seated clearance and tapped holes: the Screw of the Counterbore or Countersink row (<c>SHCS</c>), which gives the
 /// seat's starting values (task 126) and, for a clearance hole, the through hole. Null takes the first row of the size
 /// (for a tapped hole, the first row of the same size), in workbook order; a tapped hole with no row of its size has
-/// none. Not used for a dowel.
+/// none, and so has a clearance hole with no row of its size (task 137). Not used for a dowel.
 /// </param>
-/// <param name="ClearanceFit">Clearance holes with no seat: the Clearance column used. Seated holes take the row's Hole fit.</param>
+/// <param name="ClearanceFit">
+/// Clearance holes with no seat or a spotface, and seated clearance holes with no Fastener because their size has no
+/// row of the seat (task 137): the Clearance column used. A seated hole with a row takes the row's Hole fit.
+/// </param>
 /// <param name="PrecisionFit">Dowel holes: Slip, Normal or Press.</param>
 /// <param name="Tolerance">
 /// Dowel holes: the Name of the Precision Tol row, for the units and fit. Null takes the row marked Default, else
@@ -241,6 +244,15 @@ public sealed record HoleSpec(
     public bool IsBlind => Termination == HoleTermination.Distance;
 
     /// <summary>
+    /// True when <see cref="ClearanceFit"/> sizes the through hole: a clearance hole with no seat or a spotface (task
+    /// 112), or with a counterbore or countersink and no Fastener, as a size with no row of the seat has (task 137). A
+    /// seated clearance hole with a fastener takes its row's Hole fit.
+    /// </summary>
+    public bool UsesClearanceFit =>
+        Kind == HoleKind.Clearance
+        && (Seat is HoleSeat.None or HoleSeat.Spotface || string.IsNullOrWhiteSpace(Fastener));
+
+    /// <summary>
     /// The same spec with every choice that does not apply to its kind, seat and termination put back to its default
     /// (null, or Normal for the fits), so two specs that build the same hole compare equal. A depth's expression is
     /// trimmed, and goes with its depth: null when the depth is. A fastener applies only to a clearance or tapped hole's
@@ -271,9 +283,7 @@ public sealed record HoleSpec(
             SpotfaceDepthExpression = spotface && SpotfaceDepth is not null
                 ? HoleExpressions.Clean(SpotfaceDepthExpression)
                 : null,
-            ClearanceFit = Kind == HoleKind.Clearance && Seat is HoleSeat.None or HoleSeat.Spotface
-                ? ClearanceFit
-                : ClearanceFit.Normal,
+            ClearanceFit = UsesClearanceFit ? ClearanceFit : ClearanceFit.Normal,
             PrecisionFit = Kind == HoleKind.Dowel ? PrecisionFit : PrecisionFit.Normal,
             Tolerance = Kind == HoleKind.Dowel ? Tolerance?.Trim() : null,
             ThreadDepth = tapped ? ThreadDepth : null,

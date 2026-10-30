@@ -327,22 +327,13 @@ public static class HoleReadBack
                 return dowel;
             }
 
-            foreach (var units in UnitsOrder)
+            if (ClearanceMatch() is { } match)
             {
-                foreach (var row in workbook.Clearance.Where(r => r.Units == units))
+                return Blank(match.Row.Units, HoleKind.Clearance, seat, termination) with
                 {
-                    foreach (var fit in new[] { ClearanceFit.Normal, ClearanceFit.Close, ClearanceFit.Loose })
-                    {
-                        if (Same(facts.HoleDiameterCm, row.Diameter(fit), units))
-                        {
-                            return Blank(units, HoleKind.Clearance, seat, termination) with
-                            {
-                                Size = row.Size,
-                                ClearanceFit = fit,
-                            };
-                        }
-                    }
-                }
+                    Size = match.Row.Size,
+                    ClearanceFit = match.Fit,
+                };
             }
 
             notes.Add(facts.HoleDiameterCm is null
@@ -353,6 +344,67 @@ public static class HoleReadBack
             {
                 Diameter = Length(facts.HoleDiameterCm, defaultUnits),
                 DiameterExpression = facts.DiameterExpression,
+            };
+        }
+
+        /// <summary>
+        /// The Clearance row and fit whose diameter is the hole's, in either units, the default units first, trying
+        /// Normal, Close and Loose for each row in workbook order; hidden rows count. Null when there is none.
+        /// </summary>
+        private (ClearanceRow Row, ClearanceFit Fit)? ClearanceMatch()
+        {
+            foreach (var units in UnitsOrder)
+            {
+                foreach (var row in workbook.Clearance.Where(r => r.Units == units))
+                {
+                    foreach (var fit in new[] { ClearanceFit.Normal, ClearanceFit.Close, ClearanceFit.Loose })
+                    {
+                        if (Same(facts.HoleDiameterCm, row.Diameter(fit), units))
+                        {
+                            return (row, fit);
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// A seated clearance hole whose seat matches no row of its tab (task 137; spec 09 question 26, Aidan: a seat
+        /// needs no row of its size): read at the size of the Clearance row its through hole matches, with its own seat
+        /// (<see cref="WithSeatFromHole"/>). When that size has rows of the seat, the one whose Hole fit gives the hole's
+        /// diameter is picked, else the first; when it has none, the hole has no fastener and keeps the matched fit. Null
+        /// when no Clearance row has the hole's diameter.
+        /// </summary>
+        private HoleSpec? SeatOnClearanceSize<T>(
+            HoleSeat seat, HoleTermination termination, IReadOnlyList<T> seatRows, Func<T, HoleUnits> units,
+            Func<T, string> size, Func<T, string> screw, Func<T, ClearanceFit> holeFit, string tab, double? seatDiameterCm)
+        {
+            if (ClearanceMatch() is not { } match)
+            {
+                return null;
+            }
+
+            var (clearance, fit) = match;
+
+            var ofSize = seatRows
+                .Where(r => units(r) == clearance.Units
+                    && string.Equals(size(r).Trim(), clearance.Size.Trim(), StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            var row = ofSize.FirstOrDefault(r => Same(facts.HoleDiameterCm, clearance.Diameter(holeFit(r)), clearance.Units))
+                ?? ofSize.FirstOrDefault();
+            var name = tab.ToLowerInvariant();
+            notes.Add(row is null
+                ? $"No {tab} row has a {Mm(seatDiameterCm)} {name}; the hole is read as {clearance.Size.Trim()}, which " +
+                  $"has no {tab} row, with its own {name}."
+                : $"No {tab} row has a {Mm(seatDiameterCm)} {name}; the hole's size, {clearance.Size.Trim()} " +
+                  $"{screw(row).Trim()}, is picked, and the hole's own {name} is kept.");
+            return Blank(clearance.Units, HoleKind.Clearance, seat, termination) with
+            {
+                Size = clearance.Size,
+                Fastener = row is null ? null : screw(row),
+                ClearanceFit = fit,
             };
         }
 
@@ -441,6 +493,14 @@ public static class HoleReadBack
                 .ToList();
             var row = candidates.FirstOrDefault(r => ThroughHoleMatches(r.Units, r.Size, r.HoleFit)) ?? candidates.FirstOrDefault();
 
+            if (row is null
+                && SeatOnClearanceSize(
+                    HoleSeat.Counterbore, termination, workbook.Counterbore, r => r.Units, r => r.Size, r => r.Screw,
+                    r => r.HoleFit, HoleWorkbookReader.CounterboreTab, facts.CounterboreDiameterCm) is { } onSize)
+            {
+                return onSize;
+            }
+
             if (row is null)
             {
                 row = workbook.Counterbore
@@ -468,6 +528,14 @@ public static class HoleReadBack
                     && SameAngle(facts.CountersinkAngleDeg, r.AngleDeg))
                 .ToList();
             var row = candidates.FirstOrDefault(r => ThroughHoleMatches(r.Units, r.Size, r.HoleFit)) ?? candidates.FirstOrDefault();
+
+            if (row is null
+                && SeatOnClearanceSize(
+                    HoleSeat.Countersink, termination, workbook.Countersink, r => r.Units, r => r.Size, r => r.Screw,
+                    r => r.HoleFit, HoleWorkbookReader.CountersinkTab, facts.CountersinkDiameterCm) is { } onSize)
+            {
+                return onSize;
+            }
 
             if (row is null)
             {

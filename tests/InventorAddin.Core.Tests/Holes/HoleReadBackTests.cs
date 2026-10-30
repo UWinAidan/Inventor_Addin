@@ -378,13 +378,30 @@ public sealed class HoleReadBackTests
     }
 
     [Fact]
-    public void UnknownCounterbore_TakesTheClosest_WithANote()
+    public void UnknownCounterbore_OnAClearanceSize_TakesTheRowOfItsThroughHole_WithANote()
     {
+        // 5.5 mm is T5 at Normal: TCAP's Hole fit (task 137).
         var facts = PlainFacts(0.55) with { Seat = HoleSeat.Counterbore, CounterboreDiameterCm = 0.92, CounterboreDepthCm = 0.5 };
 
         var result = HoleReadBack.Read(null, facts, Workbook, HoleUnits.Metric);
 
         Assert.Equal(HoleSeat.Counterbore, result.Spec.Seat);
+        Assert.Equal("T5", result.Spec.Size);
+        Assert.Equal("TCAP", result.Spec.Fastener);
+        Assert.Equal((9.2m, 5m), (result.Spec.CboreDiameter, result.Spec.CboreDepth));
+        Assert.Equal(
+            "No Counterbore row has a 9.2 mm counterbore; the hole's size, T5 TCAP, is picked, and the hole's own " +
+            "counterbore is kept.",
+            Assert.Single(result.Notes));
+    }
+
+    [Fact]
+    public void UnknownCounterbore_WithAThroughHoleNoClearanceRowHas_TakesTheClosest_WithANote()
+    {
+        var facts = PlainFacts(0.57) with { Seat = HoleSeat.Counterbore, CounterboreDiameterCm = 0.92, CounterboreDepthCm = 0.5 };
+
+        var result = HoleReadBack.Read(null, facts, Workbook, HoleUnits.Metric);
+
         Assert.Equal("T5", result.Spec.Size);
         Assert.Equal("TCAP", result.Spec.Fastener);
         Assert.Equal((9.2m, 5m), (result.Spec.CboreDiameter, result.Spec.CboreDepth));

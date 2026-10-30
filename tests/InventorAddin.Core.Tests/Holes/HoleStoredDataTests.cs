@@ -221,8 +221,6 @@ public sealed class HoleStoredDataTests
     public static TheoryData<HoleSpec, string> UnresolvedSpecs() => new()
     {
         { Clearance() with { Seat = HoleSeat.Counterbore }, HoleStoredData.CboreDiameterName },
-        { Clearance() with { Seat = HoleSeat.Counterbore, CboreDiameter = 9.5m, CboreDepth = 5.2m }, HoleStoredData.FastenerName },
-        { Clearance() with { Seat = HoleSeat.Countersink, Fastener = " ", CsinkDiameter = 10.4m, CsinkAngleDeg = 90m }, HoleStoredData.FastenerName },
         { Dowel(), HoleStoredData.ToleranceName },
         { Tapped() with { Seat = HoleSeat.Counterbore }, HoleStoredData.CboreDiameterName },
         { Tapped() with { Seat = HoleSeat.Countersink, CsinkDiameter = 7m }, HoleStoredData.CsinkAngleName },

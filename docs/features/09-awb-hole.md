@@ -59,8 +59,8 @@ Hole types and seats stay as Inventor's: Clearance, Tapped, **Simple** and **Tap
 | Type, Standard | Seat | Sizes from | Fit | Coloured |
 |---|---|---|---|---|
 | Clearance, AWB Clearance | None | Clearance | Close, Normal, Loose (the column used) | only when toleranced |
-| Clearance, AWB Clearance | Counterbore | Counterbore, through hole from Clearance at its "Hole fit" | from the row | only when toleranced |
-| Clearance, AWB Clearance | Countersink | Countersink, through hole from Clearance at its "Hole fit" | from the row | only when toleranced |
+| Clearance, AWB Clearance | Counterbore | Clearance; the counterbore and its through hole (at the row's "Hole fit") from the Counterbore row of the same size, else sized in the window (Aidan, question 26, task 137) | from the row; Close, Normal, Loose where the size has no row | only when toleranced |
+| Clearance, AWB Clearance | Countersink | Clearance; the countersink and its through hole (at the row's "Hole fit") from the Countersink row of the same size, else sized in the window (Aidan, question 26, task 137) | from the row; Close, Normal, Loose where the size has no row | only when toleranced |
 | Clearance, AWB Clearance | Spotface | Clearance at the chosen fit; the spotface from the Spotface row of the same size, editable | Close, Normal, Loose | only when toleranced |
 | Tapped, AWB Tapped | any | Tapped; a counterbore or countersink from the row of the same size (Aidan, question 6), a spotface from the Spotface row of the same size, editable | none | no |
 | Taper Tapped, AWB Taper Tapped | None, Countersink, Spotface (no Counterbore) | Taper Tapped; a seat sized in the window (Default, question 19) | none | no |

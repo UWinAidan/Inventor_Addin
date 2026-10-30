@@ -267,7 +267,8 @@ public static class HoleRules
     /// <see cref="Build"/> picks them: a blank fastener takes the first row, hidden rows included. Each seat's values
     /// come from its own tab, so only the chosen seat's matter. <see cref="HoleDowelSeat.Empty"/> for a dowel, a blank
     /// size, or a size with no row; a value the row does not give is null. A tapped hole with no row starts from the last
-    /// values used (<see cref="HoleLastDowelSeats.ForTapped"/>); the view-model puts those after these. The spotface
+    /// values used (<see cref="HoleLastDowelSeats.ForTapped"/>); the view-model puts those after these. A clearance hole
+    /// with no row starts empty (task 137; spec 09 question 26, Aidan). The spotface
     /// values come from the Spotface row of the same size (<see cref="SpotfaceRowFor"/>; task 112), which follows no
     /// fastener.
     /// </summary>
@@ -535,6 +536,25 @@ public static class HoleRules
             }
         }
 
+        /// <summary>
+        /// A clearance counterbore or countersink on a size with no row of the seat (task 137; spec 09 question 26,
+        /// Aidan): the through hole is the Clearance row of the size at the chosen fit, as a hole with no seat, and the
+        /// seat comes only from its boxes; one left empty is asked for under its box. The hole has no fastener.
+        /// </summary>
+        private void BuildSeatWithoutRow()
+        {
+            _resolved = _resolved with { Fastener = null };
+            var row = FindRow(workbook.Clearance, r => r.Units, r => r.Size, spec.Size);
+            if (row is null)
+            {
+                Problem(HoleField.Size, NotInTab(HoleWorkbookReader.ClearanceTab));
+                return;
+            }
+
+            _holeDiameter = row.Diameter(spec.ClearanceFit);
+            TakeSeat(HoleDowelSeat.Empty);
+        }
+
         /// <summary>The through hole of a seated hole: the Clearance row of the seat's size, at the seat's Hole fit.</summary>
         private void ThroughHole(string seatTab, string size, string screw, ClearanceFit fit)
         {
@@ -582,6 +602,12 @@ public static class HoleRules
         private void BuildCounterbore()
         {
             const string tab = HoleWorkbookReader.CounterboreTab;
+            if (!workbook.Counterbore.Any(r => r.Units == Units && Same(r.Size, spec.Size)))
+            {
+                BuildSeatWithoutRow();
+                return;
+            }
+
             var row = FindSeatRow(workbook.Counterbore, r => r.Units, r => r.Size, r => r.Screw, tab);
             if (row is null)
             {
@@ -596,6 +622,12 @@ public static class HoleRules
         private void BuildCountersink()
         {
             const string tab = HoleWorkbookReader.CountersinkTab;
+            if (!workbook.Countersink.Any(r => r.Units == Units && Same(r.Size, spec.Size)))
+            {
+                BuildSeatWithoutRow();
+                return;
+            }
+
             var row = FindSeatRow(workbook.Countersink, r => r.Units, r => r.Size, r => r.Screw, tab);
             if (row is null)
             {

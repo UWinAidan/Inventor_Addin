@@ -219,9 +219,10 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
     /// <summary>
     /// The data as attributes, in a fixed order. The spec is normalised first; a choice that does not apply, or a
     /// default left null, is not written. The spec must be resolved (<see cref="HoleBuildResult.Resolved"/>): a value
-    /// <see cref="Read"/> requires but the spec leaves blank (the size, a seated clearance hole's fastener, a seat's
-    /// dimensions, a dowel's tolerance, a blind clearance or dowel hole's depth) throws <see cref="ArgumentException"/>, so nothing is stored that
-    /// cannot be read back.
+    /// <see cref="Read"/> requires but the spec leaves blank (the size, a seat's dimensions, a dowel's
+    /// tolerance, a blind clearance or dowel hole's depth) throws <see cref="ArgumentException"/>, so nothing is stored
+    /// that cannot be read back. A seated clearance hole with no fastener (no row of its size; task 137) stores its
+    /// Clearance fit instead.
     /// </summary>
     public IReadOnlyList<HoleAttribute> ToAttributes()
     {
@@ -258,7 +259,7 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
         }
 
         AddText(FastenerName, spec.Fastener);
-        if (UsesClearanceFit(spec))
+        if (spec.UsesClearanceFit)
         {
             attributes.Add(new HoleAttribute(ClearanceFitName, spec.ClearanceFit.ToString()));
         }
@@ -357,8 +358,8 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
             Require(!string.IsNullOrWhiteSpace(spec.Size), SizeName);
         }
 
-        // Every seat has its own dimensions (tasks 106 and 126). A clearance hole's seat also names its row, which gives
-        // the through hole; a tapped hole's may have none (task 126), and a dowel's follows no fastener.
+        // Every seat has its own dimensions (tasks 106 and 126). A clearance or tapped hole's seat may name no row: a
+        // size with no row of the seat has none (tasks 126 and 137), and a dowel's follows no fastener.
         if (spec.Seat == HoleSeat.Counterbore)
         {
             Require(spec.CboreDiameter is not null, CboreDiameterName);
@@ -375,11 +376,6 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
             Require(spec.SpotfaceDepth is not null, SpotfaceDepthName);
         }
 
-        if (spec.Kind == HoleKind.Clearance && spec.Seat is HoleSeat.Counterbore or HoleSeat.Countersink)
-        {
-            Require(!string.IsNullOrWhiteSpace(spec.Fastener), FastenerName);
-        }
-
         if (spec.Kind == HoleKind.Dowel)
         {
             Require(!string.IsNullOrWhiteSpace(spec.Tolerance), ToleranceName);
@@ -393,9 +389,6 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
 
     private static HoleStoredDataReadResult CannotRead(string reason) =>
         new(null, $"Cannot read the {Branding.ShortName} hole data on this hole: {reason}.");
-
-    private static bool UsesClearanceFit(HoleSpec spec) =>
-        spec.Kind == HoleKind.Clearance && spec.Seat is HoleSeat.None or HoleSeat.Spotface;
 
     private sealed class StoredDataException(string message) : Exception(message);
 
@@ -419,17 +412,20 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
             var simple = kind == HoleKind.Simple;
             var threaded = HoleStandards.IsThreaded(kind);
             var seated = (cbore || csink) && kind is HoleKind.Clearance or HoleKind.Tapped;
-            var fastenerRequired = seated && (kind == HoleKind.Clearance || version < 2);
+            // A seated clearance hole may have no fastener since task 137 (spec 09 question 26): its size has no row of
+            // the seat, and it stores the Clearance fit of its through hole instead. Data stored before always has one.
+            var fastenerRequired = seated && version < 2;
+            var fastener = fastenerRequired ? RequiredText(FastenerName) : seated ? OptionalText(FastenerName) : null;
+            var clearanceFitStored = kind == HoleKind.Clearance
+                && (seat is HoleSeat.None or HoleSeat.Spotface || string.IsNullOrWhiteSpace(fastener));
 
             var spec = new HoleSpec(
                 RequiredEnum<HoleUnits>(UnitsName),
                 kind,
                 seat,
                 simple ? OptionalText(SizeName) ?? "" : RequiredText(SizeName),
-                fastenerRequired ? RequiredText(FastenerName) : seated ? OptionalText(FastenerName) : null,
-                kind == HoleKind.Clearance && seat is HoleSeat.None or HoleSeat.Spotface
-                    ? RequiredEnum<ClearanceFit>(ClearanceFitName)
-                    : ClearanceFit.Normal,
+                fastener,
+                clearanceFitStored ? RequiredEnum<ClearanceFit>(ClearanceFitName) : ClearanceFit.Normal,
                 kind == HoleKind.Dowel ? RequiredEnum<PrecisionFit>(PrecisionFitName) : PrecisionFit.Normal,
                 kind == HoleKind.Dowel ? RequiredText(ToleranceName) : null,
                 kind == HoleKind.Tapped ? OptionalDecimal(ThreadDepthName) : null,
