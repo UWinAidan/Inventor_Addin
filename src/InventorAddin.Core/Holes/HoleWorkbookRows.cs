@@ -88,6 +88,19 @@ public sealed record CountersinkRow(
     bool Hidden);
 
 /// <summary>
+/// A Spotface tab row (task 111): where a spotface on a hole of this size starts, in the row's units. Keyed by
+/// <see cref="Size"/> as the Counterbore and Countersink rows are; it follows no screw. <see cref="SpotfaceDepth"/>
+/// may be 0 (Default, task 111), as Inventor allows.
+/// </summary>
+public sealed record SpotfaceRow(
+    int Row,
+    HoleUnits Units,
+    string Size,
+    decimal SpotfaceDiameter,
+    decimal SpotfaceDepth,
+    bool Hidden);
+
+/// <summary>
 /// A Tapped tab row. <see cref="Thread"/> is as written in the workbook (<c>M6</c>, <c>#10-32 UNF</c>);
 /// <see cref="Designation"/> and <see cref="ThreadType"/> are as Inventor's thread table names them.
 /// <see cref="PitchOrTpi"/> is the pitch in mm for Metric rows and threads per inch for Imperial rows.
@@ -140,6 +153,24 @@ public sealed record TappedRow(
         return text + "x" + pitchOrTpi.ToString("0.############################", CultureInfo.InvariantCulture);
     }
 }
+
+/// <summary>
+/// A Taper Tapped tab row (task 111): a tapered pipe thread. <see cref="ThreadType"/> and <see cref="Size"/> are as
+/// written in the workbook and must match Inventor's thread table (spike 108: thread type <c>NPT</c> with size
+/// <c>1/4</c>, <c>BSP Taper Internal</c> with <c>Rc 1/4</c>). <see cref="TapDrill"/> feeds notes and hole tables
+/// only: Inventor models its own thread-table tap drill (spec 09, question 21). <see cref="ThreadDepth"/> and
+/// <see cref="DrillDepth"/> are the cell values, or worked out from Settings when the cell is blank, with the tap
+/// drill as D since the tab has no Nominal column (Default, task 111).
+/// </summary>
+public sealed record TaperTappedRow(
+    int Row,
+    HoleUnits Units,
+    string Size,
+    string ThreadType,
+    decimal TapDrill,
+    decimal ThreadDepth,
+    decimal DrillDepth,
+    bool Hidden);
 
 /// <summary>
 /// A Dowel tab row: a nominal size offered for dowel and precision holes, and where a seat on it starts (spec 09,

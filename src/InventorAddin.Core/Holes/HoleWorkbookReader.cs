@@ -16,10 +16,19 @@ public static class HoleWorkbookReader
     public const string ClearanceTab = "Clearance";
     public const string CounterboreTab = "Counterbore";
     public const string CountersinkTab = "Countersink";
+    public const string SpotfaceTab = "Spotface";
     public const string TappedTab = "Tapped";
+    public const string TaperTappedTab = "Taper Tapped";
     public const string DowelTab = "Dowel";
     public const string PrecisionTolTab = "Precision Tol";
     public const string DrillPointTab = "Drill Point";
+
+    /// <summary>
+    /// The tabs a workbook may leave out with no problem (task 111): added after the others, so a workbook made before
+    /// them (Aidan's own copy until he adds them) still loads. A missing one is listed in
+    /// <see cref="HoleWorkbook.MissingOptionalTabs"/>.
+    /// </summary>
+    public static IReadOnlyList<string> OptionalTabs { get; } = [SpotfaceTab, TaperTappedTab];
 
     /// <summary>The row that holds the headers on every data tab (title in row 1, note in row 2).</summary>
     public const int HeaderRow = 4;
@@ -72,6 +81,9 @@ public static class HoleWorkbookReader
     public const string UpperColumn = "Upper";
     public const string LowerColumn = "Lower";
     public const string DrillPointNameColumn = "Name";
+    public const string SpotfaceDiaColumn = "Spotface dia";
+    public const string SpotfaceDepthColumn = "Spotface depth";
+    public const string ThreadTypeColumn = "Thread type";
 
     /// <summary>
     /// The Dowel tab's optional seat columns (task 106), after its required ones: where a dowel's counterbore or
@@ -91,10 +103,16 @@ public static class HoleWorkbookReader
             [ClearanceTab] = [UnitsColumn, SizeColumn, NominalColumn, CloseColumn, NormalColumn, LooseColumn, ShowColumn],
             [CounterboreTab] = [UnitsColumn, SizeColumn, ScrewColumn, CboreDiaColumn, CboreDepthColumn, HoleFitColumn, ShowColumn],
             [CountersinkTab] = [UnitsColumn, SizeColumn, ScrewColumn, CsinkDiaColumn, AngleColumn, HoleFitColumn, ShowColumn],
+            [SpotfaceTab] = [UnitsColumn, SizeColumn, SpotfaceDiaColumn, SpotfaceDepthColumn, ShowColumn],
             [TappedTab] =
             [
                 UnitsColumn, ThreadColumn, NominalColumn, PitchColumn, TapDrillColumn, ClassColumn,
                 ThreadDepthColumn, DrillDepthColumn, ShowColumn,
+            ],
+            [TaperTappedTab] =
+            [
+                UnitsColumn, SizeColumn, ThreadTypeColumn, TapDrillColumn, ThreadDepthColumn, DrillDepthColumn,
+                ShowColumn,
             ],
             [DowelTab] = [UnitsColumn, SizeColumn, NominalColumn, ShowColumn],
             [PrecisionTolTab] =
@@ -178,6 +196,7 @@ public static class HoleWorkbookReader
 
         var problems = new List<HoleWorkbookProblem>();
         var settings = ReadSettings(package, problems);
+        var missingOptional = OptionalTabs.Where(tab => package.Sheet(tab) is null).ToList();
 
         var workbook = new HoleWorkbook(
             settings,
@@ -187,7 +206,12 @@ public static class HoleWorkbookReader
             ReadTab(package, TappedTab, problems, r => ReadTapped(r, settings)),
             ReadTab(package, DowelTab, problems, ReadDowel),
             ReadTab(package, PrecisionTolTab, problems, ReadPrecisionTolerance),
-            ReadTab(package, DrillPointTab, problems, ReadDrillPoint));
+            ReadTab(package, DrillPointTab, problems, ReadDrillPoint))
+        {
+            Spotface = ReadTab(package, SpotfaceTab, problems, ReadSpotface),
+            TaperTapped = ReadTab(package, TaperTappedTab, problems, r => ReadTaperTapped(r, settings)),
+            MissingOptionalTabs = missingOptional.AsReadOnly(),
+        };
 
         return new HoleWorkbookReadResult(workbook, problems.AsReadOnly());
     }
@@ -251,7 +275,12 @@ public static class HoleWorkbookReader
         var sheet = package.Sheet(tab);
         if (sheet is null)
         {
-            problems.Add(new HoleWorkbookProblem(null, null, NoTab(tab)));
+            // An optional tab that is not there is no problem (task 111); the caller lists it as missing.
+            if (!OptionalTabs.Contains(tab))
+            {
+                problems.Add(new HoleWorkbookProblem(null, null, NoTab(tab)));
+            }
+
             return [];
         }
 
@@ -335,6 +364,38 @@ public static class HoleWorkbookReader
         var threadDepth = threadDepthCell ?? settings.DefaultThreadDepth(nominal);
         var drillDepth = drillDepthCell ?? settings.DefaultDrillDepth(nominal, threadDepth);
         return new TappedRow(r.Row, units, thread, nominal, pitch, tapDrill, threadClass, threadDepth, drillDepth, hidden);
+    }
+
+    private static SpotfaceRow? ReadSpotface(RowReader r)
+    {
+        var units = r.Units();
+        var size = r.Required(SizeColumn);
+        var diameter = r.Positive(SpotfaceDiaColumn);
+
+        // A depth of 0 is allowed: Inventor accepts a spotface of depth 0 (spike 108; Aidan, 2026-10-28).
+        var depth = r.NonNegative(SpotfaceDepthColumn);
+        var hidden = r.Hidden();
+        return r.Ok ? new SpotfaceRow(r.Row, units, size, diameter, depth, hidden) : null;
+    }
+
+    private static TaperTappedRow? ReadTaperTapped(RowReader r, HoleSettings settings)
+    {
+        var units = r.Units();
+        var size = r.Required(SizeColumn);
+        var threadType = r.Required(ThreadTypeColumn);
+        var tapDrill = r.Positive(TapDrillColumn);
+        var threadDepthCell = r.OptionalPositive(ThreadDepthColumn);
+        var drillDepthCell = r.OptionalPositive(DrillDepthColumn);
+        var hidden = r.Hidden();
+        if (!r.Ok)
+        {
+            return null;
+        }
+
+        // The tab has no Nominal column, so a blank depth is worked out with the tap drill as D (Default, task 111).
+        var threadDepth = threadDepthCell ?? settings.DefaultThreadDepth(tapDrill);
+        var drillDepth = drillDepthCell ?? settings.DefaultDrillDepth(tapDrill, threadDepth);
+        return new TaperTappedRow(r.Row, units, size, threadType, tapDrill, threadDepth, drillDepth, hidden);
     }
 
     private static DowelRow? ReadDowel(RowReader r)

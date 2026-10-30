@@ -35,6 +35,20 @@ public static class HoleWorkbookMessages
     }
 
     /// <summary>
+    /// The note for an optional tab the workbook does not have (<see cref="HoleWorkbook.MissingOptionalTabs"/>; spec 09,
+    /// "The workbook"), for the window to show where the tab's sizes would be. Not a workbook problem: a workbook made
+    /// before the tab existed loads without it.
+    /// </summary>
+    /// <param name="tab">The tab's name, for example <see cref="HoleWorkbookReader.TaperTappedTab"/>.</param>
+    public static string MissingOptionalTab(string tab)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(tab);
+
+        return $"The hole workbook has no \"{tab}\" tab, so it gives no {tab} sizes. " +
+               "Copy the tab from the starter workbook into yours to add them.";
+    }
+
+    /// <summary>
     /// The workbook exists but could not be read: Excel has it open, or it is not an <c>.xlsx</c> file.
     /// </summary>
     /// <param name="reason">The error the read gave, or null.</param>

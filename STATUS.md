@@ -6,20 +6,21 @@ Last updated: 2026-10-29
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-10-30. Branch `claude/m4-hole-generator`; PR #29 open against `main`. Local commits not yet pushed: 124 (`3bf3af4`), 125 (`ff8949c`), 122 (`9db5f74`), 126 (`38e866e`). Spike branches (local only): `spike/107-client-graphics` (`b56f0db`), `spike/108-hole-types` (`f0a2f33`).
-- Goal: run the M4 part 1 round in `docs/PLAN.md` order, one implementer and one reviewer per task, one commit per task. Aidan asked (2026-10-28) not to stop for Inventor checks: collect each task's checklist and he does them together at the end.
-- Done 2026-10-30: tasks 124, 125, 122, 126, each reviewed PASS and committed with tracking updates. All built on Windows.
-- **Next:** task 111. Two implementer runs (126, then 111) stalled with no changes, probably while the laptop slept; if 111 stalls again, check `git status` and start it again.
+- Updated: 2026-10-30 11:11. Branch `claude/m4-hole-generator`, latest commit `4edbf72`. PR #29 open against `main`. Local commits **not pushed**: `3bf3af4` (124), `ff8949c` (125), `9db5f74` (122), `96b8680` (handoff), `38e866e` (126), `4edbf72` (handoff), and task 111 (the commit after `4edbf72`). Spike branches (local only): `spike/107-client-graphics` (`b56f0db`), `spike/108-hole-types` (`f0a2f33`).
+- Goal: run the M4 part 1 round in `docs/PLAN.md` order, one implementer and one reviewer per task, one commit per task. Aidan asked (2026-10-28) not to stop for Inventor checks: collect each task's checklist for one combined check at the end.
+- Done 2026-10-30: tasks 124, 125, 122, 126, 111, each reviewed PASS and committed with tracking updates (`DECISIONS.md` Defaults, `TODO.md` follow-ups, spec 09 text and new open questions 23 to 26). Each was built on Windows with 0 errors. The last Core test count observed was 3888 passed, after 126.
+- Task 111 (Spotface and Taper Tapped workbook tabs) finished after three stalled implementer runs, reviewed PASS and committed. Core tests 3903 passed. Aidan stopped the session after 111 (5-hour limit); nothing is in progress.
 - Next steps:
-  1. Implement, review and commit 111.
+  1. Push the local commits to PR #29 (Aidan has not yet been asked; ask first).
   2. Then the PLAN order: 112, 113, 119, 131, 132, 127, 130, 110, 117, 114, 115, 116, 136, 118.
-  3. At the end, push, and give Aidan one combined checklist from the task files (135, 120, 121, 128, 129, 123, 124, 125, 122, 126, and on), plus the older 105, 109, 133, 134.
-- New questions for Aidan this session: spec 09 questions 23 (remembered blind depth keeps its expression?), 24 (hand colours on a dowel that becomes another kind), 25 (an edited seat equal to its row follows a size change?) and 26 (a clearance seat with no row).
+  3. At the end, update `STATUS.md` and `TODO.md`, push, and give Aidan one combined checklist from the task files (135, 120, 121, 128, 129, 123, 124, 125, 122, 126, and on), plus the older 105, 109, 133, 134.
+- New questions for Aidan this session (spec 09, listed in `TODO.md`): 23 (should the remembered blind depth keep its expression?), 24 (should hand colours be kept on a dowel that becomes another kind?), 25 (should an edited seat equal to its row follow a size change?), 26 (should a clearance seat be allowed with no row of its size?).
 - Gotchas:
   - Check `tasklist //FI "IMAGENAME eq Inventor.exe"` before building. If Inventor is open, pass `-p:DeployToInventor=false`.
-  - In shell scripts that edit tracking files, chain the commit with `&&` after the edit script, or a failed edit still commits.
+  - In shell scripts that edit tracking files, chain the commit with `&&` after the edit script, or a failed edit still commits. Python `str.replace` edits with an `assert old in s` guard worked well.
+  - An implementer that stalls leaves the tree as it was or partly edited. Check `git status` before starting it again, and tell the new implementer what is already there.
   - Spike 107's preview code is read with `git show spike/108-hole-types:src/InventorAddin/Spike107.cs` (task 110).
-- Read first: `docs/PLAN.md` ("Round after PR #29's first look"), `TODO.md` Next up, `docs/tasks/111-workbook-spotface-taper-tapped.md`.
+- Read first: `docs/WORKFLOW.md` (run mode), `docs/PLAN.md` ("Round after PR #29's first look"), `TODO.md` Next up, `docs/tasks/112-core-simple-taper-spotface.md`.
 
 ## Big items
 

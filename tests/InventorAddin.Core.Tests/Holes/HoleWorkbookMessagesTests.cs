@@ -9,6 +9,15 @@ public sealed class HoleWorkbookMessagesTests
     private static readonly LibraryPath FromSettings = new(@"D:\shared\Test holes.xlsx", IsStarter: false);
 
     [Fact]
+    public void MissingOptionalTab_NamesTheTab_AndSaysWhereToGetIt()
+    {
+        Assert.Equal(
+            "The hole workbook has no \"Taper Tapped\" tab, so it gives no Taper Tapped sizes. Copy the tab from the starter workbook into yours to add them.",
+            HoleWorkbookMessages.MissingOptionalTab(HoleWorkbookReader.TaperTappedTab));
+        Assert.Throws<ArgumentException>(() => HoleWorkbookMessages.MissingOptionalTab(" "));
+    }
+
+    [Fact]
     public void Missing_Starter_NamesPathAndStarter()
     {
         Assert.Equal(

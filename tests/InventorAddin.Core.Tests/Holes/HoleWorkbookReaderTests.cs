@@ -767,4 +767,264 @@ public sealed class HoleWorkbookReaderTests
             Assert.Contains(header, line);
         }
     }
+
+    // ---- The optional Spotface and Taper Tapped tabs (task 111) ----
+
+    private static object?[] SpotfaceHeaders => ["Units", "Size", "Spotface dia", "Spotface depth", "Show"];
+
+    private static object?[] TaperHeaders =>
+        ["Units", "Size", "Thread type", "Tap drill", "Default thread depth", "Default drill depth", "Show"];
+
+    private static Dictionary<string, object?[][]> TabsWithOptional()
+    {
+        var tabs = Tabs();
+        tabs["Spotface"] = Tab("Spotfaces", SpotfaceHeaders,
+            ["Metric", "T3", 7.5m, 0.4m, "Y"],
+            ["Metric", "T7", 13, 0, "N"],
+            ["Imperial", "#3", 0.27m, "0.02", null]);
+        tabs["Taper Tapped"] = Tab("Taper tapped holes", TaperHeaders,
+            ["Metric", "Rc 9/7", "BSP Taper Internal", 9.5m, new Formula("ROUND(D5*Settings!$B$5,3)", 18), new Formula("ROUND(E5+D5*Settings!$B$6,3)", 21), "Y"],
+            ["Metric", "Rc 5/3", "BSP Taper Internal", 12.3m, null, null, "N"],
+            ["Imperial", "3/7", "NPT", 0.47m, null, 0.9m, "Y"]);
+        return tabs;
+    }
+
+    [Fact]
+    public void WorkbookWithoutTheOptionalTabs_LoadsWithNoProblem_AndNamesThemAsMissing()
+    {
+        var result = Read(Tabs());
+
+        Assert.False(result.HasProblems, Problems(result));
+        Assert.Empty(result.Workbook.Spotface);
+        Assert.Empty(result.Workbook.TaperTapped);
+        Assert.Equal(["Spotface", "Taper Tapped"], result.Workbook.MissingOptionalTabs);
+        Assert.Equal([HoleWorkbookReader.SpotfaceTab, HoleWorkbookReader.TaperTappedTab], HoleWorkbookReader.OptionalTabs);
+    }
+
+    [Theory]
+    [InlineData("Spotface", "Taper Tapped")]
+    [InlineData("Taper Tapped", "Spotface")]
+    public void OneOptionalTabMissing_OnlyThatOneIsNamed(string missing, string present)
+    {
+        var tabs = TabsWithOptional();
+        tabs.Remove(missing);
+        var result = Read(tabs);
+
+        Assert.False(result.HasProblems, Problems(result));
+        Assert.Equal([missing], result.Workbook.MissingOptionalTabs);
+        Assert.Equal(3, present == "Spotface" ? result.Workbook.Spotface.Count : result.Workbook.TaperTapped.Count);
+    }
+
+    [Fact]
+    public void EmptyWorkbook_HasNoOptionalTabRows()
+    {
+        Assert.Empty(HoleWorkbook.Empty.Spotface);
+        Assert.Empty(HoleWorkbook.Empty.TaperTapped);
+        Assert.Empty(HoleWorkbook.Empty.MissingOptionalTabs);
+    }
+
+    [Fact]
+    public void Spotface_RowsRead_InTheirUnits_ShowNIsHidden_AndADepthOf0IsAllowed()
+    {
+        var result = Read(TabsWithOptional());
+
+        Assert.False(result.HasProblems, Problems(result));
+        Assert.Empty(result.Workbook.MissingOptionalTabs);
+        Assert.Equal(
+            [
+                new SpotfaceRow(5, HoleUnits.Metric, "T3", 7.5m, 0.4m, Hidden: false),
+                new SpotfaceRow(6, HoleUnits.Metric, "T7", 13m, 0m, Hidden: true),
+                new SpotfaceRow(7, HoleUnits.Imperial, "#3", 0.27m, 0.02m, Hidden: false),
+            ],
+            result.Workbook.Spotface);
+    }
+
+    [Fact]
+    public void TaperTapped_UsesTheCellDepths_OrWorksThemOutFromSettings_WithTheTapDrillAsD()
+    {
+        var result = Read(TabsWithOptional());
+
+        Assert.False(result.HasProblems, Problems(result));
+        Assert.Equal(
+            [
+                // Cached formula values are used as they are (18 and 21, not 9.5 x 2 and 19 + 9.5 x 0.25).
+                new TaperTappedRow(5, HoleUnits.Metric, "Rc 9/7", "BSP Taper Internal", 9.5m, 18m, 21m, Hidden: false),
+
+                // Blank: thread round(12.3 x 2, 3) = 24.6; drill round(24.6 + 12.3 x 0.25, 3) = 27.675.
+                new TaperTappedRow(6, HoleUnits.Metric, "Rc 5/3", "BSP Taper Internal", 12.3m, 24.6m, 27.675m, Hidden: true),
+
+                // Thread blank: round(0.47 x 2, 3) = 0.94; drill 0.9 as typed.
+                new TaperTappedRow(7, HoleUnits.Imperial, "3/7", "NPT", 0.47m, 0.94m, 0.9m, Hidden: false),
+            ],
+            result.Workbook.TaperTapped);
+    }
+
+    [Fact]
+    public void OptionalTabs_MatchIgnoringCase_HeadersInAnyOrder()
+    {
+        var tabs = TabsWithOptional();
+        tabs.Remove("Spotface");
+        tabs[" spotface "] = Tab("Spotfaces",
+            ["show", "SPOTFACE DEPTH", "Units", "Spotface dia", "Size", "Extra"],
+            ["Y", 1, "Metric", 9, "T5", "ignored"]);
+        var result = Read(tabs);
+
+        Assert.False(result.HasProblems, Problems(result));
+        Assert.Empty(result.Workbook.MissingOptionalTabs);
+        Assert.Equal([new SpotfaceRow(5, HoleUnits.Metric, "T5", 9m, 1m, Hidden: false)], result.Workbook.Spotface);
+    }
+
+    [Fact]
+    public void Spotface_BadRows_AreLeftOut_WithOneProblemPerThingWrong()
+    {
+        var tabs = TabsWithOptional();
+        tabs["Spotface"] = Tab("Spotfaces", SpotfaceHeaders,
+            ["Metric", "T3", 7.5m, 0.4m, "Y"],
+            ["Cubits", "T4", "wide", -1, "Maybe"],
+            ["Metric", "", 0, null, "Y"],
+            ["Metric", "T6", new ErrorValue("#VALUE!"), 1, "Y"]);
+        var result = Read(tabs);
+
+        Assert.Equal(["T3"], result.Workbook.Spotface.Select(s => s.Size));
+        Assert.Equal(
+            [
+                "Spotface tab, row 6: Units \"Cubits\" is not Metric or Imperial; row left out.",
+                "Spotface tab, row 6: Spotface dia \"wide\" is not a number greater than 0, for example 6.4; row left out.",
+                "Spotface tab, row 6: Spotface depth \"-1\" is not a number of 0 or more, for example 0.5; row left out.",
+                "Spotface tab, row 6: Show \"Maybe\" is not Y or N; row left out.",
+                "Spotface tab, row 7: Size is blank; row left out.",
+                "Spotface tab, row 7: Spotface dia \"0\" is not a number greater than 0, for example 6.4; row left out.",
+                "Spotface tab, row 7: Spotface depth is blank; row left out.",
+                "Spotface tab, row 8: Spotface dia shows the error #VALUE!; check its formula; row left out.",
+            ],
+            result.Problems.Select(p => p.ToString()));
+    }
+
+    [Fact]
+    public void TaperTapped_BadRows_AreLeftOut_WithOneProblemPerThingWrong()
+    {
+        var tabs = TabsWithOptional();
+        tabs["Taper Tapped"] = Tab("Taper tapped holes", TaperHeaders,
+            ["Imperial", "3/7", "NPT", 0.47m, null, null, "Y"],
+            ["Imperial", "", "", "big", 0, null, "N"],
+            ["Metric", "Rc 5/3", "BSP Taper Internal", 12.3m, new ErrorValue("#DIV/0!"), "deep", "Y"]);
+        var result = Read(tabs);
+
+        Assert.Equal(["3/7"], result.Workbook.TaperTapped.Select(t => t.Size));
+        Assert.Equal(
+            [
+                "Taper Tapped tab, row 6: Size is blank; row left out.",
+                "Taper Tapped tab, row 6: Thread type is blank; row left out.",
+                "Taper Tapped tab, row 6: Tap drill \"big\" is not a number greater than 0, for example 6.4; row left out.",
+                "Taper Tapped tab, row 6: Default thread depth \"0\" is not a number greater than 0, for example 6.4; row left out.",
+                "Taper Tapped tab, row 7: Default thread depth shows the error #DIV/0!; check its formula; row left out.",
+                "Taper Tapped tab, row 7: Default drill depth \"deep\" is not a number greater than 0, for example 6.4; row left out.",
+            ],
+            result.Problems.Select(p => p.ToString()));
+    }
+
+    [Fact]
+    public void OptionalTab_WithAMissingHeader_IsReported_AndNotNamedAsMissing()
+    {
+        var tabs = TabsWithOptional();
+        tabs["Taper Tapped"] = Tab("Taper tapped holes",
+            ["Units", "Size", "Tap drill", "Default thread depth", "Default drill depth", "Show"],
+            ["Imperial", "3/7", 0.47m, null, null, "Y"]);
+        tabs["Spotface"] = Tab("Spotfaces",
+            ["Units", "Size", "Spotface dia", "Show"],
+            ["Metric", "T3", 7.5m, "Y"]);
+        var result = Read(tabs);
+
+        Assert.Empty(result.Workbook.Spotface);
+        Assert.Empty(result.Workbook.TaperTapped);
+        Assert.Empty(result.Workbook.MissingOptionalTabs);
+        Assert.Equal(
+            [
+                "Spotface tab, row 4: The Spotface tab has no \"Spotface depth\" column. Row 4 should read: Units, Size, Spotface dia, Spotface depth, Show; tab left out.",
+                "Taper Tapped tab, row 4: The Taper Tapped tab has no \"Thread type\" column. Row 4 should read: Units, Size, Thread type, Tap drill, Default thread depth, Default drill depth, Show; tab left out.",
+            ],
+            result.Problems.Select(p => p.ToString()));
+    }
+
+    [Fact]
+    public void StarterWorkbook_HasBothOptionalTabs_InTheSpecsOrder()
+    {
+        using var stream = File.OpenRead(RepoWorkbookPath());
+        var package = XlsxPackage.Read(stream);
+
+        Assert.Equal(
+            [
+                "How to edit", "Settings", "Clearance", "Counterbore", "Countersink", "Spotface", "Tapped", "Taper Tapped",
+                "Dowel", "Precision Tol", "Drill Point",
+            ],
+            package.SheetNames);
+        foreach (var tab in HoleWorkbookReader.OptionalTabs)
+        {
+            var sheet = package.Sheet(tab)!;
+            Assert.Equal(
+                HoleWorkbookReader.Headers[tab],
+                Enumerable.Range(1, HoleWorkbookReader.Headers[tab].Count).Select(c => sheet.Text(HoleWorkbookReader.HeaderRow, c)));
+            Assert.NotEqual("", sheet.Text(1, 1));
+            Assert.NotEqual("", sheet.Text(2, 1));
+        }
+
+        var result = HoleWorkbookReader.Read(RepoWorkbookPath());
+        Assert.False(result.HasProblems, Problems(result));
+        Assert.Empty(result.Workbook.MissingOptionalTabs);
+    }
+
+    [Fact]
+    public void StarterWorkbook_HasASpotfaceRow_ForEveryCounterboreSize()
+    {
+        var wb = HoleWorkbookReader.Read(RepoWorkbookPath()).Workbook;
+
+        Assert.Equal(
+            wb.Counterbore.Select(c => (c.Units, c.Size)).Distinct(),
+            wb.Spotface.Select(s => (s.Units, s.Size)));
+        foreach (var spotface in wb.Spotface)
+        {
+            var cbore = wb.Counterbore.First(c => c.Units == spotface.Units && c.Size == spotface.Size);
+            Assert.True(spotface.SpotfaceDiameter > cbore.CboreDiameter, $"{spotface.Size}: Spotface dia");
+            Assert.True(spotface.SpotfaceDepth > 0, $"{spotface.Size}: Spotface depth");
+            Assert.False(spotface.Hidden);
+        }
+    }
+
+    [Fact]
+    public void StarterWorkbook_TaperTapped_HasBsptMetricAndNptImperialRows_AtTheSettingsDepths()
+    {
+        var wb = HoleWorkbookReader.Read(RepoWorkbookPath()).Workbook;
+
+        Assert.NotEmpty(wb.TaperTapped);
+        Assert.All(wb.TaperTapped, t => Assert.Equal(
+            t.Units == HoleUnits.Metric ? "BSP Taper Internal" : "NPT",
+            t.ThreadType));
+        Assert.Contains(wb.TaperTapped, t => t.Units == HoleUnits.Metric && t.Size == "Rc 1/4");
+        Assert.Contains(wb.TaperTapped, t => t.Units == HoleUnits.Imperial && t.Size == "1/4");
+        Assert.All(wb.TaperTapped.Where(t => t.Units == HoleUnits.Metric), t => Assert.StartsWith("Rc ", t.Size));
+
+        // The cached formula values are what the reader works out for a blank cell.
+        foreach (var t in wb.TaperTapped)
+        {
+            var thread = wb.Settings.DefaultThreadDepth(t.TapDrill);
+            Assert.Equal((thread, wb.Settings.DefaultDrillDepth(t.TapDrill, thread)), (t.ThreadDepth, t.DrillDepth));
+            Assert.False(t.Hidden);
+        }
+    }
+
+    [Fact]
+    public void StarterWorkbook_HowToEdit_HasALineForEachOptionalTab_AfterItsNeighbour()
+    {
+        using var stream = File.OpenRead(RepoWorkbookPath());
+        var sheet = XlsxPackage.Read(stream).Sheet("How to edit")!;
+        var lines = Enumerable.Range(1, sheet.LastRow).Select(r => sheet.Text(r, 1)).ToList();
+
+        var spotface = lines.FindIndex(t => t.StartsWith("Spotface:"));
+        var taper = lines.FindIndex(t => t.StartsWith("Taper Tapped:"));
+        Assert.Equal(lines.FindIndex(t => t.StartsWith("Countersink:")) + 1, spotface);
+        Assert.Equal(lines.FindIndex(t => t.StartsWith("Tapped:")) + 1, taper);
+        Assert.Contains("Optional", lines[spotface]);
+        Assert.Contains("Optional", lines[taper]);
+        Assert.Contains("STARTER VALUES", lines[^1]);
+    }
 }
