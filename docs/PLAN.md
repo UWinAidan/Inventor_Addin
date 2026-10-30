@@ -369,7 +369,7 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 - [ ] 119 Icons for Simple, Taper Tapped and Spotface
 - [x] 120 H opens AWB Hole again after the shortcuts are reset
 - [x] 121 The AWB Addin tab and AWB Hole button come back after the add-in is reloaded
-- [ ] 122 A hand colour on a hole face survives the hole being remade
+- [x] 122 A hand colour on a hole face survives the hole being remade
 - [x] 123 The seat is kept when type, standard or size changes
 - [x] 124 Typed values and expressions are kept when size, type, standard or units change
 - [x] 125 A dowel seat starts at the last values used for its size

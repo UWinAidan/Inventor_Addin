@@ -416,7 +416,8 @@ namespace InventorAddin.Holes
         /// Deletes the hole and makes it again where it was in the browser: the end-of-part marker is moved to just
         /// after the old hole, the old hole is deleted (its sketch and dependents kept), the new one is made there,
         /// and the marker goes back to the bottom. If the marker cannot be moved, the new hole is made at the end
-        /// and the result says so.
+        /// and the result says so. Colours a user put on the old hole's faces by hand go on the faces of the same role
+        /// on the new hole (task 122, <see cref="HoleFitWriter.ApplyHandColours"/>); AWB fit colours do not.
         /// </summary>
         private static HoleWriteResult Recreate(
             PartDocument doc, HoleFeature old, HoleGeometry g, ObjectCollection centres, Face? endFace, ILog log)
@@ -424,6 +425,19 @@ namespace InventorAddin.Holes
             var notes = new List<string>();
             PartComponentDefinition def = doc.ComponentDefinition;
             string? name = ComSafe.Get(() => old.Name);
+
+            // The colours a user put on the old hole by hand, to put back on the new one (task 122). Reading them never
+            // stops the hole being made again.
+            IReadOnlyList<HoleVector> centrePoints = HoleFitWriter.CentrePoints(centres);
+            HoleFitWriter.HandColours? handColours = null;
+            try
+            {
+                handColours = HoleFitWriter.ReadHandColours(old, centrePoints);
+            }
+            catch (Exception ex)
+            {
+                log.Warn(LogPrefix + $"the hand colours on {name} could not be read; they are not kept: " + ex.Message);
+            }
 
             bool placeKept = true;
             try
@@ -469,6 +483,19 @@ namespace InventorAddin.Holes
 
             if (!string.IsNullOrEmpty(name))
                 ComSafe.Run(() => hole.Name = name!);
+
+            if (handColours is { IsEmpty: false })
+            {
+                try
+                {
+                    ComSafe.Run(() => doc.Update());
+                    HoleFitWriter.ApplyHandColours(hole, handColours, g.Seat, centrePoints, log);
+                }
+                catch (Exception ex)
+                {
+                    log.Warn(LogPrefix + $"the hand colours could not be put back on {name}: " + ex.Message);
+                }
+            }
 
             log.Info(LogPrefix + $"{name} made again ({(placeKept ? "same place" : "at the end")}).");
             HoleWriteResult result = Check(doc, hole, g, notes, recreated: true, log);

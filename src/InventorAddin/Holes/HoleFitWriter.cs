@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Inventor;
 using InventorAddin.Core.Holes;
 using InventorAddin.Core.Logging;
@@ -118,6 +119,227 @@ namespace InventorAddin.Holes
             if (resetFaces)
                 log.Info(LogPrefix + $"dowel tolerance and data removed from {ComSafe.Get(() => hole.Name)}; every face is back to the part's appearance.");
         }
+
+        // ---- hand colours (task 122) ----
+
+        /// <summary>
+        /// The colours a user put on a hole by hand, read before the hole is deleted and made again (task 122): the
+        /// appearance on each face that carries an override, and the feature's own appearance when one was set on it.
+        /// AWB fit appearances and the preview appearance are not hand colours and are left out.
+        /// </summary>
+        public sealed class HandColours
+        {
+            internal HandColours(
+                IReadOnlyList<HoleFaceKey?> keys, IReadOnlyList<string?> names, Dictionary<string, Asset> assets,
+                Asset? featureAppearance)
+            {
+                Keys = keys;
+                Names = names;
+                Assets = assets;
+                FeatureAppearance = featureAppearance;
+            }
+
+            internal IReadOnlyList<HoleFaceKey?> Keys { get; }
+
+            internal IReadOnlyList<string?> Names { get; }
+
+            internal Dictionary<string, Asset> Assets { get; }
+
+            internal Asset? FeatureAppearance { get; }
+
+            /// <summary>True when the hole had no hand colour at all.</summary>
+            public bool IsEmpty => FeatureAppearance == null && !HoleFaceColours.AnyColour(Names);
+        }
+
+        /// <summary>The hole centres in model space (<c>SketchPoint.Geometry3d</c>), for <see cref="ReadHandColours"/>.</summary>
+        public static IReadOnlyList<HoleVector> CentrePoints(ObjectCollection centres)
+        {
+            if (centres == null)
+                throw new ArgumentNullException(nameof(centres));
+
+            var points = new List<HoleVector>();
+            foreach (object centre in centres)
+            {
+                if (centre is SketchPoint sketchPoint && ComSafe.Get(() => sketchPoint.Geometry3d) is Point point)
+                    points.Add(new HoleVector(point.X, point.Y, point.Z));
+            }
+
+            return points;
+        }
+
+        /// <summary>
+        /// Reads the hand colours on <paramref name="hole"/> and the role of each of its faces at
+        /// <paramref name="centres"/> (<see cref="HoleFaceColours.Classify"/>). A face whose shape or appearance cannot
+        /// be read counts as having no hand colour.
+        /// </summary>
+        public static HandColours ReadHandColours(HoleFeature hole, IReadOnlyList<HoleVector> centres)
+        {
+            if (hole == null)
+                throw new ArgumentNullException(nameof(hole));
+            if (centres == null)
+                throw new ArgumentNullException(nameof(centres));
+
+            Asset? featureAppearance = null;
+            if (ComSafe.Get(() => (AppearanceSourceTypeEnum?)hole.AppearanceSourceType) == AppearanceSourceTypeEnum.kFeatureAppearance)
+            {
+                Asset? asset = ComSafe.Get(() => hole.Appearance);
+                if (asset != null && IsHandColour(asset))
+                    featureAppearance = asset;
+            }
+
+            var shapes = new List<HoleFaceShape?>();
+            var names = new List<string?>();
+            var assets = new Dictionary<string, Asset>(StringComparer.Ordinal);
+            foreach (Face face in FacesOf(hole))
+            {
+                shapes.Add(ReadShape(face));
+
+                string? name = null;
+                if (ComSafe.Get(() => (AppearanceSourceTypeEnum?)face.AppearanceSourceType) == AppearanceSourceTypeEnum.kOverrideAppearance
+                    && ComSafe.Get(() => face.Appearance) is { } asset
+                    && IsHandColour(asset))
+                {
+                    name = AssetKey(asset);
+                    if (name != null)
+                        assets[name] = asset;
+                }
+
+                names.Add(name);
+            }
+
+            return new HandColours(HoleFaceColours.Classify(shapes, centres, SeatOf(hole)), names, assets, featureAppearance);
+        }
+
+        /// <summary>
+        /// Puts <paramref name="colours"/>, read from the hole this one replaces, back on <paramref name="hole"/>: the
+        /// feature's appearance, then each face's colour on the face of the same role and centre
+        /// (<see cref="HoleFaceColours.Carry"/>). A colour Inventor refuses is logged and left off; the hole is kept.
+        /// </summary>
+        /// <param name="seat">The new hole's seat, as its geometry has it.</param>
+        public static void ApplyHandColours(
+            HoleFeature hole, HandColours colours, HoleSeat seat, IReadOnlyList<HoleVector> centres, ILog log)
+        {
+            if (hole == null)
+                throw new ArgumentNullException(nameof(hole));
+            if (colours == null)
+                throw new ArgumentNullException(nameof(colours));
+            if (centres == null)
+                throw new ArgumentNullException(nameof(centres));
+            log ??= NullLog.Instance;
+            if (colours.IsEmpty)
+                return;
+
+            string? name = ComSafe.Get(() => hole.Name);
+            if (colours.FeatureAppearance is { } featureAppearance)
+            {
+                try
+                {
+                    hole.Appearance = featureAppearance;
+                }
+                catch (Exception ex)
+                {
+                    log.Warn(LogPrefix + $"the hole's own colour could not be put back on {name}: " + ex.Message);
+                }
+            }
+
+            if (!HoleFaceColours.AnyColour(colours.Names))
+                return;
+
+            var faces = new List<Face>();
+            var shapes = new List<HoleFaceShape?>();
+            foreach (Face face in FacesOf(hole))
+            {
+                faces.Add(face);
+                shapes.Add(ReadShape(face));
+            }
+
+            IReadOnlyList<HoleFaceKey?> keys = HoleFaceColours.Classify(shapes, centres, seat);
+            IReadOnlyList<string?> carried = HoleFaceColours.Carry(colours.Keys, colours.Names, keys);
+            int kept = 0;
+            for (int i = 0; i < faces.Count; i++)
+            {
+                if (carried[i] is not { } key || !colours.Assets.TryGetValue(key, out Asset? asset))
+                    continue;
+                try
+                {
+                    faces[i].Appearance = asset;
+                    kept++;
+                }
+                catch (Exception ex)
+                {
+                    log.Warn(LogPrefix + $"a hand colour could not be put back on a face of {name}: " + ex.Message);
+                }
+            }
+
+            log.Info(LogPrefix + $"hand colours put back on {kept} of {faces.Count} face(s) of {name}.");
+        }
+
+        /// <summary>A hand colour is any appearance that is not an AWB fit appearance or the preview appearance.</summary>
+        private static bool IsHandColour(Asset asset)
+        {
+            string? displayName = ComSafe.Get(() => asset.DisplayName);
+            return !HoleFitAppearances.IsFitAppearance(displayName) && !HolePreviewAppearance.Is(displayName);
+        }
+
+        /// <summary>The appearance's name in the part, else its display name; null when neither can be read.</summary>
+        private static string? AssetKey(Asset asset)
+        {
+            string? name = ComSafe.Get(() => asset.Name);
+            return string.IsNullOrEmpty(name) ? ComSafe.Get(() => asset.DisplayName) : name;
+        }
+
+        private static List<Face> FacesOf(HoleFeature hole)
+        {
+            var list = new List<Face>();
+            Faces? faces = ComSafe.Get(() => hole.Faces);
+            if (faces != null)
+            {
+                foreach (Face face in faces)
+                    list.Add(face);
+            }
+
+            return list;
+        }
+
+        /// <summary>The hole's seat as the face roles need it: a spotface has the walls and floor of a counterbore.</summary>
+        private static HoleSeat SeatOf(HoleFeature hole) =>
+            ComSafe.Get(() => (HoleTypeEnum?)hole.HoleType) switch
+            {
+                HoleTypeEnum.kCounterBoreHole or HoleTypeEnum.kSpotFaceHole => HoleSeat.Counterbore,
+                HoleTypeEnum.kCounterSinkHole => HoleSeat.Countersink,
+                _ => HoleSeat.None,
+            };
+
+        /// <summary>The face's surface, axis and middle, in centimetres; null when Inventor cannot report them.</summary>
+        private static HoleFaceShape? ReadShape(Face face) =>
+            ComSafe.Get(() =>
+            {
+                Box box = face.Evaluator.RangeBox;
+                Point min = box.MinPoint;
+                Point max = box.MaxPoint;
+                var mid = new HoleVector((min.X + max.X) / 2, (min.Y + max.Y) / 2, (min.Z + max.Z) / 2);
+
+                switch (face.SurfaceType)
+                {
+                    case SurfaceTypeEnum.kCylinderSurface:
+                        var cylinder = (Cylinder)face.Geometry;
+                        return new HoleFaceShape(
+                            HoleFaceSurface.Cylinder, Vector(cylinder.BasePoint), Vector(cylinder.AxisVector), mid, cylinder.Radius);
+                    case SurfaceTypeEnum.kConeSurface:
+                        var cone = (Cone)face.Geometry;
+                        return new HoleFaceShape(HoleFaceSurface.Cone, Vector(cone.BasePoint), Vector(cone.AxisVector), mid, 0);
+                    case SurfaceTypeEnum.kPlaneSurface:
+                        var plane = (Plane)face.Geometry;
+                        return new HoleFaceShape(HoleFaceSurface.Plane, mid, Vector(plane.Normal), mid, 0);
+                    default:
+                        // No axis: the face belongs to no centre, so it keeps no colour of its own.
+                        return new HoleFaceShape(HoleFaceSurface.Other, mid, new HoleVector(0, 0, 0), mid, 0);
+                }
+            });
+
+        private static HoleVector Vector(Point point) => new HoleVector(point.X, point.Y, point.Z);
+
+        private static HoleVector Vector(UnitVector vector) => new HoleVector(vector.X, vector.Y, vector.Z);
 
         /// <summary>
         /// The fit's appearance in the part, made the first time (a Generic appearance) and found by its display
