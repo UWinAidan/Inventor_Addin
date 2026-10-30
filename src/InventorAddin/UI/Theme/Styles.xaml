@@ -1307,11 +1307,18 @@
     <!-- Type: a plain hole has straight walls; a tapped hole's walls are a deep saw-tooth thread. -->
     <Geometry x:Key="HoleIcon.Clearance.Material">M2 3H7V17H2Z M18 3H13V17H18Z</Geometry>
     <Geometry x:Key="HoleIcon.Tapped.Material">M2 3H7.5L5 4.75L7.5 6.5L5 8.25L7.5 10L5 11.75L7.5 13.5L5 15.25L7.5 17H2Z M18 3H12.5L15 4.75L12.5 6.5L15 8.25L12.5 10L15 11.75L12.5 13.5L15 15.25L12.5 17H18Z</Geometry>
+    <!-- Simple (task 119): a wider plain hole with its diameter dimensioned across the top, arrows out to the walls. -->
+    <Geometry x:Key="HoleIcon.Simple.Material">M1 3H5.5V17H1Z M19 3H14.5V17H19Z</Geometry>
+    <Geometry x:Key="HoleIcon.Simple.Line">M6.3 6.5H13.7 M7.8 5L6.3 6.5L7.8 8 M12.2 5L13.7 6.5L12.2 8</Geometry>
+    <!-- Taper Tapped (task 119): the saw-tooth thread of Tapped, narrowing from the top to the bottom. -->
+    <Geometry x:Key="HoleIcon.TaperTapped.Material">M1 3H5L2.94 4.75L5.88 6.5L3.81 8.25L6.75 10L4.69 11.75L7.62 13.5L5.56 15.25L8.5 17H1Z M19 3H15L17.06 4.75L14.12 6.5L16.19 8.25L13.25 10L15.31 11.75L12.38 13.5L14.44 15.25L11.5 17H19Z</Geometry>
     <!-- Seat: the top of the hole. -->
     <Geometry x:Key="HoleIcon.SeatNone.Material">M2 4H7.5V17H2Z M18 4H12.5V17H18Z</Geometry>
     <Geometry x:Key="HoleIcon.SeatNone.Line">M1 4H19</Geometry>
     <Geometry x:Key="HoleIcon.Counterbore.Material">M2 4H4.5V9.5H7.5V17H2Z M18 4H15.5V9.5H12.5V17H18Z</Geometry>
     <Geometry x:Key="HoleIcon.Countersink.Material">M2 4H3.5L7.5 9V17H2Z M18 4H16.5L12.5 9V17H18Z</Geometry>
+    <!-- Spotface (task 119): a shallow seat much wider than a counterbore's, leaving a thin lip at the edge. -->
+    <Geometry x:Key="HoleIcon.Spotface.Material">M1 4H3V6H7.5V17H1Z M19 4H17V6H12.5V17H19Z</Geometry>
     <!-- Termination: Distance is a narrow blind hole with a flat stop and its depth dimensioned beside it. -->
     <Geometry x:Key="HoleIcon.Distance.Material">M1 4H5V13H10.5V4H13V18H1Z</Geometry>
     <Geometry x:Key="HoleIcon.Distance.Line">M14.5 4H19 M14.5 13H19 M17 4.6V12.4 M15.6 6L17 4.6L18.4 6 M15.6 11L17 12.4L18.4 11</Geometry>
