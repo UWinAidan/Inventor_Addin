@@ -13,7 +13,7 @@ using IOFile = System.IO.File;
 namespace InventorAddin.Commands
 {
     /// <summary>
-    /// Create Print (spec 02, "Commands: Create Print"): makes an <c>.idw</c> drawing of the active part or assembly from
+    /// Create Print (spec 02, "Commands: Create Print"): makes an <c>.idw</c> drawing of the part or assembly being edited (also one edited in place) from
     /// Inventor's <c>.idw</c> drawing template, with one front base view centred on the first sheet at a standard scale that fits, saves it
     /// under the model's name in the <c>Prints</c> subfolder of the model's folder (created when missing), and leaves it
     /// open. The file name, the scale and the messages are decided
@@ -35,7 +35,9 @@ namespace InventorAddin.Commands
 
         protected override void Execute()
         {
-            Document? model = InventorHost.ActiveDocument;
+            // The document being edited (CommandDocuments, task 109): while a part or sub-assembly is edited in place,
+            // its print is made, not the assembly's.
+            Document? model = CommandTargetDocument();
             if (model == null)
             {
                 Show("Open a part or assembly first.", Forms.MessageBoxIcon.Information);

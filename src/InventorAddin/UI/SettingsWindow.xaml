@@ -21,16 +21,16 @@
         folders row is labelled "Other folders" for that reason.
 
         One page that scrolls (Aidan, 2026-10-17, replacing the tabs of task 077): the sections General, Part numbers,
-        Folders, Material and finish and Developer, each a CollapsibleSection. A collapsed section shows a one-line
+        Folders, Material and finish, Holes (task 086) and Developer, each a CollapsibleSection. A collapsed section shows a one-line
         summary of its values beside its heading (SettingsViewModel's *Summary properties). Every section starts
         expanded; WindowHost remembers which ones were collapsed, by x:Name, and the window's size and position (state
         key "Settings"). The window can be resized by its edges and has only the close button; it never opens taller
         than the screen, and the body scrolls while the header and the Save and Cancel buttons stay in view.
 
         Access keys: D default designer, N other names, U new file units, R register folder, B browse (register),
-        W work folder, E browse (work folder), O other folders, M material library, F finish list, S show developer
-        tools. The Browse buttons beside the material library and finish list have no access key: every letter of
-        "Browse" is taken.
+        W work folder, E browse (work folder), O other folders, M material library, F finish list, H hole data,
+        I use Inventor's Hole command, S show developer tools. The Browse buttons beside the material library, finish
+        list and hole data have no access key: every letter of "Browse" is taken.
     -->
     <Grid Style="{DynamicResource ResizableDialogContent}">
         <!-- Header, body, footer. The body row is star-sized, so it scrolls when the window is shorter than the page. -->
@@ -148,6 +148,31 @@
                     </controls:FieldRow>
                     <controls:FieldRow>
                         <TextBlock Style="{DynamicResource MutedText}" Text="{Binding FinishListHelp, Mode=OneTime}" />
+                    </controls:FieldRow>
+                </controls:CollapsibleSection>
+                <controls:CollapsibleSection x:Name="HolesSection"
+                                             Heading="Holes"
+                                             Summary="{Binding HolesSummary, Mode=OneWay}">
+                    <controls:FieldRow Label="_Hole data" Target="{Binding ElementName=HoleWorkbookBox}">
+                        <DockPanel>
+                            <!-- Opens a file picker for an .xlsx and puts the chosen file in the box beside it (code-behind). -->
+                            <Button DockPanel.Dock="Right"
+                                    Style="{DynamicResource SideButton}"
+                                    Content="Browse..."
+                                    Click="OnBrowseHoleWorkbook" />
+                            <TextBox x:Name="HoleWorkbookBox"
+                                     Text="{Binding HoleWorkbookPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </DockPanel>
+                    </controls:FieldRow>
+                    <controls:FieldRow>
+                        <TextBlock Style="{DynamicResource MutedText}" Text="{Binding HoleWorkbookHelp, Mode=OneTime}" />
+                    </controls:FieldRow>
+                    <controls:FieldRow>
+                        <CheckBox Content="Use _Inventor's Hole command"
+                                  IsChecked="{Binding UseInventorHoleCommand, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </controls:FieldRow>
+                    <controls:FieldRow>
+                        <TextBlock Style="{DynamicResource MutedText}" Text="{Binding UseInventorHoleCommandNote, Mode=OneTime}" />
                     </controls:FieldRow>
                 </controls:CollapsibleSection>
                 <controls:CollapsibleSection x:Name="DeveloperSection"

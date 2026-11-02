@@ -19,7 +19,7 @@ The tab shows different panels depending on the environment.
 
 | Panel | Buttons | Ribbons |
 |---|---|---|
-| Create | New Part (large); Save As Copy, Save As and Replace (small) | New Part: ZeroDoc, Part, Assembly. Save As Copy: Part, Assembly. Save As and Replace: Assembly |
+| Create | New Part (large); Save As Copy, Save As and Replace (small); AWB Hole (large, after the small buttons; spec 09, task 090) | New Part: ZeroDoc, Part, Assembly. Save As Copy: Part, Assembly. Save As and Replace: Assembly. AWB Hole: Part (Default, task 090) |
 | Properties | Part Properties (large); Mass Update, Material and Finish (small) | Part Properties: Part, Assembly. Mass Update: ZeroDoc, Part, Assembly. Material and Finish: Part, Assembly (Default, spec 03 question 17; task 075) |
 | Drawing | Create Print (large) | Part, Assembly |
 | Developer | Export Model Data, Export Libraries (small) | as before; only when developer tools are on |

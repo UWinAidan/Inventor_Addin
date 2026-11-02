@@ -36,7 +36,16 @@ public interface INewPartDocument
 /// <param name="FullPath">Where the new file was saved.</param>
 /// <param name="Offline">True when the number came from this PC's copy and waits for the next sync.</param>
 /// <param name="DuplicateMessages">One line per duplicate the sync found (<see cref="PartNumberAssignment.DescribeDuplicate"/>).</param>
-public sealed record NewPartResult(string PartNumber, string FullPath, bool Offline, IReadOnlyList<string> DuplicateMessages);
+/// <param name="Note">
+/// Something that went partly wrong after the file was made, for the user (for example Save As and Replace's
+/// <see cref="SaveAsReplacer.OccurrenceNameKeptMessage"/>); null when nothing did.
+/// </param>
+public sealed record NewPartResult(
+    string PartNumber,
+    string FullPath,
+    bool Offline,
+    IReadOnlyList<string> DuplicateMessages,
+    string? Note = null);
 
 /// <summary>
 /// New Part could not finish. <see cref="Exception.Message"/> is fit to show the user and says whether a number was
@@ -151,7 +160,8 @@ public sealed class NewPartCreator
     /// <summary>
     /// What to tell the user after a successful create, or null when there is nothing to say: the offline notice
     /// (<see cref="OfflineNoticeFormat"/>) and the duplicates found by the sync
-    /// (<see cref="PartPropertiesViewModel.FormatDuplicates"/>), as Generate part number reports them.
+    /// (<see cref="PartPropertiesViewModel.FormatDuplicates"/>), as Generate part number reports them, then the
+    /// result's <see cref="NewPartResult.Note"/>.
     /// </summary>
     public static string? Notice(NewPartResult result)
     {
@@ -166,6 +176,11 @@ public sealed class NewPartCreator
         if (result.DuplicateMessages.Count > 0)
         {
             parts.Add(PartPropertiesViewModel.FormatDuplicates(result.DuplicateMessages));
+        }
+
+        if (!string.IsNullOrWhiteSpace(result.Note))
+        {
+            parts.Add(result.Note);
         }
 
         return parts.Count == 0 ? null : string.Join(Environment.NewLine + Environment.NewLine, parts);

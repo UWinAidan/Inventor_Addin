@@ -34,6 +34,8 @@ namespace InventorAddin.Commands
         protected override string WrongDocumentMessage(DocumentKind kind) =>
             "Part Properties works on parts and assemblies.";
 
+        // doc is the document being edited, by this command's row in CommandDocuments (Edited, task 109), through the
+        // default DocumentToEdit: the part or sub-assembly while it is edited in place.
         protected override void Run(Document doc)
         {
             PartPropertiesSnapshot snapshot = PartPropertiesReader.Read(doc);

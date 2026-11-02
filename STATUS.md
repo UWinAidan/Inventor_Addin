@@ -2,7 +2,25 @@
 
 Where each big item stands. One line per item, kept current by the parent session. For the order of work and the task lists see `docs/PLAN.md`; for what needs doing next see `TODO.md`.
 
-Last updated: 2026-10-17
+Last updated: 2026-10-29
+
+## Session handoff (ContextKeeper)
+
+- Updated: 2026-10-30 19:35. Branch `claude/m4-hole-generator`, latest commit `01e4558` (the handoff), tree clean apart from this line. PR #29 open against `main`. Aidan pushed everything up to `c6bfd8f` (task 111). Local commits **not pushed**: `b5a8f8d` (questions 23 to 26, task 137 planned), `da14106` (112), `ce38884` (137), `53223e2` (113), `892ce36` (119), and this handoff. Spike branches (local only): `spike/107-client-graphics` (`b56f0db`), `spike/108-hole-types` (`f0a2f33`).
+- Goal: run the M4 part 1 round in `docs/PLAN.md` order, one implementer and one reviewer per task, one commit per task. Aidan asked (2026-10-28, again 2026-10-30) not to stop for Inventor checks: collect each task's checklist for one combined check at the end.
+- Done this session: Aidan answered spec 09 questions 23 to 26 (logged as Aidan; 26 overturned the Default and became task 137). Aidan opened the starter workbook in Excel: no repair prompt (111 step 1 passed). Tasks 112, 137, 113, 119 each reviewed PASS, built on Windows with 0 errors, committed with Defaults in `DECISIONS.md` and follow-ups in `TODO.md`. Core tests 4113 passed after 119. Nothing is in progress.
+- Before task 114/115: the window shows Simple, Taper Tapped, Spotface and Custom (dowel tolerance) but they are not wired into Inventor or bound in the window yet; the follow-ups listing what 114 and 115 must bind are in `TODO.md` (tasks 112, 113, 137 entries).
+- Next steps:
+  1. The PLAN order: 131, 132, 127, 130, 110, 117, 114, 115, 116, 136, 118.
+  2. At the end, update `STATUS.md` and `TODO.md`, push (ask Aidan first), and give Aidan one combined checklist from the task files (135, 120, 121, 128, 129, 123, 124, 125, 122, 126, 111 from step 2, 112, 137, 113, 119, and on), plus the older 105, 109, 133, 134.
+- Gotchas:
+  - Check `tasklist //FI "IMAGENAME eq Inventor.exe"` before building. If Inventor is open, pass `-p:DeployToInventor=false`.
+  - In shell scripts that edit tracking files, chain the commit with `&&` after the edit script, or a failed edit still commits. Python `str.replace` edits with an `assert old in s` guard worked well.
+  - An implementer cut off (stall or usage limit) leaves the tree partly edited. Check `git status`; resuming the same agent with SendMessage worked well (task 113).
+  - Hole icons are XAML geometry in `src/InventorAddin/UI/Theme/Styles.xaml`, not PNGs; `tools/icons/render.py` is ribbon icons only.
+  - Stored hole data is version 4 (task 113).
+  - Spike 107's preview code is read with `git show spike/108-hole-types:src/InventorAddin/Spike107.cs` (task 110).
+- Read first: `docs/WORKFLOW.md` (run mode), `docs/PLAN.md` ("Round after PR #29's first look"), `TODO.md` Next up, `docs/tasks/131-drill-point-60.md`.
 
 ## Big items
 
@@ -13,7 +31,8 @@ Last updated: 2026-10-17
 | Window style and icons (M1b) | 08 | **Done, tested in Inventor** | Tasks 020 to 031. Shared look in light and dark, all three windows restyled, icons on ribbon and headers, XAML rules test. Every check passed on Windows. Two follow-ups on the build's deploy line are in `TODO.md` |
 | Part creation and numbering (M2) | 02 | **Done, tested in Inventor** | Every check passed; the last run 1 checks were reported on 2026-10-17. Run 2 checked on Windows 2026-10-11; fix run 053 to 061 and fix run 2 (spike 062, tasks 063 to 066) checked 2026-10-12 and passed. Merged into main from `claude/m2-fix-run` |
 | Material and finish (M3) | 03 | **Done, tested in Inventor** | Tasks 067 to 080, merged into main from `claude/m3-material-finish` on 2026-10-17: starter library and finish list, Material and Finish window and button, Part Properties Change button and warning, Settings and About on every ribbon, windows that fit the screen, Settings as one resizable page of collapsible sections, dialogs with only a close button, and a themed scroll bar. Every check passed |
-| Hole generator and hole table wizard (M4) | 04 | Not started | Starts with a hole generator for part files (details to discuss with Aidan). Wizard: Core half needs three answers; add-in half needs a Windows spike |
+| AWB Hole (M4 part 1) | 09 | **Built, waiting for Aidan's check in Inventor** | Decided by Aidan 2026-10-17; spike 081 done with Aidan. Tasks 082 to 090 checked by Aidan 2026-10-18 (making, picking, previewing, tapped and dowel holes, OK, Cancel and Undo work). Then built on branch `claude/m4-hole-generator`, compiled on Windows, not yet run in Inventor: fixes and requests 093 to 101, mockup 102 (approved with changes 2026-10-23), dowel seats 106, window redesign 104, takeover of Hole and H 091, Edit Feature and double-click 092. Aidan's first look on 2026-10-24 gave six changes, planned as tasks 103 (in place for every command, top priority), 105 and 107 to 119: client graphics preview, Simple and Taper Tapped types, Spotface, toleranced clearance holes, depths below the seat, centres per point, a window that fits at 150 percent. Aidan checked 091 to 106 on 2026-10-25: six failures and seven requests, planned as tasks 120 to 132 in the same round. The round is **Planned**, starting with spike 103 |
+| Hole table wizard (M4 part 2) | 04 | Not started | Planned after AWB Hole. Core half needs three answers; add-in half needs a Windows spike |
 | Drawing tools (M5) | 05 | Not started | Waiting on which commands Aidan wants. Will include a custom drawing template |
 | iLogic injection (M6) | 06 | Not started | Waiting on which rules |
 | Distribution (installer, download page) | none yet | Parked | Was to be decided when M2 was planned; still waiting on Aidan |
@@ -32,5 +51,5 @@ States used: Not started, Planned, In progress, Built (merged, not tested in Inv
 
 ## Numbers
 
-- Tasks finished: 80 (001 to 080)
+- Tasks finished: 90 (001 to 090), plus 091 to 102, 104 and 106 on branch `claude/m4-hole-generator`
 - Core tests: 2650 after task 080; they run in the cloud and on Windows with `dotnet test tests/InventorAddin.Core.Tests`

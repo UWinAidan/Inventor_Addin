@@ -10,7 +10,7 @@ namespace InventorAddin.UI
     /// <summary>
     /// Settings dialog. All behaviour is in <see cref="SettingsViewModel"/>; this only closes the window
     /// once the view-model reports a successful save, shows the folder pickers for the register and work folders, and
-    /// the file pickers for the material library and finish list.
+    /// the file pickers for the material library, finish list and hole workbook.
     /// Collapsed sections and the window's size and position are remembered by <see cref="WindowHost"/>.
     /// </summary>
     public partial class SettingsWindow : Window
@@ -111,6 +111,18 @@ namespace InventorAddin.UI
                 SettingsViewModel.ValidateFinishListPath);
             if (chosen is not null)
                 _viewModel.FinishListPath = chosen;
+        }
+
+        /// <summary>Browse beside the hole data: as <see cref="OnBrowseMaterialLibrary"/>, for an .xlsx file.</summary>
+        private void OnBrowseHoleWorkbook(object sender, RoutedEventArgs e)
+        {
+            var chosen = PickFile(
+                "Choose the hole workbook",
+                "Excel workbooks (*.xlsx)|*.xlsx",
+                _viewModel.HoleWorkbookPath,
+                SettingsViewModel.ValidateHoleWorkbookPath);
+            if (chosen is not null)
+                _viewModel.HoleWorkbookPath = chosen;
         }
 
         /// <summary>
