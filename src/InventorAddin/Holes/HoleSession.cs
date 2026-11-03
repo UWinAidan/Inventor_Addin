@@ -351,8 +351,9 @@ namespace InventorAddin.Holes
         }
 
         /// <summary>
-        /// A new hole's centres, as Inventor's Hole picks them: the selected sketch, else the sketch of the selected
-        /// points, else the newest visible unconsumed sketch with hole-centre points; all its hole centres.
+        /// A new hole's centres, as Inventor's Hole picks them (task 117): the selected sketch, else the sketch of the
+        /// selected points, with all their hole centres; else, per point, the newest visible sketch with hole centres
+        /// no hole feature uses yet, and only those.
         /// </summary>
         private void StartDefaultPicks()
         {
@@ -367,22 +368,15 @@ namespace InventorAddin.Holes
                     sketchOfPoint = ComSafe.Get(() => point.Parent as PlanarSketch);
             }
 
-            PlanarSketch? chosen = HoleSessionRules.DefaultSketch(selectedSketch, sketchOfPoint, SketchesNewestFirst());
-            _defaultSketchFrom = chosen == null ? null
-                : ReferenceEquals(chosen, selectedSketch) ? "selected"
-                : ReferenceEquals(chosen, sketchOfPoint) ? "of the selected points"
-                : "newest visible unconsumed";
-            var centres = new List<SketchPoint>();
-            if (chosen != null)
-            {
-                foreach (SketchPoint point in chosen.SketchPoints)
-                {
-                    if (ComSafe.Get(() => point.HoleCenter))
-                        centres.Add(point);
-                }
-            }
-
-            _picks.Start(chosen, centres);
+            List<UsedCentre>? used = null;
+            DefaultCentres<PlanarSketch, SketchPoint> chosen = HoleSessionRules.DefaultCentres(
+                selectedSketch,
+                sketchOfPoint,
+                SketchesNewestFirst(),
+                HoleCentres,
+                point => IsUsed(point, used ??= CentresUsedByHoles()));
+            _defaultSketchFrom = chosen.Describe();
+            _picks.Start(chosen.Sketch, chosen.Points);
         }
 
         /// <summary>
@@ -410,7 +404,7 @@ namespace InventorAddin.Holes
             });
         }
 
-        private IEnumerable<(PlanarSketch, Func<bool>, Func<bool>, Func<bool>)> SketchesNewestFirst()
+        private IEnumerable<(PlanarSketch, Func<bool>)> SketchesNewestFirst()
         {
             PlanarSketches sketches = _doc.ComponentDefinition.Sketches;
             int count = ComSafe.Get(() => sketches.Count);
@@ -420,25 +414,84 @@ namespace InventorAddin.Holes
                 PlanarSketch? sketch = ComSafe.Get(() => sketches[index]);
                 if (sketch == null)
                     continue;
-                yield return (
-                    sketch,
-                    () => ComSafe.Get(() => sketch.Visible),
-                    () => ComSafe.Get(() => sketch.Consumed),
-                    () => HasHoleCentres(sketch));
+                yield return (sketch, () => ComSafe.Get(() => sketch.Visible));
             }
         }
 
-        private static bool HasHoleCentres(PlanarSketch sketch) =>
-            ComSafe.Get(() =>
+        /// <summary>A sketch's points marked as hole centres, in sketch order.</summary>
+        private static List<SketchPoint> HoleCentres(PlanarSketch sketch)
+        {
+            var centres = new List<SketchPoint>();
+            ComSafe.Run(() =>
             {
                 foreach (SketchPoint point in sketch.SketchPoints)
                 {
-                    if (point.HoleCenter)
-                        return true;
+                    if (ComSafe.Get(() => point.HoleCenter))
+                        centres.Add(point);
                 }
-
-                return false;
             });
+            return centres;
+        }
+
+        /// <summary>A hole centre a hole feature uses, with its sketch's name and position read once.</summary>
+        private sealed class UsedCentre
+        {
+            public UsedCentre(SketchPoint point)
+            {
+                Centre = point;
+                Sketch = SketchName(ComSafe.Get(() => point.Parent as PlanarSketch));
+                Position = ComSafe.Get(() => point.Geometry3d);
+            }
+
+            public SketchPoint Centre { get; }
+
+            public string? Sketch { get; }
+
+            public Point? Position { get; }
+        }
+
+        /// <summary>
+        /// The sketch points the part's hole features already use as centres (task 117). Only hole features are read:
+        /// they are what uses hole-centre points (Default, task 117). Read once, when the first point is asked about.
+        /// </summary>
+        private List<UsedCentre> CentresUsedByHoles()
+        {
+            var used = new List<UsedCentre>();
+            ComSafe.Run(() =>
+            {
+                foreach (HoleFeature hole in _doc.ComponentDefinition.Features.HoleFeatures)
+                {
+                    ObjectCollection? points = ComSafe.Get(() => hole.HoleCenterPoints);
+                    if (points == null)
+                        continue;
+                    foreach (object item in points)
+                    {
+                        if (item is SketchPoint point)
+                            used.Add(new UsedCentre(point));
+                    }
+                }
+            });
+            return used;
+        }
+
+        /// <summary>Whether a hole feature uses <paramref name="point"/>: the same object, or the same sketch and
+        /// position, as <see cref="SamePoint"/> compares.</summary>
+        private static bool IsUsed(SketchPoint point, List<UsedCentre> used)
+        {
+            if (used.Count == 0)
+                return false;
+            if (used.Exists(u => ReferenceEquals(u.Centre, point)))
+                return true;
+
+            string? sketchName = SketchName(ComSafe.Get(() => point.Parent as PlanarSketch));
+            Point? position = ComSafe.Get(() => point.Geometry3d);
+            if (sketchName == null || position == null)
+                return false;
+            return used.Exists(u =>
+                u.Position is Point usedPosition
+                && string.Equals(u.Sketch, sketchName, StringComparison.Ordinal)
+                && ComSafe.Get(() => usedPosition.IsEqualTo(position)));
+        }
 
         /// <summary>An edited hole's own centres, in their sketch (spike 081 round 4).</summary>
         private void StartEditPicks(HoleFeature hole)

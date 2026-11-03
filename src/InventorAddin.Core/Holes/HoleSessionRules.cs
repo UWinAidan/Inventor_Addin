@@ -119,43 +119,61 @@ public static class HoleSessionRules
         && string.Equals(sessionDocument, deactivating, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
-    /// The sketch whose hole centres a new hole starts with, as Inventor's Hole picks it: the sketch the user
-    /// selected, else the sketch of the points the user selected, else the newest visible sketch with hole-centre
-    /// points that no feature consumes yet (task 094: Inventor's Hole preselects only unused centres, and a hole on a
-    /// consumed sketch shares it). A selection wins even when its sketch is consumed. Null when there is none.
+    /// The hole centres a new hole starts with, as Inventor's Hole picks them (task 117; spec 09, "Hole centres";
+    /// Aidan, 2026-10-24, question 11): the sketch the user selected, else the sketch of the points the user selected,
+    /// each with all its hole centres, used by a feature or not (task 094: a selection wins); else, per point, the
+    /// newest visible sketch that has hole-centre points no feature uses yet, with only those points. A sketch whose
+    /// centres are all used is skipped for the next newest. <see cref="DefaultCentresFrom.None"/> when there is none.
     /// </summary>
     /// <param name="selectedSketch">The first selected sketch, or null.</param>
     /// <param name="sketchOfSelectedPoint">The sketch of the first selected sketch point, or null.</param>
-    /// <param name="sketchesNewestFirst">The part's sketches, newest first, with whether each is visible, is consumed
-    /// by a feature, and has a point marked as a hole centre. Read only as far as the first that qualifies, and each
-    /// flag only when the ones before it pass, so the add-in can work the flags out lazily.</param>
-    public static TSketch? DefaultSketch<TSketch>(
+    /// <param name="sketchesNewestFirst">The part's sketches, newest first, with whether each is visible. Read only
+    /// as far as the first that qualifies, and visibility before anything else, so the add-in can work it out
+    /// lazily.</param>
+    /// <param name="holeCentres">A sketch's points marked as hole centres, in sketch order. Asked only for the
+    /// chosen selection or for a visible sketch.</param>
+    /// <param name="usedByFeature">Whether a feature already uses a hole-centre point. Asked only when nothing is
+    /// selected.</param>
+    public static DefaultCentres<TSketch, TPoint> DefaultCentres<TSketch, TPoint>(
         TSketch? selectedSketch,
         TSketch? sketchOfSelectedPoint,
-        IEnumerable<(TSketch Sketch, Func<bool> Visible, Func<bool> Consumed, Func<bool> HasHoleCentres)> sketchesNewestFirst)
+        IEnumerable<(TSketch Sketch, Func<bool> Visible)> sketchesNewestFirst,
+        Func<TSketch, IEnumerable<TPoint>> holeCentres,
+        Func<TPoint, bool> usedByFeature)
         where TSketch : class
     {
         ArgumentNullException.ThrowIfNull(sketchesNewestFirst);
+        ArgumentNullException.ThrowIfNull(holeCentres);
+        ArgumentNullException.ThrowIfNull(usedByFeature);
 
         if (selectedSketch is not null)
         {
-            return selectedSketch;
+            var all = holeCentres(selectedSketch).ToList();
+            return new(selectedSketch, all, DefaultCentresFrom.SelectedSketch, all.Count);
         }
 
         if (sketchOfSelectedPoint is not null)
         {
-            return sketchOfSelectedPoint;
+            var all = holeCentres(sketchOfSelectedPoint).ToList();
+            return new(sketchOfSelectedPoint, all, DefaultCentresFrom.SketchOfSelectedPoints, all.Count);
         }
 
-        foreach (var (sketch, visible, consumed, hasHoleCentres) in sketchesNewestFirst)
+        foreach (var (sketch, visible) in sketchesNewestFirst)
         {
-            if (visible() && !consumed() && hasHoleCentres())
+            if (!visible())
             {
-                return sketch;
+                continue;
+            }
+
+            var all = holeCentres(sketch).ToList();
+            var free = all.Where(point => !usedByFeature(point)).ToList();
+            if (free.Count > 0)
+            {
+                return new(sketch, free, DefaultCentresFrom.NewestWithFreeCentres, all.Count);
             }
         }
 
-        return null;
+        return new(null, [], DefaultCentresFrom.None, 0);
     }
 
     /// <summary>What the preview does for a window change.</summary>
@@ -220,6 +238,50 @@ public static class HoleSessionRules
             HoldNewHole: false,
             FindHoleAgain: action == HolePreviewAction.Change && recreated);
     }
+}
+
+/// <summary>How the hole centres a new hole starts with were chosen (task 117).</summary>
+public enum DefaultCentresFrom
+{
+    /// <summary>No selection, and no visible sketch has a hole centre no feature uses.</summary>
+    None,
+
+    /// <summary>The sketch the user selected: all its hole centres.</summary>
+    SelectedSketch,
+
+    /// <summary>The sketch of the points the user selected: all its hole centres.</summary>
+    SketchOfSelectedPoints,
+
+    /// <summary>Nothing selected: the newest visible sketch with hole centres no feature uses, only those.</summary>
+    NewestWithFreeCentres,
+}
+
+/// <summary>
+/// The hole centres a new hole starts with (task 117; see <see cref="HoleSessionRules.DefaultCentres"/>).
+/// </summary>
+/// <param name="Sketch">The sketch the centres are in; null when there is none.</param>
+/// <param name="Points">The picked centres, in sketch order.</param>
+/// <param name="From">How the sketch and points were chosen.</param>
+/// <param name="HoleCentresInSketch">How many hole-centre points the sketch has, used or not.</param>
+public sealed record DefaultCentres<TSketch, TPoint>(
+    TSketch? Sketch,
+    IReadOnlyList<TPoint> Points,
+    DefaultCentresFrom From,
+    int HoleCentresInSketch)
+    where TSketch : class
+{
+    /// <summary>
+    /// For the session's start log line: how the sketch and points were chosen, for example
+    /// "newest visible with free centres, 2 of 4 hole centres". Null when there is no sketch.
+    /// </summary>
+    public string? Describe() => From switch
+    {
+        DefaultCentresFrom.SelectedSketch => $"selected, all {HoleCentresInSketch} hole centres",
+        DefaultCentresFrom.SketchOfSelectedPoints => $"of the selected points, all {HoleCentresInSketch} hole centres",
+        DefaultCentresFrom.NewestWithFreeCentres =>
+            $"newest visible with free centres, {Points.Count} of {HoleCentresInSketch} hole centres",
+        _ => null,
+    };
 }
 
 /// <summary>What the session does when Inventor stops the hole centre picking.</summary>

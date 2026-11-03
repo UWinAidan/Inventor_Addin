@@ -6,21 +6,20 @@ Last updated: 2026-10-29
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-10-30 19:35. Branch `claude/m4-hole-generator`, latest commit `01e4558` (the handoff), tree clean apart from this line. PR #29 open against `main`. Aidan pushed everything up to `c6bfd8f` (task 111). Local commits **not pushed**: `b5a8f8d` (questions 23 to 26, task 137 planned), `da14106` (112), `ce38884` (137), `53223e2` (113), `892ce36` (119), and this handoff. Spike branches (local only): `spike/107-client-graphics` (`b56f0db`), `spike/108-hole-types` (`f0a2f33`).
-- Goal: run the M4 part 1 round in `docs/PLAN.md` order, one implementer and one reviewer per task, one commit per task. Aidan asked (2026-10-28, again 2026-10-30) not to stop for Inventor checks: collect each task's checklist for one combined check at the end.
-- Done this session: Aidan answered spec 09 questions 23 to 26 (logged as Aidan; 26 overturned the Default and became task 137). Aidan opened the starter workbook in Excel: no repair prompt (111 step 1 passed). Tasks 112, 137, 113, 119 each reviewed PASS, built on Windows with 0 errors, committed with Defaults in `DECISIONS.md` and follow-ups in `TODO.md`. Core tests 4113 passed after 119. Nothing is in progress.
-- Before task 114/115: the window shows Simple, Taper Tapped, Spotface and Custom (dowel tolerance) but they are not wired into Inventor or bound in the window yet; the follow-ups listing what 114 and 115 must bind are in `TODO.md` (tasks 112, 113, 137 entries).
+- Updated: 2026-11-03 11:07. Branch `claude/m4-hole-generator`, latest commit: task 117 (after `1a8557e`). PR #29 open against `main`. Aidan pushed up to `5e2f609`; local commits **not pushed**: `61545ad` (131), `cf991b9` (132), `dcfb659` (127), `938c206` (130), `1a8557e` (110), and the task 117 commit. Spike branches (local only): `spike/107-client-graphics`, `spike/108-hole-types`.
+- Goal: run the M4 part 1 round in `docs/PLAN.md` order, one implementer and one reviewer per task, one commit per task. Aidan asked (2026-10-28, 2026-10-30, 2026-11-03) not to stop for Inventor checks: collect each task's checklist for one combined check at the end.
+- Done this session: 131 (60 deg drill point), 132 (tolerance levels per fit), 127 (centre-drill spot, seat depth 0; added spec 09 question 27), 130 (live typing, 300 ms debounce), 110 (client-graphics preview, face paint removed), 117 (default centres per point: only free hole centres of the newest visible sketch). Each reviewed PASS (127 after one fix: `IsTabStop=False` on `EditableComboBox`), built on Windows with 0 errors, committed with Defaults in `DECISIONS.md` and follow-ups in `TODO.md`. Core tests 4185 passed after 117. Aidan asked to stop after 117 (2026-11-03).
 - Next steps:
-  1. The PLAN order: 131, 132, 127, 130, 110, 117, 114, 115, 116, 136, 118.
-  2. At the end, update `STATUS.md` and `TODO.md`, push (ask Aidan first), and give Aidan one combined checklist from the task files (135, 120, 121, 128, 129, 123, 124, 125, 122, 126, 111 from step 2, 112, 137, 113, 119, and on), plus the older 105, 109, 133, 134.
+  1. In order: 114, 115, 116, 136, 118. Before 114/115 read the TODO follow-ups for tasks 112, 113, 137 and 130 (what to bind; new boxes need `UpdateSourceTrigger=PropertyChanged`).
+  2. At the end: update `STATUS.md` and `TODO.md`, push (ask Aidan first), and give Aidan one combined checklist from the task files (135, 120, 121, 128, 129, 123, 124, 125, 122, 126, 111 step 2, 112, 137, 113, 119, 131, 132, 127, 130, 110, 117 and on), plus the older 105, 109, 133, 134.
 - Gotchas:
-  - Check `tasklist //FI "IMAGENAME eq Inventor.exe"` before building. If Inventor is open, pass `-p:DeployToInventor=false`.
-  - In shell scripts that edit tracking files, chain the commit with `&&` after the edit script, or a failed edit still commits. Python `str.replace` edits with an `assert old in s` guard worked well.
-  - An implementer cut off (stall or usage limit) leaves the tree partly edited. Check `git status`; resuming the same agent with SendMessage worked well (task 113).
+  - Check `tasklist //FI "IMAGENAME eq Inventor.exe"` before building; if Inventor is open pass `-p:DeployToInventor=false`.
+  - Tracking-file edits: a Python script with `assert old in s` per replace, chained `&& git add -A && git commit`, worked every time.
+  - Flaky tests in full runs (timing / file-system, Numbering and RenamePlan); they pass on re-run or alone. Listed in TODO.md.
   - Hole icons are XAML geometry in `src/InventorAddin/UI/Theme/Styles.xaml`, not PNGs; `tools/icons/render.py` is ribbon icons only.
-  - Stored hole data is version 4 (task 113).
-  - Spike 107's preview code is read with `git show spike/108-hole-types:src/InventorAddin/Spike107.cs` (task 110).
-- Read first: `docs/WORKFLOW.md` (run mode), `docs/PLAN.md` ("Round after PR #29's first look"), `TODO.md` Next up, `docs/tasks/131-drill-point-60.md`.
+  - Stored hole data is still version 4.
+  - Starter workbook edits: Python `zipfile`, change only the needed parts, keep entry order and compression, update sharedStrings counts and the dimension/autofilter/`_FilterDatabase` ranges.
+- Read first: `docs/WORKFLOW.md` (run mode), `docs/PLAN.md` ("Round after PR #29's first look"), `TODO.md` Next up and follow-ups, `docs/tasks/114-*.md`.
 
 ## Big items
 

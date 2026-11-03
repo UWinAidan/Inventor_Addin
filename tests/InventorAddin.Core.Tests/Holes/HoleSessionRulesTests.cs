@@ -119,113 +119,158 @@ public sealed class HoleSessionRulesTests
         Assert.Equal(expected, HoleSessionRules.ResetsFaceAppearances(edit, openedKind, openedFitColoured, keptKind));
     }
 
-    private static (Sketch, Func<bool>, Func<bool>, Func<bool>) Entry(
-        Sketch sketch, bool visible, bool hasHoleCentres, bool consumed = false) =>
-        (sketch, () => visible, () => consumed, () => hasHoleCentres);
+    // Task 117: hole centres per point. A sketch is described by its hole-centre points; a point named "used" is
+    // one a feature already uses.
+    private sealed record PtSketch(string Name, Pt[] Centres);
+
+    private static (PtSketch, Func<bool>) Entry(PtSketch sketch, bool visible = true) => (sketch, () => visible);
+
+    private static PtSketch WithCentres(string name, params string[] points) =>
+        new(name, points.Select(p => new Pt(p)).ToArray());
+
+    private static DefaultCentres<PtSketch, Pt> Default(
+        PtSketch? selected, PtSketch? ofPoint, params (PtSketch, Func<bool>)[] sketches) =>
+        HoleSessionRules.DefaultCentres(selected, ofPoint, sketches, s => s.Centres, p => p.Name.StartsWith("used"));
 
     [Fact]
-    public void DefaultSketch_TheSelectedSketchFirst()
+    public void DefaultCentres_OnlyTheCentresNoFeatureUses()
     {
-        var selected = new Sketch("selected");
-        var ofPoint = new Sketch("of point");
+        // Four hole centres, two used by an earlier hole: the other two are picked.
+        var sketch = WithCentres("sketch", "used a", "free b", "used c", "free d");
 
-        Assert.Same(selected, HoleSessionRules.DefaultSketch(selected, ofPoint, [Entry(new Sketch("newest"), true, true)]));
+        var result = Default(null, null, Entry(sketch));
+
+        Assert.Same(sketch, result.Sketch);
+        Assert.Equal(["free b", "free d"], result.Points.Select(p => p.Name));
+        Assert.Equal(DefaultCentresFrom.NewestWithFreeCentres, result.From);
+        Assert.Equal(4, result.HoleCentresInSketch);
+        Assert.Equal("newest visible with free centres, 2 of 4 hole centres", result.Describe());
     }
 
     [Fact]
-    public void DefaultSketch_ThenTheSketchOfTheSelectedPoints()
+    public void DefaultCentres_ASketchWhoseCentresAreAllUsedIsSkipped()
     {
-        var ofPoint = new Sketch("of point");
-
-        Assert.Same(ofPoint, HoleSessionRules.DefaultSketch(null, ofPoint, [Entry(new Sketch("newest"), true, true)]));
-    }
-
-    [Fact]
-    public void DefaultSketch_ElseTheNewestVisibleSketchWithHoleCentres()
-    {
-        var newer = new Sketch("newer");
+        var older = WithCentres("older", "free a", "used b");
         var sketches = new[]
         {
-            Entry(new Sketch("hidden"), false, true),
-            Entry(new Sketch("no centres"), true, false),
-            Entry(newer, true, true),
-            Entry(new Sketch("older"), true, true),
+            Entry(WithCentres("all used", "used a", "used b")),
+            Entry(older),
         };
 
-        Assert.Same(newer, HoleSessionRules.DefaultSketch<Sketch>(null, null, sketches));
+        var result = Default(null, null, sketches);
+
+        Assert.Same(older, result.Sketch);
+        Assert.Equal(["free a"], result.Points.Select(p => p.Name));
     }
 
     [Fact]
-    public void DefaultSketch_StopsAtTheFirstThatQualifies()
+    public void DefaultCentres_SkipsHiddenSketchesAndSketchesWithoutCentres()
+    {
+        var newer = WithCentres("newer", "free a");
+        var sketches = new[]
+        {
+            Entry(WithCentres("hidden", "free a"), visible: false),
+            Entry(WithCentres("no centres")),
+            Entry(newer),
+            Entry(WithCentres("older", "free a")),
+        };
+
+        Assert.Same(newer, Default(null, null, sketches).Sketch);
+    }
+
+    [Fact]
+    public void DefaultCentres_TheSelectedSketchFirst_WithAllItsCentres()
+    {
+        var selected = WithCentres("selected", "used a", "free b", "used c");
+        var ofPoint = WithCentres("of point", "free a");
+
+        var result = Default(selected, ofPoint, Entry(WithCentres("newest", "free a")));
+
+        Assert.Same(selected, result.Sketch);
+        Assert.Equal(["used a", "free b", "used c"], result.Points.Select(p => p.Name));
+        Assert.Equal(DefaultCentresFrom.SelectedSketch, result.From);
+        Assert.Equal("selected, all 3 hole centres", result.Describe());
+    }
+
+    [Fact]
+    public void DefaultCentres_ThenTheSketchOfTheSelectedPoints_WithAllItsCentres()
+    {
+        var ofPoint = WithCentres("of point", "used a", "used b");
+
+        var result = Default(null, ofPoint, Entry(WithCentres("newest", "free a")));
+
+        Assert.Same(ofPoint, result.Sketch);
+        Assert.Equal(["used a", "used b"], result.Points.Select(p => p.Name));
+        Assert.Equal(DefaultCentresFrom.SketchOfSelectedPoints, result.From);
+        Assert.Equal("of the selected points, all 2 hole centres", result.Describe());
+    }
+
+    [Fact]
+    public void DefaultCentres_ASelectionIsTakenEvenWithoutCentres()
+    {
+        var selected = WithCentres("selected");
+
+        var result = Default(selected, null, Entry(WithCentres("newest", "free a")));
+
+        Assert.Same(selected, result.Sketch);
+        Assert.Empty(result.Points);
+    }
+
+    [Fact]
+    public void DefaultCentres_NoneWhenNoSketchQualifies()
+    {
+        var sketches = new[]
+        {
+            Entry(WithCentres("hidden", "free a"), visible: false),
+            Entry(WithCentres("empty")),
+            Entry(WithCentres("all used", "used a")),
+        };
+
+        var result = Default(null, null, sketches);
+
+        Assert.Null(result.Sketch);
+        Assert.Empty(result.Points);
+        Assert.Equal(DefaultCentresFrom.None, result.From);
+        Assert.Null(result.Describe());
+        Assert.Null(Default(null, null).Sketch);
+    }
+
+    [Fact]
+    public void DefaultCentres_ReadsOnlyAsFarAsTheFirstThatQualifies()
     {
         var read = new List<string>();
-        (Sketch, Func<bool>, Func<bool>, Func<bool>) Logged(string name) =>
-            (new Sketch(name), () => { read.Add(name); return true; }, () => false, () => true);
-
-        HoleSessionRules.DefaultSketch<Sketch>(null, null, [Logged("newest"), Logged("older")]);
-
-        Assert.Equal(["newest"], read);
-    }
-
-    [Fact]
-    public void DefaultSketch_NoneWhenNoSketchQualifies()
-    {
-        var sketches = new[] { Entry(new Sketch("hidden"), false, true), Entry(new Sketch("empty"), true, false) };
-
-        Assert.Null(HoleSessionRules.DefaultSketch<Sketch>(null, null, sketches));
-        Assert.Null(HoleSessionRules.DefaultSketch<Sketch>(null, null, []));
-    }
-
-    [Fact]
-    public void DefaultSketch_SkipsAConsumedSketch()
-    {
-        var unused = new Sketch("unused");
+        (PtSketch, Func<bool>) Logged(PtSketch sketch, bool visible) =>
+            (sketch, () => { read.Add("visible " + sketch.Name); return visible; });
         var sketches = new[]
         {
-            Entry(new Sketch("consumed"), true, true, consumed: true),
-            Entry(unused, true, true),
+            Logged(WithCentres("hidden", "free a"), false),
+            Logged(WithCentres("newest", "free a"), true),
+            Logged(WithCentres("older", "free a"), true),
         };
 
-        Assert.Same(unused, HoleSessionRules.DefaultSketch<Sketch>(null, null, sketches));
+        HoleSessionRules.DefaultCentres(
+            null,
+            null,
+            sketches,
+            s => { read.Add("centres " + s.Name); return s.Centres; },
+            p => { read.Add("used " + p.Name); return false; });
+
+        Assert.Equal(["visible hidden", "visible newest", "centres newest", "used free a"], read);
     }
 
     [Fact]
-    public void DefaultSketch_NoneWhenEverySketchIsConsumed()
+    public void DefaultCentres_ASelectionDoesNotAskWhichPointsAreUsed()
     {
-        var sketches = new[]
-        {
-            Entry(new Sketch("newer"), true, true, consumed: true),
-            Entry(new Sketch("older"), true, true, consumed: true),
-        };
+        var asked = false;
 
-        Assert.Null(HoleSessionRules.DefaultSketch<Sketch>(null, null, sketches));
-    }
+        HoleSessionRules.DefaultCentres(
+            WithCentres("selected", "a"),
+            null,
+            Array.Empty<(PtSketch, Func<bool>)>(),
+            s => s.Centres,
+            _ => asked = true);
 
-    [Fact]
-    public void DefaultSketch_ASelectedConsumedSketchStillWins()
-    {
-        var selected = new Sketch("selected, consumed");
-        var ofPoint = new Sketch("of a selected point, consumed");
-        var sketches = new[] { Entry(new Sketch("unused"), true, true) };
-
-        Assert.Same(selected, HoleSessionRules.DefaultSketch(selected, null, sketches));
-        Assert.Same(ofPoint, HoleSessionRules.DefaultSketch(null, ofPoint, sketches));
-    }
-
-    [Fact]
-    public void DefaultSketch_ConsumedIsNotReadForAHiddenSketch()
-    {
-        var read = new List<string>();
-        var hidden = new Sketch("hidden");
-        var shown = new Sketch("shown");
-        (Sketch, Func<bool>, Func<bool>, Func<bool>)[] sketches =
-        [
-            (hidden, () => false, () => { read.Add("hidden"); return false; }, () => true),
-            (shown, () => true, () => { read.Add("shown"); return false; }, () => true),
-        ];
-
-        Assert.Same(shown, HoleSessionRules.DefaultSketch<Sketch>(null, null, sketches));
-        Assert.Equal(["shown"], read);
+        Assert.False(asked);
     }
 
     [Theory]

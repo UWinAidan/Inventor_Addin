@@ -325,3 +325,4 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-03 | Live typing: a box keeps the text as typed until a commit, so `1.` and `12.0` are tidied only then; Cancel and closing the window discard waiting text | Default | task 130 |
 | 2026-11-03 | The client-graphics preview is cleared at the start of every change step and redrawn after it from the hole the session holds (the last good hole after a refusal), as spike 107 was wired | Default | task 110 |
 | 2026-11-03 | `HolePreviewAppearance` keeps `DisplayName` and `Is` because `HoleFitWriter.IsHandColour` still uses them; the rest of task 101's paint members are removed | Default | task 110 |
+| 2026-11-03 | With nothing selected, AWB Hole picks the newest visible sketch with hole centres no feature uses, and only those; a sketch's Consumed flag no longer decides. Only hole features count as using a point (by identity, or same sketch name and position) | Default | task 117 |
