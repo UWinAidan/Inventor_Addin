@@ -23,11 +23,10 @@ namespace InventorAddin.Holes
     /// that step is aborted, so the hole stays at its last good state and later changes still work (spike 081 round 6).
     /// </para>
     /// <para>
-    /// While the window is open the hole's faces carry the translucent red preview appearance (task 101). It is
-    /// painted in a third transaction, nested in the outer one and left open while the window waits; it is aborted
-    /// before every other change to the part (a preview step, a sketch shown, OK's tolerance and colour) and on every
-    /// way out. The abort puts every face back exactly as it was and removes the preview appearance, so the writers,
-    /// task 096's face reset and OK never see the red.
+    /// While the window is open a faint, see-through red copy of the hole volume is drawn over the model with client
+    /// graphics (task 110; spike 107), made outside the Undo list. No face is painted. The graphics are removed before
+    /// every change to the part (a preview step, OK's tolerance and colour) and drawn again from the hole the model
+    /// holds afterwards, so after a refused change they follow the last good hole; they are removed on every way out.
     /// </para>
     /// <para>
     /// The session listens to the view-model: <see cref="AwbHoleViewModel.PreviewNeeded"/> previews,
@@ -78,8 +77,8 @@ namespace InventorAddin.Holes
         private Document? _startDoc;
         private string? _startDocName;
 
-        // The open preview transaction holding the red on the hole's faces (task 101); null when not painted.
-        private Transaction? _paint;
+        // True while the preview graphics may be drawn on the part (task 110).
+        private bool _drawn;
         private HoleFeature? _hole;
         private string? _holeName;
 
@@ -196,8 +195,7 @@ namespace InventorAddin.Holes
                 HoleFeature hole = _hole;
                 HoleBuildResult build = _viewModel.BuildResult;
 
-                // The step clears the preview red first: the faces are as they were before the preview, so the fit
-                // colour, task 096's reset, or the hole's own colours are what OK leaves (task 101).
+                // The step removes the preview graphics first; they are drawn again only if OK fails here.
                 Transaction step = StartStep();
                 try
                 {
@@ -211,7 +209,7 @@ namespace InventorAddin.Holes
                     AbortStep(step);
                     _log.Error(LogPrefix + $"applying the tolerance, colour and data to {_holeName} failed.", ex);
                     _viewModel.ShowRefused(HoleSessionRules.FinishFailed(ex.Message));
-                    PaintPreview();
+                    DrawPreview();
                     return false;
                 }
 
@@ -344,12 +342,12 @@ namespace InventorAddin.Holes
                       $"{_picks.Count} centre(s) from sketch {SketchName(_picks.Sketch) ?? "none"}" +
                       (_picks.Sketch == null ? "" : SketchStateText(_picks.Sketch)) + ".");
 
-            // An edited hole is left as it is until the window changes; OK brings it up to date. It is shown red at
-            // once, as a new hole is by its first preview (task 101).
+            // An edited hole is left as it is until the window changes; OK brings it up to date. Its preview is drawn
+            // at once, as a new hole's is by its first preview.
             if (!_edit)
                 Preview();
             else
-                PaintPreview();
+                DrawPreview();
         }
 
         /// <summary>
@@ -688,9 +686,9 @@ namespace InventorAddin.Holes
             switch (action)
             {
                 case HolePreviewAction.None:
-                    // Nothing changed; the red is put back only if something cleared it.
-                    if (_paint == null)
-                        PaintPreview();
+                    // Nothing changed; the preview is drawn again only if something removed it.
+                    if (!_drawn)
+                        DrawPreview();
                     return;
                 case HolePreviewAction.Remove:
                     RemovePreviewHole();
@@ -704,16 +702,16 @@ namespace InventorAddin.Holes
                     break;
             }
 
-            // Making a hole hides its sketch again; the highlight is redrawn over the new model. The red goes on last,
-            // so nothing else is changed inside the preview transaction.
+            // Making a hole hides its sketch again; the highlight is redrawn over the new model. The preview graphics
+            // are drawn from the hole the model holds now: the new one, or the last good one after a refusal.
             if (_picks.Sketch != null)
                 ShowSketch(_picks.Sketch);
-            long paintMs = PaintPreview();
+            long drawMs = DrawPreview();
             Highlight();
 
             watch.Stop();
             if (HoleSessionRules.IsSlow(watch.Elapsed))
-                _log.Info(LogPrefix + $"preview {action} took {watch.ElapsedMilliseconds} ms ({paintMs} ms of it the preview colour).");
+                _log.Info(LogPrefix + $"preview {action} took {watch.ElapsedMilliseconds} ms ({drawMs} ms of it the preview graphics).");
         }
 
         private void Write(HolePreviewAction action)
@@ -849,70 +847,54 @@ namespace InventorAddin.Holes
         }
 
         /// <summary>
-        /// An inner transaction for one change to the part. The preview red is cleared first, so the change, and an
-        /// abort of it, never mixes with the preview transaction (task 101).
+        /// An inner transaction for one change to the part. The preview graphics are removed first; the caller draws
+        /// them again from whatever hole the model holds afterwards (spike 107).
         /// </summary>
         private Transaction StartStep()
         {
-            ClearPaint();
+            ClearPreview();
             return _app.TransactionManager.StartTransaction((_Document)_doc, HoleSessionRules.StepTransactionName);
         }
 
-        // ---- preview colour ----
+        // ---- preview graphics ----
 
         /// <summary>
-        /// Paints every face of the held hole with the translucent red preview appearance (task 101), in a preview
-        /// transaction left open until <see cref="ClearPaint"/>. Any paint already there is cleared first, since the
-        /// faces may have changed. A failure is logged and the hole is left in its own colours; the preview goes on.
-        /// Returns the milliseconds it took.
+        /// Draws the held hole's preview with client graphics (task 110), replacing any drawn before. A failure is
+        /// logged and the preview goes on without graphics. Returns the milliseconds it took.
         /// </summary>
-        private long PaintPreview()
+        private long DrawPreview()
         {
-            ClearPaint();
+            ClearPreview();
             HoleFeature? hole = _hole;
             if (_ended || _outer == null || hole == null)
                 return 0;
 
             var watch = Stopwatch.StartNew();
-            Transaction? paint = null;
+            // Set first, so graphics left by a draw that failed part way are still removed.
+            _drawn = true;
             try
             {
-                paint = _app.TransactionManager.StartTransaction((_Document)_doc, HoleSessionRules.PreviewTransactionName);
-                HolePreviewWriter.Paint(_doc, hole, _log);
-                _paint = paint;
+                HolePreviewWriter.Draw(_app, _doc, hole, _log);
             }
             catch (Exception ex)
             {
-                if (paint != null)
-                    ComSafe.Run(() => paint.Abort());
-                _log.Warn(LogPrefix + $"the preview colour could not be put on {_holeName} ({ex.Message}).");
+                _log.Warn(LogPrefix + $"the preview of {_holeName} could not be drawn ({ex.Message}).");
+                ClearPreview();
             }
 
             watch.Stop();
-            if (HoleSessionRules.IsSlowPaint(watch.Elapsed))
-                _log.Info(LogPrefix + $"the preview colour took {watch.ElapsedMilliseconds} ms.");
+            if (HoleSessionRules.IsSlowDraw(watch.Elapsed))
+                _log.Info(LogPrefix + $"drawing the preview took {watch.ElapsedMilliseconds} ms.");
             return watch.ElapsedMilliseconds;
         }
 
-        /// <summary>
-        /// Aborts the open preview transaction, if any: every face is back as it was before the red, and the preview
-        /// appearance is gone from the part (task 101's spike). Called before every other change and on every way out.
-        /// </summary>
-        private void ClearPaint()
+        /// <summary>Removes the preview graphics, if drawn. Called before every change and on every way out.</summary>
+        private void ClearPreview()
         {
-            Transaction? paint = _paint;
-            if (paint == null)
+            if (!_drawn)
                 return;
-            _paint = null;
-
-            try
-            {
-                paint.Abort();
-            }
-            catch (Exception ex)
-            {
-                _log.Error(LogPrefix + "clearing the preview colour failed.", ex);
-            }
+            _drawn = false;
+            HolePreviewWriter.Clear(_doc);
         }
 
         private void AbortStep(Transaction step)
@@ -936,11 +918,7 @@ namespace InventorAddin.Holes
             if (!_shownSketches.Exists(s => SameSketch(s.Sketch, sketch)))
                 _shownSketches.Add((sketch, ComSafe.Get(() => sketch.Visible), ComSafe.Get(() => sketch.Shared)));
             if (!ComSafe.Get(() => sketch.Visible))
-            {
-                // Outside the preview transaction, or clearing the red would hide the sketch again.
-                ClearPaint();
                 ComSafe.Run(() => sketch.Visible = true);
-            }
         }
 
         /// <summary>
@@ -951,7 +929,7 @@ namespace InventorAddin.Holes
         /// </summary>
         private void RestoreSketches(bool kept)
         {
-            ClearPaint();
+            ClearPreview();
             foreach ((PlanarSketch sketch, bool wasVisible, bool wasShared) in _shownSketches)
             {
                 if (HoleSessionRules.UnshareAfter(wasShared, ComSafe.Get(() => sketch.Shared)))
@@ -1043,8 +1021,7 @@ namespace InventorAddin.Holes
             if (_ended)
                 return;
 
-            // The preview transaction is nested in the outer one: aborted first, inner before outer.
-            ClearPaint();
+            ClearPreview();
             try
             {
                 if (_outer != null)
@@ -1078,6 +1055,7 @@ namespace InventorAddin.Holes
 
             try
             {
+                ClearPreview();
                 DropInteraction(stop: true);
                 ComSafe.Run(() => _highlight?.Delete());
                 if (_appEvents != null)

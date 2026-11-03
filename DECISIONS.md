@@ -323,3 +323,5 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-03 | Live typing: OK stays enabled while typed text is waiting; pressing it applies the text first and makes the hole only if the window is then valid | Default | task 130 |
 | 2026-11-03 | Live typing: a change anywhere else in the window (Units, Type, Seat) applies waiting typed text first; picking a hole centre does not | Default | task 130 |
 | 2026-11-03 | Live typing: a box keeps the text as typed until a commit, so `1.` and `12.0` are tidied only then; Cancel and closing the window discard waiting text | Default | task 130 |
+| 2026-11-03 | The client-graphics preview is cleared at the start of every change step and redrawn after it from the hole the session holds (the last good hole after a refusal), as spike 107 was wired | Default | task 110 |
+| 2026-11-03 | `HolePreviewAppearance` keeps `DisplayName` and `Is` because `HoleFitWriter.IsHandColour` still uses them; the rest of task 101's paint members are removed | Default | task 110 |

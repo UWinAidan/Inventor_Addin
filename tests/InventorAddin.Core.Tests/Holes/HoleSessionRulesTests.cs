@@ -49,17 +49,9 @@ public sealed class HoleSessionRulesTests
     [InlineData(5, false)]
     [InlineData(30, false)]
     [InlineData(31, true)]
-    public void IsSlowPaint_OnlyOver30Ms(int ms, bool slow)
+    public void IsSlowDraw_OnlyOver30Ms(int ms, bool slow)
     {
-        Assert.Equal(slow, HoleSessionRules.IsSlowPaint(TimeSpan.FromMilliseconds(ms)));
-    }
-
-    [Fact]
-    public void PreviewTransactionName_IsNotTheSessionsOrAStepsName()
-    {
-        Assert.Equal(Branding.ShortName + " Hole preview", HoleSessionRules.PreviewTransactionName);
-        Assert.NotEqual(HoleSessionRules.PreviewTransactionName, HoleSessionRules.StepTransactionName);
-        Assert.NotEqual(HoleSessionRules.PreviewTransactionName, HoleSessionRules.TransactionName(false));
+        Assert.Equal(slow, HoleSessionRules.IsSlowDraw(TimeSpan.FromMilliseconds(ms)));
     }
 
     [Theory]

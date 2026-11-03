@@ -29,17 +29,6 @@ public sealed class HoleInventorNamesTests
     }
 
     [Fact]
-    public void PreviewAppearance_IsTranslucentRed()
-    {
-        Assert.Equal(new HoleColour(220, 40, 40), HolePreviewAppearance.Colour);
-        Assert.Equal(0.5, HolePreviewAppearance.Opacity);
-        Assert.Equal("AWB Hole preview", HolePreviewAppearance.DisplayName);
-        Assert.Equal("Awb_HolePreview", HolePreviewAppearance.Name);
-        Assert.Equal("generic_transparency", HolePreviewAppearance.TransparencyValueName);
-        Assert.Equal("generic_diffuse", HolePreviewAppearance.ColourValueName);
-    }
-
-    [Fact]
     public void PreviewAppearance_IsNeverAFitColour()
     {
         // Task 096's face reset counts fit appearances; the preview red must not be one.
@@ -47,7 +36,6 @@ public sealed class HoleInventorNamesTests
         foreach (var fit in Enum.GetValues<PrecisionFit>())
         {
             Assert.False(HolePreviewAppearance.Is(HoleFitAppearances.DisplayName(fit)));
-            Assert.NotEqual(HoleFitAppearances.Name(fit), HolePreviewAppearance.Name);
         }
     }
 
@@ -60,19 +48,6 @@ public sealed class HoleInventorNamesTests
     public void PreviewAppearance_Is(string? displayName, bool expected)
     {
         Assert.Equal(expected, HolePreviewAppearance.Is(displayName));
-    }
-
-    [Theory]
-    [InlineData(0.5, 0.5)]
-    [InlineData(1.0, 0.0)]
-    [InlineData(0.0, 1.0)]
-    [InlineData(0.25, 0.75)]
-    [InlineData(1.5, 0.0)]
-    [InlineData(-0.5, 1.0)]
-    [InlineData(double.NaN, 0.0)]
-    public void PreviewAppearance_Transparency_IsOneMinusOpacity(double opacity, double expected)
-    {
-        Assert.Equal(expected, HolePreviewAppearance.Transparency(opacity), 9);
     }
 
     [Theory]
