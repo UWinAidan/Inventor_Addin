@@ -14,6 +14,8 @@ namespace InventorAddin.UI
     /// the view-model's OK and Cancel. This closes the window when the session ends, cancels the session when the
     /// window is closed any other way, and adds the keyboard handling the bindings cannot: Enter commits the box being
     /// typed in and does OK when OK is enabled. Esc presses Cancel through the button's <c>IsCancel</c>.
+    /// Text boxes apply as you type (task 130): their bindings update on each keystroke, and the view-model applies the
+    /// text after a pause (<see cref="Debouncer"/>) on the timer this window gives it; leaving a box commits it at once.
     /// </summary>
     public partial class AwbHoleWindow : Window
     {
@@ -27,6 +29,8 @@ namespace InventorAddin.UI
             InitializeComponent();
             Title = _viewModel.HeaderTitle;
             DataContext = _viewModel;
+            _viewModel.UseTypingTimer(new DispatcherDebounceTimer(Dispatcher));
+            AddHandler(UIElement.LostFocusEvent, new RoutedEventHandler(OnBoxLostFocus));
             PreviewKeyDown += OnPreviewKeyDown;
             Loaded += OnLoaded;
             Closing += OnClosing;
@@ -81,6 +85,8 @@ namespace InventorAddin.UI
         // Closed by its close button, Alt+F4 or the add-in shutting down: the part goes back as it was.
         private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
+            // Text still waiting for the pause is not applied to a hole that is going away.
+            _viewModel.DiscardTyping();
             HoleSession? session = _session;
             if (session != null && !session.IsEnded)
                 session.Cancel();
@@ -89,18 +95,29 @@ namespace InventorAddin.UI
         private void OnClosed(object? sender, EventArgs e)
         {
             _closed = true;
+            _viewModel.DiscardTyping();
             if (_session != null)
                 _session.Ended -= OnSessionEnded;
+            RemoveHandler(UIElement.LostFocusEvent, new RoutedEventHandler(OnBoxLostFocus));
             PreviewKeyDown -= OnPreviewKeyDown;
             Closing -= OnClosing;
             Closed -= OnClosed;
         }
 
         /// <summary>
-        /// Enter does OK only when OK is enabled, after committing the box being typed in (its binding updates when it
-        /// loses focus). A focused button takes Enter itself, and an open dropdown uses it to pick an entry. In an
-        /// editable dropdown (the countersink angle, task 127) the keys go to the text box inside it, and the binding is
-        /// on the dropdown's Text.
+        /// Leaving a text box applies its text at once, without waiting for the pause (task 130). The countersink
+        /// angle's editable dropdown raises this from the text box inside it.
+        /// </summary>
+        private void OnBoxLostFocus(object sender, RoutedEventArgs e)
+        {
+            if (e.OriginalSource is TextBox)
+                _viewModel.CommitTyping();
+        }
+
+        /// <summary>
+        /// Enter does OK only when OK is enabled, after committing the box being typed in at once (task 130). A focused
+        /// button takes Enter itself, and an open dropdown uses it to pick an entry. In an editable dropdown (the
+        /// countersink angle, task 127) the keys go to the text box inside it, and the binding is on the dropdown's Text.
         /// </summary>
         private void OnPreviewKeyDown(object sender, KeyEventArgs e)
         {
@@ -119,6 +136,7 @@ namespace InventorAddin.UI
                 editable.GetBindingExpression(ComboBox.TextProperty)?.UpdateSource();
             else if (e.OriginalSource is TextBox box)
                 box.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
+            _viewModel.CommitTyping();
 
             if (_viewModel.OkCommand.CanExecute(null))
                 _viewModel.OkCommand.Execute(null);
@@ -126,11 +144,13 @@ namespace InventorAddin.UI
 
         /// <summary>
         /// An angle picked from the countersink angle's dropdown (task 127) commits at once, so a centre-drill spot is
-        /// two clicks after choosing Countersink; a typed angle still commits when the box loses focus or on Enter.
+        /// two clicks after choosing Countersink; a typed angle applies after the pause like every box (task 130), or at
+        /// once when the box loses focus or on Enter.
         /// </summary>
         private void OnCountersinkAngleDropDownClosed(object? sender, EventArgs e)
         {
             CountersinkAngleBox.GetBindingExpression(ComboBox.TextProperty)?.UpdateSource();
+            _viewModel.CommitTyping();
         }
     }
 }

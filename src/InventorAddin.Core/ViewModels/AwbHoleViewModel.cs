@@ -363,6 +363,11 @@ public sealed class AwbHoleViewModel : ObservableObject
     private HoleSpec? _lastRaisedSpec;
     private bool _changing;
 
+    // Live typing (task 130): the text each box holds as typed, until committed, and the pause before it is applied.
+    private readonly Dictionary<HoleField, TypedDraft> _drafts = [];
+    private Debouncer? _typing;
+    private bool _applyingTyping;
+
     private string _statusText = "";
     private bool _statusIsError;
     private IReadOnlyList<string> _statusNotes = [];
@@ -469,8 +474,8 @@ public sealed class AwbHoleViewModel : ObservableObject
             Refresh(keepExact: true);
         }
 
-        OkCommand = new RelayCommand(() => OkRequested?.Invoke(this, EventArgs.Empty), () => CanOk);
-        CancelCommand = new RelayCommand(() => CancelRequested?.Invoke(this, EventArgs.Empty));
+        OkCommand = new RelayCommand(Ok, () => CanOk || HasPendingTyping);
+        CancelCommand = new RelayCommand(Cancel);
 
         var problemList = (problems ?? []).ToList();
         _openStatusText = WorkbookProblemsText(problemList.Count);
@@ -1407,11 +1412,145 @@ public sealed class AwbHoleViewModel : ObservableObject
     /// </summary>
     public bool CanOk => _build.Succeeded && _centreCount >= 1 && _invalidText.Count == 0;
 
-    /// <summary>Raises <see cref="OkRequested"/>. Enabled when <see cref="CanOk"/>.</summary>
+    /// <summary>
+    /// Applies what is typed in the boxes (<see cref="CommitTyping"/>), then raises <see cref="OkRequested"/> when
+    /// <see cref="CanOk"/>. Enabled when <see cref="CanOk"/>, or while typed text waits for the pause, so OK pressed
+    /// straight after typing uses the typed value (task 130).
+    /// </summary>
     public RelayCommand OkCommand { get; }
 
-    /// <summary>Raises <see cref="CancelRequested"/>.</summary>
+    /// <summary>Drops typed text still waiting for the pause, then raises <see cref="CancelRequested"/>.</summary>
     public RelayCommand CancelCommand { get; }
+
+    private void Ok()
+    {
+        CommitTyping();
+        if (CanOk)
+        {
+            OkRequested?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    private void Cancel()
+    {
+        DiscardTyping();
+        CancelRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    // Live typing (task 130; spec 09, "The window"). With a timer, a box's text setter keeps the text as typed (a
+    // draft, which the box's getter returns, so the box is not rewritten under the caret) and applies it after the
+    // pause: text that is a number or an expression Inventor reads changes the fields and the preview; other text
+    // leaves them at the last good value and shows its message under the box. A blank box waits for a commit
+    // (Default), so clearing a box to type it again does not move the preview. Committing applies what is still
+    // waiting and ends the drafts, so the boxes show their text as settled (12.0 as 12). Without a timer every set
+    // applies at once, as before. Every box whose text property goes through SetText follows this rule.
+
+    /// <summary>
+    /// Makes the text boxes apply live, <see cref="Debouncer.TypingPause"/> after the last keystroke. The add-in passes
+    /// a timer that raises its event on the UI thread; set once, before the window is shown.
+    /// </summary>
+    public void UseTypingTimer(IDebounceTimer timer)
+    {
+        ArgumentNullException.ThrowIfNull(timer);
+        if (_typing is not null)
+        {
+            throw new InvalidOperationException("The typing timer is already set.");
+        }
+
+        _typing = new Debouncer(timer);
+    }
+
+    /// <summary>True while a box holds typed text that has not been applied yet.</summary>
+    public bool HasPendingTyping => _drafts.Values.Any(d => !d.Applied);
+
+    /// <summary>
+    /// Applies the typed text at once, a blank box included, and lets the boxes show their text as settled: Enter,
+    /// leaving a box, picking from the countersink angle's list, OK, and any change made elsewhere in the window.
+    /// </summary>
+    public void CommitTyping()
+    {
+        _typing?.Cancel();
+        if (_drafts.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var (field, draft) in _drafts.ToList())
+        {
+            if (!draft.Applied)
+            {
+                ApplyDraft(field, draft);
+            }
+        }
+
+        EndDrafts();
+    }
+
+    /// <summary>
+    /// Drops typed text that has not been applied (Cancel, the window closing); the boxes show the fields again.
+    /// </summary>
+    public void DiscardTyping()
+    {
+        _typing?.Cancel();
+        EndDrafts();
+    }
+
+    /// <summary>After the pause: applies each box's typed text, except a blank box, which waits for a commit.</summary>
+    private void ApplyTypedText()
+    {
+        foreach (var (field, draft) in _drafts.ToList())
+        {
+            if (!draft.Applied && draft.Text.Trim().Length > 0)
+            {
+                ApplyDraft(field, draft);
+            }
+        }
+
+        OkCommand.RaiseCanExecuteChanged();
+    }
+
+    private void ApplyDraft(HoleField field, TypedDraft draft)
+    {
+        draft.Applied = true;
+        _applyingTyping = true;
+        try
+        {
+            ApplyText(field, draft.Text, draft.Property, draft.Set);
+        }
+        finally
+        {
+            _applyingTyping = false;
+        }
+    }
+
+    private void EndDrafts()
+    {
+        if (_drafts.Count == 0)
+        {
+            return;
+        }
+
+        var properties = _drafts.Values.Select(d => d.Property).ToList();
+        _drafts.Clear();
+        foreach (var property in properties)
+        {
+            OnPropertyChanged(property);
+        }
+
+        OkCommand.RaiseCanExecuteChanged();
+    }
+
+    /// <summary>A box's text as typed, the text property it came from, and how to apply it.</summary>
+    private sealed class TypedDraft(string text, string property, Action<decimal?> set)
+    {
+        public string Text { get; } = text;
+
+        public string Property { get; } = property;
+
+        public Action<decimal?> Set { get; } = set;
+
+        public bool Applied { get; set; }
+    }
 
     // Status.
 
@@ -1532,6 +1671,12 @@ public sealed class AwbHoleViewModel : ObservableObject
         if (_changing)
         {
             return;
+        }
+
+        // A change made elsewhere in the window first takes what is typed in the boxes (task 130).
+        if (!_applyingTyping)
+        {
+            CommitTyping();
         }
 
         _changing = true;
@@ -2495,7 +2640,9 @@ public sealed class AwbHoleViewModel : ObservableObject
     }
 
     private string TextOf(HoleField field, decimal? value) =>
-        _invalidText.TryGetValue(field, out var text) ? text : ExpressionOf(field, value) ?? FormatNumber(value);
+        _drafts.TryGetValue(field, out var draft) ? draft.Text
+        : _invalidText.TryGetValue(field, out var text) ? text
+        : ExpressionOf(field, value) ?? FormatNumber(value);
 
     /// <summary>The expression <paramref name="value"/> was typed as, while the depth still has the value it came to.</summary>
     private string? ExpressionOf(HoleField field, decimal? value) =>
@@ -2554,9 +2701,39 @@ public sealed class AwbHoleViewModel : ObservableObject
                 || decimal.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out value));
     }
 
+    /// <summary>
+    /// A box's text set by the window: applied at once without a typing timer, else kept as typed and applied after
+    /// the pause (task 130).
+    /// </summary>
     private void SetText(HoleField field, string? text, string textProperty, Action<decimal?> set)
     {
         var raw = text ?? "";
+        if (_typing is null || _applyingTyping)
+        {
+            ApplyText(field, raw, textProperty, set);
+            return;
+        }
+
+        if (_drafts.TryGetValue(field, out var draft) && draft.Text == raw)
+        {
+            return;
+        }
+
+        var wasPending = HasPendingTyping;
+        _drafts[field] = new TypedDraft(raw, textProperty, set);
+        _typing.Post(ApplyTypedText);
+        if (!wasPending)
+        {
+            OkCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    /// <summary>
+    /// Applies a box's text: a number, or an expression Inventor reads, sets the field; other text stays in the box with
+    /// its message, and the field keeps its last good value.
+    /// </summary>
+    private void ApplyText(HoleField field, string raw, string textProperty, Action<decimal?> set)
+    {
         var trimmed = raw.Trim();
         decimal? value = null;
         string? expression = null;

@@ -319,3 +319,7 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-03 | The countersink angle is an editable dropdown offering 60 and 90 deg on every hole type; picking one commits at once (a centre-drill spot in two clicks); a typed angle commits on leaving the box or Enter; typed text auto-completes to an entry (WPF standard) | Default | task 127 |
 | 2026-11-03 | A counterbore depth of 0 is allowed in the window and remembered as the last seat, like a spotface depth of 0; a depth-0 seat is drawn flush with the top face with no wall or depth dimension | Default | task 127 |
 | 2026-11-03 | A workbook Counterbore or Dowel seat row still needs a counterbore depth above 0 (spec 09 question 27) | Default | task 127 |
+| 2026-11-03 | Live typing: a blank box is not applied by the pause, only by Enter, leaving the box or OK, so clearing a box to retype does not move the preview | Default | task 130 |
+| 2026-11-03 | Live typing: OK stays enabled while typed text is waiting; pressing it applies the text first and makes the hole only if the window is then valid | Default | task 130 |
+| 2026-11-03 | Live typing: a change anywhere else in the window (Units, Type, Seat) applies waiting typed text first; picking a hole centre does not | Default | task 130 |
+| 2026-11-03 | Live typing: a box keeps the text as typed until a commit, so `1.` and `12.0` are tidied only then; Cancel and closing the window discard waiting text | Default | task 130 |

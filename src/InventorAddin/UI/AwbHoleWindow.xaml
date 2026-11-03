@@ -27,9 +27,11 @@
         with a line above the footer.
 
         Dropdowns and icon rows bind SelectedValue (SelectedValuePath="Value") to the field; when their items change they
-        may write null, which the view-model ignores. Depth boxes bind the view-model's text properties, updated when the
-        box loses focus (or on Enter), so a preview is not made for every key; a box holding an expression shows what it
-        comes to after the unit.
+        may write null, which the view-model ignores. Text boxes bind the view-model's text properties, updated on every
+        keystroke (task 130): the view-model applies the text about 300 ms after the last key, so the preview follows
+        without leaving the box, and keeps the last good value with the message under the box while the text is
+        incomplete or not a length. Leaving the box or Enter applies it at once (code-behind). Every text box added to
+        this window binds this way. A box holding an expression shows what it comes to after the unit.
 
         Keyboard: Enter commits the box being typed in and does OK when OK is enabled (code-behind; OK is not IsDefault,
         so Enter cannot press it twice). Esc is Cancel (IsCancel). Tab moves into an icon row at its chosen button and
@@ -196,7 +198,7 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBox x:Name="CounterboreDiameterBox"
                                          Style="{DynamicResource DepthTextBox}"
-                                         Text="{Binding CounterboreDiameterText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                         Text="{Binding CounterboreDiameterText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding LengthUnitText, Mode=OneWay}" />
                             </StackPanel>
                             <TextBlock Style="{DynamicResource ErrorStatusText}"
@@ -211,7 +213,7 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBox x:Name="CounterboreDepthBox"
                                          Style="{DynamicResource DepthTextBox}"
-                                         Text="{Binding CounterboreDepthText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                         Text="{Binding CounterboreDepthText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding LengthUnitText, Mode=OneWay}" />
                                 <TextBlock Style="{DynamicResource ExpressionValueText}"
                                            Text="{Binding CounterboreDepthValueText, Mode=OneWay}"
@@ -229,7 +231,7 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBox x:Name="CountersinkDiameterBox"
                                          Style="{DynamicResource DepthTextBox}"
-                                         Text="{Binding CountersinkDiameterText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                         Text="{Binding CountersinkDiameterText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding LengthUnitText, Mode=OneWay}" />
                             </StackPanel>
                             <TextBlock Style="{DynamicResource ErrorStatusText}"
@@ -244,13 +246,14 @@
                             <StackPanel Orientation="Horizontal">
                                 <!--
                                     An editable dropdown (task 127): 60 and 90 deg are quick choices for a centre-drill
-                                    spot on any hole, and any other angle can be typed. The text commits when the box
-                                    loses focus, on Enter, or when an entry is picked (DropDownClosed, in the code-behind).
+                                    spot on any hole, and any other angle can be typed. Typed text applies after the pause
+                                    like every box (task 130); it commits at once when the box loses focus, on Enter, or
+                                    when an entry is picked (DropDownClosed, in the code-behind).
                                 -->
                                 <ComboBox x:Name="CountersinkAngleBox"
                                           Style="{DynamicResource EditableComboBox}"
                                           ItemsSource="{x:Static vm:AwbHoleViewModel.CountersinkAngleChoices}"
-                                          Text="{Binding CountersinkAngleText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                          Text="{Binding CountersinkAngleText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                           DropDownClosed="OnCountersinkAngleDropDownClosed" />
                                 <TextBlock Style="{DynamicResource SideNoteText}" Text="{x:Static vm:AwbHoleViewModel.AngleUnitText}" />
                             </StackPanel>
@@ -349,7 +352,7 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBox x:Name="ThreadDepthBox"
                                          Style="{DynamicResource DepthTextBox}"
-                                         Text="{Binding ThreadDepthText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                         Text="{Binding ThreadDepthText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding LengthUnitText, Mode=OneWay}" />
                                 <TextBlock Style="{DynamicResource ExpressionValueText}"
                                            Text="{Binding ThreadDepthValueText, Mode=OneWay}"
@@ -367,7 +370,7 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBox x:Name="DrillDepthBox"
                                          Style="{DynamicResource DepthTextBox}"
-                                         Text="{Binding DrillDepthText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                         Text="{Binding DrillDepthText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding LengthUnitText, Mode=OneWay}" />
                                 <TextBlock Style="{DynamicResource ExpressionValueText}"
                                            Text="{Binding DrillDepthValueText, Mode=OneWay}"
@@ -386,7 +389,7 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBox x:Name="DepthBox"
                                          Style="{DynamicResource DepthTextBox}"
-                                         Text="{Binding DepthText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                         Text="{Binding DepthText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding LengthUnitText, Mode=OneWay}" />
                                 <TextBlock Style="{DynamicResource ExpressionValueText}"
                                            Text="{Binding DepthValueText, Mode=OneWay}"
