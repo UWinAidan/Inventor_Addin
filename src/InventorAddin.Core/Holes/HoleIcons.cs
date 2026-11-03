@@ -32,19 +32,29 @@ public static class HoleIcons
     /// <summary>A drill point with a steep cone, drawn from the 90 deg point.</summary>
     public const string PointSteep = "PointSteep";
 
+    /// <summary>A drill point with a sharp cone, drawn from the 60 deg point (task 131).</summary>
+    public const string PointSharp = "PointSharp";
+
     public const string FlatBottom = "FlatBottom";
 
     /// <summary>
-    /// Angles at or above this many degrees show the shallow cone, below it the steep one: half way between the
-    /// 118 deg and 90 deg the icons are drawn from.
+    /// Angles at or above this many degrees show the shallow cone: half way between the 118 deg and 90 deg the icons
+    /// are drawn from.
     /// </summary>
     public const decimal ShallowPointFromDeg = 104m;
+
+    /// <summary>
+    /// Angles at or above this many degrees, and under <see cref="ShallowPointFromDeg"/>, show the steep cone, below it
+    /// the sharp one: half way between the 90 deg and 60 deg the icons are drawn from. An angle exactly half way goes
+    /// to the wider cone, as at <see cref="ShallowPointFromDeg"/> (task 131; Default).
+    /// </summary>
+    public const decimal SteepPointFromDeg = 75m;
 
     /// <summary>Every icon name, for checks that each one is drawn.</summary>
     public static IReadOnlyList<string> All { get; } =
     [
         Clearance, Tapped, SeatNone, Counterbore, Countersink, Distance, ThroughAll, ToFace, PointShallow, PointSteep,
-        FlatBottom, Simple, TaperTapped, Spotface,
+        FlatBottom, Simple, TaperTapped, Spotface, PointSharp,
     ];
 
     /// <summary>
@@ -77,13 +87,14 @@ public static class HoleIcons
     };
 
     /// <summary>
-    /// The icon for a Drill Point row's angle: flat for none, else the shallow or steep cone (see
-    /// <see cref="ShallowPointFromDeg"/>).
+    /// The icon for a Drill Point row's angle: flat for none, else the cone nearest of 118 deg (shallow), 90 deg
+    /// (steep) and 60 deg (sharp); see <see cref="ShallowPointFromDeg"/> and <see cref="SteepPointFromDeg"/>.
     /// </summary>
     public static string ForDrillPoint(decimal? angleDeg) => angleDeg switch
     {
         null => FlatBottom,
         >= ShallowPointFromDeg => PointShallow,
-        _ => PointSteep,
+        >= SteepPointFromDeg => PointSteep,
+        _ => PointSharp,
     };
 }

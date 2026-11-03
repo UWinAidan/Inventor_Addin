@@ -102,7 +102,7 @@ Hole types and seats stay as Inventor's: Clearance, Tapped, **Simple** and **Tap
 
 ## Blind holes
 
-The bottom comes from the Drill Point tab: 118 deg (default), 90 deg, or Flat. A new blind clearance, dowel or Simple hole starts at the last depth used with OK, for each units, kept across restarts (Default), or at the Settings tab's "Blind depth multiplier" x the nominal diameter (starter 2) the first time (Aidan, question 7).
+The bottom comes from the Drill Point tab: 118 deg (default), 90 deg, 60 deg, or Flat. A new blind clearance, dowel or Simple hole starts at the last depth used with OK, for each units, kept across restarts (Default), or at the Settings tab's "Blind depth multiplier" x the nominal diameter (starter 2) the first time (Aidan, question 7).
 
 ## Dowel and precision holes
 

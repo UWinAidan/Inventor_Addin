@@ -379,7 +379,7 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 - [x] 128 AWB Hole replaces Inventor's Hole on the Sheet Metal tab
 - [x] 129 AWB Hole as a split button with Inventor Hole and the default toggle
 - [ ] 130 Text boxes update the preview as you type
-- [ ] 131 A 60 deg drill point
+- [x] 131 A 60 deg drill point
 - [ ] 132 Several tolerance levels per fit
 - [x] 133 The mini toolbar's Hole button opens AWB Hole
 - [x] 134 Save As and Replace renames the occurrence it replaces

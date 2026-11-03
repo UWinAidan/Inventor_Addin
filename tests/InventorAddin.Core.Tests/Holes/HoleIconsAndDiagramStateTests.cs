@@ -11,7 +11,7 @@ public sealed class HoleIconsAndDiagramStateTests
     public void Icons_AreAllDifferent()
     {
         Assert.Equal(HoleIcons.All.Count, HoleIcons.All.Distinct(StringComparer.Ordinal).Count());
-        Assert.Equal(14, HoleIcons.All.Count);
+        Assert.Equal(15, HoleIcons.All.Count);
     }
 
     [Theory]
@@ -38,9 +38,20 @@ public sealed class HoleIconsAndDiagramStateTests
     [InlineData(104.0, HoleIcons.PointShallow)]
     [InlineData(103.9, HoleIcons.PointSteep)]
     [InlineData(90.0, HoleIcons.PointSteep)]
-    [InlineData(60.0, HoleIcons.PointSteep)]
-    public void ForDrillPoint_ShallowFrom104Degrees(double? angle, string expected) =>
+    [InlineData(75.0, HoleIcons.PointSteep)]
+    [InlineData(74.9, HoleIcons.PointSharp)]
+    [InlineData(60.0, HoleIcons.PointSharp)]
+    [InlineData(30.0, HoleIcons.PointSharp)]
+    public void ForDrillPoint_NearestOf118And90And60Degrees(double? angle, string expected) =>
         Assert.Equal(expected, HoleIcons.ForDrillPoint(angle is { } a ? (decimal)a : null));
+
+    [Fact]
+    public void DrillPoints_118And90And60AndFlat_EachHaveTheirOwnIcon()
+    {
+        var icons = new decimal?[] { 118m, 90m, 60m, null }.Select(HoleIcons.ForDrillPoint).ToList();
+
+        Assert.Equal([HoleIcons.PointShallow, HoleIcons.PointSteep, HoleIcons.PointSharp, HoleIcons.FlatBottom], icons);
+    }
 
     [Fact]
     public void DiagramState_StartsExpanded()

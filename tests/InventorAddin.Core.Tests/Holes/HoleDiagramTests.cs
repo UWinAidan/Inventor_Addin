@@ -193,6 +193,28 @@ public sealed class HoleDiagramTests
     }
 
     [Fact]
+    public void SixtyDegreePoint_IsDeeperThanNinety_AndLabelledSixty()
+    {
+        static double TipBelowWalls(HoleDiagram d)
+        {
+            var outline = d.Lines.Single(l => l.Ink == DiagramInk.Outline).Points;
+            var tip = outline.Max(p => p.Y);
+            var wallBottom = outline.Where(p => p.Y < tip - 1e-9).Max(p => p.Y);
+            var width = outline.Max(p => p.X) - outline.Min(p => p.X);
+            return (tip - wallBottom) / width;
+        }
+
+        using var culture = new CultureScope("en-US");
+        var sharp = HoleDiagram.Draw(BlindTapped with { PointAngleDeg = 60m });
+        var steep = HoleDiagram.Draw(BlindTapped with { PointAngleDeg = 90m });
+
+        // The cone's depth over the hole's width: 1/(2 tan 30) for 60 deg, 1/(2 tan 45) for 90 deg.
+        Assert.Equal(1 / (2 * Math.Tan(Math.PI / 6)), TipBelowWalls(sharp), 3);
+        Assert.Equal(0.5, TipBelowWalls(steep), 3);
+        Assert.Contains("60" + Deg, Texts(sharp));
+    }
+
+    [Fact]
     public void UnknownValues_AreLeftOut_ButTheHoleIsStillDrawn()
     {
         var diagram = HoleDiagram.Draw(BlindDowelCounterbore with
@@ -211,7 +233,7 @@ public sealed class HoleDiagramTests
     {
         "dowel counterbore", "tapped", "tapped through", "clearance counterbore", "dowel countersink", "plain through",
         "tapped counterbore blind", "imperial dowel", "seat narrower than hole", "seat deeper than hole", "nothing known",
-        "long expression values", "tiny countersink angle",
+        "long expression values", "tiny countersink angle", "60 deg point",
     };
 
     private static HoleDiagramInput Case(string name) => name switch
@@ -233,6 +255,7 @@ public sealed class HoleDiagramTests
         "nothing known" => new HoleDiagramInput { Termination = HoleTermination.Distance, Seat = HoleSeat.Countersink },
         "long expression values" => BlindDowelCounterbore with { Depth = 123.456m, CounterboreDepth = 12.345m },
         "tiny countersink angle" => ThroughDowelCountersink with { CountersinkAngleDeg = 1m },
+        "60 deg point" => BlindDowelCounterbore with { PointAngleDeg = 60m },
         _ => throw new ArgumentOutOfRangeException(nameof(name)),
     };
 

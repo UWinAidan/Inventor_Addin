@@ -624,8 +624,10 @@ public sealed class HoleWorkbookReaderTests
         Assert.True(h7.IsDefault);
 
         Assert.Equal(HoleSettings.Starter, wb.Settings);
-        Assert.Equal(["118 deg", "90 deg", "Flat"], wb.DrillPoints.Select(d => d.Name));
-        Assert.True(wb.DrillPoints[2].IsFlat);
+        Assert.Equal(["118 deg", "90 deg", "60 deg", "Flat"], wb.DrillPoints.Select(d => d.Name));
+        Assert.Equal([118m, 90m, 60m, null], wb.DrillPoints.Select(d => d.AngleDeg));
+        Assert.Equal(["118 deg"], wb.DrillPoints.Where(d => d.IsDefault).Select(d => d.Name));
+        Assert.True(wb.DrillPoints[3].IsFlat);
     }
 
     [Fact]

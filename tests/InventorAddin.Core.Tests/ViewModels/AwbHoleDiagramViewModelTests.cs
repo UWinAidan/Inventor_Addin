@@ -92,6 +92,28 @@ public sealed class AwbHoleDiagramViewModelTests
     }
 
     [Fact]
+    public void A60DegreeDrillPoint_HasTheSharpIcon()
+    {
+        var workbook = Workbook with
+        {
+            DrillPoints =
+            [
+                new DrillPointRow(5, "118 deg", 118m, true, false, ""),
+                new DrillPointRow(6, "90 deg", 90m, false, false, ""),
+                new DrillPointRow(7, "60 deg", 60m, false, false, ""),
+                new DrillPointRow(8, "Flat", null, false, false, ""),
+            ],
+        };
+        var vm = new AwbHoleViewModel(workbook, PartName, expressionChecker: new FakeChecker()) { CentreCount = 1 };
+        vm.Termination = HoleTermination.Distance;
+
+        Assert.Equal(["118 deg", "90 deg", "60 deg", "Flat"], vm.DrillPointOptions.Select(o => o.Text));
+        Assert.Equal(
+            [HoleIcons.PointShallow, HoleIcons.PointSteep, HoleIcons.PointSharp, HoleIcons.FlatBottom],
+            vm.DrillPointOptions.Select(o => o.Icon));
+    }
+
+    [Fact]
     public void EditedHoleWithADrillPointNotInTheWorkbook_ReadsTheIconFromItsName()
     {
         var spec = HoleSpec.ClearanceHole(HoleUnits.Metric, "T5") with

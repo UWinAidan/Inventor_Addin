@@ -1333,6 +1333,8 @@
     <Geometry x:Key="HoleIcon.PointShallow.Material">M1 2H3V9L10 13.2L17 9V2H19V18H1Z</Geometry>
     <!-- 90: a steep cone. -->
     <Geometry x:Key="HoleIcon.PointSteep.Material">M1 2H3V9L10 16L17 9V2H19V18H1Z</Geometry>
+    <!-- 60 (task 131): a sharp cone, the same width and tip as 90, so it starts almost at the top. -->
+    <Geometry x:Key="HoleIcon.PointSharp.Material">M1 2H3V3.9L10 16L17 3.9V2H19V18H1Z</Geometry>
     <Geometry x:Key="HoleIcon.FlatBottom.Material">M1 2H3V12H17V2H19V18H1Z</Geometry>
 
     <!--
