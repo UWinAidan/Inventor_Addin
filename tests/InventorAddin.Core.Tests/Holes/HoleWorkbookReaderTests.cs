@@ -327,6 +327,50 @@ public sealed class HoleWorkbookReaderTests
     }
 
     [Fact]
+    public void PrecisionTol_ANameUsedTwiceInOneUnits_TheLaterRowIsLeftOut_WhateverItsFit()
+    {
+        var tabs = Tabs();
+        tabs["Precision Tol"] = Tab("Precision tolerances",
+            ["Units", "Fit", "Name / purpose", "Type", "ISO code", "Upper", "Lower", "Default", "Note"],
+            ["Metric", "Normal", "Test snug", "ISO", "H7", null, null, "Y", ""],
+            ["Metric", "Slip", " test SNUG ", "ISO", "G7", null, null, "Y", ""],
+            ["Imperial", "Normal", "Test snug", "Limits", null, 0.0005m, 0, "Y", ""],
+            ["Metric", "Normal", "Test snug", "ISO", "H6", null, null, "N", ""]);
+        var result = Read(tabs);
+
+        Assert.Equal([5, 7], result.Workbook.PrecisionTolerances.Select(r => r.Row));
+        Assert.Equal(
+            [
+                "Precision Tol tab, row 6: Name / purpose \"test SNUG\" is already used by row 5 for Metric holes; row left out.",
+                "Precision Tol tab, row 8: Name / purpose \"Test snug\" is already used by row 5 for Metric holes; row left out.",
+            ],
+            result.Problems.Select(p => p.ToString()));
+    }
+
+    [Fact]
+    public void PrecisionTol_TwoDefaultsForOneFitAndUnits_TheFirstWins_AndTheSecondIsNamed()
+    {
+        var tabs = Tabs();
+        tabs["Precision Tol"] = Tab("Precision tolerances",
+            ["Units", "Fit", "Name / purpose", "Type", "ISO code", "Upper", "Lower", "Default", "Note"],
+            ["Metric", "Press", "Test light", "ISO", "N7", null, null, "N", ""],
+            ["Metric", "Press", "Test firm", "ISO", "P7", null, null, "Y", ""],
+            ["Metric", "Press", "Test firmer", "ISO", "P6", null, null, "Y", ""],
+            ["Imperial", "Press", "Test firm", "Limits", null, 0, -0.0005m, "Y", ""],
+            ["Metric", "Normal", "Test location", "ISO", "H7", null, null, "Y", ""]);
+        var result = Read(tabs);
+        var rows = result.Workbook.PrecisionTolerances;
+
+        Assert.Equal(5, rows.Count);
+        Assert.Equal(
+            ["Precision Tol tab, row 7: Default is Y on row 6 too, for Metric Press fit; row 6 is the default."],
+            result.Problems.Select(p => p.ToString()));
+        Assert.Equal([false, true, false, true, true], rows.Select(r => r.IsDefault));
+        Assert.Equal("Test firm", HoleRules.FindTolerance(result.Workbook, HoleUnits.Metric, PrecisionFit.Press, null)!.Name);
+        Assert.Equal("Test firmer", HoleRules.FindTolerance(result.Workbook, HoleUnits.Metric, PrecisionFit.Press, "Test firmer")!.Name);
+    }
+
+    [Fact]
     public void DrillPoint_FlatHasNoAngle()
     {
         var points = Read(Tabs()).Workbook.DrillPoints;
@@ -1011,6 +1055,77 @@ public sealed class HoleWorkbookReaderTests
             var thread = wb.Settings.DefaultThreadDepth(t.TapDrill);
             Assert.Equal((thread, wb.Settings.DefaultDrillDepth(t.TapDrill, thread)), (t.ThreadDepth, t.DrillDepth));
             Assert.False(t.Hidden);
+        }
+    }
+
+    [Fact]
+    public void StarterWorkbook_PrecisionTol_HasSeveralLevelsPerFit_WithOneDefault_MetricAndImperial()
+    {
+        var wb = HoleWorkbookReader.Read(RepoWorkbookPath()).Workbook;
+
+        // Task 132: Normal, Slip and Press, each with its levels, in that order so that a toleranced Clearance or
+        // Simple hole (which takes the first default of the units, task 113) starts on Normal.
+        string[] names =
+        [
+            "Normal", "Normal fine", "Close slip", "Standard slip", "Loose slip", "Light press", "Medium press", "Heavy press",
+        ];
+        PrecisionFit[] fits =
+        [
+            PrecisionFit.Normal, PrecisionFit.Normal, PrecisionFit.Slip, PrecisionFit.Slip, PrecisionFit.Slip,
+            PrecisionFit.Press, PrecisionFit.Press, PrecisionFit.Press,
+        ];
+        foreach (var units in new[] { HoleUnits.Metric, HoleUnits.Imperial })
+        {
+            var rows = wb.PrecisionTolerances.Where(r => r.Units == units).ToList();
+            Assert.Equal(names, rows.Select(r => r.Name));
+            Assert.Equal(fits, rows.Select(r => r.Fit));
+            Assert.Equal(["Normal", "Standard slip", "Medium press"], rows.Where(r => r.IsDefault).Select(r => r.Name));
+            Assert.All(Enum.GetValues<PrecisionFit>(), fit => Assert.True(rows.Count(r => r.Fit == fit) >= 2));
+            Assert.Equal("Normal", HoleRules.FindAnyTolerance(wb, units, null)!.Name);
+        }
+
+        var metric = wb.PrecisionTolerances.Where(r => r.Units == HoleUnits.Metric).ToList();
+        Assert.All(metric, r => Assert.Equal(ToleranceKind.Iso, r.Kind));
+        Assert.Equal(["H7", "H6", "G6", "G7", "F7", "M7", "N7", "P7"], metric.Select(r => r.IsoCode));
+
+        var imperial = wb.PrecisionTolerances.Where(r => r.Units == HoleUnits.Imperial).ToList();
+        Assert.All(imperial, r => Assert.Equal(ToleranceKind.Limits, r.Kind));
+        Assert.Equal(
+            [(0.0005m, 0m), (0.0003m, 0m), (0.0007m, 0.0003m), (0.001m, 0.0005m), (0.0015m, 0.0008m), (0m, -0.0003m), (0m, -0.0005m), (-0.0003m, -0.0008m)],
+            imperial.Select(r => (r.Upper!.Value, r.Lower!.Value)));
+    }
+
+    [Fact]
+    public void StarterWorkbook_EveryMetricLevel_HasIso286Limits_AtEveryMetricDowelSize()
+    {
+        var wb = HoleWorkbookReader.Read(RepoWorkbookPath()).Workbook;
+
+        var sizes = wb.Dowel.Where(d => d.Units == HoleUnits.Metric).ToList();
+        Assert.NotEmpty(sizes);
+        foreach (var row in wb.PrecisionTolerances.Where(r => r.Units == HoleUnits.Metric))
+        {
+            foreach (var size in sizes)
+            {
+                var limits = Iso286.HoleLimits(HoleRules.IsoNominalMm(size.Nominal, HoleUnits.Metric), row.IsoCode);
+                Assert.True(limits.Succeeded, $"{row.IsoCode} at {size.Size}: {limits.Message}");
+            }
+        }
+    }
+
+    [Fact]
+    public void StarterWorkbook_HowToEdit_SaysWhatEachLevelIsFor_AfterThePrecisionTolLine()
+    {
+        using var stream = File.OpenRead(RepoWorkbookPath());
+        var sheet = XlsxPackage.Read(stream).Sheet("How to edit")!;
+        var lines = Enumerable.Range(1, sheet.LastRow).Select(r => sheet.Text(r, 1)).ToList();
+
+        var precision = lines.FindIndex(t => t.StartsWith("Precision Tol:"));
+        Assert.StartsWith("Normal levels:", lines[precision + 1]);
+        Assert.StartsWith("Slip levels:", lines[precision + 2]);
+        Assert.StartsWith("Press levels", lines[precision + 3]);
+        foreach (var name in new[] { "Normal fine", "Close slip", "Standard slip", "Loose slip", "Light press", "Medium press", "Heavy press" })
+        {
+            Assert.Contains(lines.Skip(precision + 1).Take(3), line => line.Contains(name));
         }
     }
 

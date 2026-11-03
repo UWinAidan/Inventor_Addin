@@ -205,7 +205,7 @@ public static class HoleWorkbookReader
             ReadTab(package, CountersinkTab, problems, ReadCountersink),
             ReadTab(package, TappedTab, problems, r => ReadTapped(r, settings)),
             ReadTab(package, DowelTab, problems, ReadDowel),
-            ReadTab(package, PrecisionTolTab, problems, ReadPrecisionTolerance),
+            CheckPrecisionTolerances(ReadTab(package, PrecisionTolTab, problems, ReadPrecisionTolerance), problems),
             ReadTab(package, DrillPointTab, problems, ReadDrillPoint))
         {
             Spotface = ReadTab(package, SpotfaceTab, problems, ReadSpotface),
@@ -452,6 +452,48 @@ public static class HoleWorkbookReader
         }
 
         return r.Ok && kind is { } k ? new PrecisionToleranceRow(r.Row, units, fit, name, k, code, upper, lower, isDefault, note) : null;
+    }
+
+    /// <summary>
+    /// The Precision Tol rows checked against each other (task 132). The window lists and stores a tolerance by its
+    /// name, so a name is used once per units: a later row with the name of an earlier one of the same units (whatever
+    /// its fit) could never be chosen, and is left out with a problem (Default). With two Default = Y rows for one fit
+    /// and units the first wins, as <see cref="HoleRules.FindTolerance"/> already takes it; the later one is kept,
+    /// not as the default, and a problem names it (Default).
+    /// </summary>
+    private static IReadOnlyList<PrecisionToleranceRow> CheckPrecisionTolerances(
+        IReadOnlyList<PrecisionToleranceRow> rows,
+        List<HoleWorkbookProblem> problems)
+    {
+        var kept = new List<PrecisionToleranceRow>();
+        foreach (var row in rows)
+        {
+            if (kept.FirstOrDefault(k => k.Units == row.Units && SameText(k.Name, row.Name)) is { } named)
+            {
+                problems.Add(new HoleWorkbookProblem(
+                    PrecisionTolTab,
+                    row.Row,
+                    $"{NameColumn} \"{Normalise(row.Name)}\" is already used by row {named.Row} for {row.Units} holes; " +
+                    "row left out."));
+                continue;
+            }
+
+            if (row.IsDefault
+                && kept.FirstOrDefault(k => k.IsDefault && k.Units == row.Units && k.Fit == row.Fit) is { } first)
+            {
+                problems.Add(new HoleWorkbookProblem(
+                    PrecisionTolTab,
+                    row.Row,
+                    $"{DefaultColumn} is Y on row {first.Row} too, for {row.Units} {row.Fit} fit; row {first.Row} is " +
+                    "the default."));
+                kept.Add(row with { IsDefault = false });
+                continue;
+            }
+
+            kept.Add(row);
+        }
+
+        return kept.AsReadOnly();
     }
 
     private static DrillPointRow? ReadDrillPoint(RowReader r)
