@@ -579,11 +579,17 @@ public sealed class HoleRulesTests
     }
 
     [Fact]
-    public void Clearance_ACounterboreDepthOfZero_IsAProblemUnderItsBox()
+    public void Clearance_ACounterboreDepthOfZero_IsAllowed_ANegativeOneIsAProblemUnderItsBox()
     {
-        var spec = Clearance() with { Seat = HoleSeat.Counterbore, CboreDepth = 0m };
+        // Spike 108 question 7; task 127: Inventor keeps the counterbore hole type and models only the hole.
+        var zero = HoleRules.Build(Clearance() with { Seat = HoleSeat.Counterbore, CboreDepth = 0m }, Workbook, 1);
 
-        OneProblem(spec, HoleField.CounterboreDepth);
+        Assert.Empty(zero.Problems);
+        Assert.Equal(0.0, zero.Geometry!.CounterboreDepthCm);
+        Assert.Equal(
+            "The counterbore depth is less than zero.",
+            OneProblem(Clearance() with { Seat = HoleSeat.Counterbore, CboreDepth = -0.1m }, HoleField.CounterboreDepth)
+                .Message);
     }
 
     [Fact]
@@ -827,7 +833,6 @@ public sealed class HoleRulesTests
             OneProblem(CboredDowel() with { CboreDiameter = 5m }, HoleField.CounterboreDiameter).Message);
         Assert.Contains("The hole (5 mm)",
             OneProblem(CboredDowel() with { CboreDiameter = 4m }, HoleField.CounterboreDiameter).Message);
-        OneProblem(CboredDowel() with { CboreDepth = 0m }, HoleField.CounterboreDepth);
         OneProblem(CboredDowel() with { CboreDepth = -1m }, HoleField.CounterboreDepth);
         OneProblem(CsunkDowel() with { CsinkDiameter = 5m }, HoleField.CountersinkDiameter);
         OneProblem(CsunkDowel() with { CsinkAngleDeg = 180m }, HoleField.CountersinkAngle);

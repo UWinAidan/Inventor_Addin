@@ -81,6 +81,12 @@ public static class HoleRules
     public const decimal MaxCountersinkAngleDeg = 179m;
 
     /// <summary>
+    /// The countersink angles offered as quick choices in the angle box, for a centre-drill spot on any hole (Aidan,
+    /// 2026-10-25; task 127). Other angles can still be typed.
+    /// </summary>
+    public static IReadOnlyList<decimal> CountersinkQuickAnglesDeg { get; } = [60m, 90m];
+
+    /// <summary>
     /// Works out the geometry of a hole with <paramref name="centreCount"/> picked hole centres, or the problems that
     /// stop it being built.
     /// </summary>
@@ -1079,13 +1085,13 @@ public static class HoleRules
                 }
             }
 
+            // A counterbore depth of 0 is allowed too (spike 108 question 7; task 127): Inventor keeps the counterbore
+            // hole type and models only the hole.
             if (_cboreDepth is { } cboreDepth)
             {
-                if (cboreDepth <= 0)
+                if (cboreDepth < 0)
                 {
-                    Problem(
-                        HoleField.CounterboreDepth,
-                        "The counterbore depth is not greater than zero.");
+                    Problem(HoleField.CounterboreDepth, "The counterbore depth is less than zero.");
                 }
                 else if (_depth is { } depth && depth > 0 && cboreDepth >= depth)
                 {

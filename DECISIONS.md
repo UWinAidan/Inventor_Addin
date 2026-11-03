@@ -316,3 +316,6 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-03 | Starter Precision Tol rows are ordered Normal, Slip, Press, so a toleranced Clearance or Simple hole now preselects Normal (H7) instead of N7 | Default | task 132 |
 | 2026-11-03 | A Precision Tol name used twice in one units, whatever the fit, is reported and the later row left out; the same name in Metric and Imperial is allowed | Default | task 132 |
 | 2026-11-03 | With two Default = Y Precision Tol rows for one fit and units, the later row is kept as a non-default row and a problem names it (the first still wins) | Default | task 132 |
+| 2026-11-03 | The countersink angle is an editable dropdown offering 60 and 90 deg on every hole type; picking one commits at once (a centre-drill spot in two clicks); a typed angle commits on leaving the box or Enter; typed text auto-completes to an entry (WPF standard) | Default | task 127 |
+| 2026-11-03 | A counterbore depth of 0 is allowed in the window and remembered as the last seat, like a spotface depth of 0; a depth-0 seat is drawn flush with the top face with no wall or depth dimension | Default | task 127 |
+| 2026-11-03 | A workbook Counterbore or Dowel seat row still needs a counterbore depth above 0 (spec 09 question 27) | Default | task 127 |

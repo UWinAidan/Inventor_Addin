@@ -250,6 +250,13 @@ public sealed class AwbHoleViewModel : ObservableObject
     /// <summary>Beside the countersink angle box.</summary>
     public const string AngleUnitText = "deg";
 
+    /// <summary>
+    /// The quick choices in the countersink angle box's dropdown, in degrees, on every hole type: 60 and 90 for a
+    /// centre-drill spot (Aidan, 2026-10-25; task 127, Default for the dropdown). Other angles can still be typed.
+    /// </summary>
+    public static IReadOnlyList<string> CountersinkAngleChoices { get; } =
+        HoleRules.CountersinkQuickAnglesDeg.Select(a => a.ToString("0.######", CultureInfo.InvariantCulture)).ToArray();
+
     /// <summary>The message when the command is started in a document that is not a part.</summary>
     public const string WrongDocumentText = CommandName + " works in part files. Open a part and try again.";
 
@@ -1712,7 +1719,7 @@ public sealed class AwbHoleViewModel : ObservableObject
                 HoleField.CounterboreDiameter, ref _cboreDiameter, nameof(CounterboreDiameter), start.CboreDiameter,
                 restart);
             var cboreDepthStart = restart && !_typed.ContainsKey(HoleField.CounterboreDepth)
-                ? StartExpression(start.CboreDepth, start.CboreDepthExpression)
+                ? StartExpression(start.CboreDepth, start.CboreDepthExpression, allowZero: true)
                 : (start.CboreDepth, null);
             SettleBox(
                 HoleField.CounterboreDepth, ref _cboreDepth, nameof(CounterboreDepth), cboreDepthStart.Value, restart,
@@ -1896,7 +1903,8 @@ public sealed class AwbHoleViewModel : ObservableObject
 
     /// <summary>
     /// A start value remembered with the expression it was typed as (a dowel's counterbore depth; task 125): the
-    /// expression, at the value it comes to in this part now, when Inventor reads it as a length greater than zero;
+    /// expression, at the value it comes to in this part now, when Inventor reads it as a length greater than zero
+    /// (or of zero, for a seat depth; task 127);
     /// else the remembered number, as a plain number, so a part without the expression's parameters starts at the
     /// number with no message. Without a checker, the number.
     /// </summary>

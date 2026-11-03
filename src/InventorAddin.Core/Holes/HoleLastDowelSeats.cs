@@ -71,17 +71,17 @@ public sealed record HoleDowelSeat(
         };
 
     /// <summary>
-    /// The seat with each value a seat can take: lengths greater than zero (a spotface depth of 0 too, task 112) and an
-    /// angle between 0 and 180 degrees. Anything else, as a hand-edited settings file might hold, is dropped. A depth's
+    /// The seat with each value a seat can take: lengths greater than zero (a spotface depth of 0 too, task 112, and a
+    /// counterbore depth of 0, task 127) and an angle between 0 and 180 degrees. Anything else, as a hand-edited settings file might hold, is dropped. A depth's
     /// expression is trimmed, and dropped with its depth or when blank.
     /// </summary>
     public HoleDowelSeat Valid() => new(
         CboreDiameter is > 0 ? CboreDiameter : null,
-        CboreDepth is > 0 ? CboreDepth : null,
+        CboreDepth is >= 0 ? CboreDepth : null,
         CsinkDiameter is > 0 ? CsinkDiameter : null,
         CsinkAngleDeg is > 0 and < 180 ? CsinkAngleDeg : null)
     {
-        CboreDepthExpression = CboreDepth is > 0 ? HoleExpressions.Clean(CboreDepthExpression) : null,
+        CboreDepthExpression = CboreDepth is >= 0 ? HoleExpressions.Clean(CboreDepthExpression) : null,
         SpotfaceDiameter = SpotfaceDiameter is > 0 ? SpotfaceDiameter : null,
         SpotfaceDepth = SpotfaceDepth is >= 0 ? SpotfaceDepth : null,
         SpotfaceDepthExpression = SpotfaceDepth is >= 0 ? HoleExpressions.Clean(SpotfaceDepthExpression) : null,

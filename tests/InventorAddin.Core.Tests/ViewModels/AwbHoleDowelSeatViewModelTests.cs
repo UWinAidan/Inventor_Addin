@@ -393,9 +393,9 @@ public sealed class AwbHoleDowelSeatViewModelTests : IDisposable
         Assert.False(vm.CanOk);
 
         vm.CounterboreDiameterText = "9";
-        vm.CounterboreDepthText = "0";
+        vm.CounterboreDepthText = "-1";
         Assert.Null(vm.CounterboreDiameterProblem);
-        Assert.Equal("The counterbore depth is not greater than zero.", vm.CounterboreDepthProblem);
+        Assert.Equal("The counterbore depth is less than zero.", vm.CounterboreDepthProblem);
 
         vm.Seat = HoleSeat.Countersink;
         vm.CountersinkAngleText = "180";

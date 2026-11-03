@@ -396,4 +396,38 @@ public sealed class HoleDiagramTests
         Assert.Equal("118" + Deg, HoleDiagram.FormatAngle(118m));
         Assert.Equal("82.5" + Deg, HoleDiagram.FormatAngle(82.5m));
     }
+
+    [Theory]
+    [InlineData(HoleSeat.Counterbore)]
+    [InlineData(HoleSeat.Spotface)]
+    public void ASeatOfDepthZero_HasNoWall_AndNoDepthDimension(HoleSeat seat)
+    {
+        // Spike 108 question 7; task 127: Inventor models only the hole, so the seat is flush with the top face.
+        using var _ = new CultureScope("en-US");
+        var input = BlindDowelCounterbore with
+        {
+            Seat = seat,
+            CounterboreDepth = seat == HoleSeat.Counterbore ? 0m : null,
+            SpotfaceDiameter = seat == HoleSeat.Spotface ? 11m : null,
+            SpotfaceDepth = seat == HoleSeat.Spotface ? 0m : null,
+        };
+
+        var flat = HoleDiagram.Draw(input);
+        var stepped = HoleDiagram.Draw(BlindDowelCounterbore);
+
+        Assert.DoesNotContain("0", Texts(flat));
+        Assert.Contains(Dia + "11", Texts(flat));
+        Assert.Equal(0, SeatWallLength(flat), 6);
+        Assert.True(SeatWallLength(stepped) > 1);
+    }
+
+    /// <summary>How far the outline runs down at its widest point (the seat's wall), in diagram units.</summary>
+    private static double SeatWallLength(HoleDiagram diagram)
+    {
+        var centre = diagram.Lines.Single(l => l.Ink == DiagramInk.CentreLine).Points[0].X;
+        var points = diagram.Lines.Where(l => l.Ink == DiagramInk.Outline).SelectMany(l => l.Points).ToList();
+        var widest = points.Max(p => Math.Abs(p.X - centre));
+        var wall = points.Where(p => Math.Abs(Math.Abs(p.X - centre) - widest) < 1e-6).Select(p => p.Y).ToList();
+        return wall.Max() - wall.Min();
+    }
 }

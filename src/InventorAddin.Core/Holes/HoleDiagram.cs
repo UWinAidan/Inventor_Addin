@@ -422,11 +422,11 @@ public sealed record HoleDiagram(
             {
                 _seatR = Math.Max((Positive(BoreDiameter) ?? diameter * 1.8) / 2, _r * 1.15);
 
-                // A spotface is shallow: one with no depth yet is drawn at a fifth of the hole's diameter, and one of
-                // depth 0 flush with the top face (spike 108).
-                _cboreDepth = input.Seat == HoleSeat.Spotface
-                    ? input.SpotfaceDepth is { } spot && spot >= 0 ? (double)spot : diameter * 0.2
-                    : Positive(input.CounterboreDepth) ?? diameter * 0.6;
+                // A spotface is shallow: one with no depth yet is drawn at a fifth of the hole's diameter. A counterbore
+                // or spotface of depth 0 is flush with the top face, with no wall (spike 108; task 127).
+                _cboreDepth = BoreDepth is { } bore && bore >= 0
+                    ? (double)bore
+                    : input.Seat == HoleSeat.Spotface ? diameter * 0.2 : diameter * 0.6;
                 _seatBottom = _cboreDepth;
             }
             else if (input.Seat == HoleSeat.Countersink)
@@ -515,7 +515,11 @@ public sealed record HoleDiagram(
             if (Bored)
             {
                 points.Add((_seatR, 0));
-                points.Add((_seatR, _cboreDepth));
+                if (_cboreDepth > 0)
+                {
+                    points.Add((_seatR, _cboreDepth));
+                }
+
                 points.Add((_r, _cboreDepth));
             }
             else if (input.Seat == HoleSeat.Countersink)

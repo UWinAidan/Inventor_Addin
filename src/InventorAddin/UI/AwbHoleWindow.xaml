@@ -242,9 +242,16 @@
                                        Visibility="{Binding ShowsCountersinkSizes, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <TextBox x:Name="CountersinkAngleBox"
-                                         Style="{DynamicResource DepthTextBox}"
-                                         Text="{Binding CountersinkAngleText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                <!--
+                                    An editable dropdown (task 127): 60 and 90 deg are quick choices for a centre-drill
+                                    spot on any hole, and any other angle can be typed. The text commits when the box
+                                    loses focus, on Enter, or when an entry is picked (DropDownClosed, in the code-behind).
+                                -->
+                                <ComboBox x:Name="CountersinkAngleBox"
+                                          Style="{DynamicResource EditableComboBox}"
+                                          ItemsSource="{x:Static vm:AwbHoleViewModel.CountersinkAngleChoices}"
+                                          Text="{Binding CountersinkAngleText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                          DropDownClosed="OnCountersinkAngleDropDownClosed" />
                                 <TextBlock Style="{DynamicResource SideNoteText}" Text="{x:Static vm:AwbHoleViewModel.AngleUnitText}" />
                             </StackPanel>
                             <TextBlock Style="{DynamicResource ErrorStatusText}"

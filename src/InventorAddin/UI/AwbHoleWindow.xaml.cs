@@ -98,7 +98,9 @@ namespace InventorAddin.UI
 
         /// <summary>
         /// Enter does OK only when OK is enabled, after committing the box being typed in (its binding updates when it
-        /// loses focus). A focused button takes Enter itself, and an open dropdown uses it to pick an entry.
+        /// loses focus). A focused button takes Enter itself, and an open dropdown uses it to pick an entry. In an
+        /// editable dropdown (the countersink angle, task 127) the keys go to the text box inside it, and the binding is
+        /// on the dropdown's Text.
         /// </summary>
         private void OnPreviewKeyDown(object sender, KeyEventArgs e)
         {
@@ -108,13 +110,27 @@ namespace InventorAddin.UI
                 return;
             if (e.OriginalSource is ComboBox { IsDropDownOpen: true })
                 return;
+            ComboBox? editable = (e.OriginalSource as TextBox)?.TemplatedParent as ComboBox;
+            if (editable != null && editable.IsDropDownOpen)
+                return;
 
             e.Handled = true;
-            if (e.OriginalSource is TextBox box)
+            if (editable != null)
+                editable.GetBindingExpression(ComboBox.TextProperty)?.UpdateSource();
+            else if (e.OriginalSource is TextBox box)
                 box.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
 
             if (_viewModel.OkCommand.CanExecute(null))
                 _viewModel.OkCommand.Execute(null);
+        }
+
+        /// <summary>
+        /// An angle picked from the countersink angle's dropdown (task 127) commits at once, so a centre-drill spot is
+        /// two clicks after choosing Countersink; a typed angle still commits when the box loses focus or on Enter.
+        /// </summary>
+        private void OnCountersinkAngleDropDownClosed(object? sender, EventArgs e)
+        {
+            CountersinkAngleBox.GetBindingExpression(ComboBox.TextProperty)?.UpdateSource();
         }
     }
 }

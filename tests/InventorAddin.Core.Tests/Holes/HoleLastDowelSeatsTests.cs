@@ -32,6 +32,15 @@ public sealed class HoleLastDowelSeatsTests
     }
 
     [Fact]
+    public void Valid_KeepsACounterboreDepthOfZero_WithItsExpression()
+    {
+        // Task 127: a counterbore depth of 0 is a depth a seat can take (spike 108).
+        var seat = (HoleDowelSeat.Empty with { CboreDiameter = 9m, CboreDepth = 0m, CboreDepthExpression = " d0 " }).Valid();
+
+        Assert.Equal((9m, 0m, "d0"), (seat.CboreDiameter, seat.CboreDepth, seat.CboreDepthExpression));
+    }
+
+    [Fact]
     public void From_ReadsTheSettingsFile()
     {
         var settings = new AddinSettings { LastDowelSeatsIn = Map("1/4\"", new HoleDowelSeat(0.3m, 0.1m, null, null)) };
@@ -95,7 +104,7 @@ public sealed class HoleLastDowelSeatsTests
         Assert.Null(HoleLastDowelSeats.Remember(settings, Dowel("5 mm")));
         Assert.Null(HoleLastDowelSeats.Remember(settings, CboredDowel() with { Kind = HoleKind.Clearance, Size = "T5" }));
         Assert.Null(HoleLastDowelSeats.Remember(settings, Tapped() with { Seat = HoleSeat.Counterbore }));
-        Assert.Null(HoleLastDowelSeats.Remember(settings, CboredDowel() with { CboreDiameter = null, CboreDepth = 0m }));
+        Assert.Null(HoleLastDowelSeats.Remember(settings, CboredDowel() with { CboreDiameter = null, CboreDepth = -1m }));
         Assert.Null(HoleLastDowelSeats.SeatToRemember(Dowel()));
     }
 
@@ -147,7 +156,7 @@ public sealed class HoleLastDowelSeatsTests
 
         // Valid drops an expression with no depth, with a depth a seat cannot take, or a blank one.
         Assert.Equal(HoleDowelSeat.Empty, new HoleDowelSeat(null, null, null, null) { CboreDepthExpression = "d0" }.Valid());
-        Assert.Null(new HoleDowelSeat(8m, 0m, null, null) { CboreDepthExpression = "d0" }.Valid().CboreDepthExpression);
+        Assert.Null(new HoleDowelSeat(8m, -1m, null, null) { CboreDepthExpression = "d0" }.Valid().CboreDepthExpression);
         Assert.Null(new HoleDowelSeat(8m, 2m, null, null) { CboreDepthExpression = "  " }.Valid().CboreDepthExpression);
         Assert.Equal("d0", new HoleDowelSeat(8m, 2m, null, null) { CboreDepthExpression = " d0 " }.Valid().CboreDepthExpression);
     }
