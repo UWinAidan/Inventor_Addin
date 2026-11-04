@@ -2,6 +2,8 @@
 
 One **parent** session plans and coordinates. **Child** agents do the work: an `implementer` builds one task, a `reviewer` checks it. Both are defined in `.claude/agents/`.
 
+The implementer runs on Sonnet to keep usage down. The reviewer and the parent run on the parent session's model, so the check stays strong. If reviews start failing more often, move the implementer back by removing the `model` line from its file.
+
 ```
 Aidan ──► parent session ──► docs/PLAN.md, docs/tasks/NNN-*.md      (plan mode)
                          └─► implementer ─► reviewer ─► commit       (run mode, per task)
