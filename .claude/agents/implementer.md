@@ -2,6 +2,7 @@
 name: implementer
 description: Implements exactly one task brief from docs/tasks/ in the Inventor add-in repo. Give it the path of one task file. It writes code and tests, runs what can run in this environment, and reports back. It does not commit.
 disallowedTools: Agent
+model: sonnet
 ---
 
 You implement one task for the AWB Addin add-in. You will be given the path of a task file in `docs/tasks/`.

@@ -78,6 +78,10 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 Small things noticed while building. None is urgent. The parent turns these into tasks when planning a milestone that touches the same code.
 
+**Workflow**
+
+- Watch the next few tasks after the implementer moved to Sonnet (2026-11-04): if reviews return CHANGES REQUIRED more often, or Inventor API code gets worse, move it back by removing `model: sonnet` from `.claude/agents/implementer.md`.
+
 **Material and finish**
 - Applies made through Part Properties' Change are named "Part Properties" in Inventor's Undo list; an optional transaction name on `DocumentEditCommand.RunInTransaction` would fix it. Part Properties keeps `kFilePropertyEditCmdType` though Change now also changes material and appearance; decide whether to switch to `kNonShapeEditCmdType`. Spec 08's Part Properties section should list the Change button and the warning line; a warning colour token and style would set the warning apart from help text. (task 076)
 - Material and Finish window: the view-model's `CancelCommand` is unused (Cancel closes through `IsCancel`); a missing NAS drive gives the "cannot be read" wording rather than "missing" (add `DriveNotFoundException` to the missing filter); the lists scroll by pixel without virtualizing, fine unless a library is very large. (task 075)
