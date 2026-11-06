@@ -55,8 +55,11 @@ public static class HoleFeatureMessages
     public const string RecreatedAtEnd =
         "The hole was made again and is now at the end of the browser; it could not keep its place.";
 
-    /// <summary>A hole of a kind the add-in does not make (a spot face) read back as the nearest AWB hole.</summary>
-    public const string SpotFaceNotOffered = "Inventor's spot face is not offered in " + CommandName + "; Seat is None.";
+    /// <summary>
+    /// A hole whose seat Inventor reports as none of None, Counterbore, Countersink and Spotface, read back with no seat.
+    /// Replaces the spot face note from before task 114, which reads a spotface.
+    /// </summary>
+    public const string SeatNotOffered = "The hole's seat is not offered in " + CommandName + "; Seat is None.";
 
     private static string Describe(string health)
     {

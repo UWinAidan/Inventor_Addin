@@ -466,31 +466,51 @@ public static class HoleRules
                 return new HoleBuildResult(null, _resolved, _problems.AsReadOnly());
             }
 
+            // Inventor measures a spotface hole's depths from the spotface's bottom; the window from the top face
+            // (task 114, HoleDepthReference). The checks above use the window's depths.
+            var spotfaceDepthCm = Cm(_spotfaceDepth);
+            var spotfaceExpression = spec.Seat == HoleSeat.Spotface ? spec.SpotfaceDepthExpression : null;
+            var thread = _thread is { FullDepth: false, IsTapered: false } t && HoleDepthReference.Shifts(spec.Seat)
+                ? t with
+                {
+                    ThreadDepthCm = HoleDepthReference.ToInventorCm(spec.Seat, t.ThreadDepthCm, spotfaceDepthCm)
+                        ?? t.ThreadDepthCm,
+                    ThreadDepthExpression = HoleDepthReference.ToInventorExpression(
+                        spec.Seat, t.ThreadDepthExpression, _resolved.ThreadDepth, spotfaceExpression, _spotfaceDepth,
+                        Units),
+                }
+                : _thread;
+            var windowDepthExpression = spec.IsBlind
+                ? HoleStandards.IsThreaded(spec.Kind) ? spec.DrillDepthExpression : spec.DepthExpression
+                : null;
+
             var geometry = new HoleGeometry(
                 spec.Kind,
                 spec.Seat,
                 spec.Termination,
                 spec.Flip,
                 ToCm(diameter, Units),
-                Cm(_depth),
+                HoleDepthReference.ToInventorCm(spec.Seat, Cm(_depth), spotfaceDepthCm),
                 Cm(_cboreDiameter),
                 Cm(_cboreDepth),
                 Cm(_csinkDiameter),
                 (double?)_csinkAngleDeg,
                 _drillPoint,
-                _thread,
+                thread,
                 _tolerance,
                 _colour)
             {
-                // Checks above use the depths' values; the expressions go to Inventor as they were typed (task 100).
+                // Checks above use the depths' values; the expressions go to Inventor as they were typed (task 100),
+                // less the spotface depth on a spotface hole (task 114).
                 DepthExpression = spec.IsBlind
-                    ? HoleStandards.IsThreaded(spec.Kind) ? spec.DrillDepthExpression : spec.DepthExpression
+                    ? HoleDepthReference.ToInventorExpression(
+                        spec.Seat, windowDepthExpression, _depth, spotfaceExpression, _spotfaceDepth, Units)
                     : null,
                 // A counterbore depth typed as an expression, on every kind (task 126).
                 CounterboreDepthExpression = spec.Seat == HoleSeat.Counterbore ? spec.CboreDepthExpression : null,
                 SpotfaceDiameterCm = Cm(_spotfaceDiameter),
-                SpotfaceDepthCm = Cm(_spotfaceDepth),
-                SpotfaceDepthExpression = spec.Seat == HoleSeat.Spotface ? spec.SpotfaceDepthExpression : null,
+                SpotfaceDepthCm = spotfaceDepthCm,
+                SpotfaceDepthExpression = spotfaceExpression,
                 DiameterExpression = spec.Kind == HoleKind.Simple ? spec.DiameterExpression : null,
                 ExpressionUnits = Units,
             };

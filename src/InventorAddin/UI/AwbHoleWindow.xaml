@@ -37,7 +37,8 @@
         so Enter cannot press it twice). Esc is Cancel (IsCancel). Tab moves into an icon row at its chosen button and
         out again; the arrow keys or Space choose. Access keys: U units, Y type, E seat, S standard, Z size, F fastener
         type, A counterbore diameter, B counterbore depth, K countersink diameter, G countersink angle (a dowel's seat,
-        task 106), I fit, T tolerance, R termination, H thread depth, D drill depth, P depth, O drill point, L flip.
+        task 106), I fit, T tolerance, R termination, H thread depth, D drill depth, P depth, O drill point, L flip,
+        M diameter (Simple), C spotface diameter (task 114).
     -->
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="VisibleWhenTrue" />
@@ -133,6 +134,10 @@
                             <TextBlock Style="{DynamicResource ErrorStatusText}"
                                        Text="{Binding SeatProblem, Mode=OneWay}"
                                        Visibility="{Binding SeatProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
+                            <!-- Task 114: a counterbore chosen before Taper Tapped, which cannot take one, is None for now. -->
+                            <TextBlock Style="{DynamicResource MutedText}"
+                                       Text="{Binding SeatNote, Mode=OneWay}"
+                                       Visibility="{Binding SeatNote, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
                         </StackPanel>
                     </controls:FieldRow>
 
@@ -148,7 +153,10 @@
                         <controls:HoleDiagramView Diagram="{Binding Diagram, Mode=OneWay}" />
                     </controls:CollapsibleSection>
 
-                    <controls:FieldRow Label="_Standard" Target="{Binding ElementName=StandardBox}">
+                    <!-- No Standard and no Size for a Simple hole, which has its Diameter instead (task 114). -->
+                    <controls:FieldRow Label="_Standard"
+                                       Target="{Binding ElementName=StandardBox}"
+                                       Visibility="{Binding ShowsStandard, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
                         <ComboBox x:Name="StandardBox"
                                   IsEditable="False"
                                   ItemsSource="{Binding StandardOptions, Mode=OneWay}"
@@ -156,7 +164,9 @@
                                   SelectedValuePath="Value"
                                   SelectedValue="{Binding Standard, Mode=TwoWay}" />
                     </controls:FieldRow>
-                    <controls:FieldRow Label="Si_ze" Target="{Binding ElementName=SizeBox}">
+                    <controls:FieldRow Label="Si_ze"
+                                       Target="{Binding ElementName=SizeBox}"
+                                       Visibility="{Binding ShowsSize, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
                         <StackPanel>
                             <ComboBox x:Name="SizeBox"
                                       IsEditable="False"
@@ -167,6 +177,28 @@
                             <TextBlock Style="{DynamicResource ErrorStatusText}"
                                        Text="{Binding SizeProblem, Mode=OneWay}"
                                        Visibility="{Binding SizeProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
+                            <TextBlock Style="{DynamicResource MutedText}"
+                                       Text="{Binding SizeNote, Mode=OneWay}"
+                                       Visibility="{Binding SizeNote, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
+                        </StackPanel>
+                    </controls:FieldRow>
+                    <!-- A Simple hole's diameter (task 114): a number or an Inventor expression, like Depth. -->
+                    <controls:FieldRow Label="Dia_meter"
+                                       Target="{Binding ElementName=DiameterBox}"
+                                       Visibility="{Binding ShowsDiameter, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBox x:Name="DiameterBox"
+                                         Style="{DynamicResource DepthTextBox}"
+                                         Text="{Binding DiameterText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding LengthUnitText, Mode=OneWay}" />
+                                <TextBlock Style="{DynamicResource ExpressionValueText}"
+                                           Text="{Binding DiameterValueText, Mode=OneWay}"
+                                           Visibility="{Binding DiameterValueText, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
+                            </StackPanel>
+                            <TextBlock Style="{DynamicResource ErrorStatusText}"
+                                       Text="{Binding DiameterProblem, Mode=OneWay}"
+                                       Visibility="{Binding DiameterProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
                         </StackPanel>
                     </controls:FieldRow>
                     <!-- Under Size, for a seated clearance or tapped hole only (mockup choice 4). -->
@@ -262,6 +294,43 @@
                                        Visibility="{Binding CountersinkAngleProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
                         </StackPanel>
                     </controls:FieldRow>
+                    <!--
+                        The spotface boxes, on every type (task 114): the diameter takes a number, the depth a number or an
+                        Inventor expression; a depth of 0 is allowed (task 127).
+                    -->
+                    <controls:FieldRow Label="Spotfa_ce dia"
+                                       Target="{Binding ElementName=SpotfaceDiameterBox}"
+                                       Visibility="{Binding ShowsSpotfaceSizes, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBox x:Name="SpotfaceDiameterBox"
+                                         Style="{DynamicResource DepthTextBox}"
+                                         Text="{Binding SpotfaceDiameterText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding LengthUnitText, Mode=OneWay}" />
+                            </StackPanel>
+                            <TextBlock Style="{DynamicResource ErrorStatusText}"
+                                       Text="{Binding SpotfaceDiameterProblem, Mode=OneWay}"
+                                       Visibility="{Binding SpotfaceDiameterProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
+                        </StackPanel>
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="Spotface depth"
+                                       Target="{Binding ElementName=SpotfaceDepthBox}"
+                                       Visibility="{Binding ShowsSpotfaceSizes, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBox x:Name="SpotfaceDepthBox"
+                                         Style="{DynamicResource DepthTextBox}"
+                                         Text="{Binding SpotfaceDepthText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding LengthUnitText, Mode=OneWay}" />
+                                <TextBlock Style="{DynamicResource ExpressionValueText}"
+                                           Text="{Binding SpotfaceDepthValueText, Mode=OneWay}"
+                                           Visibility="{Binding SpotfaceDepthValueText, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
+                            </StackPanel>
+                            <TextBlock Style="{DynamicResource ErrorStatusText}"
+                                       Text="{Binding SpotfaceDepthProblem, Mode=OneWay}"
+                                       Visibility="{Binding SpotfaceDepthProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
+                        </StackPanel>
+                    </controls:FieldRow>
                     <!-- A dowel's fit colours its faces: the colour from the workbook and its name on Fit's row (mockup choice 5). -->
                     <controls:FieldRow Label="F_it"
                                        Target="{Binding ElementName=FitBox}"
@@ -344,10 +413,13 @@
                                        Visibility="{Binding TerminationNote, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
                         </StackPanel>
                     </controls:FieldRow>
-                    <!-- A blind tapped hole: Thread depth and Drill depth in place of Depth (mockup choice 10). -->
+                    <!--
+                        A blind tapped hole: Thread depth and Drill depth in place of Depth (mockup choice 10); a blind
+                        taper tapped hole has Drill depth only, Inventor sets its thread length (task 114).
+                    -->
                     <controls:FieldRow Label="T_hread depth"
                                        Target="{Binding ElementName=ThreadDepthBox}"
-                                       Visibility="{Binding ShowsThreadDepths, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
+                                       Visibility="{Binding ShowsThreadDepth, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <TextBox x:Name="ThreadDepthBox"
@@ -365,7 +437,7 @@
                     </controls:FieldRow>
                     <controls:FieldRow Label="_Drill depth"
                                        Target="{Binding ElementName=DrillDepthBox}"
-                                       Visibility="{Binding ShowsThreadDepths, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
+                                       Visibility="{Binding ShowsDrillDepth, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <TextBox x:Name="DrillDepthBox"

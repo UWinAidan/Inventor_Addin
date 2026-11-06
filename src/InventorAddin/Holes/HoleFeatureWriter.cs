@@ -16,7 +16,10 @@ namespace InventorAddin.Holes
     /// <remarks>
     /// A tapped hole takes its seat the same way as any other: the <c>AddCBore...</c> and <c>AddCSink...</c> methods
     /// take the tap info in place of the diameter, and <c>SetCBore</c>, <c>SetCSink</c> and <c>SetDrilled</c> change
-    /// the seat of a tapped hole in place, keeping its thread and tap drill (task 099 spike, Inventor 2026). A dowel's
+    /// the seat of a tapped hole in place, keeping its thread and tap drill (task 099 spike, Inventor 2026). A spotface
+    /// is made with the <c>AddSpotFace...</c> methods and changed to and from in place with <c>SetSpotFace</c> (task
+    /// 114; spike 108); its depths come already measured from the spotface's bottom (<see cref="HoleDepthReference"/>).
+    /// A taper tapped hole takes Inventor's tapered tap info and is made again for any change of thread or seat. A dowel's
     /// seat faces are among <see cref="HoleFeature.Faces"/>, so <see cref="HoleFitWriter"/> colours them too.
     /// Nothing here opens a transaction: the preview session (task 089) runs each call inside its own inner
     /// transaction and aborts it when the result is a refusal. After every create or change the document is
@@ -64,8 +67,8 @@ namespace InventorAddin.Holes
 
         /// <summary>
         /// Changes <paramref name="hole"/> in place to <paramref name="geometry"/>: centres, diameter, depth,
-        /// termination, seat and drill point. A change between tapped and untapped, or of the thread or its tap
-        /// drill, is not made in place, so the feature is made again in the same place in the browser; the result
+        /// termination, seat and drill point. A change between tapped and untapped, between straight and tapered, of
+        /// the thread or its tap drill, or of a taper tapped hole's seat, is not made in place, so the feature is made again in the same place in the browser; the result
         /// then carries the new feature.
         /// </summary>
         public static HoleWriteResult Change(
@@ -173,6 +176,18 @@ namespace InventorAddin.Holes
                 return drilled;
             }
 
+            // A tapered pipe thread (task 114; spike 108): Inventor's tapered tap info, with the plain Add calls. Inventor
+            // models its own thread-table tap drill and threads the table's effective length; it refuses a tap drill
+            // before Add and ignores one after (spike 108 case 7), so none is written.
+            if (thread.IsTapered)
+            {
+                object taperInfo = features.CreateTaperedTapInfo(true, thread.ThreadType, thread.Designation);
+                HoleFeature tapered = AddWith(
+                    features, features.CreateSketchPlacementDefinition(centres), taperInfo, geometry, endFace);
+                WriteExpressions(tapered, geometry);
+                return tapered;
+            }
+
             // Inventor's own tap info, so the hole shows its thread in the model (task 095: a hole made with the
             // hidden _CreateTapInfo has no pitch and shows none). The workbook's tap drill is written afterwards.
             object tapInfo = thread.FullDepth
@@ -225,6 +240,8 @@ namespace InventorAddin.Holes
                             place, diameterOrTapInfo, direction, Required(g.CounterboreDiameterCm), Required(g.CounterboreDepthCm)),
                         HoleSeat.Countersink => features.AddCSinkByThroughAllExtent(
                             place, diameterOrTapInfo, direction, Required(g.CountersinkDiameterCm), Radians(g.CountersinkAngleDeg)),
+                        HoleSeat.Spotface => features.AddSpotFaceByThroughAllExtent(
+                            place, diameterOrTapInfo, direction, Required(g.SpotfaceDiameterCm), Required(g.SpotfaceDepthCm)),
                         _ => features.AddDrilledByThroughAllExtent(place, diameterOrTapInfo, direction),
                     };
 
@@ -238,6 +255,10 @@ namespace InventorAddin.Holes
                         HoleSeat.Countersink => features.AddCSinkByDistanceExtent2(
                             place, diameterOrTapInfo, depth, direction, Required(g.CountersinkDiameterCm),
                             Radians(g.CountersinkAngleDeg), pointType, pointAngle),
+                        // The depth is from the spotface's bottom, as Inventor measures it (HoleDepthReference).
+                        HoleSeat.Spotface => features.AddSpotFaceByDistanceExtent2(
+                            place, diameterOrTapInfo, depth, direction, Required(g.SpotfaceDiameterCm),
+                            Required(g.SpotfaceDepthCm), pointType, pointAngle),
                         _ => features.AddDrilledByDistanceExtent2(place, diameterOrTapInfo, depth, direction, pointType, pointAngle),
                     };
 
@@ -250,6 +271,9 @@ namespace InventorAddin.Holes
                         HoleSeat.Countersink => features.AddCSinkByToFaceExtent2(
                             place, diameterOrTapInfo, endFace!, false, Required(g.CountersinkDiameterCm),
                             Radians(g.CountersinkAngleDeg), pointType, pointAngle),
+                        HoleSeat.Spotface => features.AddSpotFaceByToFaceExtent2(
+                            place, diameterOrTapInfo, endFace!, false, Required(g.SpotfaceDiameterCm),
+                            Required(g.SpotfaceDepthCm), pointType, pointAngle),
                         _ => features.AddDrilledByToFaceExtent2(place, diameterOrTapInfo, endFace!, false, pointType, pointAngle),
                     };
 
@@ -265,7 +289,13 @@ namespace InventorAddin.Holes
             // A tapped hole's diameter comes from its thread.
             if (g.Thread != null)
                 return;
-            if (current is { } now && Math.Abs(now - g.HoleDiameterCm) < HoleStateComparison.LengthToleranceCm)
+            // A diameter that was an expression and is now a plain number is written even when its value is the same,
+            // so the expression goes (task 114, as task 106 does for a counterbore depth); a new expression is written
+            // afterwards (WriteExpressions).
+            bool dropExpression = g.DiameterExpression == null
+                && ComSafe.Get(() => hole.HoleDiameter.DrivenBy.Count > 0);
+            if (!dropExpression && current is { } now
+                && Math.Abs(now - g.HoleDiameterCm) < HoleStateComparison.LengthToleranceCm)
                 return;
             hole.HoleDiameter.Value = g.HoleDiameterCm;
         }
@@ -306,6 +336,22 @@ namespace InventorAddin.Holes
                     else
                     {
                         hole.SetCSink(Required(g.CountersinkDiameterCm), Radians(g.CountersinkAngleDeg));
+                    }
+                    break;
+                case HoleSeat.Spotface:
+                    // Spike 108 case 3: SetSpotFace changes any seat to a spotface in place, reusing the seat's
+                    // parameters; on a spotface hole its parameters are written as a counterbore's are.
+                    if (current == HoleTypeEnum.kSpotFaceHole)
+                    {
+                        SetParameter(hole.SpotFaceDiameter, Required(g.SpotfaceDiameterCm), HoleStateComparison.LengthToleranceCm);
+                        SetParameter(
+                            hole.SpotFaceDepth, Required(g.SpotfaceDepthCm), HoleStateComparison.LengthToleranceCm,
+                            force: g.SpotfaceDepthExpression == null
+                                && ComSafe.Get(() => hole.SpotFaceDepth.DrivenBy.Count > 0));
+                    }
+                    else
+                    {
+                        hole.SetSpotFace(Required(g.SpotfaceDiameterCm), Required(g.SpotfaceDepthCm));
                     }
                     break;
                 default:
@@ -370,6 +416,11 @@ namespace InventorAddin.Holes
             string unit = HoleExpressions.UnitName(g.ExpressionUnits);
             if (g.Seat == HoleSeat.Counterbore && g.CounterboreDepthExpression is { } cboreExpression)
                 WriteExpression(hole.CBoreDepth, cboreExpression, unit);
+            if (g.Seat == HoleSeat.Spotface && g.SpotfaceDepthExpression is { } spotfaceExpression)
+                WriteExpression(hole.SpotFaceDepth, spotfaceExpression, unit);
+            // A Simple hole's diameter typed as an expression (task 114; spike 108 question 4: it stays parametric).
+            if (g.Thread == null && g.DiameterExpression is { } diameterExpression)
+                WriteExpression(hole.HoleDiameter, diameterExpression, unit);
 
             if (g.Termination != HoleTermination.Distance)
                 return;
@@ -399,7 +450,21 @@ namespace InventorAddin.Holes
                 return true;
             if (g.Thread is not { } thread)
                 return false;
-            if (ComSafe.Get(() => hole.TapInfo) is not HoleTapInfo tap)
+
+            object? tapInfo = ComSafe.Get(() => hole.TapInfo);
+            if ((tapInfo is TaperedThreadInfo) != thread.IsTapered)
+                return true;
+            if (tapInfo is TaperedThreadInfo taper)
+            {
+                // A tapered thread (task 114): a new thread type or size, or a new seat, is made again. The API
+                // reference says SetSpotFace fails on a hole with a tapered thread, and the other seat changes were
+                // not tried on one (spike 108), so no seat is changed in place on a taper tapped hole.
+                return !Same(ComSafe.Get(() => taper.ThreadDesignation), thread.Designation)
+                    || !Same(ComSafe.Get(() => taper.ThreadType), thread.ThreadType)
+                    || ComSafe.Get(() => (HoleTypeEnum?)hole.HoleType) != HoleTypeOf(g.Seat);
+            }
+
+            if (tapInfo is not HoleTapInfo tap)
                 return true;
 
             return !Same(ComSafe.Get(() => tap.ThreadDesignation), thread.Designation)
@@ -567,6 +632,15 @@ namespace InventorAddin.Holes
             if (differences.Count > 0)
                 log.Warn(LogPrefix + $"hole {ComSafe.Get(() => hole.Name)} does not match its seat: {string.Join(" ", differences)}");
         }
+
+        /// <summary>The Inventor hole type a seat is made as.</summary>
+        private static HoleTypeEnum HoleTypeOf(HoleSeat seat) => seat switch
+        {
+            HoleSeat.Counterbore => HoleTypeEnum.kCounterBoreHole,
+            HoleSeat.Countersink => HoleTypeEnum.kCounterSinkHole,
+            HoleSeat.Spotface => HoleTypeEnum.kSpotFaceHole,
+            _ => HoleTypeEnum.kDrilledHole,
+        };
 
         /// <summary>Into the material, for a sketch whose normal points out of it (spike 081); Flip reverses it.</summary>
         private static PartFeatureExtentDirectionEnum Direction(HoleGeometry g) =>

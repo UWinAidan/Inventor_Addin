@@ -65,6 +65,8 @@ public static class HoleReapplyRules
         ArgumentNullException.ThrowIfNull(stored);
         ArgumentNullException.ThrowIfNull(facts);
 
+        // A spotface hole's depths as the window measures them (task 114).
+        facts = HoleDepthReference.ToWindow(facts);
         var spec = stored.Spec.Normalised();
         var units = spec.Units;
         var differences = new List<string>();

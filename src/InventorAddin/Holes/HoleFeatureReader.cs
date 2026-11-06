@@ -64,8 +64,10 @@ namespace InventorAddin.Holes
             {
                 HoleTypeEnum.kCounterBoreHole => HoleSeat.Counterbore,
                 HoleTypeEnum.kCounterSinkHole => HoleSeat.Countersink,
-                HoleTypeEnum.kSpotFaceHole => null,
-                _ => HoleSeat.None,
+                HoleTypeEnum.kSpotFaceHole => HoleSeat.Spotface,
+                HoleTypeEnum.kDrilledHole => HoleSeat.None,
+                null => HoleSeat.None,
+                _ => null,
             };
 
             PartFeatureExtentEnum? extent = ComSafe.Get(() => (PartFeatureExtentEnum?)hole.ExtentType, warnings, "Hole termination");
@@ -79,7 +81,11 @@ namespace InventorAddin.Holes
             bool blind = termination == HoleTermination.Distance;
 
             bool tapped = ComSafe.Get(() => hole.Tapped);
-            HoleTapInfo? tap = tapped ? ComSafe.Get(() => hole.TapInfo as HoleTapInfo) : null;
+            object? tapInfo = tapped ? ComSafe.Get(() => hole.TapInfo) : null;
+            // A straight thread is a HoleTapInfo, a tapered pipe thread a TaperedThreadInfo (spike 108), whose length
+            // Inventor sets from its table (spec 09 question 22): it has no thread depth to read.
+            HoleTapInfo? tap = tapInfo as HoleTapInfo;
+            TaperedThreadInfo? taper = tapInfo as TaperedThreadInfo;
             bool fullThread = tap == null || ComSafe.Get(() => tap.FullTapDepth);
 
             HoleDrillPointTypeEnum? pointType = blind
@@ -89,11 +95,18 @@ namespace InventorAddin.Holes
 
             (string? isoCode, double? upper, double? lower) = ReadTolerance(hole, warnings);
 
+            string? designation = tap != null
+                ? ComSafe.Get(() => tap.ThreadDesignation)
+                : taper != null ? ComSafe.Get(() => taper.ThreadDesignation) : null;
+            string? threadType = tap != null
+                ? ComSafe.Get(() => tap.ThreadType)
+                : taper != null ? ComSafe.Get(() => taper.ThreadType) : null;
+
             return new InventorHoleFacts(
                 seat,
                 tapped,
-                tap == null ? null : ComSafe.Get(() => tap.ThreadDesignation),
-                tap == null ? null : ComSafe.Get(() => tap.ThreadType),
+                designation,
+                threadType,
                 tap == null || fullThread ? null : Length(() => tap.ThreadDepth),
                 Length(() => hole.HoleDiameter),
                 termination,
@@ -113,6 +126,13 @@ namespace InventorAddin.Holes
                 DepthExpression = blind ? Expression(() => ((DistanceExtent)hole.Extent).Distance) : null,
                 // A dowel's counterbore depth may be an expression (task 106); read for any counterbore.
                 CounterboreDepthExpression = seat == HoleSeat.Counterbore ? Expression(() => hole.CBoreDepth) : null,
+                // Task 114: a tapered thread, a spotface (spike 108: SpotFaceDiameter and SpotFaceDepth are model
+                // parameters), and a Simple hole's diameter typed as an expression, shown without Inventor's " ul".
+                TaperedThread = taper != null,
+                SpotfaceDiameterCm = seat == HoleSeat.Spotface ? Length(() => hole.SpotFaceDiameter) : null,
+                SpotfaceDepthCm = seat == HoleSeat.Spotface ? Length(() => hole.SpotFaceDepth) : null,
+                SpotfaceDepthExpression = seat == HoleSeat.Spotface ? Expression(() => hole.SpotFaceDepth) : null,
+                DiameterExpression = tapped ? null : HoleExpressions.FromInventor(Expression(() => hole.HoleDiameter)),
             };
         }
 

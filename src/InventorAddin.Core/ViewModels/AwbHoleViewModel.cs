@@ -13,6 +13,12 @@ public sealed record HoleOption<T>(T Value, string Text)
 {
     /// <summary>The <see cref="HoleIcons"/> name the icon button shows, or null for a choice shown as text.</summary>
     public string? Icon { get; init; }
+
+    /// <summary>
+    /// False for a choice listed but not offered, shown greyed out with its reason in <see cref="Text"/> (task 114:
+    /// Counterbore on a taper tapped hole). The view-model refuses it.
+    /// </summary>
+    public bool IsEnabled { get; init; } = true;
 }
 
 /// <summary>
@@ -689,17 +695,37 @@ public sealed class AwbHoleViewModel : ObservableObject
 
     /// <summary>
     /// The seats: None, Counterbore, Countersink, Spotface, on every kind (tasks 112 and 126; this widens task 099's
-    /// tapped list, which held only the seats with a row of the same size), except Counterbore on Taper Tapped
-    /// (Aidan, 2026-10-28).
+    /// tapped list, which held only the seats with a row of the same size). Counterbore is listed but not enabled on
+    /// Taper Tapped (Aidan, 2026-10-28; task 114), with <see cref="CounterboreNotOnTaperText"/> as its text.
     /// </summary>
     public IReadOnlyList<HoleOption<HoleSeat>> SeatOptions => _seatOptions;
+
+    /// <summary>The disabled Counterbore button's tooltip on a taper tapped hole (task 114).</summary>
+    public const string CounterboreNotOnTaperText = "Counterbore (Inventor does not allow one on a taper tapped hole)";
+
+    /// <summary>
+    /// Under Seat when the hole is taper tapped and the seat chosen last was a counterbore, which it cannot take: the
+    /// seat is None until another is chosen, and the counterbore comes back on a type that takes it (task 114).
+    /// </summary>
+    public const string TaperDroppedCounterboreText =
+        "A taper tapped hole cannot have a counterbore (Inventor does not allow one), so Seat is None. The counterbore " +
+        "comes back if the type is changed back.";
+
+    /// <summary>
+    /// <see cref="TaperDroppedCounterboreText"/> while a counterbore chosen before is not offered by the type; else
+    /// null.
+    /// </summary>
+    public string? SeatNote =>
+        _wantedSeat == HoleSeat.Counterbore && _seat != HoleSeat.Counterbore && !HoleStandards.Takes(Kind, HoleSeat.Counterbore)
+            ? TaperDroppedCounterboreText
+            : null;
 
     public HoleSeat Seat
     {
         get => _seat;
         set
         {
-            if (!_seatOptions.Any(o => o.Value == value))
+            if (!_seatOptions.Any(o => o.Value == value && o.IsEnabled))
             {
                 OnPropertyChanged();
                 return;
@@ -2146,14 +2172,24 @@ public sealed class AwbHoleViewModel : ObservableObject
 
     /// <summary>
     /// The seats: all four on every kind, since every seat is sized in the window (tasks 106, 112 and 126; this widens
-    /// task 099, which listed on a tapped hole only the seats with a shown row of the same size), except Counterbore on
-    /// Taper Tapped (Aidan, 2026-10-28). The seat shown is the one the user chose last when the list offers it, else
-    /// None (task 123).
+    /// task 099, which listed on a tapped hole only the seats with a shown row of the same size). Counterbore on Taper
+    /// Tapped is listed but not enabled (Aidan, 2026-10-28; task 114). The seat shown is the one the user chose last
+    /// when the list offers it enabled, else None (task 123), with <see cref="SeatNote"/> saying why.
     /// </summary>
     private void RefreshSeats(HoleKind kind)
     {
-        SetList(ref _seatOptions, AllSeats.Where(o => HoleStandards.Takes(kind, o.Value)).ToList(), nameof(SeatOptions));
-        Set(ref _seat, _seatOptions.Any(o => o.Value == _wantedSeat) ? _wantedSeat : HoleSeat.None, nameof(Seat));
+        SetList(
+            ref _seatOptions,
+            AllSeats
+                .Select(o => HoleStandards.Takes(kind, o.Value)
+                    ? o
+                    : o with { Text = CounterboreNotOnTaperText, IsEnabled = false })
+                .ToList(),
+            nameof(SeatOptions));
+        Set(
+            ref _seat,
+            _seatOptions.Any(o => o.Value == _wantedSeat && o.IsEnabled) ? _wantedSeat : HoleSeat.None,
+            nameof(Seat));
     }
 
     /// <summary>
@@ -2522,7 +2558,7 @@ public sealed class AwbHoleViewModel : ObservableObject
         nameof(SpotfaceDiameterText), nameof(SpotfaceDepthText), nameof(SpotfaceDepthValueText),
         nameof(SpotfaceDiameterProblem), nameof(SpotfaceDepthProblem), nameof(ShowsThreadDepth),
         nameof(ShowsDrillDepth), nameof(ShowsToleranced), nameof(ShowsCustomTolerance), nameof(ToleranceUpperText),
-        nameof(ToleranceLowerText), nameof(ToleranceUpperProblem), nameof(ToleranceLowerProblem),
+        nameof(ToleranceLowerText), nameof(ToleranceUpperProblem), nameof(ToleranceLowerProblem), nameof(SeatNote),
     ];
 
     private void Reevaluate()

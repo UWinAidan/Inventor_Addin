@@ -553,8 +553,10 @@ public sealed class HoleTypesAndSpotfaceTests
         var g = Built(Simple(6.25m) with
         {
             Termination = HoleTermination.Distance, Depth = 12m, DrillPoint = "Flat",
-            Seat = HoleSeat.Counterbore, CboreDiameter = 11m, CboreDepth = 3m,
+            Seat = HoleSeat.Spotface, SpotfaceDiameter = 11m, SpotfaceDepth = 3m,
         }).Geometry!;
+        // Inventor measures the depth from the spotface's bottom (task 114): 9 mm here, read back as 12.
+        Assert.Equal(0.9, g.DepthCm!.Value, 9);
         var facts = FactsOf(g) with { Seat = HoleSeat.Spotface, SpotfaceDiameterCm = 1.1, SpotfaceDepthCm = 0.3 };
 
         var result = HoleReadBack.Read(null, facts, Workbook, HoleUnits.Metric);

@@ -208,7 +208,7 @@ public sealed class AwbHoleTypesViewModelTests : IDisposable
     // ---- Taper Tapped ----
 
     [Fact]
-    public void TaperTapped_ListsItsStandardAndSizes_AndNoCounterbore()
+    public void TaperTapped_ListsItsStandardAndSizes_AndCounterboreDisabled()
     {
         var vm = OfType(HoleStandards.TaperTappedType);
 
@@ -217,7 +217,9 @@ public sealed class AwbHoleTypesViewModelTests : IDisposable
         Assert.True(vm.ShowsStandard);
         Assert.Equal(["Rc 1/8", "Rc 1/4"], Values(vm.SizeOptions));
         Assert.Equal("Rc 1/8", vm.Size);
-        Assert.Equal(["None", "Countersink", "Spotface"], Values(vm.SeatOptions));
+        Assert.Equal(
+            ["None", AwbHoleViewModel.CounterboreNotOnTaperText, "Countersink", "Spotface"], Values(vm.SeatOptions));
+        Assert.Equal([true, false, true, true], vm.SeatOptions.Select(o => o.IsEnabled).ToList());
         Assert.False(vm.ShowsFit);
         Assert.False(vm.ShowsTolerance);
         Assert.False(vm.ShowsFastener);
@@ -258,6 +260,46 @@ public sealed class AwbHoleTypesViewModelTests : IDisposable
 
         vm.Type = HoleStandards.ClearanceType;
         Assert.Equal(HoleSeat.Counterbore, vm.Seat);
+    }
+
+    [Fact]
+    public void TaperTapped_ACounterboreDropped_ShowsANote_UntilAnotherSeatOrTypeIsChosen()
+    {
+        var vm = NewHole();
+        vm.Seat = HoleSeat.Counterbore;
+        Assert.Null(vm.SeatNote);
+
+        vm.Type = HoleStandards.TaperTappedType;
+        Assert.Equal(AwbHoleViewModel.TaperDroppedCounterboreText, vm.SeatNote);
+
+        vm.Type = HoleStandards.TappedType;
+        Assert.Equal(HoleSeat.Counterbore, vm.Seat);
+        Assert.Null(vm.SeatNote);
+
+        vm.Type = HoleStandards.TaperTappedType;
+        vm.Seat = HoleSeat.Spotface;
+        Assert.Null(vm.SeatNote);
+    }
+
+    [Fact]
+    public void TaperTapped_TheDisabledCounterbore_CannotBeChosen()
+    {
+        var vm = OfType(HoleStandards.TaperTappedType);
+
+        vm.Seat = HoleSeat.Counterbore;
+
+        Assert.Equal(HoleSeat.None, vm.Seat);
+        Assert.Null(vm.SeatNote);
+    }
+
+    [Fact]
+    public void EveryOtherType_OffersEverySeatEnabled()
+    {
+        foreach (var type in new[] { HoleStandards.ClearanceType, HoleStandards.TappedType, HoleStandards.SimpleType })
+        {
+            var vm = OfType(type);
+            Assert.All(vm.SeatOptions, o => Assert.True(o.IsEnabled));
+        }
     }
 
     [Fact]

@@ -326,3 +326,10 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-03 | The client-graphics preview is cleared at the start of every change step and redrawn after it from the hole the session holds (the last good hole after a refusal), as spike 107 was wired | Default | task 110 |
 | 2026-11-03 | `HolePreviewAppearance` keeps `DisplayName` and `Is` because `HoleFitWriter.IsHandColour` still uses them; the rest of task 101's paint members are removed | Default | task 110 |
 | 2026-11-03 | With nothing selected, AWB Hole picks the newest visible sketch with hole centres no feature uses, and only those; a sketch's Consumed flag no longer decides. Only hole features count as using a point (by identity, or same sketch name and position) | Default | task 117 |
+| 2026-11-05 | Until task 116, depths keep their top-face meaning on every seat: a spotface hole's Inventor depth is the window depth minus the spotface depth (Inventor measures it from the spotface bottom); the brief's seat-bottom rule waits for 116 | Default (parent) | task 114 |
+| 2026-11-05 | A thread depth on a spotface hole is converted like the drill depth, assuming Inventor starts the thread at the spotface bottom | Default | task 114 |
+| 2026-11-05 | Any seat change on a taper tapped hole remakes the feature in place (same name and browser place), since `SetSpotFace` fails on a tapered thread and the other in-place calls are untried on one | Default | task 114 |
+| 2026-11-05 | Counterbore on Taper Tapped is shown disabled with a tooltip rather than left out; the note when it is dropped sits under Seat until another seat or type is chosen | Default | task 114 |
+| 2026-11-05 | Only a trailing ` ul` after a number is dropped from a Simple diameter expression read from Inventor | Default | task 114 |
+| 2026-11-05 | A depth expression read from an Inventor-made spotface hole not in the add-in's `(a) - (b)` form opens as `(expression) + (spotface depth)` | Default | task 114 |
+| 2026-11-05 | Only hole features count as using a hole-centre point for AWB Hole's default centres (task 117's Default), fine for now | Aidan | session 2026-11-05 |

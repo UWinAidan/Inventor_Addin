@@ -346,12 +346,12 @@ public sealed class HoleReadBackTests
     }
 
     [Fact]
-    public void SpotFace_ReadsAsNoSeat_WithANote()
+    public void ASeatNotOffered_ReadsAsNoSeat_WithANote()
     {
         var result = HoleReadBack.Read(null, PlainFacts(0.55) with { Seat = null }, Workbook, HoleUnits.Metric);
 
         Assert.Equal(HoleSeat.None, result.Spec.Seat);
-        Assert.Equal(HoleFeatureMessages.SpotFaceNotOffered, Assert.Single(result.Notes));
+        Assert.Equal(HoleFeatureMessages.SeatNotOffered, Assert.Single(result.Notes));
     }
 
     [Fact]

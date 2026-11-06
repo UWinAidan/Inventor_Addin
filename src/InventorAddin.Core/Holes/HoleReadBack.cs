@@ -8,7 +8,8 @@ namespace InventorAddin.Core.Holes;
 /// </summary>
 /// <param name="Seat">
 /// None, Counterbore, Countersink or Spotface (task 112; the add-in reads a spotface from task 114); null for a seat AWB
-/// Hole does not offer.
+/// Hole does not offer. Depths are as Inventor measures them: a spotface hole's from the spotface's bottom
+/// (<see cref="HoleDepthReference"/>).
 /// </param>
 /// <param name="Tapped">The hole is threaded, with a straight or a tapered thread (<see cref="TaperedThread"/>).</param>
 /// <param name="ThreadDesignation">Tapped holes: Inventor's designation (<c>M6x1</c>).</param>
@@ -134,6 +135,9 @@ public static class HoleReadBack
         ArgumentNullException.ThrowIfNull(facts);
         ArgumentNullException.ThrowIfNull(workbook);
 
+        // A spotface hole's depths as the window measures them (task 114).
+        facts = HoleDepthReference.ToWindow(facts);
+
         if (stored?.Data is { } data)
         {
             return new HoleReadBackResult(WithDowelSeatFromHole(data.Spec, facts), HoleSource.Awb, data, []);
@@ -245,7 +249,7 @@ public static class HoleReadBack
             var seat = facts.Seat ?? HoleSeat.None;
             if (facts.Seat is null)
             {
-                notes.Add(HoleFeatureMessages.SpotFaceNotOffered);
+                notes.Add(HoleFeatureMessages.SeatNotOffered);
             }
 
             // A seated hole with a tolerance on its diameter is read as a seated dowel first (task 099). A spotface

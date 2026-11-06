@@ -301,11 +301,15 @@ namespace InventorAddin.Holes
             return list;
         }
 
-        /// <summary>The hole's seat as the face roles need it: a spotface has the walls and floor of a counterbore.</summary>
+        /// <summary>
+        /// The hole's seat as Inventor reports it; <see cref="HoleFaceColours.Classify"/> gives a spotface the walls and
+        /// floor of a counterbore (task 122).
+        /// </summary>
         private static HoleSeat SeatOf(HoleFeature hole) =>
             ComSafe.Get(() => (HoleTypeEnum?)hole.HoleType) switch
             {
-                HoleTypeEnum.kCounterBoreHole or HoleTypeEnum.kSpotFaceHole => HoleSeat.Counterbore,
+                HoleTypeEnum.kCounterBoreHole => HoleSeat.Counterbore,
+                HoleTypeEnum.kSpotFaceHole => HoleSeat.Spotface,
                 HoleTypeEnum.kCounterSinkHole => HoleSeat.Countersink,
                 _ => HoleSeat.None,
             };

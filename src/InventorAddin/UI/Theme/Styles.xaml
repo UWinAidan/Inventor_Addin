@@ -1473,6 +1473,9 @@
         <Setter Property="SnapsToDevicePixels" Value="True" />
         <Setter Property="ToolTip" Value="{Binding Text, Mode=OneWay}" />
         <Setter Property="AutomationProperties.Name" Value="{Binding Text, Mode=OneWay}" />
+        <!-- A choice listed but not offered (HoleOption.IsEnabled; task 114: Counterbore on Taper Tapped) is greyed out, its reason in the tooltip. -->
+        <Setter Property="IsEnabled" Value="{Binding IsEnabled, Mode=OneWay, FallbackValue=True}" />
+        <Setter Property="ToolTipService.ShowOnDisabled" Value="True" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ListBoxItem}">

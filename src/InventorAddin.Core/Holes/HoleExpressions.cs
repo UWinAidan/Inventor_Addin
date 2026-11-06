@@ -52,4 +52,32 @@ public static class HoleExpressions
         var trimmed = (expression ?? "").Trim();
         return trimmed.Length == 0 ? null : trimmed;
     }
+
+    /// <summary>The unit Inventor writes after a unitless number in an expression it stores (spike 108).</summary>
+    public const string UnitlessSuffix = "ul";
+
+    /// <summary>
+    /// An expression Inventor reports, as the window shows it (task 114): <see cref="Clean"/>ed, without the trailing
+    /// <c> ul</c> Inventor adds after a unitless factor (spike 108: <c>spk108_d * 2</c> is stored as
+    /// <c>spk108_d * 2 ul</c>). Only a final <c>ul</c> after a number goes; a <c>ul</c> elsewhere, and a parameter whose
+    /// name ends in <c>ul</c>, are kept. Inventor reads the expression the same either way.
+    /// </summary>
+    public static string? FromInventor(string? expression)
+    {
+        var text = Clean(expression);
+        if (text is null || text.Length <= UnitlessSuffix.Length
+            || !text.EndsWith(UnitlessSuffix, StringComparison.OrdinalIgnoreCase))
+        {
+            return text;
+        }
+
+        var before = text[..^UnitlessSuffix.Length];
+        var trimmed = before.TrimEnd();
+        if (trimmed.Length == before.Length || trimmed.Length == 0 || !char.IsDigit(trimmed[^1]))
+        {
+            return text;
+        }
+
+        return trimmed;
+    }
 }
