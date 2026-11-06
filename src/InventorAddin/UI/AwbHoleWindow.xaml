@@ -20,7 +20,8 @@
         Type and Seat as icon buttons with the chosen name after them, the diagram (collapsible, remembered by the
         add-in), Standard, Size, Fastener type (seated clearance and tapped holes with a row of their size), the seat
         boxes (every seated hole, task 126), Fit with its
-        colour on the same row, Tolerance; section Depth and direction: Termination as icon buttons, Thread depth and
+        colour on the same row, Toleranced (Clearance and Simple, task 115), Tolerance, and the Custom Upper and Lower
+        boxes; section Depth and direction: Termination as icon buttons, Thread depth and
         Drill depth (blind tapped) or Depth, Drill point as icon buttons, Flip; section Centres. A field that does not
         apply is not shown. Each field's problem from HoleRules is shown under it in the error style. The body scrolls
         when the window is capped at the screen's height; the header and the footer (status line, OK, Cancel) stay put,
@@ -38,7 +39,8 @@
         out again; the arrow keys or Space choose. Access keys: U units, Y type, E seat, S standard, Z size, F fastener
         type, A counterbore diameter, B counterbore depth, K countersink diameter, G countersink angle (a dowel's seat,
         task 106), I fit, T tolerance, R termination, H thread depth, D drill depth, P depth, O drill point, L flip,
-        M diameter (Simple), C spotface diameter (task 114).
+        M diameter (Simple), C spotface diameter (task 114), N toleranced, W the Custom lower limit (task 115; the Custom
+        upper limit has none, its letters are all taken).
     -->
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="VisibleWhenTrue" />
@@ -350,6 +352,17 @@
                             </StackPanel>
                         </StackPanel>
                     </controls:FieldRow>
+                    <!--
+                        Toleranced (task 115; spec 09, "Toleranced clearance and Simple holes"): Clearance (AWB Clearance)
+                        and Simple holes only, on one row, off by default; ticked, the Tolerance row below shows, with
+                        every Precision Tol row for the units and Custom last.
+                    -->
+                    <controls:FieldRow Target="{Binding ElementName=TolerancedBox}"
+                                       Visibility="{Binding ShowsToleranced, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
+                        <CheckBox x:Name="TolerancedBox"
+                                  Content="Tolera_nced"
+                                  IsChecked="{Binding Toleranced, Mode=TwoWay}" />
+                    </controls:FieldRow>
                     <controls:FieldRow Label="_Tolerance"
                                        Target="{Binding ElementName=ToleranceBox}"
                                        Visibility="{Binding ShowsTolerance, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
@@ -389,6 +402,41 @@
                             <TextBlock Style="{DynamicResource ErrorStatusText}"
                                        Text="{Binding ToleranceProblem, Mode=OneWay}"
                                        Visibility="{Binding ToleranceProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
+                        </StackPanel>
+                    </controls:FieldRow>
+                    <!--
+                        Custom limits (task 115): numbers only, signed as typed, in the window's units, relative to the
+                        modelled diameter; Upper must be above Lower. Shown while Custom is the tolerance chosen, for a
+                        dowel and for a toleranced hole. Upper has no access key: its letters are all taken.
+                    -->
+                    <controls:FieldRow Label="Upper"
+                                       Target="{Binding ElementName=ToleranceUpperBox}"
+                                       Visibility="{Binding ShowsCustomTolerance, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBox x:Name="ToleranceUpperBox"
+                                         Style="{DynamicResource DepthTextBox}"
+                                         Text="{Binding ToleranceUpperText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding LengthUnitText, Mode=OneWay}" />
+                            </StackPanel>
+                            <TextBlock Style="{DynamicResource ErrorStatusText}"
+                                       Text="{Binding ToleranceUpperProblem, Mode=OneWay}"
+                                       Visibility="{Binding ToleranceUpperProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
+                        </StackPanel>
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="Lo_wer"
+                                       Target="{Binding ElementName=ToleranceLowerBox}"
+                                       Visibility="{Binding ShowsCustomTolerance, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBox x:Name="ToleranceLowerBox"
+                                         Style="{DynamicResource DepthTextBox}"
+                                         Text="{Binding ToleranceLowerText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding LengthUnitText, Mode=OneWay}" />
+                            </StackPanel>
+                            <TextBlock Style="{DynamicResource ErrorStatusText}"
+                                       Text="{Binding ToleranceLowerProblem, Mode=OneWay}"
+                                       Visibility="{Binding ToleranceLowerProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
                         </StackPanel>
                     </controls:FieldRow>
                 </controls:FormSection>

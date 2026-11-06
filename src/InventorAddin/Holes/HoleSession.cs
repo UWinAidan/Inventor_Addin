@@ -82,8 +82,9 @@ namespace InventorAddin.Holes
         private HoleFeature? _hole;
         private string? _holeName;
 
-        // What an edited hole was when the window opened, for the face reset on OK (task 096).
-        private readonly HoleKind _openedKind;
+        // What an edited hole was when the window opened, for the face reset on OK (task 096): a precision hole (a
+        // dowel, or a toleranced Clearance or Simple hole, task 113), and whether a face carried a fit colour.
+        private readonly bool _openedPrecision;
         private readonly bool _openedFitColoured;
 
         // What the hole in the model was last made from: OK keeps it only when it is what the window shows.
@@ -121,7 +122,7 @@ namespace InventorAddin.Holes
             _edit = existing != null;
             _hole = existing;
             _holeName = existing == null ? null : ComSafe.Get(() => existing.Name);
-            _openedKind = viewModel.Spec.Kind;
+            _openedPrecision = HolePrecision.IsPrecision(viewModel.Spec);
             _openedFitColoured = existing != null && HoleFeatureReader.IsColoured(existing);
             _picks = new HoleCentrePicks<SketchPoint, PlanarSketch>(_edit, SamePoint, SameSketch);
         }
@@ -199,8 +200,9 @@ namespace InventorAddin.Holes
                 Transaction step = StartStep();
                 try
                 {
+                    // By the precision rule (task 115): a hole kept toleranced is recoloured, not reset first.
                     bool resetFaces = HoleSessionRules.ResetsFaceAppearances(
-                        _edit, _openedKind, _openedFitColoured, build.Resolved.Kind);
+                        _edit, _openedPrecision, _openedFitColoured, HolePrecision.IsPrecision(build.Resolved));
                     HoleFitWriter.Finish(_doc, hole, build, resetFaces, _log);
                     step.End();
                 }

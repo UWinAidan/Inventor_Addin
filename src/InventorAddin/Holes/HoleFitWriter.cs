@@ -19,14 +19,16 @@ namespace InventorAddin.Holes
         private const string LogPrefix = AwbHoleViewModel.CommandName + ": ";
 
         /// <summary>
-        /// Applies what the add-in leaves on a hole when it is kept (task 089, OK): for a dowel the tolerance and the
-        /// fit colour, for any other kind no dowel tolerance or data; then the stored data for
-        /// <paramref name="build"/>'s resolved spec and the state applied.
+        /// Applies what the add-in leaves on a hole when it is kept (task 089, OK): for a precision hole (a dowel, or a
+        /// toleranced Clearance or Simple hole, tasks 113 and 115) the tolerance on the through diameter and the fit
+        /// colour on every face, for any other hole no tolerance; then the stored data for
+        /// <paramref name="build"/>'s resolved spec and the state applied. A seated hole's seat keeps the default
+        /// tolerance (spike 108 question 5: ISO gives a stacked fit, Custom a deviation, on the hole diameter only).
         /// </summary>
         /// <param name="build">A successful <see cref="HoleRules.Build"/> result for the hole.</param>
-        /// <param name="resetFaces">The hole was a dowel or precision hole and is kept as another kind
-        /// (<see cref="HoleSessionRules.ResetsFaceAppearances"/>): every face goes back to the part's appearance
-        /// (task 096). Ignored when the hole is kept as a dowel.</param>
+        /// <param name="resetFaces">The hole was a dowel or precision hole and is kept as a hole that is not one, for
+        /// example with Toleranced unticked (<see cref="HoleSessionRules.ResetsFaceAppearances"/>): every face goes back
+        /// to the part's appearance (task 096). Ignored when the hole is kept as a precision hole.</param>
         public static void Finish(PartDocument doc, HoleFeature hole, HoleBuildResult build, bool resetFaces, ILog log)
         {
             if (doc == null)

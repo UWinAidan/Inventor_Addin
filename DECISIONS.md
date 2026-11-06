@@ -333,3 +333,6 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-05 | Only a trailing ` ul` after a number is dropped from a Simple diameter expression read from Inventor | Default | task 114 |
 | 2026-11-05 | A depth expression read from an Inventor-made spotface hole not in the add-in's `(a) - (b)` form opens as `(expression) + (spotface depth)` | Default | task 114 |
 | 2026-11-05 | Only hole features count as using a hole-centre point for AWB Hole's default centres (task 117's Default), fine for now | Aidan | session 2026-11-05 |
+| 2026-11-05 | The Toleranced checkbox sits on its own row with no field label, between Fit and Tolerance; access keys N (Toleranced) and W (Lower), none for Upper | Default | task 115 |
+| 2026-11-05 | A toleranced Clearance or Simple hole shows no fit colour swatch (spec 09 question 28) | Default | task 115 |
+| 2026-11-05 | On OK, an edited hole that stays a precision hole is recoloured without a reset first (precision overload of `ResetsFaceAppearances`) | Default | task 115 |
