@@ -25,9 +25,11 @@ Last updated: 2026-10-29
 **M4 part 1, 090** was checked on 2026-10-18: steps 1 to 4a, 6, 7, 10, 12 to 21 and 25 passed (step 5 skipped). Steps 8 and 11 and the tapped thread display failed, now tasks 093 to 095; step 4b and Aidan's other requests are tasks 096 to 105. Steps 22 to 24 (editing) wait for 092.
 
 **M4 part 1, 091 to 106** (not 103, 105) were checked on 2026-10-25. Failed, now fix tasks: 091-3 (120), 091-4 (121), 096-3 (122), 099-3 (123), 100-7 (124), 106-5 (125). Every other step passed or was accepted as it is (092-4, 098-2, 099-5), except:
-- [ ] Not tested yet: 106 steps 6, 7 and 10 (fold into task 125's check)
+- [ ] Not tested yet: 106 steps 6, 7 and 10 (on the combined checklist below)
 - Skipped, not needed: 091-6, 095-4, 099-2 (covered by 106), 106-8, 106-9
 - 095-5 answered: Inventor's own Hole dialog, editing an AWB tapped hole with no changes, keeps the bore at the tap drill, not the minor diameter.
+
+- [ ] **M4 part 1 round after PR #29's first look** (105 to 138; 103, 107 and 108 were spikes with Aidan): built on Windows, not yet run in Inventor. One combined checklist, grouped by area with each step labelled `task-step`, goes in PR #29's description.
 
 From Part Properties (task 019):
 
