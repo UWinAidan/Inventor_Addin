@@ -6,11 +6,16 @@ Last updated: 2026-10-29
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-07. Branch `claude/m4-hole-generator`, PR #29 open against `main`. Aidan pushed up to `bf303b7` (136). Local commits **not pushed**: `0ee9159` (118), `c5d5fd9` (plan 138), `ff9a17e` (138).
-- Done: the whole round after PR #29's first look, 105 to 138, each reviewed PASS and built on Windows. Last this session: 118 (window fits at 150 percent) and 138 (swatch on a toleranced hole, Aidan's answer to spec 09 question 28, 2026-11-07). Core tests 4375 (a few flaky `Numbering` tests fail per full run, pass alone).
-- Combined Inventor checklist is drafted (about 200 steps, 12 groups) in the session scratchpad as `checklist.md`; it has not been posted.
-- Next: ask Aidan to push the three commits and approve putting the checklist in PR #29's description; then Aidan runs it in Inventor, and the failures become fix tasks.
-- Gotchas: check `tasklist //FI "IMAGENAME eq Inventor.exe"` before building; tracking-file edits via Python with `newline=''`; keep STATUS.md out of task commits.
+- Updated: 2026-11-07 10:40. Branch `claude/m4-hole-generator`, everything pushed (the handoff and checklist commit is the latest). PR #29 open against `main`; its description is the round summary plus the combined checklist (2026-11-07).
+- Goal: finish the M4 part 1 round after PR #29's first look (one implementer and one reviewer per task, one commit per task), then one combined Inventor checklist for Aidan.
+- Done this session: 114, 115, 116, 136, 118 (window fits at 150 percent: Units on the header line via `DialogHeader.Trailing`, Centres as a row, `CompactDialogContent` styles, diagram 104 tall) and 138 (colour swatch on a toleranced hole's Tolerance row, Aidan's answer to spec 09 question 28; `HolePrecision.TolerancedRow/ColourFitIn/ColourIn`, shared with `HoleRules.Build`). Each reviewed PASS, built on Windows with 0 errors (4 old CS8600 warnings). Decisions and Defaults in `DECISIONS.md`; follow-ups in `TODO.md`.
+- State: Core tests 4375; a few known flaky `Numbering` tests fail per full parallel run and pass alone. Nothing of the round (105 to 138) has run in Inventor.
+- Combined checklist: `docs/checklists/m4-round-after-pr29.md` (about 200 steps, 12 groups, labelled `task-step`), committed and in PR #29's description. 134 step 6 dropped (superseded by 135); 106 steps 6, 7, 10 included.
+- Next steps:
+  1. Aidan runs the checklist in Inventor; failures become fix tasks in `docs/PLAN.md`.
+- Open questions for Aidan (in `TODO.md` follow-ups): seat boxes shift a row when Fit replaces Fastener type (118); three hole layouts still scroll with the diagram open (118).
+- Gotchas: check `tasklist //FI "IMAGENAME eq Inventor.exe"` before building, use `-p:DeployToInventor=false`; edit tracking files with Python `newline=''` and an `assert count==1` per replace; keep STATUS.md out of task commits; resume a subagent stopped on the usage limit with SendMessage.
+- Read first: `docs/WORKFLOW.md`, `TODO.md` ("Next up", follow-ups for 114 to 138), `docs/checklists/m4-round-after-pr29.md`.
 
 ## Big items
 
