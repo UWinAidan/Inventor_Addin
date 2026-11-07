@@ -2,7 +2,7 @@
 
 Everything that needs doing and is not already a task in `docs/PLAN.md`. Kept current by the parent session: items are added when they come up and removed when they are done or turned into a task. Where the project stands is in `STATUS.md`; why things are the way they are is in `DECISIONS.md`.
 
-Last updated: 2026-10-29
+Last updated: 2026-11-07
 
 ## Next up
 
@@ -30,6 +30,12 @@ Last updated: 2026-10-29
 - 095-5 answered: Inventor's own Hole dialog, editing an AWB tapped hole with no changes, keeps the bore at the tap drill, not the minor diameter.
 
 - [ ] **M4 part 1 round after PR #29's first look** (105 to 138; 103, 107 and 108 were spikes with Aidan): built on Windows, not yet run in Inventor. One combined checklist, grouped by area with each step labelled `task-step`, goes in PR #29's description.
+  - Section 1 (111-2 to 111-5, 131-1, 132-1, in Excel) passed (Aidan, 2026-11-07). The rest runs with a temporary self-test (spike branch `spike/139-selftest`, local only) for the measurable steps; Aidan does the steps marked [MANUAL] in `docs/checklists/m4-round-after-pr29.md`.
+  - Open from Aidan's first look (2026-11-07), not yet answered or fixed:
+    - [ ] Text is cut off at the right of the Type, Seat and Drill point rows ("Cl...", "Sp...", "11...").
+    - [ ] Custom tolerance: keep Upper and Lower limits, but also allow typing a custom ISO 286 code (for example H8, k6).
+    - [ ] Inventor's own Hole lets you edit dimensions on the preview in the model (drag handles and typed value boxes); consider whether AWB Hole should do the same.
+    - [ ] 128-5: the Flat Pattern tab has Inventor's Hole only, no AWB Hole, as designed. Question for Aidan: should Flat Pattern get AWB Hole too?
 
 From Part Properties (task 019):
 
