@@ -38,6 +38,9 @@ Last updated: 2026-11-07
     - [ ] 128-5: the Flat Pattern tab has Inventor's Hole only, no AWB Hole, as designed. Question for Aidan: should Flat Pattern get AWB Hole too?
   - Section 2 so far (Aidan, 2026-11-07): 121-1 to 121-5, 128-2 to 128-4, 128-6 to 128-8, 120-1 to 120-3 and 129-2 to 129-8 pass.
   - [ ] **133-1 failed** (2026-11-07): left-click on a sketch point in a part shows a mini toolbar with only Extrude and Revolve, no Hole at all (neither ours nor Inventor's). 129-6 passed earlier the same session. The log has no "replacing Hole on the mini toolbar failed" line, and the add-in only swaps `PartDMHoleCmd` when Inventor lists it, so Inventor most likely did not offer Hole for that point (point type, or a sketch with a closed profile). To narrow it: the same point with "Use Inventor's Hole" on (133-3); a hole-centre point in a sketch without a closed profile.
+  - Self-test run 2 (2026-11-07): 128 PASS, 2 FAIL, 13 SKIP (each skip is a manual step, or needs a hole from an older build or an edited workbook). Two real failures, to become tasks:
+    - [ ] **122-6**: a colour set on the whole hole through Feature Properties is lost when the hole is remade as tapped (the feature reads kBodyAppearance, Default); the feature's appearance should be kept.
+    - [ ] **122-8**: when a remade hole gains new faces (a seat, for example), they should take the bore's hand colour (Aidan, 2026-11-07); faces that existed keep their own colours. Today the new counterbore and spotface faces come out Default.
   - [ ] **New, to fix**: the part's right-click marking menu (radial ring) has a Hole button with Inventor's icon that opens Inventor's Hole while AWB Hole has taken over. It should open AWB Hole, by the same rule as the mini toolbar's Hole (task 133), and Inventor's when "Use Inventor's Hole" is on (Aidan, 2026-11-07). Becomes a task.
 
 From Part Properties (task 019):
