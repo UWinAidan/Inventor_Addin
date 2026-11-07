@@ -976,6 +976,11 @@ public sealed class AwbHoleViewModel : ObservableObject
     /// <summary>True for a dowel or precision hole, whose faces take the fit colour.</summary>
     public bool ShowsFitColour => Kind == HoleKind.Dowel;
 
+    // The fit whose colour a toleranced Clearance or Simple hole takes (task 138); null for a dowel, an unticked hole,
+    // a kind that cannot be toleranced, and a tolerance with no row.
+    private PrecisionFit? ToleranceColourFit() =>
+        Kind != HoleKind.Dowel && ShowsTolerance ? HolePrecision.ColourFitIn(_spec, _workbook) : null;
+
     /// <summary>The selected fit's colour as <c>#RRGGBB</c> for a dowel hole, else null.</summary>
     public string? FitSwatch => ShowsFitColour ? _fitOptions.FirstOrDefault(o => SameText(o.Value, _fit))?.Swatch : null;
 
@@ -1018,6 +1023,24 @@ public sealed class AwbHoleViewModel : ObservableObject
 
     /// <summary>True for a dowel, and for a toleranced Clearance or Simple hole (task 113).</summary>
     public bool ShowsTolerance => Kind == HoleKind.Dowel || (ShowsToleranced && _toleranced);
+
+    /// <summary>
+    /// True for a toleranced Clearance or Simple hole whose colour is known: the Tolerance row shows the colour its faces
+    /// take on OK (Aidan, 2026-11-07, spec 09 question 28; task 138). Never for a dowel, whose colour is on Fit's row.
+    /// </summary>
+    public bool ShowsToleranceColour => ToleranceColourFit() is not null;
+
+    /// <summary>
+    /// The colour a toleranced hole's faces take on OK, as <c>#RRGGBB</c> (<see cref="HolePrecision.ColourIn(HoleSpec,
+    /// HoleWorkbook)"/>, the rule the hole is built with: the Precision Tol row's fit, Normal for Custom); else null.
+    /// </summary>
+    public string? ToleranceSwatch =>
+        ToleranceColourFit() is not null && HolePrecision.ColourIn(_spec, _workbook) is { } colour
+            ? HoleFitOption.SwatchOf(colour)
+            : null;
+
+    /// <summary>The name of <see cref="ToleranceSwatch"/>'s colour, as a dowel's, for example <c>Normal fit</c>; else null.</summary>
+    public string? ToleranceColourText => ToleranceColourFit() is { } fit ? fit + " fit" : null;
 
     /// <summary>True while Custom is the tolerance chosen: the Upper and Lower boxes show (task 113).</summary>
     public bool ShowsCustomTolerance => ShowsTolerance && SameText(_tolerance, HoleToleranceOption.CustomValue);
@@ -2603,6 +2626,7 @@ public sealed class AwbHoleViewModel : ObservableObject
         nameof(SpotfaceDiameterProblem), nameof(SpotfaceDepthProblem), nameof(ShowsThreadDepth),
         nameof(ShowsDrillDepth), nameof(ShowsToleranced), nameof(ShowsCustomTolerance), nameof(ToleranceUpperText),
         nameof(ToleranceLowerText), nameof(ToleranceUpperProblem), nameof(ToleranceLowerProblem), nameof(SeatNote),
+        nameof(ShowsToleranceColour), nameof(ToleranceSwatch), nameof(ToleranceColourText),
     ];
 
     private void Reevaluate()

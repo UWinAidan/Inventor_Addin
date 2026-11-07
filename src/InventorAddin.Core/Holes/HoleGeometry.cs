@@ -29,7 +29,7 @@ namespace InventorAddin.Core.Holes;
 /// Precision holes only (<see cref="HolePrecision"/>): dowels, and toleranced Clearance and Simple holes (task 113): the
 /// tolerance on the hole diameter, the through hole's and never the seat's.
 /// </param>
-/// <param name="FitColour">Precision holes only: the colour every face of the hole takes (<see cref="HolePrecision.Colour"/>).</param>
+/// <param name="FitColour">Precision holes only: the colour every face of the hole takes (<see cref="HolePrecision.Colour(HoleSpec, PrecisionToleranceRow?, HoleSettings)"/>).</param>
 public sealed record HoleGeometry(
     HoleKind Kind,
     HoleSeat Seat,

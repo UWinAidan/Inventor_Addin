@@ -1416,6 +1416,14 @@
         <Setter Property="Margin" Value="8,0,8,0" />
     </Style>
 
+    <!--
+        A colour square last on its row, with no name after it (a toleranced hole's colour beside Tolerance, task 138):
+        8 after the dropdown and nothing after it, so the dropdown keeps the rest of the 316-wide content.
+    -->
+    <Style x:Key="TrailingColourSwatch" TargetType="{x:Type controls:ColourSwatch}" BasedOn="{StaticResource {x:Type controls:ColourSwatch}}">
+        <Setter Property="Margin" Value="8,0,0,0" />
+    </Style>
+
     <!-- A depth box: 104 wide, so the unit and the value of an expression fit after it in the 360-wide window. -->
     <Style x:Key="DepthTextBox" TargetType="{x:Type TextBox}" BasedOn="{StaticResource {x:Type TextBox}}">
         <Setter Property="Width" Value="104" />

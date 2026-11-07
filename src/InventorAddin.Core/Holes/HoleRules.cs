@@ -939,7 +939,7 @@ public static class HoleRules
         }
 
         /// <summary>
-        /// The tolerance on a precision hole's diameter and its colour (<see cref="HolePrecision.Colour"/>). A dowel's
+        /// The tolerance on a precision hole's diameter and its colour (<see cref="HolePrecision.Colour(HoleSpec, PrecisionToleranceRow?, HoleSettings)"/>). A dowel's
         /// row is the Precision Tol row of its fit (task 098); a toleranced Clearance or Simple hole's any row for the
         /// units (task 113; spec 09 question 17, Default), and its resolved PrecisionFit is the row's fit. A Custom
         /// tolerance (questions 17 and 18, Default) takes the typed Upper and Lower, Upper above Lower. ISO limits are
@@ -962,7 +962,7 @@ public static class HoleRules
 
             var tolerance = dowel
                 ? FindTolerance(workbook, Units, spec.PrecisionFit, spec.Tolerance)
-                : FindAnyTolerance(workbook, Units, spec.Tolerance, spec.PrecisionFit);
+                : HolePrecision.TolerancedRow(spec, workbook);
             if (tolerance is null)
             {
                 Problem(

@@ -535,4 +535,67 @@ public sealed class HoleTolerancedTests
 
         Assert.Contains("+0.050 / -0.010", HoleDiagram.Summary(input));
     }
+
+    // ---- The colour from the workbook (task 138: the window's swatch takes the colour the hole is built with) ----
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("Test bore")]
+    [InlineData("Test location")]
+    [InlineData("Test press")]
+    public void Colour_FromTheWorkbook_IsTheColourTheHoleIsBuiltWith(string? tolerance)
+    {
+        var spec = TolClearance(tolerance).Normalised();
+
+        var built = Built(spec);
+
+        Assert.NotNull(built.Geometry!.FitColour);
+        Assert.Equal(built.Geometry.FitColour, HolePrecision.ColourIn(spec, Workbook));
+    }
+
+    [Fact]
+    public void Colour_FromTheWorkbook_OfASimpleHole_IsTheColourItIsBuiltWith()
+    {
+        var spec = (Simple() with { Toleranced = true, Tolerance = "Test press" }).Normalised();
+
+        Assert.Equal(HoleSettings.Starter.PressFitColour, HolePrecision.ColourIn(spec, Workbook));
+        Assert.Equal(Built(spec).Geometry!.FitColour, HolePrecision.ColourIn(spec, Workbook));
+    }
+
+    [Fact]
+    public void Colour_FromTheWorkbook_OfACustomTolerance_IsNormal_EvenBeforeItsLimitsAreTyped()
+    {
+        var typed = Custom(TolClearance(), 0.02m, 0m).Normalised();
+        var empty = Custom(TolClearance(), null, null).Normalised();
+
+        Assert.Equal(PrecisionFit.Normal, HolePrecision.ColourFitIn(empty, Workbook));
+        Assert.Equal(HoleSettings.Starter.NormalFitColour, HolePrecision.ColourIn(empty, Workbook));
+        Assert.Equal(Built(typed).Geometry!.FitColour, HolePrecision.ColourIn(typed, Workbook));
+        Assert.Null(HolePrecision.TolerancedRow(typed, Workbook));
+    }
+
+    [Fact]
+    public void TolerancedRow_IsTheNamedRowForTheUnits_OrTheDefaultRow()
+    {
+        Assert.Equal("Test press", HolePrecision.TolerancedRow(TolClearance("Test press").Normalised(), Workbook)!.Name);
+        Assert.Equal("Test location", HolePrecision.TolerancedRow(TolClearance().Normalised(), Workbook)!.Name);
+        Assert.Null(HolePrecision.TolerancedRow(TolClearance("No such row").Normalised(), Workbook));
+    }
+
+    [Fact]
+    public void Colour_FromTheWorkbook_IsNullForARowThatIsNotThere_AndForAHoleThatIsNotToleranced()
+    {
+        Assert.Null(HolePrecision.ColourIn(TolClearance("No such row").Normalised(), Workbook));
+        Assert.Null(HolePrecision.ColourIn(HoleTestWorkbook.Clearance(), Workbook));
+        Assert.Null(HolePrecision.TolerancedRow(HoleTestWorkbook.Clearance(), Workbook));
+    }
+
+    [Fact]
+    public void Colour_FromTheWorkbook_OfADowel_IsItsFitsColour()
+    {
+        var dowel = HoleTestWorkbook.Clearance() with { Kind = HoleKind.Dowel, PrecisionFit = PrecisionFit.Slip };
+
+        Assert.Null(HolePrecision.TolerancedRow(dowel, Workbook));
+        Assert.Equal(HoleSettings.Starter.SlipFitColour, HolePrecision.ColourIn(dowel, Workbook));
+    }
 }

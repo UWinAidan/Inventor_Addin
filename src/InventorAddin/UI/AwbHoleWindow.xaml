@@ -22,7 +22,7 @@
         Type and Seat as icon buttons with the chosen name after them, the diagram (collapsible, remembered by the
         add-in), Standard, Size, Fastener type (seated clearance and tapped holes with a row of their size), the seat
         boxes (every seated hole, task 126), Fit with its
-        colour on the same row, Toleranced (Clearance and Simple, task 115), Tolerance, and the Custom Upper and Lower
+        colour on the same row, Toleranced (Clearance and Simple, task 115), Tolerance (with a toleranced hole's colour, task 138), and the Custom Upper and Lower
         boxes; section Depth and direction: Termination as icon buttons, Thread depth and
         Drill depth (blind tapped) or Depth, Drill point as icon buttons, Flip, and the centres on one line ("3 picked",
         how to pick in its tooltip; question 15 b, task 118). A field that does not apply is not shown. Each field's problem from HoleRules is shown under it in the error style. The body scrolls
@@ -372,37 +372,56 @@
                                        Visibility="{Binding ShowsTolerance, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
                         <StackPanel>
                             <!--
-                                Each entry is a HoleToleranceOption: the tolerance at the chosen size, and the Precision Tol
-                                row's name beside it in the muted style (task 098). The closed dropdown uses the same
-                                template, outside any ComboBoxItem, so the name is collapsed there and only the tolerance
-                                shows. TextSearch keys on the tolerance text, as the closed box reads.
+                                A toleranced Clearance or Simple hole's colour sits after the dropdown, on the same line
+                                (Aidan, 2026-11-07, spec 09 question 28; task 138): the colour its faces take on OK. The
+                                swatch alone, its name ("Normal fit") in its tooltip: the name beside it would leave the
+                                dropdown too narrow for an entry such as "N7  -0.004 / -0.016" in the 316-wide content
+                                (Default). A dowel's colour stays on Fit's row.
                             -->
-                            <ComboBox x:Name="ToleranceBox"
-                                      IsEditable="False"
-                                      TextSearch.TextPath="Text"
-                                      ItemsSource="{Binding ToleranceOptions, Mode=OneWay}"
-                                      SelectedValuePath="Value"
-                                      SelectedValue="{Binding Tolerance, Mode=TwoWay}">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate DataType="{x:Type vm:HoleToleranceOption}">
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="{Binding Text, Mode=OneWay}" />
-                                            <TextBlock x:Name="Detail"
-                                                       Style="{DynamicResource SideNoteText}"
-                                                       Text="{Binding Detail, Mode=OneWay}" />
-                                        </StackPanel>
-                                        <DataTemplate.Triggers>
-                                            <DataTrigger Binding="{Binding Detail, Mode=OneWay}" Value="{x:Null}">
-                                                <Setter TargetName="Detail" Property="Visibility" Value="Collapsed" />
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ComboBoxItem}}, FallbackValue={x:Null}}"
-                                                         Value="{x:Null}">
-                                                <Setter TargetName="Detail" Property="Visibility" Value="Collapsed" />
-                                            </DataTrigger>
-                                        </DataTemplate.Triggers>
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <!--
+                                    Each entry is a HoleToleranceOption: the tolerance at the chosen size, and the
+                                    Precision Tol row's name beside it in the muted style (task 098). The closed dropdown
+                                    uses the same template, outside any ComboBoxItem, so the name is collapsed there and
+                                    only the tolerance shows. TextSearch keys on the tolerance text, as the closed box reads.
+                                -->
+                                <ComboBox x:Name="ToleranceBox"
+                                          IsEditable="False"
+                                          TextSearch.TextPath="Text"
+                                          ItemsSource="{Binding ToleranceOptions, Mode=OneWay}"
+                                          SelectedValuePath="Value"
+                                          SelectedValue="{Binding Tolerance, Mode=TwoWay}">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:HoleToleranceOption}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Text, Mode=OneWay}" />
+                                                <TextBlock x:Name="Detail"
+                                                           Style="{DynamicResource SideNoteText}"
+                                                           Text="{Binding Detail, Mode=OneWay}" />
+                                            </StackPanel>
+                                            <DataTemplate.Triggers>
+                                                <DataTrigger Binding="{Binding Detail, Mode=OneWay}" Value="{x:Null}">
+                                                    <Setter TargetName="Detail" Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ComboBoxItem}}, FallbackValue={x:Null}}"
+                                                             Value="{x:Null}">
+                                                    <Setter TargetName="Detail" Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                            </DataTemplate.Triggers>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                                <controls:ColourSwatch Grid.Column="1"
+                                                       Style="{DynamicResource TrailingColourSwatch}"
+                                                       Colour="{Binding ToleranceSwatch, Mode=OneWay}"
+                                                       ToolTip="{Binding ToleranceColourText, Mode=OneWay}"
+                                                       AutomationProperties.Name="{Binding ToleranceColourText, Mode=OneWay}"
+                                                       Visibility="{Binding ShowsToleranceColour, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}" />
+                            </Grid>
                             <TextBlock Style="{DynamicResource ErrorStatusText}"
                                        Text="{Binding ToleranceProblem, Mode=OneWay}"
                                        Visibility="{Binding ToleranceProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />

@@ -353,3 +353,5 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-07 | Units sits on the AWB Hole header's line with no label; Alt+U is handled by the window and named in the tooltip | Default | task 118 |
 | 2026-11-07 | Centres is the last row of Depth and direction ("3 picked", help in the tooltip, "cannot be changed" for centres that are not sketch points) | Default | task 118 |
 | 2026-11-07 | Toleranced and Fit stay on two rows in the AWB Hole window | Default | task 118 |
+| 2026-11-07 | A toleranced hole's colour swatch shows alone at the end of the Tolerance dropdown's line, its name in the tooltip and automation name (the name beside it would clip long entries) | Default | task 138 |
+| 2026-11-07 | The toleranced hole's swatch shows whenever its colour is known, even before the hole can be built (Simple with no diameter, Custom without limits); hidden when the tolerance has no row for the units | Default | task 138 |

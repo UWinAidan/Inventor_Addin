@@ -58,8 +58,42 @@ public static class HolePrecision
     }
 
     /// <summary>
+    /// The Precision Tol row a toleranced Clearance or Simple hole takes, as <see cref="HoleRules.Build"/> finds it
+    /// (task 113): the row of the spec's tolerance name for its units, the one of its fit first when two share the name;
+    /// the units' Default row when no name is given. Null for a Custom tolerance, a dowel (whose row is of its own fit),
+    /// a hole that is not toleranced, and a name with no row.
+    /// </summary>
+    public static PrecisionToleranceRow? TolerancedRow(HoleSpec spec, HoleWorkbook workbook)
+    {
+        ArgumentNullException.ThrowIfNull(spec);
+        ArgumentNullException.ThrowIfNull(workbook);
+
+        return spec.Kind != HoleKind.Dowel && IsPrecision(spec) && !spec.CustomTolerance
+            ? HoleRules.FindAnyTolerance(workbook, spec.Units, spec.Tolerance, spec.PrecisionFit)
+            : null;
+    }
+
+    /// <summary>
+    /// <see cref="ColourFit(HoleSpec, PrecisionToleranceRow?)"/> with a toleranced hole's row found in the workbook
+    /// (<see cref="TolerancedRow"/>): the fit whose colour the hole's faces take on OK (task 138, for the window's
+    /// swatch).
+    /// </summary>
+    public static PrecisionFit? ColourFitIn(HoleSpec spec, HoleWorkbook workbook) =>
+        ColourFit(spec, TolerancedRow(spec, workbook));
+
+    /// <summary>
+    /// The colour every face of a hole takes on OK, from the workbook's Settings tab
+    /// (<see cref="ColourFitIn"/>); null for a hole that is not coloured.
+    /// </summary>
+    public static HoleColour? ColourIn(HoleSpec spec, HoleWorkbook workbook)
+    {
+        ArgumentNullException.ThrowIfNull(workbook);
+        return ColourFitIn(spec, workbook) is { } fit ? workbook.Settings.FitColour(fit) : null;
+    }
+
+    /// <summary>
     /// The colour every face of a precision hole takes, from the workbook's Settings tab
-    /// (<see cref="ColourFit"/>); null for a hole that is not coloured.
+    /// (<see cref="ColourFit(HoleSpec, PrecisionToleranceRow?)"/>); null for a hole that is not coloured.
     /// </summary>
     public static HoleColour? Colour(HoleSpec spec, PrecisionToleranceRow? row, HoleSettings settings)
     {
