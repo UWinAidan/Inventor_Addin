@@ -13,17 +13,19 @@
         window still sizes to its content if the shared styles fail to load.
 
         Spec 09, "The window" (task 090), laid out as Aidan approved the task 102 mockup on 2026-10-23 (task 104;
-        docs/ui-mockups/awb-hole-window.png): 360 wide (CompactDialogContent). Modeless: it stays open while the user
+        docs/ui-mockups/awb-hole-window.png): 360 wide (CompactDialogContent), and tightened so the common holes fit at
+        150 percent on a 1080p screen (task 118; the spacing is CompactDialogContent's, in UI/Theme/Styles.xaml). Modeless: it stays open while the user
         picks hole centres in the model, and the HoleSession (task 089) keeps the real hole in step with it.
 
-        Body, top to bottom: the note for a hole made by Inventor's Hole command; Units, a two-part toggle; section Hole:
+        Header: the title, and Units as a two-part toggle on its line (task 118). Body, top to bottom: the note for a hole
+        made by Inventor's Hole command; section Hole:
         Type and Seat as icon buttons with the chosen name after them, the diagram (collapsible, remembered by the
         add-in), Standard, Size, Fastener type (seated clearance and tapped holes with a row of their size), the seat
         boxes (every seated hole, task 126), Fit with its
         colour on the same row, Toleranced (Clearance and Simple, task 115), Tolerance, and the Custom Upper and Lower
         boxes; section Depth and direction: Termination as icon buttons, Thread depth and
-        Drill depth (blind tapped) or Depth, Drill point as icon buttons, Flip; section Centres. A field that does not
-        apply is not shown. Each field's problem from HoleRules is shown under it in the error style. The body scrolls
+        Drill depth (blind tapped) or Depth, Drill point as icon buttons, Flip, and the centres on one line ("3 picked",
+        how to pick in its tooltip; question 15 b, task 118). A field that does not apply is not shown. Each field's problem from HoleRules is shown under it in the error style. The body scrolls
         when the window is capped at the screen's height; the header and the footer (status line, OK, Cancel) stay put,
         with a line above the footer.
 
@@ -36,11 +38,11 @@
 
         Keyboard: Enter commits the box being typed in and does OK when OK is enabled (code-behind; OK is not IsDefault,
         so Enter cannot press it twice). Esc is Cancel (IsCancel). Tab moves into an icon row at its chosen button and
-        out again; the arrow keys or Space choose. Access keys: U units, Y type, E seat, S standard, Z size, F fastener
+        out again; the arrow keys or Space choose. Access keys: U units (handled in the code-behind: no label), Y type, E seat, S standard, Z size, F fastener
         type, A counterbore diameter, B counterbore depth, K countersink diameter, G countersink angle (a dowel's seat,
         task 106), I fit, T tolerance, R termination, H thread depth, D drill depth, P depth, O drill point, L flip,
         M diameter (Simple), C spotface diameter (task 114), N toleranced, W the Custom lower limit (task 115; the Custom
-        upper limit has none, its letters are all taken).
+        upper limit has none, its letters are all taken). Full depth (task 136) has none either.
     -->
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="VisibleWhenTrue" />
@@ -57,10 +59,24 @@
         </Grid.RowDefinitions>
 
         <!-- The header icon is put in the window's resources by WindowHost (HeaderIcon), in the window's theme. -->
+        <!--
+            Units on the header's line, after the title (Aidan, 2026-10-24, question 15 c; task 118). No label beside it,
+            so "Edit AWB Hole" fits before it: Alt+U is handled in the code-behind and named in the tooltip.
+        -->
         <controls:DialogHeader Grid.Row="0"
                                Icon="{DynamicResource HeaderIcon}"
                                Title="{Binding HeaderTitle, Mode=OneTime}"
-                               Subline="{Binding HeaderSubline, Mode=OneTime}" />
+                               Subline="{Binding HeaderSubline, Mode=OneTime}">
+            <controls:DialogHeader.Trailing>
+                <controls:ChoiceList x:Name="UnitsList"
+                                     Style="{DynamicResource SegmentedChoiceList}"
+                                     AutomationProperties.Name="Units"
+                                     ToolTip="Units (Alt+U)"
+                                     ItemsSource="{x:Static vm:AwbHoleViewModel.UnitsOptions}"
+                                     SelectedValuePath="Value"
+                                     SelectedValue="{Binding Units, Mode=TwoWay}" />
+            </controls:DialogHeader.Trailing>
+        </controls:DialogHeader>
 
         <ScrollViewer Grid.Row="1" Style="{DynamicResource DialogBody}">
             <StackPanel Style="{DynamicResource DialogBodyContent}">
@@ -91,18 +107,6 @@
                         </ItemsControl>
                         <TextBlock Style="{DynamicResource MutedText}" Text="{Binding ReapplyNote, Mode=OneTime}" />
                     </StackPanel>
-                </controls:FormSection>
-
-                <!-- Units on its own row above the sections (mockup choice 1). -->
-                <controls:FormSection>
-                    <controls:FieldRow Label="_Units" Target="{Binding ElementName=UnitsList}">
-                        <controls:ChoiceList x:Name="UnitsList"
-                                             Style="{DynamicResource SegmentedChoiceList}"
-                                             AutomationProperties.Name="Units"
-                                             ItemsSource="{x:Static vm:AwbHoleViewModel.UnitsOptions}"
-                                             SelectedValuePath="Value"
-                                             SelectedValue="{Binding Units, Mode=TwoWay}" />
-                    </controls:FieldRow>
                 </controls:FormSection>
 
                 <controls:FormSection Heading="Hole">
@@ -555,20 +559,23 @@
                     <controls:FieldRow Label="Direction">
                         <CheckBox Content="F_lip" IsChecked="{Binding Flip, Mode=TwoWay}" />
                     </controls:FieldRow>
-                </controls:FormSection>
-
-                <!--
-                    The picked hole centres (spec 09, "Hole centres"): the count, the problem when none is picked, and how
-                    to pick, or why nothing can be picked for an edited hole whose centres are not sketch points.
-                -->
-                <controls:FormSection Heading="Centres">
-                    <controls:FieldRow Label="Centres">
+                    <!--
+                        The picked hole centres (spec 09, "Hole centres"; question 15 b, task 118): one line at the end of
+                        these rows, "3 picked", with how to pick in its tooltip; for an edited hole whose centres are not
+                        sketch points, a muted note after it says they cannot be changed. The problem when none is
+                        picked shows under it.
+                    -->
+                    <controls:FieldRow Label="Centres" ToolTip="{Binding CentresHelp, Mode=OneWay}">
                         <StackPanel>
-                            <TextBlock Style="{DynamicResource ValueText}" Text="{Binding CentresText, Mode=OneWay}" />
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Style="{DynamicResource ValueText}" Text="{Binding CentresText, Mode=OneWay}" />
+                                <TextBlock Style="{DynamicResource SideNoteText}"
+                                           Text="{Binding CentresNote, Mode=OneWay}"
+                                           Visibility="{Binding CentresNote, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
+                            </StackPanel>
                             <TextBlock Style="{DynamicResource ErrorStatusText}"
                                        Text="{Binding CentresProblem, Mode=OneWay}"
                                        Visibility="{Binding CentresProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
-                            <TextBlock Style="{DynamicResource MutedText}" Text="{Binding CentresHelp, Mode=OneWay}" />
                         </StackPanel>
                     </controls:FieldRow>
                 </controls:FormSection>

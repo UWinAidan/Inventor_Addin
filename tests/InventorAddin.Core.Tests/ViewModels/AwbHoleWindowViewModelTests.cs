@@ -336,6 +336,36 @@ public sealed class AwbHoleWindowViewModelTests
         Assert.Contains(nameof(AwbHoleViewModel.CentresHelp), changed);
     }
 
+    [Fact]
+    public void CentresNote_IsNone_WhileTheCentresCanBePicked()
+    {
+        var vm = NewHole();
+        vm.CentreCount = 3;
+
+        Assert.True(vm.CanPickCentres);
+        Assert.Null(vm.CentresNote);
+        Assert.Equal("3 picked", vm.CentresText);
+    }
+
+    [Fact]
+    public void CentresNote_SaysTheCentresCannotBeChanged_ForCentresThatAreNotSketchPoints()
+    {
+        var vm = AwbHoleViewModel.ForEdit(Workbook, PartName, MetricSpec(HoleKind.Clearance, "T5"));
+        var changed = new List<string?>();
+        vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        vm.CanPickCentres = false;
+
+        Assert.Equal(AwbHoleViewModel.CentresFixedNoteText, vm.CentresNote);
+        Assert.Contains(nameof(AwbHoleViewModel.CentresNote), changed);
+
+        changed.Clear();
+        vm.CanPickCentres = true;
+
+        Assert.Null(vm.CentresNote);
+        Assert.Contains(nameof(AwbHoleViewModel.CentresNote), changed);
+    }
+
     // ---- The add-in's notes on the hole as made ----
 
     [Fact]

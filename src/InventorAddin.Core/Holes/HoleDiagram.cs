@@ -151,10 +151,13 @@ public sealed record HoleDiagram(
     IReadOnlyList<DiagramArrow> Arrows,
     IReadOnlyList<DiagramLabel> Labels)
 {
-    /// <summary>The drawing's size in the window: the full width of the content inside its border, and 134 tall.</summary>
+    /// <summary>
+    /// The drawing's size in the window: the full width of the content inside its border, and 104 tall (134 until
+    /// task 118 made the window fit at 150 percent on a 1080p screen).
+    /// </summary>
     public const double DefaultWidth = 314;
 
-    public const double DefaultHeight = 134;
+    public const double DefaultHeight = 104;
 
     public const string DiameterSign = "⌀";
     public const string DegreeSign = "°";

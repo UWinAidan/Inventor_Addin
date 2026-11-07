@@ -250,6 +250,12 @@ public sealed class AwbHoleViewModel : ObservableObject
     /// <summary>The window says this under the centres while they can be picked.</summary>
     public const string CentresHelpText = "Click a point in the model to add or remove a hole centre.";
 
+    /// <summary>
+    /// After the count on the centres' one line (task 118) when the centres cannot be picked; the tooltip has
+    /// <see cref="CentresNotPickableText"/>.
+    /// </summary>
+    public const string CentresFixedNoteText = "cannot be changed";
+
     /// <summary>Beside a depth box whose text is not a number.</summary>
     public const string NotANumberText = "Enter a number.";
 
@@ -1378,12 +1384,20 @@ public sealed class AwbHoleViewModel : ObservableObject
             if (SetProperty(ref _canPickCentres, value))
             {
                 OnPropertyChanged(nameof(CentresHelp));
+                OnPropertyChanged(nameof(CentresNote));
             }
         }
     }
 
     /// <summary>How to pick centres, or <see cref="CentresNotPickableText"/> when they cannot be picked.</summary>
     public string CentresHelp => _canPickCentres ? CentresHelpText : CentresNotPickableText;
+
+    /// <summary>
+    /// The muted note after <see cref="CentresText"/> on the centres' one line (spec 09, question 15 b; task 118):
+    /// null while the centres can be picked (how to pick is in the tooltip, <see cref="CentresHelp"/>), else
+    /// <see cref="CentresFixedNoteText"/>.
+    /// </summary>
+    public string? CentresNote => _canPickCentres ? null : CentresFixedNoteText;
 
     /// <summary>The spec the fields give, normalised.</summary>
     public HoleSpec Spec => _spec;

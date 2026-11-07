@@ -115,12 +115,22 @@ namespace InventorAddin.UI
         }
 
         /// <summary>
+        /// Alt+U focuses the Units toggle (task 118).
         /// Enter does OK only when OK is enabled, after committing the box being typed in at once (task 130). A focused
         /// button takes Enter itself, and an open dropdown uses it to pick an entry. In an editable dropdown (the
         /// countersink angle, task 127) the keys go to the text box inside it, and the binding is on the dropdown's Text.
         /// </summary>
         private void OnPreviewKeyDown(object sender, KeyEventArgs e)
         {
+            // Alt+U goes to the chosen Units part. Units sits on the header's line with no label (task 118), so no
+            // label's underscore gives it the access key (registering the list itself with AccessKeyManager did nothing).
+            if (e.Key == Key.System && e.SystemKey == Key.U && Keyboard.Modifiers == ModifierKeys.Alt)
+            {
+                e.Handled = true;
+                UnitsList.FocusChosen();
+                return;
+            }
+
             if (e.Key != Key.Enter || Keyboard.Modifiers != ModifierKeys.None)
                 return;
             if (e.OriginalSource is ButtonBase || e.OriginalSource is ComboBoxItem)

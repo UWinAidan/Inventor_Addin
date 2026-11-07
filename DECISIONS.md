@@ -347,3 +347,9 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-07 | The Full depth checkbox has its own row after Termination and no access key (every letter is taken) | Default | task 136 |
 | 2026-11-07 | A Through All stopped thread depth is checked only for above zero, not against the drill depth or the part; a ticked edited hole's unused thread depth is not counted as typed | Default | task 136 |
 | 2026-11-07 | A hole ending To a face stays full depth with no checkbox; the collapsed diagram summary says "through all, thread N" | Default | task 136 |
+| 2026-11-07 | A toleranced Clearance or Simple hole shows the precision colour swatch beside its Tolerance row, matching the colour the hole gets (overturns task 115's Default) | Aidan | spec 09 question 28, session 2026-11-07 |
+| 2026-11-07 | The AWB Hole window uses tighter spacing than spec 08 (4 between rows, 6 under a heading, 10 between sections, 12 under the header, 14 around the content, 10 under the footer divider), through its own styles only | Default | task 118 |
+| 2026-11-07 | The AWB Hole diagram is 104 tall (128 with header and frame); icon buttons are 40 by 28 | Default | task 118 |
+| 2026-11-07 | Units sits on the AWB Hole header's line with no label; Alt+U is handled by the window and named in the tooltip | Default | task 118 |
+| 2026-11-07 | Centres is the last row of Depth and direction ("3 picked", help in the tooltip, "cannot be changed" for centres that are not sketch points) | Default | task 118 |
+| 2026-11-07 | Toleranced and Fit stay on two rows in the AWB Hole window | Default | task 118 |

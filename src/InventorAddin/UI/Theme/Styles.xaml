@@ -1074,7 +1074,10 @@
 
     <!-- ===== Shared pieces (UI/Controls) ===== -->
 
-    <!-- Header band: icon tile, title, subline; 18 above the first section. -->
+    <!--
+        Header band: icon tile, title, subline; 18 above the first section. A Trailing control (AWB Hole's Units, task
+        118) sits on the header's line against the right edge, 12 after the title; without one nothing is drawn there.
+    -->
     <Style TargetType="{x:Type controls:DialogHeader}">
         <Setter Property="Margin" Value="0,0,0,18" />
         <Setter Property="Template">
@@ -1084,6 +1087,7 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <Border Grid.Column="0"
                                 Width="36"
@@ -1102,8 +1106,16 @@
                                        Style="{DynamicResource HeaderSublineText}"
                                        Text="{TemplateBinding Subline}" />
                         </StackPanel>
+                        <ContentPresenter x:Name="TrailingPresenter"
+                                          Grid.Column="2"
+                                          Margin="12,0,0,0"
+                                          VerticalAlignment="Center"
+                                          Content="{TemplateBinding Trailing}" />
                     </Grid>
                     <ControlTemplate.Triggers>
+                        <Trigger Property="Trailing" Value="{x:Null}">
+                            <Setter TargetName="TrailingPresenter" Property="Visibility" Value="Collapsed" />
+                        </Trigger>
                         <Trigger Property="Subline" Value="{x:Null}">
                             <Setter TargetName="SublineText" Property="Visibility" Value="Collapsed" />
                         </Trigger>
@@ -1327,21 +1339,68 @@
     <!-- ===== AWB Hole (task 104) ===== -->
 
     <!--
+        The AWB Hole window's tighter spacing (Aidan, 2026-10-24, spec 09 question 15; task 118), so the common holes fit
+        at 150 percent on a 1080p screen. Spec 08's spacing table stays for every other window: these styles reach only
+        the window whose root panel is in CompactDialogContent, through its Style.Resources below.
+        Rows 4 apart (9 elsewhere); a section's heading 6 above its first row, and sections 10 apart (9 and 18); the
+        header 12 above the body (18). The gaps are even, so at 150 percent they are whole pixels (DialogWindow's note).
+    -->
+    <Style x:Key="CompactFieldRow" TargetType="{x:Type controls:FieldRow}" BasedOn="{StaticResource {x:Type controls:FieldRow}}">
+        <Setter Property="Margin" Value="0,0,0,4" />
+    </Style>
+
+    <Style x:Key="CompactFormSection" TargetType="{x:Type controls:FormSection}" BasedOn="{StaticResource {x:Type controls:FormSection}}">
+        <Setter Property="Margin" Value="0,0,0,6" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type controls:FormSection}">
+                    <StackPanel>
+                        <StackPanel x:Name="HeadingPanel" Margin="0,0,0,6">
+                            <TextBlock Style="{DynamicResource SectionHeadingText}"
+                                       Text="{TemplateBinding DisplayHeading}"
+                                       AutomationProperties.Name="{TemplateBinding Heading}" />
+                            <Border Height="1" Margin="0,4,0,0" Background="{DynamicResource DividerBrush}" />
+                        </StackPanel>
+                        <ItemsPresenter />
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="HasHeading" Value="False">
+                            <Setter TargetName="HeadingPanel" Property="Visibility" Value="Collapsed" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="CompactDialogHeader" TargetType="{x:Type controls:DialogHeader}" BasedOn="{StaticResource {x:Type controls:DialogHeader}}">
+        <Setter Property="Margin" Value="0,0,0,12" />
+    </Style>
+
+    <!--
         A compact window's root panel (AWB Hole, Aidan 2026-10-23: 360 wide): as DialogContent, but the content is
-        always 316 wide, so with the 22 margins the window is 360 wide. The label column and gaps are unchanged.
+        always 316 wide, so with the 22 margins the window is 360 wide, and 14 above and below (18 elsewhere). Its
+        rows, sections and header take the tighter spacing above (task 118); the label column is unchanged.
     -->
     <Style x:Key="CompactDialogContent" TargetType="{x:Type FrameworkElement}" BasedOn="{StaticResource DialogContent}">
+        <Style.Resources>
+            <Style TargetType="{x:Type controls:FieldRow}" BasedOn="{StaticResource CompactFieldRow}" />
+            <Style TargetType="{x:Type controls:FormSection}" BasedOn="{StaticResource CompactFormSection}" />
+            <Style TargetType="{x:Type controls:DialogHeader}" BasedOn="{StaticResource CompactDialogHeader}" />
+        </Style.Resources>
+        <Setter Property="Margin" Value="22,14,22,14" />
         <Setter Property="MinWidth" Value="316" />
         <Setter Property="MaxWidth" Value="316" />
     </Style>
 
     <!--
         A line across the whole window above the footer (AWB Hole, mockup choice 13), so a body that scrolls has a
-        visible edge while the footer stays put. It reaches past the content margins to the window's edges; 12 below it.
+        visible edge while the footer stays put. It reaches past the content margins to the window's edges; 10 below it
+        (task 118).
     -->
     <Style x:Key="FooterDivider" TargetType="{x:Type Border}">
         <Setter Property="Height" Value="1" />
-        <Setter Property="Margin" Value="-22,0,-22,12" />
+        <Setter Property="Margin" Value="-22,0,-22,10" />
         <Setter Property="Background" Value="{DynamicResource DividerBrush}" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
     </Style>
@@ -1454,7 +1513,7 @@
     <Geometry x:Key="HoleIcon.FlatBottom.Material">M1 2H3V12H17V2H19V18H1Z</Geometry>
 
     <!--
-        A button in a row of icon buttons (mockup choice 2): 40 by 32, icon only, 4 apart. Muted while not chosen; the
+        A button in a row of icon buttons (mockup choice 2): 40 by 28 (32 until task 118), icon only, 4 apart. Muted while not chosen; the
         mouse over it shows an input border; the chosen one has the icon tile fill, a lighter (label colour) border and
         the strong text colour, not the accent. Keyboard focus shows the shared Accent outline. Its tooltip and its name
         for screen readers are the choice's text.
@@ -1466,7 +1525,7 @@
         <Setter Property="BorderBrush" Value="Transparent" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="Width" Value="40" />
-        <Setter Property="Height" Value="32" />
+        <Setter Property="Height" Value="28" />
         <Setter Property="Margin" Value="0,0,4,0" />
         <Setter Property="Padding" Value="0" />
         <Setter Property="Cursor" Value="Hand" />
@@ -1545,8 +1604,8 @@
     </Style>
 
     <!--
-        A two-part toggle (Units, mockup choice 1): one frame in the input border, 30 high, the parts side by side with a
-        line between them. The chosen part has the icon tile fill and semibold strong text; the other is muted.
+        A two-part toggle (Units, mockup choice 1; on the header's line since task 118): one frame in the input border,
+        30 high, the parts side by side with a line between them, 10 either side of each name. The chosen part has the icon tile fill and semibold strong text; the other is muted.
     -->
     <Style x:Key="SegmentedChoiceItem" TargetType="{x:Type ListBoxItem}">
         <Setter Property="FocusVisualStyle" Value="{StaticResource FocusOutline}" />
@@ -1554,7 +1613,7 @@
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
         <Setter Property="BorderThickness" Value="1,0,0,0" />
-        <Setter Property="Padding" Value="14,0,14,0" />
+        <Setter Property="Padding" Value="10,0,10,0" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
         <Setter Property="AutomationProperties.Name" Value="{Binding Text, Mode=OneWay}" />
@@ -1632,13 +1691,13 @@
     </Style>
 
     <!--
-        The hole diagram (UI/Controls/HoleDiagramView; mockup choice 3): 134 tall, the full width inside its frame. Its
+        The hole diagram (UI/Controls/HoleDiagramView; mockup choice 3): 104 tall (134 until task 118), the full width inside its frame. Its
         colours are the theme's, never a fit colour: the outline and labels in the primary text colour, the part's edges
         in the input border, the section hatched in the divider and input border colours, dimensions in the muted text
         colour, the centre line in the placeholder colour. Labels are Segoe UI 11.
     -->
     <Style TargetType="{x:Type controls:HoleDiagramView}">
-        <Setter Property="Height" Value="134" />
+        <Setter Property="Height" Value="104" />
         <Setter Property="FontSize" Value="11" />
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
         <Setter Property="OutlineBrush" Value="{DynamicResource TextPrimaryBrush}" />
@@ -1652,20 +1711,20 @@
     </Style>
 
     <!--
-        The diagram's frame (mockup choice 12): a CollapsibleSection in a 1 px divider frame, radius 4, 9 below as after a
-        row. Its 24-high header is the button, as a collapsible section's heading is: the chevron, "DIAGRAM" and, while
+        The diagram's frame (mockup choice 12): a CollapsibleSection in a 1 px divider frame, radius 4, 4 below as after a
+        row in this window (task 118). Its 22-high header (24 until task 118) is the button, as a collapsible section's heading is: the chevron, "DIAGRAM" and, while
         collapsed, the summary in muted text cut short with an ellipsis (its tooltip has it all). Collapsed, only the
         header shows. Click it, or press Space when it has focus.
     -->
     <Style x:Key="DiagramSection" TargetType="{x:Type controls:CollapsibleSection}">
-        <Setter Property="Margin" Value="0,0,0,9" />
+        <Setter Property="Margin" Value="0,0,0,4" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type controls:CollapsibleSection}">
                     <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" CornerRadius="4">
                         <StackPanel>
                             <ToggleButton FocusVisualStyle="{DynamicResource FocusOutline}"
-                                          Height="24"
+                                          Height="22"
                                           Padding="8,0,8,0"
                                           HorizontalContentAlignment="Stretch"
                                           Cursor="Hand"

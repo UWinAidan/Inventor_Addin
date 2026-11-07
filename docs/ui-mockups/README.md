@@ -82,3 +82,13 @@ Choices 1 to 11 were approved as first shown, along with the 360 width and the `
 15. **A countersunk dowel** has **Csink dia** (mm) and **Csink angle** (deg) boxes in the same place. Access keys: K and G.
 
 The labels follow the Dowel tab's column names, shortened to fit the 100-wide label column.
+
+### Changed by task 118 (Aidan, 2026-10-24, spec 09 question 15)
+
+The built window no longer matches the mockup in these ways, so the common holes fit at 150 percent on a 1080p screen. The mockup image is not redrawn.
+
+- **Units** (choice 1) is on the header's line, after the title, with no label of its own. Alt+U still reaches it, and its tooltip says so.
+- **Centres** (choice 8) is one row at the end of Depth and direction: "3 picked", with how to pick in its tooltip. There is no Centres section. For an edited hole whose centres are not sketch points, a muted "cannot be changed" follows the count.
+- **The diagram** (choices 3 and 12) is 128 tall with its header (the drawing 104, the header 22); collapsing it makes the window 104 shorter.
+- **Icon buttons** (choice 2) are 40 by 28.
+- **Spacing** in this window only: 4 between rows, 6 from a section's heading to its first row, 10 between sections, 12 under the header, 14 above and below the content, and 10 under the footer's divider. The other windows keep spec 08's 9 and 18.
