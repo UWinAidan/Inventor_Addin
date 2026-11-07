@@ -355,3 +355,4 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-07 | Toleranced and Fit stay on two rows in the AWB Hole window | Default | task 118 |
 | 2026-11-07 | A toleranced hole's colour swatch shows alone at the end of the Tolerance dropdown's line, its name in the tooltip and automation name (the name beside it would clip long entries) | Default | task 138 |
 | 2026-11-07 | The toleranced hole's swatch shows whenever its colour is known, even before the hole can be built (Simple with no diameter, Custom without limits); hidden when the tolerance has no row for the units | Default | task 138 |
+| 2026-11-07 | The Hole button on a part's right-click marking menu follows the Hole takeover like the mini toolbar's Hole: AWB Hole, or Inventor's Hole when "Use Inventor's Hole" is on | Aidan | first look at the round, 2026-11-07 |
