@@ -532,15 +532,15 @@ public sealed class AwbHoleViewModelTests
     public void ThreadDepths_OnlyForBlindTappedHoles_FromTheTappedRow()
     {
         var vm = NewHole();
-        Assert.False(vm.ShowsThreadDepths);
+        Assert.False(vm.ShowsThreadDepth);
         Assert.Null(vm.ThreadDepth);
 
         vm.Type = HoleStandards.TappedType;
-        Assert.False(vm.ShowsThreadDepths);
+        Assert.False(vm.ShowsThreadDepth);
 
         vm.Termination = HoleTermination.Distance;
 
-        Assert.True(vm.ShowsThreadDepths);
+        Assert.True(vm.ShowsThreadDepth);
         Assert.False(vm.ShowsDepth);
         Assert.Equal(4.5m, vm.ThreadDepth);
         Assert.Equal(6m, vm.DrillDepth);

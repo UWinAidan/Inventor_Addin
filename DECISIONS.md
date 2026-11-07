@@ -342,3 +342,8 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-07 | Seat-depth-versus-drill-depth checks do not apply to threaded holes, since the drill is below the seat | Default | task 116 |
 | 2026-11-07 | Stored hole data version 5: versions 1 to 4 are converted on read (seat depth from the stored spec, else the hole; expressions become `(expression) - (seat)`); an old hole whose thread did not reach below its seat opens with a thread depth of 0 or less and the window asks for one | Default | task 116 |
 | 2026-11-07 | An expression read back as `(length) + (seat)` opens as the plain number; the collapsed diagram's summary line is unchanged | Default | task 116 |
+| 2026-11-07 | Full depth is stored as an optional attribute (missing = ticked) without a version bump; an older add-in would read an unticked hole as ticked | Default | task 136 |
+| 2026-11-07 | Full depth is kept while the window is open across type and termination changes; each new window starts ticked; an AWB hole opens on its stored setting (re-apply offered if changed in Inventor), an Inventor-made hole follows Inventor's | Default | task 136 |
+| 2026-11-07 | The Full depth checkbox has its own row after Termination and no access key (every letter is taken) | Default | task 136 |
+| 2026-11-07 | A Through All stopped thread depth is checked only for above zero, not against the drill depth or the part; a ticked edited hole's unused thread depth is not counted as typed | Default | task 136 |
+| 2026-11-07 | A hole ending To a face stays full depth with no checkbox; the collapsed diagram summary says "through all, thread N" | Default | task 136 |

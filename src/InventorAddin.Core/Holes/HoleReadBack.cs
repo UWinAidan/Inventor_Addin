@@ -14,7 +14,10 @@ namespace InventorAddin.Core.Holes;
 /// <param name="Tapped">The hole is threaded, with a straight or a tapered thread (<see cref="TaperedThread"/>).</param>
 /// <param name="ThreadDesignation">Tapped holes: Inventor's designation (<c>M6x1</c>).</param>
 /// <param name="ThreadType">Tapped holes: Inventor's thread type.</param>
-/// <param name="ThreadDepthCm">Tapped holes: the thread depth, when the thread is not full depth.</param>
+/// <param name="ThreadDepthCm">
+/// Tapped holes: the thread depth, when the thread is not full depth (a blind hole, or a Through All one with Full depth
+/// unticked, task 136); null for a full-depth thread.
+/// </param>
 /// <param name="HoleDiameterCm">The hole diameter.</param>
 /// <param name="Termination">Distance, Through All or To; null for an extent AWB Hole does not offer.</param>
 /// <param name="DepthCm">Blind holes: the depth.</param>
@@ -349,16 +352,22 @@ public static class HoleReadBack
             }
 
             var blind = termination == HoleTermination.Distance;
+            // A Through All hole whose thread is not full depth opens with Full depth unticked and its thread depth
+            // (task 136); Inventor reports a thread depth only then.
+            var partThrough = termination == HoleTermination.ThroughAll && facts.ThreadDepthCm is not null;
+            var threadStops = blind || partThrough;
             return Blank(units, HoleKind.Tapped, seat, termination) with
             {
                 Size = row?.Thread ?? "",
                 Fastener = SameSizeFastener(seat, units, row?.Thread, row?.Nominal),
-                // A hole that is not blind has no depths in Inventor; take the row's defaults, as HoleRules does.
-                ThreadDepth = blind && facts.ThreadDepthCm is { } thread ? FromCm(thread, units) : row?.ThreadDepth,
+                // A hole that is not blind has no drill depth in Inventor, and a full thread no thread depth; take the
+                // row's defaults, as HoleRules does.
+                ThreadDepth = threadStops && facts.ThreadDepthCm is { } thread ? FromCm(thread, units) : row?.ThreadDepth,
                 DrillDepth = blind && facts.DepthCm is { } drill ? FromCm(drill, units) : row?.DrillDepth,
                 // A depth driven by parameters shows its expression in the window (task 100).
-                ThreadDepthExpression = blind && facts.ThreadDepthCm is not null ? facts.ThreadDepthExpression : null,
+                ThreadDepthExpression = threadStops && facts.ThreadDepthCm is not null ? facts.ThreadDepthExpression : null,
                 DrillDepthExpression = blind && facts.DepthCm is not null ? facts.DepthExpression : null,
+                FullDepth = !partThrough,
             };
         }
 

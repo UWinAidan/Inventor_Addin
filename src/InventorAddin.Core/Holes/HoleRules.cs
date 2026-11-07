@@ -887,13 +887,17 @@ public static class HoleRules
             _resolved = _resolved with { ThreadDepth = threadDepth, DrillDepth = drillDepth };
             _holeDiameter = row.TapDrill;
 
+            // A blind hole's thread stops at its thread depth, and so does a Through All hole's with Full depth unticked
+            // (task 136). A Through All thread depth is not checked against the part's thickness: Inventor reports
+            // that, and the hole has no drill depth to check it against.
+            var threadStops = spec.HasThreadDepth;
+            if (threadStops && threadDepth <= 0)
+            {
+                Problem(HoleField.ThreadDepth, "Enter a thread depth greater than zero.");
+            }
+
             if (spec.IsBlind)
             {
-                if (threadDepth <= 0)
-                {
-                    Problem(HoleField.ThreadDepth, "Enter a thread depth greater than zero.");
-                }
-
                 if (threadDepth > drillDepth)
                 {
                     Problem(
@@ -909,10 +913,10 @@ public static class HoleRules
                 row.Class.Trim(),
                 (double)row.TapDrill,
                 row.Units,
-                FullDepth: !spec.IsBlind,
+                FullDepth: !threadStops,
                 ToCm(threadDepth, Units))
             {
-                ThreadDepthExpression = spec.IsBlind ? spec.ThreadDepthExpression : null,
+                ThreadDepthExpression = threadStops ? spec.ThreadDepthExpression : null,
             };
 
             BuildSeatOfSameSize(row.Nominal);

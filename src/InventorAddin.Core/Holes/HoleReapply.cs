@@ -28,6 +28,7 @@ public sealed record HoleReapplyOffer(IReadOnlyList<string> Differences)
 /// diameter, which its thread sets and the add-in does not write;</item>
 /// <item>the seat (none, counterbore, countersink) and how the hole ends;</item>
 /// <item>a blind hole's depths: the depth, or a tapped hole's drill and thread depths;</item>
+/// <item>a Through All tapped hole's Full depth setting, and its thread depth when that is unticked (task 136);</item>
 /// <item>the seat's own sizes, on every kind (task 106 for a dowel, task 126 for clearance and tapped holes, task 112
 /// for Simple and taper tapped holes): the counterbore diameter and depth, the countersink diameter and angle, or the
 /// spotface diameter and depth.</item>
@@ -118,6 +119,24 @@ public static class HoleReapplyRules
             else
             {
                 lengths.Compare("depth", spec.Depth, spec.DepthExpression, facts.DepthCm);
+            }
+        }
+        else if (sameEnd && spec.TakesFullDepth)
+        {
+            // A Through All tapped hole (task 136): its Full depth setting, and with it unticked its thread depth.
+            if (spec.FullDepth && facts.ThreadDepthCm is { } partial)
+            {
+                differences.Add(
+                    $"The thread stops at {HoleStateComparison.LengthText(partial, units)}; {CommandName} threaded " +
+                    "the full depth.");
+            }
+            else if (!spec.FullDepth && facts.ThreadDepthCm is null)
+            {
+                differences.Add($"The thread runs the full depth; {CommandName} set a thread depth.");
+            }
+            else if (!spec.FullDepth)
+            {
+                lengths.Compare("thread depth", spec.ThreadDepth, spec.ThreadDepthExpression, facts.ThreadDepthCm);
             }
         }
 

@@ -234,7 +234,8 @@ public sealed class HoleDiagramTests
         "dowel counterbore", "tapped", "tapped through", "clearance counterbore", "dowel countersink", "plain through",
         "tapped counterbore blind", "imperial dowel", "seat narrower than hole", "seat deeper than hole", "nothing known",
         "long expression values", "tiny countersink angle", "60 deg point", "tapped countersink blind",
-        "tapped counterbore deeper than drill",
+        "tapped counterbore deeper than drill", "tapped through not full depth",
+        "tapped through not full depth counterbore",
     };
 
     private static HoleDiagramInput Case(string name) => name switch
@@ -261,6 +262,13 @@ public sealed class HoleDiagramTests
         "tapped counterbore deeper than drill" => BlindTapped with
         {
             Seat = HoleSeat.Counterbore, CounterboreDiameter = 11m, CounterboreDepth = 30m,
+        },
+        // Task 136: a Through All tapped hole whose thread stops at its thread depth.
+        "tapped through not full depth" => BlindTapped with { Termination = HoleTermination.ThroughAll, FullDepth = false },
+        "tapped through not full depth counterbore" => BlindTapped with
+        {
+            Termination = HoleTermination.ThroughAll, FullDepth = false, Seat = HoleSeat.Counterbore,
+            CounterboreDiameter = 11m, CounterboreDepth = 6m, ThreadDepth = 30m,
         },
         _ => throw new ArgumentOutOfRangeException(nameof(name)),
     };

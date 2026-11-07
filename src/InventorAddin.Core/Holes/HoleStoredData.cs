@@ -183,6 +183,11 @@ public sealed record HoleStoredDataReadResult(HoleStoredData? Data, string Messa
 /// version says which way the depths are measured. Older data reads with its <see cref="Version"/>, and
 /// <see cref="HoleDepthReference.Upgrade"/> converts its depths, so the hole opens as it is in Inventor, not deeper.
 /// </para>
+/// <para>
+/// Still version 5 (task 136): a Through All tapped hole stores <see cref="FullDepthName"/>, 1 or 0, and with 0 its
+/// thread depth is below the seat, as a blind hole's. Data without it (every hole stored before task 136) reads as
+/// ticked, which is how those holes were made, so the version is unchanged.
+/// </para>
 /// </summary>
 public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
 {
@@ -239,6 +244,7 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
     public const string CustomToleranceName = "CustomTolerance";
     public const string CustomUpperName = "CustomUpper";
     public const string CustomLowerName = "CustomLower";
+    public const string FullDepthName = "FullDepth";
     public const string AppliedDiameterName = "AppliedDiameterCm";
     public const string AppliedIsoCodeName = "AppliedToleranceIsoCode";
     public const string AppliedUpperName = "AppliedToleranceUpperCm";
@@ -330,6 +336,10 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
         AddNumber(SpotfaceDiameterName, spec.SpotfaceDiameter);
         AddNumber(SpotfaceDepthName, spec.SpotfaceDepth);
         AddText(SpotfaceDepthExpressionName, spec.SpotfaceDepthExpression);
+        if (spec.TakesFullDepth)
+        {
+            attributes.Add(new HoleAttribute(FullDepthName, spec.FullDepth ? 1 : 0));
+        }
 
         attributes.Add(new HoleAttribute(AppliedDiameterName, Applied.HoleDiameterCm));
         AddText(AppliedIsoCodeName, Applied.ToleranceIsoCode);
@@ -504,6 +514,11 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
                 CustomTolerance = custom,
                 CustomUpper = custom ? RequiredDecimal(CustomUpperName) : null,
                 CustomLower = custom ? RequiredDecimal(CustomLowerName) : null,
+                // A Through All tapped hole's Full depth (task 136); missing reads as ticked, as every hole stored
+                // before it was made.
+                FullDepth = !(kind == HoleKind.Tapped && termination == HoleTermination.ThroughAll)
+                    || !values.ContainsKey(FullDepthName)
+                    || RequiredFlag(FullDepthName),
             };
 
             var applied = new HoleAppliedState(

@@ -113,7 +113,9 @@ public sealed record HoleDrillPoint(string Name, double? AngleDeg)
 /// centimetres.
 /// </param>
 /// <param name="TableUnits">The thread table's units: Metric (mm) or Imperial (inches).</param>
-/// <param name="FullDepth">True when the thread runs the full depth of the hole (Through All and To a face).</param>
+/// <param name="FullDepth">
+/// True when the thread runs the full depth of the hole: To a face, and Through All with Full depth ticked (task 136).
+/// </param>
 /// <param name="ThreadDepthCm">The thread depth, used when <see cref="FullDepth"/> is false.</param>
 public sealed record HoleThread(
     string Designation,

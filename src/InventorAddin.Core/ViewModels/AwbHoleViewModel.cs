@@ -303,6 +303,10 @@ public sealed class AwbHoleViewModel : ObservableObject
     private decimal? _toleranceUpper;
     private decimal? _toleranceLower;
     private decimal? _threadDepth;
+
+    // A Through All tapped hole's Full depth checkbox (task 136): ticked for each new hole, kept while the window is
+    // open, whatever the type or termination.
+    private bool _fullDepth = true;
     private decimal? _drillDepth;
     private HoleTermination _termination;
     private decimal? _depth;
@@ -437,6 +441,7 @@ public sealed class AwbHoleViewModel : ObservableObject
             _toleranceUpper = spec.CustomUpper;
             _toleranceLower = spec.CustomLower;
             _threadDepth = spec.ThreadDepth;
+            _fullDepth = spec.FullDepth;
             _drillDepth = spec.DrillDepth;
             _termination = spec.Termination;
             _depth = spec.Depth;
@@ -458,7 +463,13 @@ public sealed class AwbHoleViewModel : ObservableObject
             OpenExpression(HoleField.Diameter, spec.DiameterExpression, ref _diameter);
 
             // The hole's own values count as typed, so a change in the window never resets them (task 124, Default).
-            OpenTyped(HoleField.ThreadDepth, _threadDepth);
+            // A thread depth the hole does not use (a Through All hole threaded its full depth) is the row's, and
+            // follows the size as a new hole's does (task 136, Default).
+            if (spec.HasThreadDepth)
+            {
+                OpenTyped(HoleField.ThreadDepth, _threadDepth);
+            }
+
             OpenTyped(HoleField.DrillDepth, _drillDepth);
             OpenTyped(HoleField.Depth, _depth);
             OpenTyped(HoleField.Diameter, _diameter);
@@ -1060,17 +1071,35 @@ public sealed class AwbHoleViewModel : ObservableObject
     }
 
     /// <summary>
-    /// True for a tapped hole ending at a distance; through holes are threaded the full depth. The thread and drill
-    /// depth rows as the window binds them before task 114; see <see cref="ShowsThreadDepth"/> and
-    /// <see cref="ShowsDrillDepth"/>.
+    /// True for a tapped hole ending Through All: the Full depth checkbox shows (Aidan, 2026-10-28; task 136). Not on a
+    /// taper tapped hole, whose thread Inventor sets (spec 09 question 22), nor on a hole that ends at a face.
     /// </summary>
-    public bool ShowsThreadDepths => Kind == HoleKind.Tapped && IsBlind;
+    public bool ShowsFullDepth => Kind == HoleKind.Tapped && _termination == HoleTermination.ThroughAll;
 
     /// <summary>
-    /// True for a blind tapped hole: the Thread depth box shows. Not on a taper tapped hole, whose thread length
-    /// Inventor sets (spec 09 question 22).
+    /// A Through All tapped hole's Full depth checkbox (task 136): ticked for each new hole, threading the whole hole;
+    /// unticked, the Thread depth box shows and the thread stops there, below the seat. Ignored while it is not shown.
     /// </summary>
-    public bool ShowsThreadDepth => Kind == HoleKind.Tapped && IsBlind;
+    public bool FullDepth
+    {
+        get => _fullDepth;
+        set
+        {
+            if (!ShowsFullDepth)
+            {
+                OnPropertyChanged();
+                return;
+            }
+
+            Change(() => Set(ref _fullDepth, value, nameof(FullDepth)));
+        }
+    }
+
+    /// <summary>
+    /// True for a blind tapped hole, and a Through All one with <see cref="FullDepth"/> unticked (task 136): the Thread
+    /// depth box shows. Not on a taper tapped hole, whose thread length Inventor sets (spec 09 question 22).
+    /// </summary>
+    public bool ShowsThreadDepth => Kind == HoleKind.Tapped && (IsBlind || (ShowsFullDepth && !_fullDepth));
 
     /// <summary>True for a blind tapped or taper tapped hole: the Drill depth box shows (task 112).</summary>
     public bool ShowsDrillDepth => HoleStandards.IsThreaded(Kind) && IsBlind;
@@ -2514,6 +2543,7 @@ public sealed class AwbHoleViewModel : ObservableObject
             _flip)
         {
             ThreadDepthExpression = ExpressionOf(HoleField.ThreadDepth, _threadDepth),
+            FullDepth = _fullDepth,
             DrillDepthExpression = ExpressionOf(HoleField.DrillDepth, _drillDepth),
             DepthExpression = ExpressionOf(HoleField.Depth, _depth),
             CboreDiameter = _cboreDiameter,
@@ -2542,7 +2572,7 @@ public sealed class AwbHoleViewModel : ObservableObject
     private static readonly string[] DerivedProperties =
     [
         nameof(Kind), nameof(ShowsFastener), nameof(ShowsFit), nameof(ShowsFitColour), nameof(FitSwatch),
-        nameof(FitColourText), nameof(ShowsTolerance), nameof(ShowsThreadDepths), nameof(ShowsDepth),
+        nameof(FitColourText), nameof(ShowsTolerance), nameof(ShowsFullDepth), nameof(ShowsDepth),
         nameof(ShowsDrillPoint), nameof(Spec), nameof(BuildResult), nameof(Geometry), nameof(Checks),
         nameof(HasProblems), nameof(CentresProblem), nameof(SeatProblem), nameof(FastenerProblem), nameof(SizeProblem),
         nameof(ToleranceProblem), nameof(ThreadDepthProblem), nameof(DrillDepthProblem), nameof(DepthProblem),
@@ -2651,6 +2681,7 @@ public sealed class AwbHoleViewModel : ObservableObject
             ThreadDiameter = tapped?.Nominal,
             ThreadDepth = kind == HoleKind.Tapped ? _threadDepth : null,
             ThreadDepthIsExpression = kind == HoleKind.Tapped && ExpressionOf(HoleField.ThreadDepth, _threadDepth) is not null,
+            FullDepth = _fullDepth,
         };
     }
 

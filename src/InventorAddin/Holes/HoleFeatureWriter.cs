@@ -423,12 +423,16 @@ namespace InventorAddin.Holes
             if (g.Thread == null && g.DiameterExpression is { } diameterExpression)
                 WriteExpression(hole.HoleDiameter, diameterExpression, unit);
 
+            // A thread that is not full depth: a blind hole's, or a Through All hole's with Full depth unticked (task
+            // 136). The expression already carries the seat depth where Inventor measures from the start face (task
+            // 116, HoleDepthReference).
+            if (g.Thread is { FullDepth: false, IsTapered: false, ThreadDepthExpression: { } threadExpression }
+                && ComSafe.Get(() => hole.TapInfo) is HoleTapInfo tap)
+                WriteExpression(tap.ThreadDepth, threadExpression, unit);
+
             if (g.Termination != HoleTermination.Distance)
                 return;
 
-            if (g.Thread is { FullDepth: false, ThreadDepthExpression: { } threadExpression }
-                && ComSafe.Get(() => hole.TapInfo) is HoleTapInfo tap)
-                WriteExpression(tap.ThreadDepth, threadExpression, unit);
             if (g.DepthExpression is { } depthExpression && ComSafe.Get(() => hole.Extent) is DistanceExtent extent)
                 WriteExpression(extent.Distance, depthExpression, unit);
         }

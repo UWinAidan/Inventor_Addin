@@ -200,6 +200,24 @@ public sealed record HoleSpec(
     /// <summary>Tapped holes: the expression <see cref="ThreadDepth"/> came from, or null for a plain number.</summary>
     public string? ThreadDepthExpression { get; init; }
 
+    /// <summary>
+    /// Through All tapped holes: the Full depth checkbox (Aidan, 2026-10-28; task 136; spec 09, "Tapped holes"), ticked
+    /// by default. Ticked, the thread runs the whole hole; unticked, it stops at <see cref="ThreadDepth"/>, below the
+    /// seat as a blind hole's. True on every other hole: a blind tapped hole always has its thread depth, a hole that
+    /// ends at a face is threaded its full depth, and a taper tapped hole's thread Inventor sets (spec 09 question 22).
+    /// </summary>
+    public bool FullDepth { get; init; } = true;
+
+    /// <summary>
+    /// True for a tapped hole whose thread stops at <see cref="ThreadDepth"/>: a blind one, or a Through All one with
+    /// <see cref="FullDepth"/> unticked (task 136).
+    /// </summary>
+    public bool HasThreadDepth =>
+        Kind == HoleKind.Tapped && (IsBlind || (Termination == HoleTermination.ThroughAll && !FullDepth));
+
+    /// <summary>True when the Full depth checkbox applies: a tapped hole that ends Through All (task 136).</summary>
+    public bool TakesFullDepth => Kind == HoleKind.Tapped && Termination == HoleTermination.ThroughAll;
+
     /// <summary>Tapped holes: the expression <see cref="DrillDepth"/> came from, or null for a plain number.</summary>
     public string? DrillDepthExpression { get; init; }
 
@@ -322,6 +340,8 @@ public sealed record HoleSpec(
             CustomUpper = custom ? CustomUpper : null,
             CustomLower = custom ? CustomLower : null,
             ThreadDepth = tapped ? ThreadDepth : null,
+            // Full depth applies only to a Through All tapped hole (task 136); every other hole is ticked.
+            FullDepth = !TakesFullDepth || FullDepth,
             DrillDepth = threaded ? DrillDepth : null,
             Depth = depthApplies ? Depth : null,
             DrillPoint = IsBlind ? DrillPoint?.Trim() : null,

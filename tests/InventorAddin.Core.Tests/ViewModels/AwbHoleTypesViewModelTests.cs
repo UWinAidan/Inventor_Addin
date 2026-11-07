@@ -84,7 +84,7 @@ public sealed class AwbHoleTypesViewModelTests : IDisposable
         Assert.False(vm.ShowsFastener);
         Assert.False(vm.ShowsTolerance);
         Assert.True(vm.ShowsDiameter);
-        Assert.False(vm.ShowsThreadDepths);
+        Assert.False(vm.ShowsThreadDepth);
         Assert.Equal(["None", "Counterbore", "Countersink", "Spotface"], Values(vm.SeatOptions));
     }
 

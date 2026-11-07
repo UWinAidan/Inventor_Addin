@@ -462,8 +462,20 @@
                         </StackPanel>
                     </controls:FieldRow>
                     <!--
+                        Full depth (task 136): a Through All tapped hole only, ticked by default; unticked, the Thread
+                        depth box below shows, and the thread stops there, below the seat. No access key: every letter
+                        of "Full depth" is taken.
+                    -->
+                    <controls:FieldRow Target="{Binding ElementName=FullDepthBox}"
+                                       Visibility="{Binding ShowsFullDepth, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
+                        <CheckBox x:Name="FullDepthBox"
+                                  Content="Full depth"
+                                  IsChecked="{Binding FullDepth, Mode=TwoWay}" />
+                    </controls:FieldRow>
+                    <!--
                         A blind tapped hole: Thread depth and Drill depth in place of Depth (mockup choice 10); a blind
-                        taper tapped hole has Drill depth only, Inventor sets its thread length (task 114).
+                        taper tapped hole has Drill depth only, Inventor sets its thread length (task 114). A Through All
+                        tapped hole with Full depth unticked has Thread depth only (task 136).
                     -->
                     <controls:FieldRow Label="T_hread depth"
                                        Target="{Binding ElementName=ThreadDepthBox}"

@@ -66,15 +66,29 @@ public sealed record HoleDiagramInput
     public decimal? ThreadDiameter { get; init; }
 
     /// <summary>
-    /// A blind tapped hole's thread depth, below the seat (task 116); a hole that is not blind is threaded its full
-    /// depth. Null for a taper tapped hole, whose thread length Inventor sets (spec 09 question 22): its thread is drawn
-    /// in proportion, with no dimension.
+    /// A blind tapped hole's thread depth, below the seat (task 116), or a Through All one's with
+    /// <see cref="FullDepth"/> unticked (task 136); any other hole that is not blind is threaded its full depth. Null for
+    /// a taper tapped hole, whose thread length Inventor sets (spec 09 question 22): its thread is drawn in proportion,
+    /// with no dimension.
     /// </summary>
     public decimal? ThreadDepth { get; init; }
 
     public bool ThreadDepthIsExpression { get; init; }
 
+    /// <summary>
+    /// A Through All tapped hole's Full depth checkbox (task 136): ticked (the default) threads the whole hole;
+    /// unticked, the thread stops at <see cref="ThreadDepth"/>. Ignored on other holes.
+    /// </summary>
+    public bool FullDepth { get; init; } = true;
+
     public bool IsBlind => Termination == HoleTermination.Distance;
+
+    /// <summary>
+    /// True for a tapped hole whose thread stops short of the hole's end: a blind one, or a Through All one with
+    /// <see cref="FullDepth"/> unticked (task 136).
+    /// </summary>
+    public bool ThreadStops =>
+        Kind == HoleKind.Tapped && (IsBlind || (Termination == HoleTermination.ThroughAll && !FullDepth));
 }
 
 /// <summary>What a diagram line is: the control picks its brush and stroke from this.</summary>
@@ -191,6 +205,7 @@ public sealed record HoleDiagram(
             HoleTermination.Distance when input.Kind == HoleKind.TaperTapped => $"drill {Len(input.Depth)}",
             HoleTermination.Distance => $"{Len(input.Depth)} deep",
             HoleTermination.ToFace => "to a face",
+            _ when input.ThreadStops => $"through all, thread {Len(input.ThreadDepth)}",
             _ => "through all",
         });
 
@@ -270,6 +285,9 @@ public sealed record HoleDiagram(
 
         private bool Blind => input.IsBlind;
 
+        // The thread ends above the hole's end: a blind tapped hole, or a Through All one not full depth (task 136).
+        private bool ThreadStops => input.ThreadStops;
+
         // A taper thread is drawn as a tapped thread (task 112).
         private bool Tapped => HoleStandards.IsThreaded(input.Kind);
 
@@ -327,7 +345,7 @@ public sealed record HoleDiagram(
                     0, _cboreDepth, _seatR, _seatR, Len(BoreDepth!.Value), BoreDepthIsExpression));
             }
 
-            if (Tapped && Blind && Positive(input.ThreadDepth) is not null)
+            if (ThreadStops && Positive(input.ThreadDepth) is not null)
             {
                 rightDimensions.Add(StackItem.Dimension(
                     DepthStart, _threadEnd, Math.Max(DepthStartX, _threadR), _threadR, Len(input.ThreadDepth!.Value),
@@ -489,6 +507,15 @@ public sealed record HoleDiagram(
             {
                 _blockDepth = Math.Max(_seatBottom + 2.2 * diameter, 3 * diameter);
                 _threadEnd = _blockDepth;
+                if (ThreadStops)
+                {
+                    // A Through All thread that is not full depth (task 136) stops below the seat, with plain hole
+                    // below it: the part is drawn deep enough to show some.
+                    var threadDepth = Positive(input.ThreadDepth) ?? diameter * 1.8;
+                    _threadEnd = DepthStart + threadDepth;
+                    _blockDepth = Math.Max(_blockDepth, _threadEnd + Math.Max(0.8 * diameter, 0.25 * threadDepth));
+                }
+
                 _tip = _blockDepth;
             }
 
@@ -605,7 +632,7 @@ public sealed record HoleDiagram(
             var to = _threadEnd;
             Line(DiagramInk.Thread, (-_threadR, from), (-_threadR, to));
             Line(DiagramInk.Thread, (_threadR, from), (_threadR, to));
-            if (Blind)
+            if (Blind || ThreadStops)
             {
                 Line(DiagramInk.Thread, (-_threadR, to), (-_r, to));
                 Line(DiagramInk.Thread, (_threadR, to), (_r, to));
