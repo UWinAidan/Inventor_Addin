@@ -302,7 +302,23 @@ public sealed class HoleReapplyRulesTests
 
         var offer = Check(hole with { Facts = hole.Facts with { CountersinkAngleDeg = 82 } });
 
-        Assert.Equal("The countersink angle is 82 deg; AWB Hole set 90 deg.", Assert.Single(offer.Differences));
+        // A narrower angle makes a deeper cone, so the thread and drill below it are shorter (task 116): the window
+        // measures them from where the cone meets the tap drill, and says so too.
+        Assert.Contains("The countersink angle is 82 deg; AWB Hole set 90 deg.", offer.Differences);
+        Assert.Contains(offer.Differences, d => d.StartsWith("The drill depth is 9.53", StringComparison.Ordinal));
+        Assert.Contains(offer.Differences, d => d.StartsWith("The thread depth is 7.03", StringComparison.Ordinal));
+        Assert.Equal(3, offer.Differences.Count);
+    }
+
+    [Fact]
+    public void ATappedCountersink_WithOnlyTheSeatDiameterChanged_SaysTheDepthsBelowItChangedToo()
+    {
+        var hole = Applied(Tapped() with { Seat = HoleSeat.Countersink });
+
+        // 10.4 to 11.4: the cone is 0.5 mm deeper, so 0.5 mm less of the drill and thread is below it.
+        var offer = Check(hole with { Facts = hole.Facts with { CountersinkDiameterCm = 1.14 } });
+
+        Assert.Contains("The drill depth is 9.5 mm; AWB Hole set 10 mm.", offer.Differences);
     }
 
     [Fact]

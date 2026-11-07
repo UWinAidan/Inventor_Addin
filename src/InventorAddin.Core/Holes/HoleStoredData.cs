@@ -177,14 +177,32 @@ public sealed record HoleStoredDataReadResult(HoleStoredData? Data, string Messa
 /// <see cref="CustomLowerName"/> instead of a row. The version is bumped so an add-in from before reads no toleranced
 /// hole as an untoleranced one. Versions 1 to 3 hold none of these, and read as untoleranced, with a dowel's row.
 /// </para>
+/// <para>
+/// Version 5 (task 116): a seated tapped or taper tapped hole's thread and drill depths are measured from the bottom of
+/// the seat (spec 09 question 12), where versions 1 to 4 measured them from the top face. The shape is unchanged; the
+/// version says which way the depths are measured. Older data reads with its <see cref="Version"/>, and
+/// <see cref="HoleDepthReference.Upgrade"/> converts its depths, so the hole opens as it is in Inventor, not deeper.
+/// </para>
 /// </summary>
 public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
 {
     /// <summary>The attribute set's name on the hole feature.</summary>
     public const string AttributeSetName = Branding.ShortName + "_Hole";
 
-    /// <summary>The version written now (task 113).</summary>
-    public const int CurrentVersion = 4;
+    /// <summary>The version written now (task 116).</summary>
+    public const int CurrentVersion = 5;
+
+    /// <summary>
+    /// The first version whose threaded depths are measured from the bottom of the seat (task 116); data of an older
+    /// version measured them from the top face.
+    /// </summary>
+    public const int DepthsBelowSeatVersion = 5;
+
+    /// <summary>
+    /// The version the data was read at (<see cref="Read"/>); <see cref="CurrentVersion"/> for data made here. Not
+    /// written: <see cref="ToAttributes"/> always writes <see cref="CurrentVersion"/>.
+    /// </summary>
+    public int Version { get; init; } = CurrentVersion;
 
     /// <summary>The oldest version read. Data with a version outside this and <see cref="CurrentVersion"/> is not read.</summary>
     public const int OldestVersion = 1;
@@ -495,7 +513,7 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
                 OptionalDouble(AppliedLowerName),
                 RequiredFlag(AppliedColouredName));
 
-            return new HoleStoredData(spec, applied);
+            return new HoleStoredData(spec, applied) { Version = version };
         }
 
         private static StoredDataException Missing(string name) => new($"the value {name} is missing");

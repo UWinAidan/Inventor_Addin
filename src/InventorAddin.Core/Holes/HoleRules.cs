@@ -466,23 +466,25 @@ public static class HoleRules
                 return new HoleBuildResult(null, _resolved, _problems.AsReadOnly());
             }
 
-            // Inventor measures a spotface hole's depths from the spotface's bottom; the window from the top face
-            // (task 114, HoleDepthReference). The checks above use the window's depths.
-            var spotfaceDepthCm = Cm(_spotfaceDepth);
-            var spotfaceExpression = spec.Seat == HoleSeat.Spotface ? spec.SpotfaceDepthExpression : null;
-            var thread = _thread is { FullDepth: false, IsTapered: false } t && HoleDepthReference.Shifts(spec.Seat)
+            // The window measures a threaded hole's depths below the seat and any other hole's from the top face;
+            // Inventor from the start face, or a spotface hole's from the spotface's bottom (tasks 114 and 116,
+            // HoleDepthReference). The checks above use the window's depths.
+            var (seatDepth, seatExpression) = SeatDepth();
+            var seatDepthCm = Cm(seatDepth);
+            var thread = _thread is { FullDepth: false, IsTapered: false } t
                 ? t with
                 {
-                    ThreadDepthCm = HoleDepthReference.ToInventorCm(spec.Seat, t.ThreadDepthCm, spotfaceDepthCm)
+                    ThreadDepthCm = HoleDepthReference.ToInventorCm(spec.Kind, spec.Seat, t.ThreadDepthCm, seatDepthCm)
                         ?? t.ThreadDepthCm,
                     ThreadDepthExpression = HoleDepthReference.ToInventorExpression(
-                        spec.Seat, t.ThreadDepthExpression, _resolved.ThreadDepth, spotfaceExpression, _spotfaceDepth,
+                        spec.Kind, spec.Seat, t.ThreadDepthExpression, _resolved.ThreadDepth, seatExpression, seatDepth,
                         Units),
                 }
                 : _thread;
             var windowDepthExpression = spec.IsBlind
                 ? HoleStandards.IsThreaded(spec.Kind) ? spec.DrillDepthExpression : spec.DepthExpression
                 : null;
+            var spotfaceExpression = spec.Seat == HoleSeat.Spotface ? spec.SpotfaceDepthExpression : null;
 
             var geometry = new HoleGeometry(
                 spec.Kind,
@@ -490,7 +492,7 @@ public static class HoleRules
                 spec.Termination,
                 spec.Flip,
                 ToCm(diameter, Units),
-                HoleDepthReference.ToInventorCm(spec.Seat, Cm(_depth), spotfaceDepthCm),
+                HoleDepthReference.ToInventorCm(spec.Kind, spec.Seat, Cm(_depth), seatDepthCm),
                 Cm(_cboreDiameter),
                 Cm(_cboreDepth),
                 Cm(_csinkDiameter),
@@ -501,15 +503,15 @@ public static class HoleRules
                 _colour)
             {
                 // Checks above use the depths' values; the expressions go to Inventor as they were typed (task 100),
-                // less the spotface depth on a spotface hole (task 114).
+                // with the seat depth added or taken off where the two measure from different places (tasks 114, 116).
                 DepthExpression = spec.IsBlind
                     ? HoleDepthReference.ToInventorExpression(
-                        spec.Seat, windowDepthExpression, _depth, spotfaceExpression, _spotfaceDepth, Units)
+                        spec.Kind, spec.Seat, windowDepthExpression, _depth, seatExpression, seatDepth, Units)
                     : null,
                 // A counterbore depth typed as an expression, on every kind (task 126).
                 CounterboreDepthExpression = spec.Seat == HoleSeat.Counterbore ? spec.CboreDepthExpression : null,
                 SpotfaceDiameterCm = Cm(_spotfaceDiameter),
-                SpotfaceDepthCm = spotfaceDepthCm,
+                SpotfaceDepthCm = Cm(_spotfaceDepth),
                 SpotfaceDepthExpression = spotfaceExpression,
                 DiameterExpression = spec.Kind == HoleKind.Simple ? spec.DiameterExpression : null,
                 ExpressionUnits = Units,
@@ -519,6 +521,24 @@ public static class HoleRules
         }
 
         private double? Cm(decimal? value) => value is { } v ? ToCm(v, Units) : null;
+
+        /// <summary>
+        /// The seat's depth in the spec's units and the expression it was typed as (task 116): the counterbore or
+        /// spotface depth, or the countersink's cone down to the modelled hole diameter (the tap drill for a tapped
+        /// hole; Default), rounded to <see cref="HoleDepthReference.CountersinkDepthDecimals"/>; none for no seat.
+        /// </summary>
+        private (decimal? Depth, string? Expression) SeatDepth() => spec.Seat switch
+        {
+            HoleSeat.Counterbore => (_cboreDepth, spec.CboreDepthExpression),
+            HoleSeat.Spotface => (_spotfaceDepth, spec.SpotfaceDepthExpression),
+            HoleSeat.Countersink => (
+                HoleDepthReference.CountersinkDepth(
+                    (double?)_csinkDiameter, (double?)_holeDiameter, (double?)_csinkAngleDeg) is { } cone
+                    ? Math.Round((decimal)cone, HoleDepthReference.CountersinkDepthDecimals)
+                    : null,
+                null),
+            _ => (null, null),
+        };
 
         private T? FindRow<T>(IEnumerable<T> rows, Func<T, HoleUnits> units, Func<T, string> size, string key)
             where T : class =>
@@ -1062,6 +1082,12 @@ public static class HoleRules
                 ? $"The tap drill ({Length(value, Units)})"
                 : $"The hole ({Length(value, Units)})";
 
+        /// <summary>
+        /// The hole's depth is measured from the top face, so a seat as deep as it is a problem: every hole but a tapped
+        /// or taper tapped one, whose depths are below the seat (task 116) and so always clear it.
+        /// </summary>
+        private bool DepthFromTopFace => !HoleDepthReference.BelowSeat(spec.Kind);
+
         private void CheckSizes()
         {
             // The seat is in its own boxes on every kind (tasks 106 and 126), so its problems show beside them.
@@ -1086,7 +1112,7 @@ public static class HoleRules
                 {
                     Problem(HoleField.SpotfaceDepth, "The spotface depth is less than zero.");
                 }
-                else if (_depth is { } blind && blind > 0 && spotfaceDepth >= blind)
+                else if (DepthFromTopFace && _depth is { } blind && blind > 0 && spotfaceDepth >= blind)
                 {
                     Problem(
                         HoleField.Depth,
@@ -1113,7 +1139,7 @@ public static class HoleRules
                 {
                     Problem(HoleField.CounterboreDepth, "The counterbore depth is less than zero.");
                 }
-                else if (_depth is { } depth && depth > 0 && cboreDepth >= depth)
+                else if (DepthFromTopFace && _depth is { } depth && depth > 0 && cboreDepth >= depth)
                 {
                     Problem(
                         HoleField.Depth,
@@ -1137,15 +1163,13 @@ public static class HoleRules
                     $"The countersink angle ({angle} deg) is not between {MinCountersinkAngleDeg} and " +
                     $"{MaxCountersinkAngleDeg} degrees.");
             }
-            else if (_csinkAngleDeg is { } csinkAngle
-                && _csinkDiameter is { } sinkDiameter
-                && _holeDiameter is { } sinkHole && sinkHole > 0 && sinkHole < sinkDiameter
+            else if (DepthFromTopFace
+                && HoleDepthReference.CountersinkDepth(
+                    (double?)_csinkDiameter, (double?)_holeDiameter, (double?)_csinkAngleDeg) is { } csinkDepth
                 && _depth is { } blindDepth && blindDepth > 0)
             {
                 // The cone's depth from the countersink diameter down to the modelled hole diameter (the tap drill for a
                 // tapped hole, as the task 099 spike measured it).
-                var halfAngleRad = (double)csinkAngle / 2 * Math.PI / 180;
-                var csinkDepth = (double)(sinkDiameter - sinkHole) / 2 / Math.Tan(halfAngleRad);
                 if (csinkDepth >= (double)blindDepth)
                 {
                     Problem(

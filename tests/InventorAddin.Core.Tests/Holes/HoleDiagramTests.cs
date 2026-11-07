@@ -233,7 +233,8 @@ public sealed class HoleDiagramTests
     {
         "dowel counterbore", "tapped", "tapped through", "clearance counterbore", "dowel countersink", "plain through",
         "tapped counterbore blind", "imperial dowel", "seat narrower than hole", "seat deeper than hole", "nothing known",
-        "long expression values", "tiny countersink angle", "60 deg point",
+        "long expression values", "tiny countersink angle", "60 deg point", "tapped countersink blind",
+        "tapped counterbore deeper than drill",
     };
 
     private static HoleDiagramInput Case(string name) => name switch
@@ -256,6 +257,11 @@ public sealed class HoleDiagramTests
         "long expression values" => BlindDowelCounterbore with { Depth = 123.456m, CounterboreDepth = 12.345m },
         "tiny countersink angle" => ThroughDowelCountersink with { CountersinkAngleDeg = 1m },
         "60 deg point" => BlindDowelCounterbore with { PointAngleDeg = 60m },
+        "tapped countersink blind" => BlindTapped with { Seat = HoleSeat.Countersink, CountersinkDiameter = 12m, CountersinkAngleDeg = 90m },
+        "tapped counterbore deeper than drill" => BlindTapped with
+        {
+            Seat = HoleSeat.Counterbore, CounterboreDiameter = 11m, CounterboreDepth = 30m,
+        },
         _ => throw new ArgumentOutOfRangeException(nameof(name)),
     };
 
@@ -419,6 +425,85 @@ public sealed class HoleDiagramTests
         Assert.Contains(Dia + "11", Texts(flat));
         Assert.Equal(0, SeatWallLength(flat), 6);
         Assert.True(SeatWallLength(stepped) > 1);
+    }
+
+    [Fact]
+    public void ACounterboredTappedHole_DimensionsItsDepthsFromTheCounterboreFloor()
+    {
+        // Spec 09 question 12; task 116: the thread and drill depths are below the seat.
+        using var _ = new CultureScope("en-US");
+        var diagram = HoleDiagram.Draw(BlindTapped with
+        {
+            Seat = HoleSeat.Counterbore, CounterboreDiameter = 11m, CounterboreDepth = 6m,
+        });
+        var floor = SeatFloorY(diagram);
+        var outlineTop = OutlineTopY(diagram);
+
+        // Three dimensions start at the top of their line: the counterbore (top face), the drill and thread depths.
+        var tops = diagram.Arrows.Where(a => a.DirectionY < 0).Select(a => a.Tip.Y).OrderBy(y => y).ToList();
+        Assert.Equal(3, tops.Count);
+        Assert.Equal(outlineTop, tops[0], 6);
+        Assert.Equal(floor, tops[1], 6);
+        Assert.Equal(floor, tops[2], 6);
+    }
+
+    [Fact]
+    public void ACounterboredDowel_StillDimensionsItsDepthFromTheTopFace()
+    {
+        // Spec 09 question 16 (Default).
+        using var _ = new CultureScope("en-US");
+        var diagram = HoleDiagram.Draw(BlindDowelCounterbore);
+
+        var tops = diagram.Arrows.Where(a => a.DirectionY < 0).Select(a => a.Tip.Y).ToList();
+        Assert.All(tops, y => Assert.Equal(OutlineTopY(diagram), y, 6));
+    }
+
+    [Fact]
+    public void ACountersunkTappedHole_DimensionsItsDepthsFromWhereTheConeMeetsTheHole()
+    {
+        using var _ = new CultureScope("en-US");
+        var diagram = HoleDiagram.Draw(BlindTapped with
+        {
+            Seat = HoleSeat.Countersink, CountersinkDiameter = 12m, CountersinkAngleDeg = 90m,
+        });
+        var centre = diagram.Lines.Single(l => l.Ink == DiagramInk.CentreLine).Points[0].X;
+        var outline = diagram.Lines.Where(l => l.Ink == DiagramInk.Outline).SelectMany(l => l.Points).ToList();
+        var top = OutlineTopY(diagram);
+
+        // The cone's bottom: the outline's first point below the top face, where it meets the hole's wall.
+        var coneBottom = outline.Where(p => p.Y > top + 1e-6).Min(p => p.Y);
+        var tops = diagram.Arrows.Where(a => a.DirectionY < 0).Select(a => a.Tip.Y).ToList();
+
+        Assert.Equal(2, tops.Count);
+        Assert.All(tops, y => Assert.Equal(coneBottom, y, 6));
+        Assert.True(outline.Any(p => Math.Abs(p.Y - coneBottom) < 1e-6 && Math.Abs(p.X - centre) > 1));
+    }
+
+    [Fact]
+    public void ACounterboredTappedHole_DeeperThanItsDrill_DrawsTheHoleOnBelowTheSeat()
+    {
+        using var _ = new CultureScope("en-US");
+        var diagram = HoleDiagram.Draw(BlindTapped with
+        {
+            Seat = HoleSeat.Counterbore, CounterboreDiameter = 11m, CounterboreDepth = 30m,
+        });
+        var floor = SeatFloorY(diagram);
+        var bottom = diagram.Lines.Where(l => l.Ink == DiagramInk.Outline).SelectMany(l => l.Points).Max(p => p.Y);
+
+        // The seat keeps its depth; the 12 drill runs on below it, so the hole is deeper than the 30 seat.
+        Assert.True(bottom - floor > 0.3 * (floor - OutlineTopY(diagram)));
+    }
+
+    private static double OutlineTopY(HoleDiagram diagram) =>
+        diagram.Lines.Where(l => l.Ink == DiagramInk.Outline).SelectMany(l => l.Points).Min(p => p.Y);
+
+    /// <summary>The bottom of the seat's wall: the lowest outline point at the outline's widest.</summary>
+    private static double SeatFloorY(HoleDiagram diagram)
+    {
+        var centre = diagram.Lines.Single(l => l.Ink == DiagramInk.CentreLine).Points[0].X;
+        var points = diagram.Lines.Where(l => l.Ink == DiagramInk.Outline).SelectMany(l => l.Points).ToList();
+        var widest = points.Max(p => Math.Abs(p.X - centre));
+        return points.Where(p => Math.Abs(Math.Abs(p.X - centre) - widest) < 1e-6).Max(p => p.Y);
     }
 
     /// <summary>How far the outline runs down at its widest point (the seat's wall), in diagram units.</summary>

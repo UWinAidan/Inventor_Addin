@@ -336,3 +336,9 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-05 | The Toleranced checkbox sits on its own row with no field label, between Fit and Tolerance; access keys N (Toleranced) and W (Lower), none for Upper | Default | task 115 |
 | 2026-11-05 | A toleranced Clearance or Simple hole shows no fit colour swatch (spec 09 question 28) | Default | task 115 |
 | 2026-11-05 | On OK, an edited hole that stays a precision hole is recoloured without a reset first (precision overload of `ResetsFaceAppearances`) | Default | task 115 |
+| 2026-11-07 | A threaded hole's thread depth is measured in Inventor from the same place as its drill depth: the start face with a counterbore or countersink, the spotface bottom with a spotface (countersink and spotface unconfirmed) | Default | task 116 |
+| 2026-11-07 | A countersink's seat depth is the cone down to the modelled diameter (the tap drill, or the Taper Tapped row's tap drill) | Default | task 116 |
+| 2026-11-07 | The written depth expression adds the seat as the user's seat expression or its length (a countersink cone as a number to 6 decimals); the hole's own seat parameter is not referenced, so a seat changed in Inventor's dialog makes Edit offer re-apply, listing the drill and thread depths too | Default | task 116 |
+| 2026-11-07 | Seat-depth-versus-drill-depth checks do not apply to threaded holes, since the drill is below the seat | Default | task 116 |
+| 2026-11-07 | Stored hole data version 5: versions 1 to 4 are converted on read (seat depth from the stored spec, else the hole; expressions become `(expression) - (seat)`); an old hole whose thread did not reach below its seat opens with a thread depth of 0 or less and the window asks for one | Default | task 116 |
+| 2026-11-07 | An expression read back as `(length) + (seat)` opens as the plain number; the collapsed diagram's summary line is unchanged | Default | task 116 |

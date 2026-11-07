@@ -405,7 +405,8 @@ public sealed class HoleRulesTests
         Assert.Equal(0.42, geometry.HoleDiameterCm, 12);           // the tap drill, as without a seat
         Assert.Equal("M5x0.8", geometry.Thread!.Designation);
         Assert.False(geometry.Thread.FullDepth);
-        Assert.Equal(1.0, geometry.DepthCm!.Value, 12);
+        // The drill depth 10 is below the 5.2 counterbore (task 116); Inventor measures it from the start face.
+        Assert.Equal(1.52, geometry.DepthCm!.Value, 12);
         Assert.Null(geometry.FitColour);
         Assert.Equal("TCAP", result.Resolved.Fastener);
     }
@@ -618,21 +619,22 @@ public sealed class HoleRulesTests
     }
 
     [Fact]
-    public void Tapped_CounterboreNotShallowerThanTheDrillDepth_IsAProblem()
+    public void Tapped_CounterboreDeeperThanTheDrillDepth_IsNoProblem_SinceTheDrillIsBelowIt()
     {
-        var problem = OneProblem(
-            Tapped() with { Seat = HoleSeat.Counterbore, ThreadDepth = 4m, DrillDepth = 5m }, HoleField.Depth);
+        // Task 116: the drill depth is measured from the counterbore's bottom, so it always clears it.
+        var geometry = Built(Tapped() with { Seat = HoleSeat.Counterbore, ThreadDepth = 4m, DrillDepth = 5m });
 
-        Assert.Contains("5.2 mm", problem.Message);
-        Assert.Contains("5 mm", problem.Message);
+        Assert.Equal(1.02, geometry.DepthCm!.Value, 12);
     }
 
     [Fact]
     public void Tapped_CountersinkDepth_IsFromTheTapDrill()
     {
-        // (10.4 - 4.2) / 2 / tan 45 = 3.1 mm of cone.
-        Built(Tapped() with { Seat = HoleSeat.Countersink, ThreadDepth = 3m, DrillDepth = 3.2m });
-        OneProblem(Tapped() with { Seat = HoleSeat.Countersink, ThreadDepth = 3m, DrillDepth = 3.1m }, HoleField.Depth);
+        // (10.4 - 4.2) / 2 / tan 45 = 3.1 mm of cone, added to the drill depth below it (task 116).
+        var geometry = Built(Tapped() with { Seat = HoleSeat.Countersink, ThreadDepth = 3m, DrillDepth = 3.1m });
+
+        Assert.Equal(0.62, geometry.DepthCm!.Value, 12);
+        Assert.Equal(0.61, geometry.Thread!.ThreadDepthCm, 12);
     }
 
     // ---- Dowel ----

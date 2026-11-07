@@ -135,13 +135,19 @@ public static class HoleReadBack
         ArgumentNullException.ThrowIfNull(facts);
         ArgumentNullException.ThrowIfNull(workbook);
 
-        // A spotface hole's depths as the window measures them (task 114).
-        facts = HoleDepthReference.ToWindow(facts);
-
-        if (stored?.Data is { } data)
+        if (stored?.Data is { } storedData)
         {
-            return new HoleReadBackResult(WithDowelSeatFromHole(data.Spec, facts), HoleSource.Awb, data, []);
+            // Data stored before task 116 measured a threaded hole's depths from the top face: they are converted to
+            // below the seat, so the hole opens as it is (HoleDepthReference.Upgrade). The re-apply check takes the
+            // converted data too.
+            var data = HoleDepthReference.Upgrade(storedData, facts);
+            var windowFacts = HoleDepthReference.ToWindow(facts, data.Applied.HoleDiameterCm);
+            return new HoleReadBackResult(WithDowelSeatFromHole(data.Spec, windowFacts), HoleSource.Awb, data, []);
         }
+
+        // The depths as the window measures them (tasks 114 and 116): below the seat on a threaded hole, whose
+        // countersink cone is worked out at the workbook's tap drill, as the window works it out.
+        facts = HoleDepthReference.ToWindow(facts, TapDrillCm(facts, workbook));
 
         var notes = new List<string>();
         if (stored is not null)
@@ -208,6 +214,36 @@ public static class HoleReadBack
             },
         };
         return filled.Normalised();
+    }
+
+    /// <summary>
+    /// The tap drill a threaded hole of <paramref name="facts"/> is modelled at, in centimetres: the Tapped row of its
+    /// designation and thread type, or the Taper Tapped row of its size and thread type (the row's tap drill, as the
+    /// window takes it; spec 09 question 21). Null for a hole that is not threaded or a thread not in the workbook.
+    /// </summary>
+    public static double? TapDrillCm(InventorHoleFacts facts, HoleWorkbook workbook)
+    {
+        ArgumentNullException.ThrowIfNull(facts);
+        ArgumentNullException.ThrowIfNull(workbook);
+        if (!facts.Tapped)
+        {
+            return null;
+        }
+
+        var designation = facts.ThreadDesignation?.Trim() ?? "";
+        var threadType = facts.ThreadType?.Trim();
+        bool Same(string a, string? b) => string.Equals(a.Trim(), b, StringComparison.OrdinalIgnoreCase);
+
+        if (facts.TaperedThread)
+        {
+            var taper = workbook.TaperTapped.FirstOrDefault(r =>
+                Same(r.Size, designation) && (threadType is null || Same(r.ThreadType, threadType)));
+            return taper is null ? null : HoleRules.ToCm(taper.TapDrill, taper.Units);
+        }
+
+        var row = workbook.Tapped.FirstOrDefault(r =>
+            Same(r.Designation, designation) && (threadType is null || Same(r.ThreadType, threadType)));
+        return row is null ? null : HoleRules.ToCm(row.TapDrill, row.Units);
     }
 
     private static decimal? Length(double? cm, HoleUnits units) => cm is { } c ? FromCm(c, units) : null;

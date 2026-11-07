@@ -336,13 +336,13 @@ public sealed class HoleTolerancedTests
     }
 
     [Fact]
-    public void StoredData_AToleranceHole_IsVersion4_WithItsFlagRowAndFit()
+    public void StoredData_AToleranceHole_IsTheCurrentVersion_WithItsFlagRowAndFit()
     {
         var build = Built(TolClearance("Test press"));
         var byName = new HoleStoredData(build.Resolved, HoleAppliedState.From(build.Geometry!))
             .ToAttributes().ToDictionary(a => a.Name, a => a.Value);
 
-        Assert.Equal(4, byName[HoleStoredData.VersionName]);
+        Assert.Equal(HoleStoredData.CurrentVersion, byName[HoleStoredData.VersionName]);
         Assert.Equal(1, byName[HoleStoredData.TolerancedName]);
         Assert.Equal("Test press", byName[HoleStoredData.ToleranceName]);
         Assert.Equal("Press", byName[HoleStoredData.PrecisionFitName]);

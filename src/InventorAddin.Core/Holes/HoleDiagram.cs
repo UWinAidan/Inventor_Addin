@@ -26,7 +26,10 @@ public sealed record HoleDiagramInput
     /// </summary>
     public string? Tolerance { get; init; }
 
-    /// <summary>A blind hole's depth (the drill depth when tapped); ignored when the hole is not blind.</summary>
+    /// <summary>
+    /// A blind hole's depth from the top face, or a tapped or taper tapped hole's drill depth below the seat (task
+    /// 116); ignored when the hole is not blind.
+    /// </summary>
     public decimal? Depth { get; init; }
 
     /// <summary>The depth was typed as an Inventor expression: its value is marked <c>fx</c>.</summary>
@@ -63,8 +66,9 @@ public sealed record HoleDiagramInput
     public decimal? ThreadDiameter { get; init; }
 
     /// <summary>
-    /// A blind tapped hole's thread depth; a hole that is not blind is threaded its full depth. Null for a taper tapped
-    /// hole, whose thread length Inventor sets (spec 09 question 22): its thread is drawn in proportion, with no dimension.
+    /// A blind tapped hole's thread depth, below the seat (task 116); a hole that is not blind is threaded its full
+    /// depth. Null for a taper tapped hole, whose thread length Inventor sets (spec 09 question 22): its thread is drawn
+    /// in proportion, with no dimension.
     /// </summary>
     public decimal? ThreadDepth { get; init; }
 
@@ -280,6 +284,18 @@ public sealed record HoleDiagram(
         private bool BoreDepthIsExpression =>
             input.Seat == HoleSeat.Spotface ? input.SpotfaceDepthIsExpression : input.CounterboreDepthIsExpression;
 
+        /// <summary>
+        /// Where the depths are dimensioned from: the bottom of the seat on a tapped or taper tapped hole (spec 09
+        /// question 12; task 116), else the top face.
+        /// </summary>
+        private double DepthStart => Tapped ? _seatBottom : 0;
+
+        /// <summary>
+        /// Where a depth's extension line starts across the hole, on the right: the seat's edge at the top face or a
+        /// counterbore's floor; the hole's wall where a countersink's cone meets it.
+        /// </summary>
+        private double DepthStartX => Tapped && input.Seat == HoleSeat.Countersink ? _r : _seatR;
+
         private double X(double value) => _cx + value * _scale;
 
         private double Y(double value) => _top + value * _scale;
@@ -296,7 +312,7 @@ public sealed record HoleDiagram(
             if (Blind && Positive(input.Depth) is not null)
             {
                 left.Add(StackItem.Dimension(
-                    0, _depth, -_seatR, -_r, Len(input.Depth!.Value), input.DepthIsExpression));
+                    DepthStart, _depth, -DepthStartX, -_r, Len(input.Depth!.Value), input.DepthIsExpression));
             }
 
             if (input.Seat == HoleSeat.Countersink && input.CountersinkAngleDeg is { } csinkAngle && csinkAngle > 0)
@@ -314,7 +330,7 @@ public sealed record HoleDiagram(
             if (Tapped && Blind && Positive(input.ThreadDepth) is not null)
             {
                 rightDimensions.Add(StackItem.Dimension(
-                    0, _threadEnd, Math.Max(_seatR, _threadR), _threadR, Len(input.ThreadDepth!.Value),
+                    DepthStart, _threadEnd, Math.Max(DepthStartX, _threadR), _threadR, Len(input.ThreadDepth!.Value),
                     input.ThreadDepthIsExpression));
             }
 
@@ -441,11 +457,14 @@ public sealed record HoleDiagram(
 
             if (Blind)
             {
+                // A threaded hole's depths are below the seat (task 116), any other hole's from the top face.
                 var threadDepth = Positive(input.ThreadDepth) ?? diameter * 1.8;
-                _depth = Positive(input.Depth) ?? (Tapped ? threadDepth + diameter * 0.6 : diameter * 2);
+                var drillDepth = Positive(input.Depth) ?? (Tapped ? threadDepth + diameter * 0.6 : diameter * 2);
+                _depth = DepthStart + drillDepth;
 
-                // A seat as deep as the hole is drawn a little shallower, so the hole still shows below it.
-                if (_seatBottom >= _depth * 0.9)
+                // A seat as deep as the hole is drawn a little shallower, so the hole still shows below it. A threaded
+                // hole always runs on below its seat.
+                if (!Tapped && _seatBottom >= _depth * 0.9)
                 {
                     var scaleDown = _depth * 0.6 / _seatBottom;
                     _cboreDepth *= scaleDown;
@@ -453,7 +472,7 @@ public sealed record HoleDiagram(
                     _seatBottom *= scaleDown;
                 }
 
-                _threadEnd = Math.Clamp(threadDepth, _seatBottom, _depth);
+                _threadEnd = Math.Clamp(DepthStart + threadDepth, _seatBottom, _depth);
                 if (Positive(input.PointAngleDeg) is { } pointAngle && pointAngle < 180)
                 {
                     _pointHalfAngleRad = pointAngle * Math.PI / 360;

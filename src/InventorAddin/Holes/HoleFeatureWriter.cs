@@ -18,7 +18,8 @@ namespace InventorAddin.Holes
     /// take the tap info in place of the diameter, and <c>SetCBore</c>, <c>SetCSink</c> and <c>SetDrilled</c> change
     /// the seat of a tapped hole in place, keeping its thread and tap drill (task 099 spike, Inventor 2026). A spotface
     /// is made with the <c>AddSpotFace...</c> methods and changed to and from in place with <c>SetSpotFace</c> (task
-    /// 114; spike 108); its depths come already measured from the spotface's bottom (<see cref="HoleDepthReference"/>).
+    /// 114; spike 108). Every depth in the geometry is already as Inventor measures it, from the start face or a spotface's
+    /// bottom (<see cref="HoleDepthReference"/>; task 116 adds a threaded hole's seat depth), so it is written as it is.
     /// A taper tapped hole takes Inventor's tapered tap info and is made again for any change of thread or seat. A dowel's
     /// seat faces are among <see cref="HoleFeature.Faces"/>, so <see cref="HoleFitWriter"/> colours them too.
     /// Nothing here opens a transaction: the preview session (task 089) runs each call inside its own inner
@@ -255,7 +256,7 @@ namespace InventorAddin.Holes
                         HoleSeat.Countersink => features.AddCSinkByDistanceExtent2(
                             place, diameterOrTapInfo, depth, direction, Required(g.CountersinkDiameterCm),
                             Radians(g.CountersinkAngleDeg), pointType, pointAngle),
-                        // The depth is from the spotface's bottom, as Inventor measures it (HoleDepthReference).
+                        // The depth is from the spotface's bottom, as Inventor measures it (HoleDepthReference, task 116).
                         HoleSeat.Spotface => features.AddSpotFaceByDistanceExtent2(
                             place, diameterOrTapInfo, depth, direction, Required(g.SpotfaceDiameterCm),
                             Required(g.SpotfaceDepthCm), pointType, pointAngle),

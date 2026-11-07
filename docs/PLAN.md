@@ -364,7 +364,7 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 - [x] 113 Core: toleranced Clearance and Simple holes, Custom tolerance
 - [x] 114 Simple and Taper Tapped holes and spotfaces in Inventor and the window
 - [x] 115 Toleranced Clearance and Simple holes in Inventor and the window
-- [ ] 116 Thread and drill depths measured from the bottom of the seat
+- [x] 116 Thread and drill depths measured from the bottom of the seat
 - [x] 117 Default hole centres per point, like Inventor's Hole
 - [ ] 118 The AWB Hole window fits without scrolling at 150 percent on 1080p
 - [x] 119 Icons for Simple, Taper Tapped and Spotface
