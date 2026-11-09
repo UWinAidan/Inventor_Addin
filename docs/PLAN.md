@@ -338,6 +338,8 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 | 146 | Core, then windows build | 127 | 140 to 143, 145 |
 | 147 | windows build | 118 | 140 to 143, 145 |
 | 148 | image only | 119 | all |
+| 149 | windows build | 118, 144, 147 | 140 to 143, 148 |
+| 150 | Core, then windows build | 113, 115, 132, 149 | 140 to 143, 148 |
 
 - [x] 081 Spike: AWB Hole through the Inventor API (Windows)
 - [x] 082 Hole workbook: reader and models (Core)
@@ -406,6 +408,8 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 - [ ] 146 A "Custom..." entry on the countersink angle
 - [ ] 147 Up and Down arrows move between fields in the AWB Hole window
 - [ ] 148 AWB icon redesign and light-mode colours: mockup for Aidan
+- [ ] 149 No name text after the icon rows
+- [ ] 150 Custom tolerance takes a typed ISO 286 code
 
 **Order.** 082 and 083, 084, 085, 086 and 087 alongside, then 088, 089, 090. Aidan checked 090 on 2026-10-18; his three bugs and seven requests became tasks 093 to 105 (Aidan, 2026-10-18). Then: 093 to 101 one after another (fixes, then answers and requests), 091, 092, then 102 (mockup). Aidan then checks 091 to 101, approves or changes the mockup, and runs spike 103 with the parent session. Aidan approved the mockup on 2026-10-23 with changes (revised in task 102) and decided dowel seats (task 106). Then 106, 104, 091, 092; spike 103 and 105 with Aidan; and a last check.
 
@@ -413,7 +417,7 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 
 Spike 103 (2026-10-25) added task 133 (the mini toolbar's Hole button, `PartDMHoleCmd`, is taken over too) and task 134 (Save As and Replace renames the occurrence it replaces; from Aidan's Rename report). Aidan's PR #29 checklist results and requests (2026-10-25) added tasks 120 to 132: fixes 120 (shortcut reset), 121 (reload), 122 (hand colour), 123 (seat kept), 124 (typed values kept), 125 (dowel seat last values); requests 126 (seat boxes on every type), 127 (centre-drill spot, seat depth 0), 128 (Sheet Metal tab), 129 (split button), 130 (live typing), 131 (60 deg point), 132 (tolerance levels). **Full order:** spike 103 with Aidan (done 2026-10-25), 105, 109, 133, 134; spikes 107 and 108 with Aidan; 135 (Rename renames any occurrence with an AWB-format name, Aidan's answer to spec 02 question 27, 2026-10-28); the ribbon fixes 120, 121, 128, 129; the window fixes 123, 124, 125, 122; 126; 111, 112, 137 (a seat on a clearance size with no row, Aidan's answer to spec 09 question 26, 2026-10-30), 113, 119; 131, 132; 127; 130; 110, 117, 114, 115, 116; 136 (Full depth on a Through All tapped hole, Aidan 2026-10-28, after 116 since it measures from the seat); 118 last; then 138 (a colour swatch on a toleranced hole's Tolerance row, Aidan's answer to spec 09 question 28, 2026-11-07).
 
-**Fixes and requests from Aidan's check of the round** (2026-11-07 to 2026-11-09). Everything else on the combined checklist passed. The self-test (spike 139, local only, never merged) covered the measurable steps. Fixes: 140 (122-6 and 122-8, hand colours), 141 (133-1, 133-2, 133-5: the sketch point mini toolbar), 142 (the marking menu's Hole), 143 (105-1: highlight in place). Requests: 144 (type order), 145 (a browser sketch picks its centres), 146 (countersink angle Custom...), 147 (arrow keys), 148 (icon redesign mockup, before any build). **Order** (Aidan: the requests after the 122 fixes): 140, 141, 142, 143, then 144, 145, 146, 147, and 148 at any time. Then Aidan checks them in Inventor and reviews the mockup.
+**Fixes and requests from Aidan's check of the round** (2026-11-07 to 2026-11-09). Everything else on the combined checklist passed. The self-test (spike 139, local only, never merged) covered the measurable steps. Fixes: 140 (122-6 and 122-8, hand colours), 141 (133-1, 133-2, 133-5: the sketch point mini toolbar), 142 (the marking menu's Hole), 143 (105-1: highlight in place). Requests: 144 (type order), 145 (a browser sketch picks its centres), 146 (countersink angle Custom...), 147 (arrow keys), 148 (icon redesign mockup, before any build). Aidan's first-look answers (2026-11-09) added 149 (no name after the icon rows) and 150 (a typed ISO 286 code in Custom tolerance). **Order** (Aidan: the requests after the 122 fixes): 140, 141, 142, 143, then 144, 145, 146, 147, 149, 150, and 148 last. Then Aidan checks them in Inventor in one combined check and reviews the mockup.
 
 Not in part 1: AWB Hole on the Flat Pattern tab (it keeps Inventor's Hole; the Sheet Metal tab is taken over, Aidan 2026-10-25, task 128), holes placed without a sketch, and Standard and Fastener type beyond spec 09's defaults (questions 2 and 3). Simple and Taper Tapped holes and spotfaces were added to part 1 on 2026-10-24 (Aidan).
 

@@ -6,7 +6,7 @@ Last updated: 2026-11-09
 
 ## Next up
 
-1. M4 part 1: the round is planned: tasks 103 to 134 (2026-10-25). Spike 103 is done (rounds 1 and 2 with Aidan, 2026-10-25); it gave tasks 105 and 109 in full and two new tasks, 133 (the mini toolbar's Hole button) and 134 (Save As and Replace renames the occurrence; Aidan's Rename report). 105, 109, 133 and 134 are done (not yet run in Inventor). Spikes 107 and 108 are done (with Aidan, 2026-10-28); task 110 is confirmed from 107's final result (round 4: drill point, seats off the edge and end caps all pass), tasks 114, 115 and 127 are completed from 108. 135, 120, 121, 128, 129, 123, 124, 125, 122, 126, 111, 112, 137 (Aidan's answer to spec 09 question 26), 113, 119, 131, 132, 127, 130, 110, 117, 114, 115, 116, 136, 118 and 138 (swatch on a toleranced hole, Aidan's answer to spec 09 question 28) are done. Aidan checked the round in Inventor (2026-11-07 to 2026-11-09). **Next:** the fixes and requests from that check, tasks 140 to 148, in the order in `docs/PLAN.md`: the fixes 140 to 143 first, then the requests 144 to 147; 148 (icon mockup) at any time.
+1. M4 part 1: the round is planned: tasks 103 to 134 (2026-10-25). Spike 103 is done (rounds 1 and 2 with Aidan, 2026-10-25); it gave tasks 105 and 109 in full and two new tasks, 133 (the mini toolbar's Hole button) and 134 (Save As and Replace renames the occurrence; Aidan's Rename report). 105, 109, 133 and 134 are done (not yet run in Inventor). Spikes 107 and 108 are done (with Aidan, 2026-10-28); task 110 is confirmed from 107's final result (round 4: drill point, seats off the edge and end caps all pass), tasks 114, 115 and 127 are completed from 108. 135, 120, 121, 128, 129, 123, 124, 125, 122, 126, 111, 112, 137 (Aidan's answer to spec 09 question 26), 113, 119, 131, 132, 127, 130, 110, 117, 114, 115, 116, 136, 118 and 138 (swatch on a toleranced hole, Aidan's answer to spec 09 question 28) are done. Aidan checked the round in Inventor (2026-11-07 to 2026-11-09). **Next:** the fixes and requests from that check, tasks 140 to 150, in the order in `docs/PLAN.md`, then one combined Inventor check.
 2. Ribbon icon colours: Aidan picks option A, B or C from `docs/ui-mockups/ribbon-icons-colour-options.png` on branch `claude/ribbon-icon-colour`; then build it. **Later, not this round** (Aidan, 2026-10-25): every AWB icon gets a more polished look, done together with the colour option.
 3. Aidan finishes the remaining Part Properties checks below.
 
@@ -36,11 +36,7 @@ Last updated: 2026-11-09
 - Aidan's requests: type order (144), a browser sketch picks its centres (145), countersink angle Custom... (146), arrow keys between fields (147), icon redesign and light-mode colours, mockup first (148, from 118-10).
 - Noted passes: 114-11 (blind tapped M6 with a 1 mm spotface, thread 7.5, drill 10: the thread starts at the spotface floor and ends 8.5 from the top face, plain bore and point below), 110-4, 118-7, 138-11.
 
-Open from Aidan's first look (2026-11-07), not yet answered or fixed:
-- [ ] Text is cut off at the right of the Type, Seat and Drill point rows ("Cl...", "Sp...", "11...").
-- [ ] Custom tolerance: keep Upper and Lower limits, but also allow typing a custom ISO 286 code (for example H8, k6).
-- [ ] Inventor's own Hole lets you edit dimensions on the preview in the model (drag handles and typed value boxes); consider whether AWB Hole should do the same.
-- [ ] 128-5: the Flat Pattern tab has Inventor's Hole only, no AWB Hole, as designed. Question for Aidan: should Flat Pattern get AWB Hole too?
+Aidan's first look (2026-11-07), answered 2026-11-09: cut-off text is task 149, a typed ISO code in Custom tolerance is task 150, Flat Pattern keeps Inventor's Hole (`DECISIONS.md`), and dimensions on the preview are parked under "Proposed work".
 - [ ] Delete the local branch `spike/139-selftest` once Aidan no longer needs the self-test (it is never merged or pushed).
 
 From Part Properties (task 019):
@@ -98,6 +94,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Proposed work, not yet agreed
 
+- **Editing AWB Hole's dimensions on the preview in the model** (drag handles and typed value boxes, as Inventor's own Hole does). Parked by Aidan on 2026-11-09 as a later idea, not this round.
 - **Reviewer styling checklist and a Windows build script.** Both are written into spec 08 as proposed additions to M1b. Aidan has not said yes or no.
 - **Part name editable in the properties window.** Aidan asked on 2026-10-06 whether the name can be edited. It stays display-only, linked to the file name; the Rename button beside it is now planned (task 047). Waiting on Aidan only if he wants the name to differ from the file name.
 
