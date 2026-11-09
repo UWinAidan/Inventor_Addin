@@ -101,6 +101,13 @@ namespace InventorAddin.Holes
         private SelectEvents? _select;
         private HighlightSet? _highlight;
         private ApplicationEvents? _appEvents;
+
+        // When the part is edited in place, the occurrence being edited: the highlight set is then on the assembly and
+        // takes each point's proxy through it (task 143). Null in the part's own window.
+        private ComponentOccurrence? _highlightOccurrence;
+
+        // A point whose proxy could not be made is logged once per session.
+        private bool _proxyWarned;
         private UserInputEvents? _userInput;
 
         // Tells whether the picking was stopped by AWB Hole itself (its button pressed while the window is open, or
@@ -519,11 +526,37 @@ namespace InventorAddin.Holes
         /// </summary>
         private void StartPicking()
         {
-            _highlight = _doc.CreateHighlightSet();
+            _highlight = CreateHighlightSet();
             HoleColour blue = HoleSessionRules.PickedColour;
             _highlight.SetColor(blue.R, blue.G, blue.B);
 
             StartInteraction();
+        }
+
+        /// <summary>
+        /// The highlight set on the document Inventor shows (task 143): in place, a part's highlight set is not drawn in
+        /// the assembly's view, so the set is made on the assembly and <see cref="Highlight"/> adds each point's proxy
+        /// through the occurrence being edited. In the part's own window, or when no edited occurrence is found, the
+        /// set is on the part, as before.
+        /// </summary>
+        private HighlightSet CreateHighlightSet()
+        {
+            _highlightOccurrence = null;
+            if (ComSafe.Get(() => _app.ActiveDocument) is AssemblyDocument assembly && !ReferenceEquals(assembly, _doc))
+            {
+                ComponentOccurrence? occurrence = ComSafe.Get(() => assembly.ComponentDefinition.ActiveOccurrence);
+                HighlightSet? set = occurrence == null ? null : ComSafe.Get(() => assembly.CreateHighlightSet());
+                if (occurrence != null && set != null)
+                {
+                    _highlightOccurrence = occurrence;
+                    return set;
+                }
+
+                _log.Warn(LogPrefix + "the part is shown in an assembly but no edited occurrence or highlight set was " +
+                          "found there; the picked centres are highlighted on the part.");
+            }
+
+            return _doc.CreateHighlightSet();
         }
 
         /// <summary>The interaction events that pick the centres; made again when AWB Hole restarts the picking.</summary>
@@ -1030,8 +1063,35 @@ namespace InventorAddin.Holes
 
             ComSafe.Run(() => highlight.Clear());
             foreach (SketchPoint point in _picks.Points)
-                ComSafe.Run(() => highlight.AddItem(point));
+            {
+                object? item = InViewOf(point);
+                if (item != null)
+                    ComSafe.Run(() => highlight.AddItem(item));
+            }
             ComSafe.Run(() => _app.ActiveView.Update());
+        }
+
+        /// <summary>
+        /// The object to highlight for <paramref name="point"/>: the point itself in the part's own window, its proxy
+        /// through the edited occurrence in place (task 143). A proxy that cannot be made is logged once and skipped.
+        /// </summary>
+        private object? InViewOf(SketchPoint point)
+        {
+            ComponentOccurrence? occurrence = _highlightOccurrence;
+            if (occurrence == null)
+                return point;
+
+            object? proxy = ComSafe.Get(() =>
+            {
+                occurrence.CreateGeometryProxy(point, out object result);
+                return result;
+            });
+            if (proxy == null && !_proxyWarned)
+            {
+                _proxyWarned = true;
+                _log.Warn(LogPrefix + "a picked centre could not be found in the assembly; it is not highlighted.");
+            }
+            return proxy;
         }
 
         /// <summary>
@@ -1131,6 +1191,7 @@ namespace InventorAddin.Holes
                 _select = null;
                 _interaction = null;
                 _highlight = null;
+                _highlightOccurrence = null;
                 _appEvents = null;
                 _userInput = null;
                 _ended = true;

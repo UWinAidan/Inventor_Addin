@@ -34,13 +34,18 @@ Spike 103 and task 105 describe how the session finds the edited occurrence and 
 
 Filled in by the implementer.
 
-- **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):**
-- **Inventor API members not confirmed:**
+- **Ran:** on Windows with Inventor 2026 installed and not running: `dotnet build InventorAddin.slnx` (0 errors, 9 warnings, none in `HoleSession.cs`; deployed to `%APPDATA%\Autodesk\Inventor 2026\Addins`). `dotnet test tests/InventorAddin.Core.Tests`: 4461 passed, 0 failed. No Core change, so no new tests: the change is which document holds the highlight set and which object is added to it, both Inventor-side.
+- **Approach:** `HoleSession.CreateHighlightSet()` makes the set on `ActiveDocument` when it is an `AssemblyDocument` other than the part, and keeps `assembly.ComponentDefinition.ActiveOccurrence`. `Highlight()` then adds each picked point's proxy, made with `occurrence.CreateGeometryProxy(point, out result)`; a proxy that cannot be made is logged once per session and skipped. With no assembly active, or no edited occurrence or set found (logged), the set is on the part as before. `Finish` deletes whichever set was made, as today, and forgets the occurrence.
+- **Not compiled (changed under `src/InventorAddin`):** none; `src/InventorAddin/Holes/HoleSession.cs` was built on Windows. Not yet run in Inventor.
+- **Inventor API members not confirmed:** none. Confirmed by reflection on the Inventor 2026 interop: `AssemblyDocument.CreateHighlightSet()`, `AssemblyComponentDefinition.ActiveOccurrence`, `ComponentOccurrence.CreateGeometryProxy(object Geometry, out object Result)` (`Result` is `out`), `HighlightSet.AddItem/Clear/Delete/SetColor`. Untested in Inventor: whether a set on the assembly with proxies draws in place (spike 103 had reported the part's set showing in place; Aidan's check 105-1 says it does not), and a part edited in place inside a sub-assembly, where `ActiveOccurrence` may be a proxy occurrence.
 - **Manual checklist for Inventor:**
   1. Edit a part in place, press H: the default centres are blue.
   2. Pick another point and un-pick one: the highlight follows.
   3. OK and Cancel: no highlight is left behind.
   4. The same in the part's own window: as before.
+  5. A part edited in place two levels down (top assembly, sub-assembly, part): H, the centres turn blue. If not, check `awbaddin.log` for the warning about the occurrence or proxy.
 
 ## Follow-ups
+
+- Spike 103 question 5 recorded that a highlight set on the part shows in place; Aidan's check 105-1 contradicts it. Once this task is checked in Inventor, the spike's result 5 could carry a note pointing here.
+- Not checked: a part edited in place inside a sub-assembly (the highlight's occurrence would be a proxy occurrence).
