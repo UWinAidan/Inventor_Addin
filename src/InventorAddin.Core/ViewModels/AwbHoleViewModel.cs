@@ -263,11 +263,25 @@ public sealed class AwbHoleViewModel : ObservableObject
     public const string AngleUnitText = "deg";
 
     /// <summary>
+    /// The last entry in the countersink angle's dropdown (Aidan, 2026-11-09; task 146): it says other angles can be
+    /// typed. It is never a value: given as <see cref="CountersinkAngleText"/> it changes nothing, and the window puts
+    /// the cursor in the box instead.
+    /// </summary>
+    public const string CountersinkAngleCustomText = "Custom...";
+
+    /// <summary>
     /// The quick choices in the countersink angle box's dropdown, in degrees, on every hole type: 60 and 90 for a
-    /// centre-drill spot (Aidan, 2026-10-25; task 127, Default for the dropdown). Other angles can still be typed.
+    /// centre-drill spot (Aidan, 2026-10-25; task 127, Default for the dropdown), then
+    /// <see cref="CountersinkAngleCustomText"/> (task 146). Other angles can still be typed.
     /// </summary>
     public static IReadOnlyList<string> CountersinkAngleChoices { get; } =
-        HoleRules.CountersinkQuickAnglesDeg.Select(a => a.ToString("0.######", CultureInfo.InvariantCulture)).ToArray();
+        HoleRules.CountersinkQuickAnglesDeg.Select(a => a.ToString("0.######", CultureInfo.InvariantCulture))
+            .Append(CountersinkAngleCustomText)
+            .ToArray();
+
+    /// <summary>True when <paramref name="text"/> is the countersink angle's "Custom..." entry, not an angle (task 146).</summary>
+    public static bool IsCountersinkAngleCustom(string? text) =>
+        string.Equals(text?.Trim(), CountersinkAngleCustomText, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>The message when the command is started in a document that is not a part.</summary>
     public const string WrongDocumentText = CommandName + " works in part files. Open a part and try again.";
@@ -1271,11 +1285,24 @@ public sealed class AwbHoleViewModel : ObservableObject
         set => SetText(HoleField.CountersinkDiameter, value, nameof(CountersinkDiameterText), v => CountersinkDiameter = v);
     }
 
-    /// <summary><see cref="CountersinkAngle"/> as text: a number of degrees; blank empties it.</summary>
+    /// <summary>
+    /// <see cref="CountersinkAngle"/> as text: a number of degrees; blank empties it. The dropdown's "Custom..." entry
+    /// (task 146) is not taken: the angle and the text stay as they were, and the change is raised so the box shows the
+    /// current angle again.
+    /// </summary>
     public string CountersinkAngleText
     {
         get => TextOf(HoleField.CountersinkAngle, _csinkAngle);
-        set => SetText(HoleField.CountersinkAngle, value, nameof(CountersinkAngleText), v => CountersinkAngle = v);
+        set
+        {
+            if (IsCountersinkAngleCustom(value))
+            {
+                OnPropertyChanged(nameof(CountersinkAngleText));
+                return;
+            }
+
+            SetText(HoleField.CountersinkAngle, value, nameof(CountersinkAngleText), v => CountersinkAngle = v);
+        }
     }
 
     /// <summary><see cref="SpotfaceDiameter"/> as text: a number in the units' length; blank empties it.</summary>

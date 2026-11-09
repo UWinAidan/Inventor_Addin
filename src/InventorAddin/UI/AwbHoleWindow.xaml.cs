@@ -2,7 +2,9 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Threading;
 using InventorAddin.Core.ViewModels;
 using InventorAddin.Holes;
 
@@ -22,6 +24,7 @@ namespace InventorAddin.UI
         private readonly AwbHoleViewModel _viewModel;
         private HoleSession? _session;
         private bool _closed;
+        private bool _countersinkCustomChosen;
 
         public AwbHoleWindow(AwbHoleViewModel viewModel)
         {
@@ -153,14 +156,78 @@ namespace InventorAddin.UI
         }
 
         /// <summary>
+        /// Notes when "Custom..." (task 146) is picked from the open countersink angle list, for
+        /// <see cref="OnCountersinkAngleDropDownClosed"/>. Read here, not from <c>SelectedItem</c> when the list closes:
+        /// the view-model refuses the text and the box reads the angle back, which can move the selection off
+        /// "Custom..." first. Stepping through the closed box with the arrow keys sets nothing.
+        /// </summary>
+        private void OnCountersinkAngleSelectionChanged(object? sender, SelectionChangedEventArgs e)
+        {
+            // A change that only removes the selection (the angle read back while the list is open) keeps the flag.
+            if (!CountersinkAngleBox.IsDropDownOpen || e.AddedItems.Count == 0)
+                return;
+            _countersinkCustomChosen = AwbHoleViewModel.IsCountersinkAngleCustom(e.AddedItems[0] as string);
+        }
+
+        /// <summary>
         /// An angle picked from the countersink angle's dropdown (task 127) commits at once, so a centre-drill spot is
         /// two clicks after choosing Countersink; a typed angle applies after the pause like every box (task 130), or at
         /// once when the box loses focus or on Enter.
+        /// "Custom..." (task 146) is not an angle: the view-model refuses it as text, so the box shows the current angle
+        /// again, nothing is committed, the selection is cleared, and the box gets focus with its text selected so
+        /// typing replaces it.
         /// </summary>
         private void OnCountersinkAngleDropDownClosed(object? sender, EventArgs e)
         {
+            if (_countersinkCustomChosen)
+            {
+                _countersinkCustomChosen = false;
+                ClearCountersinkAngleSelection();
+                // After the dropdown has finished closing, which hands focus back to the dropdown itself.
+                Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(FocusCountersinkAngleText));
+                return;
+            }
+
             CountersinkAngleBox.GetBindingExpression(ComboBox.TextProperty)?.UpdateSource();
             _viewModel.CommitTyping();
+        }
+
+        /// <summary>
+        /// Takes the selection off "Custom..." so it is not left highlighted. An editable dropdown with no selection
+        /// empties its Text, so the Text binding is lifted while the selection is cleared and set again after, which
+        /// reads the view-model's angle back without sending the empty text to it.
+        /// </summary>
+        private void ClearCountersinkAngleSelection()
+        {
+            BindingBase? binding = BindingOperations.GetBindingBase(CountersinkAngleBox, ComboBox.TextProperty);
+            if (binding != null)
+                BindingOperations.ClearBinding(CountersinkAngleBox, ComboBox.TextProperty);
+            try
+            {
+                CountersinkAngleBox.SelectedIndex = -1;
+            }
+            finally
+            {
+                if (binding != null)
+                    CountersinkAngleBox.SetBinding(ComboBox.TextProperty, binding);
+            }
+        }
+
+        /// <summary>The cursor in the countersink angle's text box, its text selected (task 146).</summary>
+        private void FocusCountersinkAngleText()
+        {
+            if (_closed)
+                return;
+
+            if (CountersinkAngleBox.Template?.FindName("PART_EditableTextBox", CountersinkAngleBox) is TextBox text)
+            {
+                text.Focus();
+                text.SelectAll();
+            }
+            else
+            {
+                CountersinkAngleBox.Focus();
+            }
         }
     }
 }

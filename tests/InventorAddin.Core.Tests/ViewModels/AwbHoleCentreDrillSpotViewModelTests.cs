@@ -6,8 +6,8 @@ namespace InventorAddin.Core.Tests.ViewModels;
 
 /// <summary>
 /// A centre-drill spot and a seat depth of 0 in the AWB Hole window (spec 09, "The window": Seat sizes; question 20;
-/// task 127): the countersink angle box offers 60 and 90 deg on every type, and a counterbore or spotface depth of 0 is
-/// allowed.
+/// task 127): the countersink angle box offers 60 and 90 deg on every type, then "Custom..." (task 146), and a
+/// counterbore or spotface depth of 0 is allowed.
 /// </summary>
 public sealed class AwbHoleCentreDrillSpotViewModelTests : IDisposable
 {
@@ -47,9 +47,93 @@ public sealed class AwbHoleCentreDrillSpotViewModelTests : IDisposable
     }
 
     [Fact]
-    public void TheAngleBox_Offers60And90()
+    public void TheAngleBox_Offers60And90_ThenCustomLast()
     {
-        Assert.Equal(new[] { "60", "90" }, AwbHoleViewModel.CountersinkAngleChoices);
+        Assert.Equal(new[] { "60", "90", "Custom..." }, AwbHoleViewModel.CountersinkAngleChoices);
+        Assert.Equal(AwbHoleViewModel.CountersinkAngleCustomText, AwbHoleViewModel.CountersinkAngleChoices[^1]);
+    }
+
+    [Theory]
+    [InlineData("clearance")]
+    [InlineData("tapped")]
+    [InlineData("dowel")]
+    [InlineData("simple")]
+    public void ChoosingCustom_ChangesNoValue_AndLeavesCanOkAsItWas(string kind)
+    {
+        var vm = Hole(kind);
+        vm.Seat = HoleSeat.Countersink;
+        vm.CountersinkDiameterText = "7";
+        vm.CountersinkAngleText = "82";
+        var spec = vm.Spec;
+        var canOk = vm.CanOk;
+        var changed = new List<string?>();
+        vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        vm.CountersinkAngleText = AwbHoleViewModel.CountersinkAngleCustomText;
+
+        Assert.Equal("82", vm.CountersinkAngleText);
+        Assert.Equal(82m, vm.CountersinkAngle);
+        Assert.Null(vm.CountersinkAngleProblem);
+        Assert.Equal(canOk, vm.CanOk);
+        Assert.Equal(spec, vm.Spec);
+        Assert.Equal(new string?[] { nameof(AwbHoleViewModel.CountersinkAngleText) }, changed);
+    }
+
+    [Fact]
+    public void ChoosingCustom_WithNoAngle_LeavesTheBoxEmpty_AndOkStillWaits()
+    {
+        var vm = Hole("simple");
+        vm.Seat = HoleSeat.Countersink;
+        vm.CountersinkDiameterText = "7";
+        vm.CountersinkAngleText = "";
+        var canOk = vm.CanOk;
+
+        vm.CountersinkAngleText = AwbHoleViewModel.CountersinkAngleCustomText;
+
+        Assert.Equal("", vm.CountersinkAngleText);
+        Assert.Null(vm.CountersinkAngle);
+        Assert.Equal(canOk, vm.CanOk);
+    }
+
+    [Fact]
+    public void ChoosingCustom_WhileTyping_IsNotTakenAsText_AndTheTypedAngleStillApplies()
+    {
+        var vm = Hole("tapped");
+        vm.Seat = HoleSeat.Countersink;
+        vm.CountersinkDiameterText = "7";
+        vm.CountersinkAngleText = "90";
+        var timer = new FakeDebounceTimer();
+        vm.UseTypingTimer(timer);
+
+        vm.CountersinkAngleText = AwbHoleViewModel.CountersinkAngleCustomText;
+
+        Assert.False(vm.HasPendingTyping);
+        Assert.Equal("90", vm.CountersinkAngleText);
+
+        vm.CountersinkAngleText = "100";
+        timer.Advance(TimeSpan.FromSeconds(1));
+
+        Assert.Null(vm.CountersinkAngleProblem);
+        Assert.Equal(100m, vm.Spec.CsinkAngleDeg);
+        Assert.True(vm.CanOk);
+    }
+
+    [Theory]
+    [InlineData("custom...")]
+    [InlineData(" Custom... ")]
+    public void IsCountersinkAngleCustom_IgnoresCaseAndSpaces(string text)
+    {
+        Assert.True(AwbHoleViewModel.IsCountersinkAngleCustom(text));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("90")]
+    [InlineData("Custom")]
+    public void IsCountersinkAngleCustom_IsFalseForAnythingElse(string? text)
+    {
+        Assert.False(AwbHoleViewModel.IsCountersinkAngleCustom(text));
     }
 
     [Theory]

@@ -368,3 +368,4 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-09 | Custom tolerance also takes a typed ISO 286 code (for example H8, k6), as well as Upper and Lower limits | Aidan | first look, 2026-11-07 (task 150) |
 | 2026-11-09 | Editing dimensions on the preview in the model is parked as a later idea, not this round | Aidan | first look, 2026-11-07 |
 | 2026-11-09 | The Flat Pattern tab keeps Inventor's Hole only; no AWB Hole there | Aidan | checklist 128-5, 2026-11-09 |
+| 2026-11-09 | Choosing "Custom..." on the countersink angle keeps the current angle in the box, selected, rather than clearing it (clearing would disable OK and lose the angle on a change of mind) | Default | task 146 |

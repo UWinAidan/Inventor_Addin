@@ -286,12 +286,14 @@
                                     An editable dropdown (task 127): 60 and 90 deg are quick choices for a centre-drill
                                     spot on any hole, and any other angle can be typed. Typed text applies after the pause
                                     like every box (task 130); it commits at once when the box loses focus, on Enter, or
-                                    when an entry is picked (DropDownClosed, in the code-behind).
+                                    when an entry is picked (DropDownClosed, in the code-behind). The last entry,
+                                    "Custom...", is never a value: it puts the cursor in the box to type (task 146).
                                 -->
                                 <ComboBox x:Name="CountersinkAngleBox"
                                           Style="{DynamicResource EditableComboBox}"
                                           ItemsSource="{x:Static vm:AwbHoleViewModel.CountersinkAngleChoices}"
                                           Text="{Binding CountersinkAngleText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          SelectionChanged="OnCountersinkAngleSelectionChanged"
                                           DropDownClosed="OnCountersinkAngleDropDownClosed" />
                                 <TextBlock Style="{DynamicResource SideNoteText}" Text="{x:Static vm:AwbHoleViewModel.AngleUnitText}" />
                             </StackPanel>
