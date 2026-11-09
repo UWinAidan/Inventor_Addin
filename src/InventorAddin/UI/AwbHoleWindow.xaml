@@ -110,33 +110,23 @@
                 </controls:FormSection>
 
                 <controls:FormSection Heading="Hole">
-                    <!-- Icon buttons with the chosen name after them in muted text (mockup choice 2). -->
+                    <!-- Icon buttons only (mockup choice 2); each button's tooltip and screen-reader name give its choice (task 149). -->
                     <controls:FieldRow Label="T_ype" Target="{Binding ElementName=TypeList}">
-                        <DockPanel>
-                            <controls:ChoiceList x:Name="TypeList"
-                                                 DockPanel.Dock="Left"
-                                                 Style="{DynamicResource IconChoiceList}"
-                                                 AutomationProperties.Name="Type"
-                                                 ItemsSource="{x:Static vm:AwbHoleViewModel.TypeOptions}"
-                                                 SelectedValuePath="Value"
-                                                 SelectedValue="{Binding Type, Mode=TwoWay}" />
-                            <TextBlock Style="{DynamicResource ChoiceNameText}"
-                                       Text="{Binding SelectedItem.Text, ElementName=TypeList, Mode=OneWay}" />
-                        </DockPanel>
+                        <controls:ChoiceList x:Name="TypeList"
+                                             Style="{DynamicResource IconChoiceList}"
+                                             AutomationProperties.Name="Type"
+                                             ItemsSource="{x:Static vm:AwbHoleViewModel.TypeOptions}"
+                                             SelectedValuePath="Value"
+                                             SelectedValue="{Binding Type, Mode=TwoWay}" />
                     </controls:FieldRow>
                     <controls:FieldRow Label="S_eat" Target="{Binding ElementName=SeatList}">
                         <StackPanel>
-                            <DockPanel>
-                                <controls:ChoiceList x:Name="SeatList"
-                                                     DockPanel.Dock="Left"
-                                                     Style="{DynamicResource IconChoiceList}"
-                                                     AutomationProperties.Name="Seat"
-                                                     ItemsSource="{Binding SeatOptions, Mode=OneWay}"
-                                                     SelectedValuePath="Value"
-                                                     SelectedValue="{Binding Seat, Mode=TwoWay}" />
-                                <TextBlock Style="{DynamicResource ChoiceNameText}"
-                                           Text="{Binding SelectedItem.Text, ElementName=SeatList, Mode=OneWay}" />
-                            </DockPanel>
+                            <controls:ChoiceList x:Name="SeatList"
+                                                 Style="{DynamicResource IconChoiceList}"
+                                                 AutomationProperties.Name="Seat"
+                                                 ItemsSource="{Binding SeatOptions, Mode=OneWay}"
+                                                 SelectedValuePath="Value"
+                                                 SelectedValue="{Binding Seat, Mode=TwoWay}" />
                             <TextBlock Style="{DynamicResource ErrorStatusText}"
                                        Text="{Binding SeatProblem, Mode=OneWay}"
                                        Visibility="{Binding SeatProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
@@ -470,17 +460,12 @@
                     <!-- Distance and Through All; To only for an edited hole that already ends at a face, with a note (mockup choice 11). -->
                     <controls:FieldRow Label="Te_rmination" Target="{Binding ElementName=TerminationList}">
                         <StackPanel>
-                            <DockPanel>
-                                <controls:ChoiceList x:Name="TerminationList"
-                                                     DockPanel.Dock="Left"
-                                                     Style="{DynamicResource IconChoiceList}"
-                                                     AutomationProperties.Name="Termination"
-                                                     ItemsSource="{Binding TerminationOptions, Mode=OneTime}"
-                                                     SelectedValuePath="Value"
-                                                     SelectedValue="{Binding Termination, Mode=TwoWay}" />
-                                <TextBlock Style="{DynamicResource ChoiceNameText}"
-                                           Text="{Binding SelectedItem.Text, ElementName=TerminationList, Mode=OneWay}" />
-                            </DockPanel>
+                            <controls:ChoiceList x:Name="TerminationList"
+                                                 Style="{DynamicResource IconChoiceList}"
+                                                 AutomationProperties.Name="Termination"
+                                                 ItemsSource="{Binding TerminationOptions, Mode=OneTime}"
+                                                 SelectedValuePath="Value"
+                                                 SelectedValue="{Binding Termination, Mode=TwoWay}" />
                             <TextBlock Style="{DynamicResource MutedText}"
                                        Text="{Binding TerminationNote, Mode=OneWay}"
                                        Visibility="{Binding TerminationNote, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
@@ -561,17 +546,12 @@
                                        Target="{Binding ElementName=DrillPointList}"
                                        Visibility="{Binding ShowsDrillPoint, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
                         <StackPanel>
-                            <DockPanel>
-                                <controls:ChoiceList x:Name="DrillPointList"
-                                                     DockPanel.Dock="Left"
-                                                     Style="{DynamicResource IconChoiceList}"
-                                                     AutomationProperties.Name="Drill point"
-                                                     ItemsSource="{Binding DrillPointOptions, Mode=OneWay}"
-                                                     SelectedValuePath="Value"
-                                                     SelectedValue="{Binding DrillPoint, Mode=TwoWay}" />
-                                <TextBlock Style="{DynamicResource ChoiceNameText}"
-                                           Text="{Binding SelectedItem.Text, ElementName=DrillPointList, Mode=OneWay}" />
-                            </DockPanel>
+                            <controls:ChoiceList x:Name="DrillPointList"
+                                                 Style="{DynamicResource IconChoiceList}"
+                                                 AutomationProperties.Name="Drill point"
+                                                 ItemsSource="{Binding DrillPointOptions, Mode=OneWay}"
+                                                 SelectedValuePath="Value"
+                                                 SelectedValue="{Binding DrillPoint, Mode=TwoWay}" />
                             <TextBlock Style="{DynamicResource ErrorStatusText}"
                                        Text="{Binding DrillPointProblem, Mode=OneWay}"
                                        Visibility="{Binding DrillPointProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />

@@ -1438,17 +1438,6 @@
     </Style>
 
     <!--
-        The chosen name after a row of icon buttons: muted, 12, 8 after the last button (whose own 4 gap is half of it),
-        cut short with an ellipsis when the row is full.
-    -->
-    <Style x:Key="ChoiceNameText" TargetType="{x:Type TextBlock}" BasedOn="{StaticResource SideNoteText}">
-        <Setter Property="Margin" Value="4,0,0,0" />
-        <Setter Property="FontSize" Value="12" />
-        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
-        <Setter Property="TextWrapping" Value="NoWrap" />
-    </Style>
-
-    <!--
         One of the AWB Hole icons (UI/Controls/HoleIcon): a 20 by 20 drawing shown 24 square in the button's text colour.
         The material is filled at 45 percent and outlined; thin lines (arrows, marks) and a heavy line (an end face).
     -->
