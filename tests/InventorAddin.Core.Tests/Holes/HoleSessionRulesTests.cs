@@ -341,6 +341,131 @@ public sealed class HoleSessionRulesTests
         Assert.Equal(expected, HoleSessionRules.FinishFailed(reason));
     }
 
+    // Task 145: a sketch clicked in the browser. A point named "used" is one a feature already uses.
+    private static PickedSketchCentres<Pt> Clicked(PtSketch sketch, bool edit = false, bool inSessionPart = true) =>
+        HoleSessionRules.CentresOfPickedSketch(edit, inSessionPart, () => sketch.Centres);
+
+    [Fact]
+    public void PickedSketch_GivesAllItsCentres_UsedOrNot_AsForASelectedSketch()
+    {
+        var result = Clicked(WithCentres("other", "used a", "free b", "free c"));
+
+        Assert.True(result.Replaces);
+        Assert.Equal(PickedSketchOutcome.Replaced, result.Outcome);
+        Assert.Equal(["used a", "free b", "free c"], result.Points.Select(p => p.Name));
+        Assert.Equal(3, result.HoleCentresInSketch);
+        Assert.Equal("other was clicked in the browser: all its 3 hole centres are picked.", result.Describe("other"));
+    }
+
+    [Fact]
+    public void PickedSketch_WithAllCentresUsed_StillPicksThemAll()
+    {
+        var result = Clicked(WithCentres("done", "used a", "used b"));
+
+        Assert.True(result.Replaces);
+        Assert.Equal(["used a", "used b"], result.Points.Select(p => p.Name));
+    }
+
+    [Fact]
+    public void PickedSketch_WithNoHoleCentres_KeepsThePicks_AndSaysSo()
+    {
+        var result = Clicked(WithCentres("empty"));
+
+        Assert.False(result.Replaces);
+        Assert.Equal(PickedSketchOutcome.NoHoleCentres, result.Outcome);
+        Assert.Empty(result.Points);
+        Assert.Equal("empty was clicked in the browser but has no hole centres; the picks are kept.", result.Describe("empty"));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void PickedSketch_OfAnotherDocument_KeepsThePicks_WithoutReadingTheSketch_AndSaysSo(bool edit)
+    {
+        var read = false;
+        var result = HoleSessionRules.CentresOfPickedSketch<Pt>(
+            edit,
+            inSessionPart: false,
+            () =>
+            {
+                read = true;
+                return [new Pt("free a")];
+            });
+
+        Assert.False(result.Replaces);
+        Assert.Equal(PickedSketchOutcome.OtherDocument, result.Outcome);
+        Assert.Empty(result.Points);
+        Assert.False(read);
+        Assert.Equal(
+            "Sketch1 was clicked in the browser but is not in the part the hole is made in; the picks are kept.",
+            result.Describe("Sketch1"));
+    }
+
+    [Fact]
+    public void PickedSketch_WhenEditing_KeepsThePicks_WithoutReadingTheSketch()
+    {
+        var read = false;
+        var result = HoleSessionRules.CentresOfPickedSketch<Pt>(
+            edit: true,
+            inSessionPart: true,
+            () =>
+            {
+                read = true;
+                return [new Pt("free a")];
+            });
+
+        Assert.False(result.Replaces);
+        Assert.Equal(PickedSketchOutcome.Editing, result.Outcome);
+        Assert.False(read);
+        Assert.StartsWith("a sketch was clicked in the browser", result.Describe(null));
+    }
+
+    [Fact]
+    public void Picks_Replace_WithAnotherSketch_TakesItsPointsAndSaysTheSketchChanged()
+    {
+        var first = new Sketch("first");
+        var other = new Sketch("other");
+        var c = new Pt("c");
+        var d = new Pt("d");
+        var picks = new HoleCentrePicks<Pt, Sketch>(edit: false);
+        picks.Start(first, [new Pt("a"), new Pt("b")]);
+
+        Assert.True(picks.Replace(other, [c, d]));
+        Assert.Same(other, picks.Sketch);
+        Assert.Equal([c, d], picks.Points);
+    }
+
+    [Fact]
+    public void Picks_Replace_WithTheSameSketch_TakesItsPointsInTheSameSketch()
+    {
+        var sketch = new Sketch("s");
+        var a = new Pt("a");
+        var b = new Pt("b");
+        var picks = new HoleCentrePicks<Pt, Sketch>(edit: false, sameSketch: (x, y) => x.Name == y.Name);
+        picks.Start(sketch, [a]);
+
+        Assert.False(picks.Replace(new Sketch("s"), [a, b]));
+        Assert.Equal([a, b], picks.Points);
+    }
+
+    [Fact]
+    public void Picks_Replace_WithNoSketchYet_SaysTheSketchChanged()
+    {
+        var picks = new HoleCentrePicks<Pt, Sketch>(edit: false);
+        picks.Start(null, []);
+
+        Assert.True(picks.Replace(new Sketch("s"), [new Pt("a")]));
+        Assert.Equal(1, picks.Count);
+    }
+
+    [Fact]
+    public void Picks_Replace_IsNotForAnEdit()
+    {
+        var picks = new HoleCentrePicks<Pt, Sketch>(edit: true);
+
+        Assert.Throws<InvalidOperationException>(() => picks.Replace(new Sketch("s"), [new Pt("a")]));
+    }
+
     [Fact]
     public void Picks_StartTakesThePointsOnce()
     {

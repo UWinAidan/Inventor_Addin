@@ -16,7 +16,8 @@ public static class HoleSessionRules
     public static HoleColour PickedColour { get; } = new(30, 120, 255);
 
     /// <summary>Inventor's status bar while the window is open.</summary>
-    public const string StatusBarText = CommandName + ": click a point to add or remove a hole centre.";
+    public const string StatusBarText =
+        CommandName + ": click a point to add or remove a hole centre, or a sketch in the browser to pick its centres.";
 
     /// <summary>A preview change slower than this is logged at Info.</summary>
     public const int SlowChangeMs = 500;
@@ -176,6 +177,40 @@ public static class HoleSessionRules
         return new(null, [], DefaultCentresFrom.None, 0);
     }
 
+    /// <summary>
+    /// The hole centres a sketch clicked in the browser while the window is open gives (task 145; spec 09, "Hole
+    /// centres"; Aidan, 2026-11-09): all its hole-centre points, used by a feature or not, as for a sketch selected
+    /// before the window opens. They replace the picks. A sketch with none leaves the picks as they were, and so do a
+    /// sketch of another document (another part, or the assembly itself, when the part is edited in place) and an
+    /// edit, whose centres stay in the hole's own sketch.
+    /// </summary>
+    /// <param name="edit">The session edits an existing hole.</param>
+    /// <param name="inSessionPart">The sketch belongs to the part the session works on.</param>
+    /// <param name="holeCentres">The sketch's points marked as hole centres, in sketch order. Asked only for a sketch
+    /// of the session's part, and not for an edit.</param>
+    public static PickedSketchCentres<TPoint> CentresOfPickedSketch<TPoint>(
+        bool edit,
+        bool inSessionPart,
+        Func<IEnumerable<TPoint>> holeCentres)
+    {
+        ArgumentNullException.ThrowIfNull(holeCentres);
+
+        if (!inSessionPart)
+        {
+            return new([], PickedSketchOutcome.OtherDocument, 0);
+        }
+
+        if (edit)
+        {
+            return new([], PickedSketchOutcome.Editing, 0);
+        }
+
+        var all = holeCentres().ToList();
+        return all.Count == 0
+            ? new([], PickedSketchOutcome.NoHoleCentres, 0)
+            : new(all, PickedSketchOutcome.Replaced, all.Count);
+    }
+
     /// <summary>What the preview does for a window change.</summary>
     /// <param name="hasHole">The session holds a hole (the edited hole, or a preview hole it made).</param>
     /// <param name="edit">The session edits an existing hole.</param>
@@ -282,6 +317,57 @@ public sealed record DefaultCentres<TSketch, TPoint>(
             $"newest visible with free centres, {Points.Count} of {HoleCentresInSketch} hole centres",
         _ => null,
     };
+}
+
+/// <summary>What a sketch clicked in the browser did to the picked centres (task 145).</summary>
+public enum PickedSketchOutcome
+{
+    /// <summary>The picks are now all the sketch's hole centres.</summary>
+    Replaced,
+
+    /// <summary>The sketch has no hole-centre points: the picks are kept.</summary>
+    NoHoleCentres,
+
+    /// <summary>
+    /// The sketch is in another document than the session's part (another part, or the assembly, in place): the picks
+    /// are kept and nothing of that document is changed.
+    /// </summary>
+    OtherDocument,
+
+    /// <summary>An edited hole keeps its centres in its own sketch: the picks are kept.</summary>
+    Editing,
+}
+
+/// <summary>
+/// The hole centres a sketch clicked in the browser gives (task 145; see
+/// <see cref="HoleSessionRules.CentresOfPickedSketch"/>).
+/// </summary>
+/// <param name="Points">The centres that replace the picks, in sketch order; empty when the picks are kept.</param>
+/// <param name="Outcome">Whether the picks are replaced, and why not.</param>
+/// <param name="HoleCentresInSketch">How many hole-centre points the sketch has, used or not.</param>
+public sealed record PickedSketchCentres<TPoint>(
+    IReadOnlyList<TPoint> Points,
+    PickedSketchOutcome Outcome,
+    int HoleCentresInSketch)
+{
+    /// <summary>True when the picks are replaced by <see cref="Points"/>.</summary>
+    public bool Replaces => Outcome == PickedSketchOutcome.Replaced;
+
+    /// <summary>The log line for a click on <paramref name="sketchName"/> in the browser.</summary>
+    public string Describe(string? sketchName)
+    {
+        var name = string.IsNullOrWhiteSpace(sketchName) ? "a sketch" : sketchName;
+        return Outcome switch
+        {
+            PickedSketchOutcome.Replaced =>
+                $"{name} was clicked in the browser: all its {HoleCentresInSketch} hole centres are picked.",
+            PickedSketchOutcome.NoHoleCentres =>
+                $"{name} was clicked in the browser but has no hole centres; the picks are kept.",
+            PickedSketchOutcome.OtherDocument =>
+                $"{name} was clicked in the browser but is not in the part the hole is made in; the picks are kept.",
+            _ => $"{name} was clicked in the browser; an edited hole keeps its centres in its own sketch.",
+        };
+    }
 }
 
 /// <summary>What the session does when Inventor stops the hole centre picking.</summary>
@@ -457,6 +543,24 @@ public sealed class HoleCentrePicks<TPoint, TSketch>
                 _points.Add(point);
             }
         }
+    }
+
+    /// <summary>
+    /// A sketch clicked in the browser (task 145): the picks become <paramref name="points"/>, in
+    /// <paramref name="sketch"/>. Returns true when the sketch differs from the one the picks were in. A new hole only.
+    /// </summary>
+    public bool Replace(TSketch sketch, IEnumerable<TPoint> points)
+    {
+        ArgumentNullException.ThrowIfNull(sketch);
+        ArgumentNullException.ThrowIfNull(points);
+        if (IsEdit)
+        {
+            throw new InvalidOperationException("An edited hole keeps its centres in its own sketch.");
+        }
+
+        var otherSketch = Sketch is null || !_sameSketch(Sketch, sketch);
+        Start(sketch, points);
+        return otherSketch;
     }
 
     /// <summary>A click on <paramref name="point"/>, a point of <paramref name="sketch"/>.</summary>

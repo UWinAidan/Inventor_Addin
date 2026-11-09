@@ -521,8 +521,9 @@ namespace InventorAddin.Holes
         }
 
         /// <summary>
-        /// Picking as Inventor's Hole does (spike 081 round 2): sketch points only, one at a time; each click toggles
-        /// a point, without Ctrl. The picked centres are highlighted blue.
+        /// Picking as Inventor's Hole does (spike 081 round 2): sketch points, one at a time; each click toggles a
+        /// point, without Ctrl. A sketch clicked in the browser picks its hole centres instead (task 145). The picked
+        /// centres are highlighted blue.
         /// </summary>
         private void StartPicking()
         {
@@ -559,14 +560,21 @@ namespace InventorAddin.Holes
             return _doc.CreateHighlightSet();
         }
 
-        /// <summary>The interaction events that pick the centres; made again when AWB Hole restarts the picking.</summary>
+        /// <summary>
+        /// The interaction events that pick the centres; made again when AWB Hole restarts the picking. Sketch points
+        /// are picked anywhere; whole sketches are let through too, so a sketch clicked in the browser reaches
+        /// <see cref="OnSelect"/> (task 145), and <see cref="OnPreSelect"/> keeps them from being picked in the
+        /// graphics window, where only points are picked, as before.
+        /// </summary>
         private void StartInteraction()
         {
             _interaction = _app.CommandManager.CreateInteractionEvents();
             _interaction.StatusBarText = HoleSessionRules.StatusBarText;
             _select = _interaction.SelectEvents;
             _select.AddSelectionFilter(SelectionFilterEnum.kSketchPointFilter);
+            _select.AddSelectionFilter(SelectionFilterEnum.kSketchObjectFilter);
             _select.SingleSelectEnabled = true;
+            _select.OnPreSelect += OnPreSelect;
             _select.OnSelect += OnSelect;
             _interaction.OnTerminate += OnTerminate;
             _interaction.Start();
@@ -584,7 +592,10 @@ namespace InventorAddin.Holes
             _interaction = null;
 
             if (select != null)
+            {
+                ComSafe.Run(() => select.OnPreSelect -= OnPreSelect);
                 ComSafe.Run(() => select.OnSelect -= OnSelect);
+            }
             if (interaction != null)
             {
                 ComSafe.Run(() => interaction.OnTerminate -= OnTerminate);
@@ -605,8 +616,16 @@ namespace InventorAddin.Holes
                 bool changed = false;
                 foreach (object raw in justSelected)
                 {
-                    // In place, Inventor gives the point as a proxy in the assembly; the part's own point is used.
-                    if (NativeOf(raw) is not SketchPoint point)
+                    // In place, Inventor gives the point or sketch as a proxy in the assembly; the part's own is used.
+                    object? item = NativeOf(raw);
+                    if (item is PlanarSketch clicked)
+                    {
+                        if (PickSketch(clicked, device))
+                            changed = true;
+                        continue;
+                    }
+
+                    if (item is not SketchPoint point)
                         continue;
 
                     PlanarSketch? sketch = ComSafe.Get(() => point.Parent as PlanarSketch);
@@ -636,6 +655,74 @@ namespace InventorAddin.Holes
             {
                 _log.Error(LogPrefix + "picking a hole centre failed.", ex);
             }
+        }
+
+        /// <summary>
+        /// A sketch clicked in the browser (task 145): all its hole centres replace the picks, as for a sketch
+        /// selected before the window opens, and the sketch is shown as the default sketch is (<see cref="HoleSessionRules.CentresOfPickedSketch"/>). A
+        /// sketch picked in the graphics window is not taken: there only points are picked. Returns true when the
+        /// picks changed. What happened is logged either way, with the selection device Inventor reported.
+        /// </summary>
+        private bool PickSketch(PlanarSketch sketch, SelectionDeviceEnum device)
+        {
+            string? name = SketchName(sketch);
+            if (device == SelectionDeviceEnum.kGraphicsWindowSelection)
+            {
+                _log.Info(LogPrefix + $"{name ?? "a sketch"} was picked in the graphics window; only a click in the " +
+                          "browser picks a sketch's centres.");
+                return false;
+            }
+
+            PickedSketchCentres<SketchPoint> chosen = HoleSessionRules.CentresOfPickedSketch(
+                _edit, InSessionPart(sketch), () => HoleCentres(sketch));
+            _log.Info(LogPrefix + chosen.Describe(name) + $" (selection device {device})");
+            if (!chosen.Replaces)
+                return false;
+
+            if (_picks.Replace(sketch, chosen.Points))
+                _sketchChanged = true;
+            ShowSketch(sketch);
+            return true;
+        }
+
+        /// <summary>
+        /// Whether <paramref name="sketch"/> (already the native object) is a sketch of the session's part: its parent
+        /// component definition's document is the part, compared as <see cref="IsOurDocument"/> does (the same object,
+        /// else the same full file name). In place, a sketch of another part or of the assembly itself is not (task 145
+        /// review): taking it would pick another document's points and change its visibility outside the session's
+        /// transaction. False when the owner cannot be read.
+        /// </summary>
+        private bool InSessionPart(PlanarSketch sketch)
+        {
+            object? owner = ComSafe.Get(() => (sketch.Parent as ComponentDefinition)?.Document);
+            if (owner == null)
+                return false;
+            if (ReferenceEquals(owner, _doc))
+                return true;
+            if (owner is not Document document)
+                return false;
+
+            string? ours = ComSafe.Get(() => _doc.FullDocumentName);
+            string? theirs = ComSafe.Get(() => document.FullDocumentName);
+            return !string.IsNullOrEmpty(ours)
+                && string.Equals(ours, theirs, StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Keeps whole sketches from being highlighted, and so picked, in the graphics window (task 145): there a click
+        /// picks points only, as before the sketch filter was added. Anything else is highlighted as Inventor would.
+        /// </summary>
+        private void OnPreSelect(
+            ref object preSelectEntity, out bool doHighlight, ref ObjectCollection morePreSelectEntities,
+            SelectionDeviceEnum selectionDevice, Point modelPosition, Point2d viewPosition, View view)
+        {
+            doHighlight = true;
+            if (_ended || selectionDevice != SelectionDeviceEnum.kGraphicsWindowSelection)
+                return;
+
+            object entity = preSelectEntity;
+            if (entity is PlanarSketch || entity is PlanarSketchProxy)
+                doHighlight = false;
         }
 
         private void OnPreviewNeeded(object? sender, EventArgs e)
