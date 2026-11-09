@@ -218,15 +218,193 @@ public sealed class HoleTakeoverRulesTests
         Assert.False(request.StartIsAskedFor(InventorsMiniHole));
     }
 
-    [Fact]
-    public void SheetMetalMessage_NamesTheEntries()
-    {
-        string message = HoleTakeoverRules.SheetMetalMiniToolbarMessage(["SheetMetalHoleCmd", null, " X "]);
+    // ---- task 141: the mini toolbar keeps every entry ----
 
-        Assert.Contains("SheetMetalHoleCmd, (unnamed), X", message);
-        Assert.Contains("PartDMHoleCmd", message);
-        Assert.Contains("(none)", HoleTakeoverRules.SheetMetalMiniToolbarMessage([]));
-        Assert.Throws<ArgumentNullException>(() => HoleTakeoverRules.SheetMetalMiniToolbarMessage(null!));
+    // The list Inventor gave on a sketch point in a sheet metal part (Aidan's log, task 133).
+    private static readonly string?[] SketchPointToolbar =
+        [InventorsMiniHole, "SketchEditSketchCtxCmd", "PartVisibilityCtxCmd"];
+
+    [Fact]
+    public void MiniToolbarHole_AnUnreadableName_IsNull()
+    {
+        // Inventor's list could not be put back if the swap broke it.
+        Assert.Null(HoleTakeoverRules.MiniToolbarHoleIndex([InventorsMiniHole, null], Ours));
+        Assert.Null(HoleTakeoverRules.MiniToolbarHoleIndex(["A", " ", InventorsMiniHole], Ours));
+    }
+
+    [Fact]
+    public void SwappedMiniToolbar_ReplacesInventorsHoleInPlace_AndKeepsTheRest()
+    {
+        Assert.Equal(
+            [Ours, "SketchEditSketchCtxCmd", "PartVisibilityCtxCmd"],
+            HoleTakeoverRules.SwappedMiniToolbar(SketchPointToolbar, Ours));
+        Assert.Equal(["A", Ours, "B"], HoleTakeoverRules.SwappedMiniToolbar(["A", " PartDMHoleCmd ", " B "], Ours));
+        Assert.Equal(["A", "B"], HoleTakeoverRules.SwappedMiniToolbar(["A", "B"], Ours));
+        Assert.Empty(HoleTakeoverRules.SwappedMiniToolbar([], Ours));
+    }
+
+    [Fact]
+    public void SwapHeld_TheExpectedList_IsTrue()
+    {
+        Assert.True(HoleTakeoverRules.MiniToolbarSwapHeld(
+            SketchPointToolbar, [Ours, "SketchEditSketchCtxCmd", " PartVisibilityCtxCmd "], Ours));
+        Assert.True(HoleTakeoverRules.MiniToolbarSwapHeld(["A", InventorsMiniHole], ["A", Ours], Ours));
+    }
+
+    [Fact]
+    public void SwapHeld_EntriesAfterHoleLost_IsFalse() =>
+        // Aidan's checks 133-1, 133-2 and 133-5: only Extrude and Revolve, which are not in the map, were left.
+        Assert.False(HoleTakeoverRules.MiniToolbarSwapHeld(SketchPointToolbar, [Ours], Ours));
+
+    [Fact]
+    public void SwapHeld_AnythingButTheOneReplacement_IsFalse()
+    {
+        // Nothing left at all.
+        Assert.False(HoleTakeoverRules.MiniToolbarSwapHeld(SketchPointToolbar, [], Ours));
+        // Inventor's still there, ours before it (Remove failed).
+        Assert.False(HoleTakeoverRules.MiniToolbarSwapHeld(
+            SketchPointToolbar, [Ours, InventorsMiniHole, "SketchEditSketchCtxCmd", "PartVisibilityCtxCmd"], Ours));
+        // Ours not added (Insert failed), Inventor's removed.
+        Assert.False(HoleTakeoverRules.MiniToolbarSwapHeld(
+            SketchPointToolbar, ["SketchEditSketchCtxCmd", "PartVisibilityCtxCmd"], Ours));
+        // Ours at the wrong place.
+        Assert.False(HoleTakeoverRules.MiniToolbarSwapHeld(
+            SketchPointToolbar, ["SketchEditSketchCtxCmd", Ours, "PartVisibilityCtxCmd"], Ours));
+        // An entry unreadable afterwards.
+        Assert.False(HoleTakeoverRules.MiniToolbarSwapHeld(
+            SketchPointToolbar, [Ours, null, "PartVisibilityCtxCmd"], Ours));
+        // Nothing to swap: unchanged is not a held swap.
+        Assert.False(HoleTakeoverRules.MiniToolbarSwapHeld(["A"], ["A"], Ours));
+        // Names match exactly.
+        Assert.False(HoleTakeoverRules.MiniToolbarSwapHeld(
+            SketchPointToolbar, ["awb_awbhole", "SketchEditSketchCtxCmd", "PartVisibilityCtxCmd"], Ours));
+    }
+
+    [Fact]
+    public void SwapHeld_BadArguments_Throw()
+    {
+        Assert.Throws<ArgumentNullException>(() => HoleTakeoverRules.MiniToolbarSwapHeld(null!, [], Ours));
+        Assert.Throws<ArgumentNullException>(() => HoleTakeoverRules.MiniToolbarSwapHeld([], null!, Ours));
+        Assert.Throws<ArgumentException>(() => HoleTakeoverRules.MiniToolbarSwapHeld([], [], " "));
+        Assert.Throws<ArgumentNullException>(() => HoleTakeoverRules.SwappedMiniToolbar(null!, Ours));
+    }
+
+    [Fact]
+    public void MiniToolbarMessage_NamesTheStageAndEntriesInOrder()
+    {
+        string before = HoleTakeoverRules.MiniToolbarMessage(
+            MiniToolbarStage.BeforeSwap, SketchPointToolbar, ["SketchPoint", null, " "], sheetMetal: false);
+        string after = HoleTakeoverRules.MiniToolbarMessage(
+            MiniToolbarStage.AfterSwap, [Ours, null, " X "], null, sheetMetal: true);
+        string putBack = HoleTakeoverRules.MiniToolbarMessage(MiniToolbarStage.PutBack, [], null, sheetMetal: false);
+
+        Assert.Contains("in a part, before the swap: ", before);
+        Assert.Contains(
+            "PartDMHoleCmd [SketchPoint], SketchEditSketchCtxCmd [no value], PartVisibilityCtxCmd [no value].", before);
+        Assert.Contains("in a sheet metal part, after the swap: ", after);
+        Assert.Contains($"{Ours}, (unnamed), X.", after);
+        Assert.DoesNotContain("[", after);
+        Assert.Contains("put back: (none).", putBack);
+        Assert.Throws<ArgumentNullException>(() =>
+            HoleTakeoverRules.MiniToolbarMessage(MiniToolbarStage.BeforeSwap, null!, null, false));
+    }
+
+    [Fact]
+    public void MiniToolbarMessage_FewerKindsThanNames_ShowsNoValue() =>
+        Assert.Contains(
+            "A [Face], B [no value]",
+            HoleTakeoverRules.MiniToolbarMessage(MiniToolbarStage.BeforeSwap, ["A", "B"], ["Face"], false));
+
+    [Fact]
+    public void SwapFailedMessage_NamesBothListsAndThePutBack()
+    {
+        string message = HoleTakeoverRules.MiniToolbarSwapFailedMessage(
+            HoleTakeoverRules.SwappedMiniToolbar(SketchPointToolbar, Ours), [Ours], "Unspecified error");
+
+        Assert.Contains($"should have left {Ours}, SketchEditSketchCtxCmd, PartVisibilityCtxCmd but left {Ours}.", message);
+        Assert.Contains("The swap threw: Unspecified error", message);
+        Assert.Contains("Inventor's list is being put back", message);
+        Assert.DoesNotContain("threw", HoleTakeoverRules.MiniToolbarSwapFailedMessage(["A"], [], null));
+        Assert.Contains("but left (none).", HoleTakeoverRules.MiniToolbarSwapFailedMessage(["A"], []));
+    }
+
+    [Fact]
+    public void SameMiniToolbar_MatchesOnlyTheSameEntriesInOrder()
+    {
+        // Insert refused the value and threw before changing anything: the map is left alone.
+        Assert.True(HoleTakeoverRules.SameMiniToolbar(SketchPointToolbar, [" PartDMHoleCmd", "SketchEditSketchCtxCmd", "PartVisibilityCtxCmd"]));
+        Assert.True(HoleTakeoverRules.SameMiniToolbar([], []));
+        Assert.False(HoleTakeoverRules.SameMiniToolbar(SketchPointToolbar, [InventorsMiniHole]));
+        Assert.False(HoleTakeoverRules.SameMiniToolbar(["A", "B"], ["B", "A"]));
+        Assert.False(HoleTakeoverRules.SameMiniToolbar([null], [null]));
+        Assert.False(HoleTakeoverRules.SameMiniToolbar(["a"], ["A"]));
+        Assert.Throws<ArgumentNullException>(() => HoleTakeoverRules.SameMiniToolbar(null!, []));
+        Assert.Throws<ArgumentNullException>(() => HoleTakeoverRules.SameMiniToolbar([], null!));
+    }
+
+    [Fact]
+    public void SwapLeftAloneMessage_SaysNothingChanged()
+    {
+        string message = HoleTakeoverRules.MiniToolbarSwapLeftAloneMessage(SketchPointToolbar, "Invalid argument");
+
+        Assert.Contains("changed nothing; PartDMHoleCmd, SketchEditSketchCtxCmd, PartVisibilityCtxCmd is left", message);
+        Assert.Contains("The swap threw: Invalid argument", message);
+        Assert.DoesNotContain("threw", HoleTakeoverRules.MiniToolbarSwapLeftAloneMessage([]));
+        Assert.Throws<ArgumentNullException>(() => HoleTakeoverRules.MiniToolbarSwapLeftAloneMessage(null!));
+    }
+
+    [Fact]
+    public void Undo_InsertedButNotRemoved_RemovesOursOnly() =>
+        Assert.Equal(
+            new MiniToolbarUndo(true, false, null),
+            HoleTakeoverRules.UndoMiniToolbarSwap(
+                SketchPointToolbar, [Ours, InventorsMiniHole, "SketchEditSketchCtxCmd", "PartVisibilityCtxCmd"], Ours));
+
+    [Fact]
+    public void Undo_SwappedButBroken_RemovesOursAndPutsInventorsBackAtItsIndex()
+    {
+        // Entries after Hole lost: Inventor's goes back at the end of what is left.
+        Assert.Equal(
+            new MiniToolbarUndo(true, true, null),
+            HoleTakeoverRules.UndoMiniToolbarSwap(SketchPointToolbar, [Ours], Ours));
+        // Ours ended up elsewhere: Inventor's goes back before the entry now at its old index.
+        Assert.Equal(
+            new MiniToolbarUndo(true, true, 1),
+            HoleTakeoverRules.UndoMiniToolbarSwap(
+                SketchPointToolbar, ["SketchEditSketchCtxCmd", Ours, "PartVisibilityCtxCmd"], Ours));
+        Assert.Equal(
+            new MiniToolbarUndo(false, true, 2),
+            HoleTakeoverRules.UndoMiniToolbarSwap(["A", InventorsMiniHole, "B"], ["A", "B"], Ours));
+        Assert.Equal(
+            new MiniToolbarUndo(false, true, null),
+            HoleTakeoverRules.UndoMiniToolbarSwap(["A", InventorsMiniHole], ["A"], Ours));
+    }
+
+    [Fact]
+    public void Undo_NothingToUndo_TouchesNothing()
+    {
+        Assert.Equal(new MiniToolbarUndo(false, false, null), HoleTakeoverRules.UndoMiniToolbarSwap(SketchPointToolbar, SketchPointToolbar, Ours));
+        Assert.Equal(new MiniToolbarUndo(false, false, null), HoleTakeoverRules.UndoMiniToolbarSwap(["A"], [], Ours));
+    }
+
+    [Fact]
+    public void Undo_BadArguments_Throw()
+    {
+        Assert.Throws<ArgumentNullException>(() => HoleTakeoverRules.UndoMiniToolbarSwap(null!, [], Ours));
+        Assert.Throws<ArgumentNullException>(() => HoleTakeoverRules.UndoMiniToolbarSwap([], null!, Ours));
+        Assert.Throws<ArgumentException>(() => HoleTakeoverRules.UndoMiniToolbarSwap([], [], ""));
+    }
+
+    [Fact]
+    public void PutBackMessage_NamesWhatFailedAndWhatLostItsValue()
+    {
+        string message = HoleTakeoverRules.MiniToolbarPutBackMessage(["SketchEditSketchCtxCmd: Invalid argument"], ["PartVisibilityCtxCmd"]);
+
+        Assert.Contains("not added back: SketchEditSketchCtxCmd: Invalid argument", message);
+        Assert.Contains("added back with no value (unreadable before): PartVisibilityCtxCmd.", message);
+        Assert.Contains("every entry was added back.", HoleTakeoverRules.MiniToolbarPutBackMessage([], []));
+        Assert.Throws<ArgumentNullException>(() => HoleTakeoverRules.MiniToolbarPutBackMessage(null!, []));
+        Assert.Throws<ArgumentNullException>(() => HoleTakeoverRules.MiniToolbarPutBackMessage([], null!));
     }
 
     [Theory]

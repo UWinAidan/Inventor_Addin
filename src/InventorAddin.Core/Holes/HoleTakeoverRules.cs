@@ -27,6 +27,29 @@ public enum HoleButtonKind
     PlainButton,
 }
 
+/// <summary>When a sketch point mini toolbar's entries are logged (task 141).</summary>
+public enum MiniToolbarStage
+{
+    /// <summary>As Inventor gave them, before AWB Hole is swapped in.</summary>
+    BeforeSwap,
+
+    /// <summary>After AWB Hole was swapped in for Inventor's Hole.</summary>
+    AfterSwap,
+
+    /// <summary>After the swap broke the list and Inventor's was put back.</summary>
+    PutBack,
+}
+
+/// <summary>
+/// How a broken mini toolbar swap is undone (task 141): only what changed.
+/// </summary>
+/// <param name="RemoveOurs">AWB Hole's entry is there and is removed.</param>
+/// <param name="ReinsertInventors">Inventor's Hole is missing and is put back.</param>
+/// <param name="InsertBeforeIndex">
+/// The 1-based index, in the list once ours is removed, before which Inventor's goes; null to add it at the end.
+/// </param>
+public sealed record MiniToolbarUndo(bool RemoveOurs, bool ReinsertInventors, int? InsertBeforeIndex);
+
 /// <summary>
 /// What the add-in sets on the 3D Model tab's Modify panel, on the Sheet Metal tab's Hole panel (task 128), and on the
 /// two Hole commands' shortcuts.
@@ -278,7 +301,8 @@ public static class HoleTakeoverRules
     /// The viewport's mini toolbar (<c>OnContextualMiniToolbar</c>, its commands in a <c>NameValueMap</c>; task 133): the
     /// 1-based index of Inventor's Hole (<see cref="InventorMiniToolbarHoleCommand"/>), before which AWB Hole is
     /// inserted (<c>Insert(ours, value, index, true)</c>, then <c>Remove</c> Inventor's, as for Edit Feature), or null
-    /// when Inventor's is not there or ours already is. Internal names match exactly.
+    /// when Inventor's is not there, ours already is, or an entry's name could not be read (task 141: Inventor's list
+    /// could not then be put back if the swap broke it). Internal names match exactly.
     /// </summary>
     /// <param name="toolbarCommands">The names in the map, in order (the map's item 1 first).</param>
     /// <param name="ourCommand">AWB Hole's internal name.</param>
@@ -288,7 +312,7 @@ public static class HoleTakeoverRules
         ArgumentException.ThrowIfNullOrWhiteSpace(ourCommand);
 
         var index = IndexOf(toolbarCommands, InventorMiniToolbarHoleCommand);
-        if (index < 0 || IndexOf(toolbarCommands, ourCommand) >= 0)
+        if (index < 0 || IndexOf(toolbarCommands, ourCommand) >= 0 || toolbarCommands.Any(string.IsNullOrWhiteSpace))
         {
             return null;
         }
@@ -311,16 +335,199 @@ public static class HoleTakeoverRules
         string? startedCommand, HoleCommandOwner? owner, bool documentIsPart, bool askedFor) =>
         owner == HoleCommandOwner.Awb && documentIsPart && !askedFor && IsInventorMiniToolbarHole(startedCommand);
 
-    /// <summary>The log line naming a sheet metal part's mini toolbar entries, so its Hole command can be found.</summary>
-    public static string SheetMetalMiniToolbarMessage(IReadOnlyList<string?> toolbarCommands)
+    /// <summary>
+    /// The mini toolbar's entries the swap should leave (task 141): Inventor's, in order, with
+    /// <see cref="InventorMiniToolbarHoleCommand"/> replaced by <paramref name="ourCommand"/> at the same position and
+    /// nothing else changed. Names are trimmed; an unreadable name stays null.
+    /// </summary>
+    /// <param name="before">The names in the map before the swap, in order.</param>
+    /// <param name="ourCommand">AWB Hole's internal name.</param>
+    public static IReadOnlyList<string?> SwappedMiniToolbar(IReadOnlyList<string?> before, string ourCommand)
+    {
+        ArgumentNullException.ThrowIfNull(before);
+        ArgumentException.ThrowIfNullOrWhiteSpace(ourCommand);
+
+        var index = IndexOf(before, InventorMiniToolbarHoleCommand);
+        var expected = new List<string?>(before.Count);
+        for (var i = 0; i < before.Count; i++)
+        {
+            expected.Add(i == index ? ourCommand.Trim() : before[i]?.Trim());
+        }
+
+        return expected;
+    }
+
+    /// <summary>
+    /// True when the mini toolbar after the swap is exactly <see cref="SwappedMiniToolbar"/> of the list before: the
+    /// same entries in the same order, with only Inventor's Hole replaced by ours (task 141). Anything else (an entry
+    /// lost, added or moved, ours missing, Inventor's still there) is false, and Inventor's list is put back, since a
+    /// broken toolbar is worse than Inventor's Hole. Names are trimmed and match exactly; an unreadable name matches
+    /// nothing.
+    /// </summary>
+    /// <param name="before">The names in the map before the swap, in order.</param>
+    /// <param name="after">The names in the map after the swap, in order.</param>
+    /// <param name="ourCommand">AWB Hole's internal name.</param>
+    public static bool MiniToolbarSwapHeld(IReadOnlyList<string?> before, IReadOnlyList<string?> after, string ourCommand)
+    {
+        ArgumentNullException.ThrowIfNull(after);
+        var expected = SwappedMiniToolbar(before, ourCommand);
+        if (IndexOf(before, InventorMiniToolbarHoleCommand) < 0 || expected.Count != after.Count)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < expected.Count; i++)
+        {
+            var name = after[i]?.Trim();
+            if (string.IsNullOrEmpty(name) || !string.Equals(expected[i], name, StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// The Info line naming a sketch point mini toolbar's entries, in order, at <paramref name="stage"/> (task 141),
+    /// each with the kind of its value (the entity Inventor highlights when the entry is hovered) when given.
+    /// </summary>
+    /// <param name="stage">Before the swap, after it, or after Inventor's list was put back.</param>
+    /// <param name="toolbarCommands">The names in the map, in order.</param>
+    /// <param name="valueKinds">
+    /// Each entry's value kind (its type name, or null for no value), in the same order, or null to leave them out.
+    /// </param>
+    /// <param name="sheetMetal">Whether the part is a sheet metal part.</param>
+    public static string MiniToolbarMessage(
+        MiniToolbarStage stage, IReadOnlyList<string?> toolbarCommands, IReadOnlyList<string?>? valueKinds, bool sheetMetal)
     {
         ArgumentNullException.ThrowIfNull(toolbarCommands);
-        var names = toolbarCommands.Count == 0
-            ? "(none)"
-            : string.Join(", ", toolbarCommands.Select(n => string.IsNullOrWhiteSpace(n) ? "(unnamed)" : n.Trim()));
-        return $"Hole takeover: the mini toolbar on a sketch point in a sheet metal part shows {names}. " +
-               $"Only {InventorMiniToolbarHoleCommand} is replaced by {AwbHoleViewModel.CommandName}.";
+        var entries = new List<string>(toolbarCommands.Count);
+        for (var i = 0; i < toolbarCommands.Count; i++)
+        {
+            var entry = Entry(toolbarCommands[i]);
+            if (valueKinds is not null)
+            {
+                var kind = i < valueKinds.Count ? valueKinds[i] : null;
+                entry += $" [{(string.IsNullOrWhiteSpace(kind) ? "no value" : kind.Trim())}]";
+            }
+
+            entries.Add(entry);
+        }
+
+        var when = stage switch
+        {
+            MiniToolbarStage.BeforeSwap => "before the swap",
+            MiniToolbarStage.AfterSwap => "after the swap",
+            _ => "after Inventor's list was put back",
+        };
+        var part = sheetMetal ? "a sheet metal part" : "a part";
+        var list = entries.Count == 0 ? "(none)" : string.Join(", ", entries);
+        return $"Hole takeover: the mini toolbar on a sketch point in {part}, {when}: {list}.";
     }
+
+    /// <summary>
+    /// The warning when the swap did not leave the expected list (task 141): Inventor's list is put back, so the mini
+    /// toolbar shows Inventor's Hole (whose start the backstop still turns into AWB Hole).
+    /// </summary>
+    /// <param name="expected">The list the swap should have left (<see cref="SwappedMiniToolbar"/>).</param>
+    /// <param name="after">The list it left.</param>
+    /// <param name="error">The swap's exception message, if it threw.</param>
+    public static string MiniToolbarSwapFailedMessage(
+        IReadOnlyList<string?> expected, IReadOnlyList<string?> after, string? error = null)
+    {
+        ArgumentNullException.ThrowIfNull(expected);
+        ArgumentNullException.ThrowIfNull(after);
+        var threw = string.IsNullOrWhiteSpace(error) ? string.Empty : $" The swap threw: {error.Trim()}";
+        return $"Hole takeover: replacing Hole on the mini toolbar should have left {Names(expected)} but left " +
+               $"{Names(after)}.{threw} Inventor's list is being put back, so the toolbar shows Inventor's Hole.";
+    }
+
+    /// <summary>
+    /// The warning when the swap left Inventor's list as it was (task 141; for example <c>Insert</c> refused the value
+    /// and threw before anything changed): the map is left alone, so the toolbar shows Inventor's Hole.
+    /// </summary>
+    /// <param name="before">Inventor's list, unchanged.</param>
+    /// <param name="error">The swap's exception message, if it threw.</param>
+    public static string MiniToolbarSwapLeftAloneMessage(IReadOnlyList<string?> before, string? error = null)
+    {
+        ArgumentNullException.ThrowIfNull(before);
+        var threw = string.IsNullOrWhiteSpace(error) ? string.Empty : $" The swap threw: {error.Trim()}";
+        return $"Hole takeover: replacing Hole on the mini toolbar changed nothing; {Names(before)} is left as Inventor " +
+               $"gave it, so the toolbar shows Inventor's Hole.{threw}";
+    }
+
+    /// <summary>
+    /// True when two mini toolbar lists hold the same entries in the same order (task 141): names trimmed and matched
+    /// exactly; an unreadable name matches nothing. Used to see that the swap changed nothing, so Inventor's list is not
+    /// touched, and that a put-back gave Inventor's list again.
+    /// </summary>
+    public static bool SameMiniToolbar(IReadOnlyList<string?> first, IReadOnlyList<string?> second)
+    {
+        ArgumentNullException.ThrowIfNull(first);
+        ArgumentNullException.ThrowIfNull(second);
+        if (first.Count != second.Count)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < first.Count; i++)
+        {
+            var a = first[i]?.Trim();
+            if (string.IsNullOrEmpty(a) || !string.Equals(a, second[i]?.Trim(), StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// How a broken swap is undone (task 141), touching only what changed: whether AWB Hole's entry is removed (it is
+    /// there), and whether Inventor's Hole is put back (it is missing) and where. Inventor's goes back before the entry
+    /// now at its old 1-based index, or at the end (<see cref="MiniToolbarUndo.InsertBeforeIndex"/> null) when the list
+    /// is now shorter than that. If the list after the undo is still not Inventor's, the caller falls back to clearing
+    /// the map and adding Inventor's entries again.
+    /// </summary>
+    /// <param name="before">Inventor's list before the swap.</param>
+    /// <param name="now">The list now.</param>
+    /// <param name="ourCommand">AWB Hole's internal name.</param>
+    public static MiniToolbarUndo UndoMiniToolbarSwap(IReadOnlyList<string?> before, IReadOnlyList<string?> now, string ourCommand)
+    {
+        ArgumentNullException.ThrowIfNull(before);
+        ArgumentNullException.ThrowIfNull(now);
+        ArgumentException.ThrowIfNullOrWhiteSpace(ourCommand);
+
+        var removeOurs = IndexOf(now, ourCommand) >= 0;
+        var oldIndex = IndexOf(before, InventorMiniToolbarHoleCommand);
+        if (oldIndex < 0 || IndexOf(now, InventorMiniToolbarHoleCommand) >= 0)
+        {
+            return new MiniToolbarUndo(removeOurs, false, null);
+        }
+
+        // The count once ours is removed.
+        var count = now.Count - (removeOurs ? 1 : 0);
+        int? before1Based = oldIndex < count ? oldIndex + 1 : null;
+        return new MiniToolbarUndo(removeOurs, true, before1Based);
+    }
+
+    /// <summary>The Error when the last-resort put-back could not add some of Inventor's entries again.</summary>
+    /// <param name="failed">Each entry that could not be added, with the reason.</param>
+    /// <param name="valueLost">Entries added back with no value, because their value could not be read before the swap.</param>
+    public static string MiniToolbarPutBackMessage(IReadOnlyList<string> failed, IReadOnlyList<string?> valueLost)
+    {
+        ArgumentNullException.ThrowIfNull(failed);
+        ArgumentNullException.ThrowIfNull(valueLost);
+        var notAdded = failed.Count == 0 ? "every entry was added back" : $"not added back: {string.Join("; ", failed)}";
+        var lost = valueLost.Count == 0 ? string.Empty : $"; added back with no value (unreadable before): {Names(valueLost)}";
+        return $"Hole takeover: Inventor's mini toolbar list was cleared and added back entry by entry; {notAdded}{lost}.";
+    }
+
+    private static string Names(IReadOnlyList<string?> names) =>
+        names.Count == 0 ? "(none)" : string.Join(", ", names.Select(Entry));
+
+    private static string Entry(string? name) => string.IsNullOrWhiteSpace(name) ? "(unnamed)" : name.Trim();
 
     private static int IndexOf(IReadOnlyList<string?> names, string name)
     {

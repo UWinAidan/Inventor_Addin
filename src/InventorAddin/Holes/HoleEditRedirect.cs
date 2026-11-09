@@ -50,13 +50,11 @@ namespace InventorAddin.Holes
         private readonly ButtonDefinition _editFeature;
 
         // AWB Hole's definition, kept alive by RibbonSetup; null when it failed to register (the Hole entry is then left).
+        // Inventor finds the command by the entry's name, so only whether it is registered matters here.
         private readonly ButtonDefinition? _awbHole;
 
         // A start of Inventor's mini toolbar Hole the add-in asked for (task 129's "Inventor Hole"), let through once.
         private readonly InventorHoleRunRequest _holeRunRequest = new();
-
-        // The names on a sheet metal part's mini toolbar on a sketch point are logged once per session (task 133).
-        private bool _sheetMetalToolbarLogged;
         private readonly Func<HoleCommandOwner?> _owner;
         private readonly ILog _log;
 
@@ -228,10 +226,28 @@ namespace InventorAddin.Holes
         }
 
         /// <summary>
-        /// The mini toolbar's Hole entry (<c>PartDMHoleCmd</c>; task 133): AWB Hole's button inserted where it is and
-        /// Inventor's removed, as for Edit Feature. Its value is Inventor's entry's, or AWB Hole's definition when
-        /// Inventor gives none. A failure is logged and leaves Inventor's entry; the Edit Feature swap still runs.
+        /// The mini toolbar's Hole entry (<c>PartDMHoleCmd</c>; task 133): AWB Hole's entry inserted where it is and
+        /// Inventor's removed, so the list is Inventor's with that one change (task 141). The entry's value is Inventor's
+        /// entry's value, as it is: the API reference says a mini toolbar entry's value is the entity Inventor highlights
+        /// when the entry is hovered, and the command is found by the entry's name. Task 133 put AWB Hole's
+        /// <c>ButtonDefinition</c> there when Inventor's value was empty, which is not an entity; the leading suspect for
+        /// the entries from Hole onward being lost (Aidan's checks 133-1, 133-2, 133-5).
         /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The entries are logged at Info before and after the swap on each sketch point mini toolbar, and on any toolbar
+        /// the swap runs on. A failure of <c>Insert</c> or <c>Remove</c> is caught and the list checked like any other
+        /// result; nothing here throws into Inventor's event.
+        /// </para>
+        /// <para>
+        /// If the list after the swap is not the expected one: when it is still Inventor's list (the swap changed nothing,
+        /// for example <c>Insert</c> refused the value), the map is left alone and a warning logged. Otherwise a warning
+        /// is logged and only what changed is undone (<see cref="UndoSwap"/>); only if that does not give Inventor's list
+        /// back is the map cleared and each entry added again. A broken toolbar is worse than Inventor's Hole, whose start
+        /// the backstop (<see cref="StopInventorsMiniToolbarHole"/>) still turns into AWB Hole. The Edit Feature swap runs
+        /// either way.
+        /// </para>
+        /// </remarks>
         private void ReplaceMiniToolbarHole(ObjectsEnumerator selected, NameValueMap displayed, PartDocument doc)
         {
             if (_awbHole == null)
@@ -239,47 +255,135 @@ namespace InventorAddin.Holes
 
             try
             {
-                List<string?> names = ToolbarNames(displayed);
-                LogSheetMetalToolbar(selected, names, doc);
+                List<string?> before = ToolbarNames(displayed);
+                var unreadableValues = new List<string?>();
+                List<object?> values = ToolbarValues(displayed, before, unreadableValues);
+                int? target = HoleTakeoverRules.MiniToolbarHoleIndex(before, CommandNames.AwbHole);
+                bool onPoint = HasSketchPoint(selected);
+                if (target == null && !onPoint)
+                    return;
 
-                int? target = HoleTakeoverRules.MiniToolbarHoleIndex(names, CommandNames.AwbHole);
+                bool sheetMetal = DocumentKinds.Of((Document)doc) == DocumentKind.SheetMetalPart;
+                _log.Info(HoleTakeoverRules.MiniToolbarMessage(MiniToolbarStage.BeforeSwap, before, ValueKinds(values), sheetMetal));
                 if (target == null)
                     return;
 
-                object? value = ComSafe.Get(() => displayed.Value[HoleTakeoverRules.InventorMiniToolbarHoleCommand]);
-                displayed.Insert(CommandNames.AwbHole, value ?? _awbHole, target.Value, true);
-                displayed.Remove(HoleTakeoverRules.InventorMiniToolbarHoleCommand);
+                object? holeValue = values[target.Value - 1];
+                string? error = null;
+                try
+                {
+                    displayed.Insert(CommandNames.AwbHole, holeValue, target.Value, true);
+                    displayed.Remove(HoleTakeoverRules.InventorMiniToolbarHoleCommand);
+                }
+                catch (Exception ex)
+                {
+                    error = ex.Message;
+                }
+
+                List<string?> after = ToolbarNames(displayed);
+                _log.Info(HoleTakeoverRules.MiniToolbarMessage(
+                    MiniToolbarStage.AfterSwap, after, ValueKinds(ToolbarValues(displayed, after)), sheetMetal));
+                if (error == null && HoleTakeoverRules.MiniToolbarSwapHeld(before, after, CommandNames.AwbHole))
+                    return;
+
+                // Still Inventor's list: never touch an intact list.
+                if (HoleTakeoverRules.SameMiniToolbar(before, after))
+                {
+                    _log.Warn(HoleTakeoverRules.MiniToolbarSwapLeftAloneMessage(before, error));
+                    return;
+                }
+
+                _log.Warn(HoleTakeoverRules.MiniToolbarSwapFailedMessage(
+                    HoleTakeoverRules.SwappedMiniToolbar(before, CommandNames.AwbHole), after, error));
+                if (!UndoSwap(displayed, before, after, holeValue))
+                    PutBack(displayed, before, values, unreadableValues);
+
+                List<string?> putBack = ToolbarNames(displayed);
+                _log.Info(HoleTakeoverRules.MiniToolbarMessage(
+                    MiniToolbarStage.PutBack, putBack, ValueKinds(ToolbarValues(displayed, putBack)), sheetMetal));
             }
             catch (Exception ex)
             {
-                _log.Error("Hole takeover: replacing Hole on the mini toolbar failed; Inventor's is left.", ex);
+                _log.Error("Hole takeover: replacing Hole on the mini toolbar failed; Inventor's list may not have been put back.", ex);
             }
         }
 
         /// <summary>
-        /// The first mini toolbar on a sketch point in a sheet metal part this session: its entries logged at Info, since
-        /// sheet metal may show another Hole command (task 133). Only <c>PartDMHoleCmd</c> is replaced either way.
+        /// Undoes only what the swap changed (<see cref="HoleTakeoverRules.UndoMiniToolbarSwap"/>): AWB Hole's entry
+        /// removed if it is there, and Inventor's Hole put back with its value at its old place if it is missing. True
+        /// when the list is then Inventor's again.
         /// </summary>
-        private void LogSheetMetalToolbar(ObjectsEnumerator selected, List<string?> names, PartDocument doc)
+        private bool UndoSwap(NameValueMap displayed, List<string?> before, List<string?> now, object? holeValue)
         {
-            if (_sheetMetalToolbarLogged || DocumentKinds.Of((Document)doc) != DocumentKind.SheetMetalPart)
-                return;
+            MiniToolbarUndo undo = HoleTakeoverRules.UndoMiniToolbarSwap(before, now, CommandNames.AwbHole);
+            try
+            {
+                if (undo.RemoveOurs)
+                    displayed.Remove(CommandNames.AwbHole);
 
-            bool onPoint = false;
+                if (undo.ReinsertInventors)
+                {
+                    if (undo.InsertBeforeIndex is int index)
+                        displayed.Insert(HoleTakeoverRules.InventorMiniToolbarHoleCommand, holeValue, index, true);
+                    else
+                        displayed.Add(HoleTakeoverRules.InventorMiniToolbarHoleCommand, holeValue);
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.Warn($"Hole takeover: undoing the mini toolbar swap failed ({ex.Message}); Inventor's entries are added again one by one.");
+                return false;
+            }
+
+            if (HoleTakeoverRules.SameMiniToolbar(before, ToolbarNames(displayed)))
+                return true;
+
+            _log.Warn("Hole takeover: undoing the mini toolbar swap did not give Inventor's list back; its entries are added again one by one.");
+            return false;
+        }
+
+        /// <summary>
+        /// The last resort: the map cleared, then each of Inventor's entries added again in order with its value, each
+        /// add guarded on its own so one refusal does not lose the rest. What could not be added, and what went back
+        /// with no value because its value was unreadable before the swap, is logged.
+        /// </summary>
+        private void PutBack(NameValueMap displayed, List<string?> names, List<object?> values, List<string?> unreadableValues)
+        {
+            try
+            {
+                displayed.Clear();
+            }
+            catch (Exception ex)
+            {
+                _log.Error("Hole takeover: clearing the mini toolbar to put Inventor's list back failed; it is left as it is.", ex);
+                return;
+            }
+
+            var failed = new List<string>();
+            for (int i = 0; i < names.Count; i++)
+            {
+                string name = names[i]!;
+                object? value = values[i];
+                ComSafe.Run(() => displayed.Add(name, value), failed, name);
+            }
+
+            string message = HoleTakeoverRules.MiniToolbarPutBackMessage(failed, unreadableValues);
+            if (failed.Count > 0)
+                _log.Error(message);
+            else
+                _log.Warn(message);
+        }
+
+        /// <summary>True when a sketch point is selected (in place, a proxy of one).</summary>
+        private static bool HasSketchPoint(ObjectsEnumerator selected)
+        {
             foreach (object item in selected)
             {
                 if (item is SketchPoint)
-                {
-                    onPoint = true;
-                    break;
-                }
+                    return true;
             }
 
-            if (!onPoint)
-                return;
-
-            _sheetMetalToolbarLogged = true;
-            _log.Info(HoleTakeoverRules.SheetMetalMiniToolbarMessage(names));
+            return false;
         }
 
         /// <summary>
@@ -377,6 +481,46 @@ namespace InventorAddin.Holes
         }
 
         // ---- helpers ----
+
+        /// <summary>
+        /// Each entry's value, by name, in the order of <paramref name="names"/>; null for no value, an unreadable one,
+        /// or an unreadable name (reading a missing name would add it to the map). The names whose value could not be
+        /// read are added to <paramref name="unreadable"/> when it is given.
+        /// </summary>
+        private static List<object?> ToolbarValues(NameValueMap displayed, List<string?> names, List<string?>? unreadable = null)
+        {
+            var values = new List<object?>(names.Count);
+            foreach (string? name in names)
+            {
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    values.Add(null);
+                    continue;
+                }
+
+                try
+                {
+                    values.Add(displayed.Value[name]);
+                }
+                catch (Exception)
+                {
+                    values.Add(null);
+                    unreadable?.Add(name);
+                }
+            }
+
+            return values;
+        }
+
+        /// <summary>Each value's COM type name, for the log; null for no value.</summary>
+        private static List<string?> ValueKinds(List<object?> values)
+        {
+            var kinds = new List<string?>(values.Count);
+            foreach (object? value in values)
+                kinds.Add(value == null ? null : ComSafe.Get(() => Microsoft.VisualBasic.Information.TypeName(value)));
+
+            return kinds;
+        }
 
         /// <summary>The mini toolbar's entry names, in order (the map is 1-based); an unreadable name is null.</summary>
         private static List<string?> ToolbarNames(NameValueMap displayed)
