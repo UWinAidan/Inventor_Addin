@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 1 (window icons); applies to M1b's ribbon icons too
 - **Feature spec:** `docs/features/08-window-style.md`, `docs/features/09-awb-hole.md`
-- **Status:** todo
+- **Status:** done
 - **Depends on:** 119
 - **Needs:** image only (Python with Pillow, or an HTML mockup rendered to PNG)
 - **Parallel-safe with:** every other task (no source code)
@@ -27,9 +27,9 @@ Out of scope:
 
 ## Acceptance criteria
 
-- [ ] One PNG Aidan can judge without running anything, plus its source.
-- [ ] Every icon used in the AWB Hole window appears, old and new.
-- [ ] Colours named by value (hex), ready for the build task.
+- [x] One PNG Aidan can judge without running anything, plus its source.
+- [x] Every icon used in the AWB Hole window appears, old and new.
+- [x] Colours named by value (hex), ready for the build task.
 
 ## Notes for the implementer
 
@@ -39,9 +39,16 @@ Today's icon geometry is in `src/InventorAddin/UI/Styles.xaml` (task 119) and th
 
 Filled in by the implementer.
 
-- **Ran:**
+- **Ran:** headless Edge (Windows) on `docs/ui-mockups/awb-icons-redesign.html` at 1600 wide, then the empty bottom trimmed with Pillow 12.3.0 (command in the HTML's top comment); looked over every section of the PNG. No .NET build or tests: no code changed.
 - **Not compiled (changed under `src/InventorAddin`):** none
 - **Inventor API members not confirmed:** none
-- **Manual checklist for Inventor:** none; Aidan reviews the image.
+- **Manual checklist for Inventor:** none; Aidan reviews `docs/ui-mockups/awb-icons-redesign.png` and answers the four picks at its foot (window icon look; Outline or Solid chosen state; ribbon option A, B or C in the new style; blue or neutral icons in dark mode).
+- **Notes:** the hole icon geometry is unchanged (copied from `Styles.xaml`); only the template and colours differ. The ribbon "today" icons are the PNGs in `src/InventorAddin/UI/Icons`, loaded by relative path. Inventor's ribbon style is described in words, from memory, with no screenshot; the ribbon background colours are the colour-options image's stand-ins, not measured. The new 16 px ribbon icons are the 32 px drawings at half size, not pixel-fitted.
 
 ## Follow-ups
+
+- Build task (after Aidan picks): new tokens `HoleIconInk`, `HoleIconMaterial` and the chosen-state colours in `Colors.Light.xaml` / `Colors.Dark.xaml`; the `HoleIcon` template gets a solid fill, a hatch Path clipped to the material geometry, and outline 1.3 / lines 1.1 / face 2.4; `IconChoiceItem` and `SegmentedChoiceItem` take the chosen state; the not-chosen icon is no longer muted.
+- Dark-mode Solid cannot meet both 3:1 (fill against the window) and 4.5:1 (white Units text on it): #3A7AC6 gives 3.01:1 and 4.39:1. Outline has no trade-off.
+- With Outline chosen, the keyboard focus ring (Accent #0F6CB0) sits 3 px outside a dark blue border in light mode; check in Inventor that the two read as separate.
+- New ribbon icons need pixel-fitted 16 px drawings and `tools/icons/render.py` support for fills in more than one colour (today each PNG has exactly one colour), plus `paint-order`-style halos or an explicit halo shape for the New Part plus.
+- Spec 08 question 3 (icon style) and the ribbon colour option in `TODO.md` are answered by Aidan's picks on this image.

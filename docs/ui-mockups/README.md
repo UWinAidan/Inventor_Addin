@@ -92,3 +92,7 @@ The built window no longer matches the mockup in these ways, so the common holes
 - **The diagram** (choices 3 and 12) is 128 tall with its header (the drawing 104, the header 22); collapsing it makes the window 104 shorter.
 - **Icon buttons** (choice 2) are 40 by 28.
 - **Spacing** in this window only: 4 between rows, 6 from a section's heading to its first row, 10 between sections, 12 under the header, 14 above and below the content, and 10 under the footer's divider. The other windows keep spec 08's 9 and 18.
+
+## AWB icons redesign (task 148)
+
+`awb-icons-redesign.png`, rendered from `awb-icons-redesign.html` with headless Edge (command at the top of the HTML): every AWB Hole window icon today and redrawn (full colour, solid hatched material, dark blue in light mode) in both themes at 100 and 150 percent, the chosen-button states (Outline or Solid), colours with contrast ratios, and the ribbon icons in the same style in colour options A to C.

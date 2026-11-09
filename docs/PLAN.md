@@ -407,7 +407,7 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 - [x] 145 Clicking a sketch in the browser picks its hole centres
 - [x] 146 A "Custom..." entry on the countersink angle
 - [x] 147 Up and Down arrows move between fields in the AWB Hole window
-- [ ] 148 AWB icon redesign and light-mode colours: mockup for Aidan
+- [x] 148 AWB icon redesign and light-mode colours: mockup for Aidan
 - [x] 149 No name text after the icon rows
 - [x] 150 Custom tolerance takes a typed ISO 286 code
 
