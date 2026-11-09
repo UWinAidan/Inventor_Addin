@@ -25,7 +25,7 @@ It follows Inventor's Hole panel, with a **Metric or Imperial** selector on the 
 | Field | Contents |
 |---|---|
 | Units | Metric or Imperial, on the header's line beside the title (Aidan, 2026-10-24, question 15 c). Starts on the workbook's Settings "Default units" |
-| Type | Clearance, Tapped, Simple, Taper Tapped (Aidan, 2026-10-24; see "Types and seats") |
+| Type | Simple, Clearance, Tapped, Taper Tapped, in that order (Aidan, 2026-10-24; order Aidan, 2026-11-09, task 144; see "Types and seats"). A new hole still starts on Clearance |
 | Seat | As Inventor's: None, Counterbore, Countersink, Spotface, for every type and standard (Aidan, 2026-10-18 and 2026-10-24; see "Types and seats") |
 | Standard | AWB Clearance, AWB Tapped, AWB Dowel, AWB Taper Tapped, for the units chosen at the top (Aidan, question 2). Clearance lists AWB Clearance and AWB Dowel; Tapped lists AWB Tapped; Taper Tapped lists AWB Taper Tapped (Default). Not shown for Simple |
 | Fastener type | The Screw values of the seat's tab (Counterbore or Countersink), for example SHCS, FHCS, in workbook order (Aidan, question 2); it picks the seat boxes' starting values, which stay editable (Aidan, 2026-10-25); shown only for a clearance or tapped hole with a counterbore or countersink, under Size (Aidan, 2026-10-23). Not shown for a dowel, Simple or Taper Tapped hole, or for a spotface (Default) |
@@ -55,7 +55,7 @@ It follows Inventor's Hole panel, with a **Metric or Imperial** selector on the 
 
 ## Types and seats
 
-Hole types and seats stay as Inventor's: Clearance, Tapped, **Simple** and **Taper Tapped**, each with None, Counterbore, Countersink or **Spotface** (Aidan, 2026-10-24). **Every seat works on every type**, tapped and taper tapped included, **except Counterbore on Taper Tapped**, which Inventor does not allow (Aidan, 2026-10-28, spike 108), and **its dimensions are editable in the window on every type** (Aidan, 2026-10-25; task 126); the rows below give the starting values. A dowel or precision hole is the Clearance type with Standard AWB Dowel; there is no separate Type entry (Aidan, question 3). How the workbook's tabs map onto them:
+Hole types and seats stay as Inventor's: **Simple**, Clearance, Tapped and **Taper Tapped**, each with None, Counterbore, Countersink or **Spotface** (Aidan, 2026-10-24). **Every seat works on every type**, tapped and taper tapped included, **except Counterbore on Taper Tapped**, which Inventor does not allow (Aidan, 2026-10-28, spike 108), and **its dimensions are editable in the window on every type** (Aidan, 2026-10-25; task 126); the rows below give the starting values. A dowel or precision hole is the Clearance type with Standard AWB Dowel; there is no separate Type entry (Aidan, question 3). How the workbook's tabs map onto them:
 
 | Type, Standard | Seat | Sizes from | Fit | Coloured |
 |---|---|---|---|---|

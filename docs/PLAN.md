@@ -403,7 +403,7 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 - [x] 141 The sketch point mini toolbar keeps every button, with AWB Hole in Hole's place
 - [x] 142 The marking menu's Hole follows the takeover
 - [x] 143 Picked hole centres are highlighted in a part edited in place
-- [ ] 144 Hole types in the order Simple, Clearance, Tapped, Taper Tapped
+- [x] 144 Hole types in the order Simple, Clearance, Tapped, Taper Tapped
 - [ ] 145 Clicking a sketch in the browser picks its hole centres
 - [ ] 146 A "Custom..." entry on the countersink angle
 - [ ] 147 Up and Down arrows move between fields in the AWB Hole window

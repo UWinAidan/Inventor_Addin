@@ -81,7 +81,7 @@ public sealed class AwbHoleViewModelTests
     public void FixedLists_AreInTheWindowsOrder()
     {
         Assert.Equal(["Metric", "Imperial"], Values(AwbHoleViewModel.UnitsOptions));
-        Assert.Equal(["Clearance", "Tapped", "Simple", "Taper Tapped"], Values(AwbHoleViewModel.TypeOptions));
+        Assert.Equal(["Simple", "Clearance", "Tapped", "Taper Tapped"], Values(AwbHoleViewModel.TypeOptions));
         Assert.Equal(["Distance", "Through All"], Values(NewHole().TerminationOptions));
     }
 

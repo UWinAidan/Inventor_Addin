@@ -220,7 +220,7 @@ public sealed class AwbHoleViewModel : ObservableObject
         new(HoleUnits.Imperial, ImperialText),
     ];
 
-    /// <summary>Clearance, Tapped, Simple and Taper Tapped (spec 09, "The window"; task 112).</summary>
+    /// <summary>Simple, Clearance, Tapped and Taper Tapped, in <see cref="HoleStandards.Types"/> order (spec 09, "The window"; tasks 112 and 144).</summary>
     public static IReadOnlyList<HoleOption<string>> TypeOptions { get; } =
         HoleStandards.Types.Select(t => new HoleOption<string>(t, t) { Icon = HoleIcons.ForType(t) }).ToList().AsReadOnly();
 

@@ -61,7 +61,7 @@ public sealed class AwbHoleDiagramViewModelTests
         var vm = NewHole();
 
         Assert.Equal(
-            [HoleIcons.Clearance, HoleIcons.Tapped, HoleIcons.Simple, HoleIcons.TaperTapped],
+            [HoleIcons.Simple, HoleIcons.Clearance, HoleIcons.Tapped, HoleIcons.TaperTapped],
             AwbHoleViewModel.TypeOptions.Select(o => o.Icon));
         Assert.Equal(
             [HoleIcons.SeatNone, HoleIcons.Counterbore, HoleIcons.Countersink, HoleIcons.Spotface],

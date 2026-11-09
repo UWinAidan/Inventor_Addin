@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 1
 - **Feature spec:** `docs/features/09-awb-hole.md`
-- **Status:** todo
+- **Status:** done
 - **Depends on:** 112, 114
 - **Needs:** Core, then windows build
 - **Parallel-safe with:** 140 to 143 (not 146 or 147: same window files)
@@ -36,12 +36,16 @@ Search for every use of `HoleSpec.Types` and the type constants before changing 
 
 Filled in by the implementer.
 
-- **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):**
-- **Inventor API members not confirmed:**
+- **Ran:** on Windows (Inventor not running), `dotnet build InventorAddin.slnx` with deploy: 0 errors, 9 warnings (existing CS8600 and similar, none in changed files). `dotnet test tests/InventorAddin.Core.Tests`: 4461 passed, 0 failed.
+- **Order changed in:** `HoleStandards.Types` (`src/InventorAddin.Core/Holes/HoleSpec.cs`). `AwbHoleViewModel.TypeOptions` is built from it, and the window's Type row binds to `TypeOptions` (`AwbHoleWindow.xaml` sets no order or icons of its own, so it is unchanged). Pinned by `HoleRulesTests` (`HoleStandards.Types`), `AwbHoleViewModelTests.FixedLists_AreInTheWindowsOrder` and `AwbHoleDiagramViewModelTests.TypeSeatAndTermination_EachNameTheirIcon` (icons in the new order).
+- **Positions checked:** no code indexes `Types` or `TypeOptions` (no `[i]`, `First()`, `IndexOf`, `SelectedIndex`). A new hole's type is `_type = HoleStandards.ClearanceType`, by name, so it still starts on Clearance (pinned by `NewHole_StartsOnTheDefaults`). An edited hole's type comes from `HoleStandards.TypeName(spec.Kind)`, by kind; `Kind` comes from `KindFor(_type, _standard)`, by name. The Type setter matches by value (`Find(TypeOptions, value)`). Icons are by name (`HoleIcons.ForType`). Settings store no hole type (AddinSettings keeps last depths and seats keyed by units, size and seat, not by type position). `ChoiceList.FocusChosen` falls back to the first item only when nothing is selected, which the Type row never is. `HoleKind` enum order is untouched.
+- **Not compiled (changed under `src/InventorAddin`):** none; nothing under `src/InventorAddin` changed. The whole solution was built on Windows.
+- **Inventor API members not confirmed:** none used.
 - **Manual checklist for Inventor:**
   1. Open AWB Hole: Type shows Simple, Clearance, Tapped, Taper Tapped, left to right.
   2. A new hole starts on the same type as before this change.
   3. Edit an existing hole of each type: the right type is chosen.
 
 ## Follow-ups
+
+- With Simple first, a new hole starting on Clearance (the second button) may look odd now. Ask Aidan whether a new hole should start on Simple; left as today per scope.

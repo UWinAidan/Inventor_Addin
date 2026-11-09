@@ -51,8 +51,8 @@ public static class HoleStandards
     public const string DowelStandard = Branding.ShortName + " Dowel";
     public const string TaperTappedStandard = Branding.ShortName + " Taper Tapped";
 
-    /// <summary>The window's Types, in window order (spec 09, "The window").</summary>
-    public static IReadOnlyList<string> Types { get; } = [ClearanceType, TappedType, SimpleType, TaperTappedType];
+    /// <summary>The window's Types, in window order: Simple first (spec 09, "The window"; Aidan, 2026-11-09, task 144).</summary>
+    public static IReadOnlyList<string> Types { get; } = [SimpleType, ClearanceType, TappedType, TaperTappedType];
 
     /// <summary>The window's Type for a kind: a dowel is the Clearance type (spec 09 question 3).</summary>
     public static string TypeName(HoleKind kind) => kind switch

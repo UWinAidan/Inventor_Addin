@@ -1048,7 +1048,7 @@ public sealed class HoleRulesTests
         Assert.Equal([HoleStandards.TaperTappedStandard], HoleStandards.StandardsFor("taper tapped"));
         Assert.Empty(HoleStandards.StandardsFor(HoleStandards.SimpleType));
         Assert.Equal("", HoleStandards.StandardName(HoleKind.Simple));
-        Assert.Equal(["Clearance", "Tapped", "Simple", "Taper Tapped"], HoleStandards.Types);
+        Assert.Equal(["Simple", "Clearance", "Tapped", "Taper Tapped"], HoleStandards.Types);
 
         foreach (var kind in Enum.GetValues<HoleKind>().Where(k => k != HoleKind.Simple))
         {
