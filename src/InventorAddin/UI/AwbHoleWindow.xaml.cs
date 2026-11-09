@@ -15,7 +15,8 @@ namespace InventorAddin.UI
     /// All behaviour is in <see cref="AwbHoleViewModel"/> and the <see cref="HoleSession"/> (task 089), which handles
     /// the view-model's OK and Cancel. This closes the window when the session ends, cancels the session when the
     /// window is closed any other way, and adds the keyboard handling the bindings cannot: Enter commits the box being
-    /// typed in and does OK when OK is enabled. Esc presses Cancel through the button's <c>IsCancel</c>.
+    /// typed in and does OK when OK is enabled; Up and Down move between fields. Esc presses Cancel through the
+    /// button's <c>IsCancel</c>.
     /// Text boxes apply as you type (task 130): their bindings update on each keystroke, and the view-model applies the
     /// text after a pause (<see cref="Debouncer"/>) on the timer this window gives it; leaving a box commits it at once.
     /// </summary>
@@ -118,7 +119,7 @@ namespace InventorAddin.UI
         }
 
         /// <summary>
-        /// Alt+U focuses the Units toggle (task 118).
+        /// Alt+U focuses the Units toggle (task 118). Up and Down move between fields (task 147, <see cref="MoveFocusByArrow"/>).
         /// Enter does OK only when OK is enabled, after committing the box being typed in at once (task 130). A focused
         /// button takes Enter itself, and an open dropdown uses it to pick an entry. In an editable dropdown (the
         /// countersink angle, task 127) the keys go to the text box inside it, and the binding is on the dropdown's Text.
@@ -134,15 +135,22 @@ namespace InventorAddin.UI
                 return;
             }
 
-            if (e.Key != Key.Enter || Keyboard.Modifiers != ModifierKeys.None)
+            if (Keyboard.Modifiers != ModifierKeys.None)
                 return;
-            if (e.OriginalSource is ButtonBase || e.OriginalSource is ComboBoxItem)
+
+            if (e.Key == Key.Up || e.Key == Key.Down)
+            {
+                MoveFocusByArrow(e);
                 return;
-            if (e.OriginalSource is ComboBox { IsDropDownOpen: true })
+            }
+
+            if (e.Key != Key.Enter)
+                return;
+            if (e.OriginalSource is ButtonBase)
+                return;
+            if (IsInOpenDropDown(e.OriginalSource))
                 return;
             ComboBox? editable = (e.OriginalSource as TextBox)?.TemplatedParent as ComboBox;
-            if (editable != null && editable.IsDropDownOpen)
-                return;
 
             e.Handled = true;
             if (editable != null)
@@ -156,10 +164,44 @@ namespace InventorAddin.UI
         }
 
         /// <summary>
+        /// Up and Down move to the previous and next field, as Shift+Tab and Tab do (task 147). An open dropdown keeps
+        /// them to step through its entries; a closed dropdown, the editable countersink angle included, moves focus
+        /// rather than changing its value. Handled here, before the focused control sees the key, so an icon row's list
+        /// does not take Up and Down; Left and Right are not touched and still change its choice. Text boxes are single
+        /// line, so the caret loses nothing. <see cref="UIElement.MoveFocus"/> follows the tab order and skips hidden
+        /// and disabled controls, so collapsed rows are passed over.
+        /// </summary>
+        private static void MoveFocusByArrow(KeyEventArgs e)
+        {
+            if (IsInOpenDropDown(e.OriginalSource))
+                return;
+
+            e.Handled = true;
+            FocusNavigationDirection direction = e.Key == Key.Up
+                ? FocusNavigationDirection.Previous
+                : FocusNavigationDirection.Next;
+            if (Keyboard.FocusedElement is UIElement focused)
+                focused.MoveFocus(new TraversalRequest(direction));
+        }
+
+        /// <summary>
+        /// True when the key comes from an open dropdown: one of its entries, the dropdown itself, or the text box of an
+        /// editable dropdown (the countersink angle) whose list is open.
+        /// </summary>
+        private static bool IsInOpenDropDown(object source)
+        {
+            if (source is ComboBoxItem)
+                return true;
+            if (source is ComboBox { IsDropDownOpen: true })
+                return true;
+            return (source as TextBox)?.TemplatedParent is ComboBox { IsDropDownOpen: true };
+        }
+
+        /// <summary>
         /// Notes when "Custom..." (task 146) is picked from the open countersink angle list, for
         /// <see cref="OnCountersinkAngleDropDownClosed"/>. Read here, not from <c>SelectedItem</c> when the list closes:
         /// the view-model refuses the text and the box reads the angle back, which can move the selection off
-        /// "Custom..." first. Stepping through the closed box with the arrow keys sets nothing.
+        /// "Custom..." first. A change while the list is closed sets nothing (the arrow keys move focus there, task 147).
         /// </summary>
         private void OnCountersinkAngleSelectionChanged(object? sender, SelectionChangedEventArgs e)
         {
