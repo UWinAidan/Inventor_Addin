@@ -159,18 +159,45 @@ public sealed class HoleTakeoverRulesTests
     }
 
     [Theory]
-    [InlineData("PartDMHoleCmd", HoleCommandOwner.Awb, true, false, true)]
-    [InlineData(" PartDMHoleCmd ", HoleCommandOwner.Awb, true, false, true)]
-    [InlineData("PartDMHoleCmd", HoleCommandOwner.Inventor, true, false, false)]
-    [InlineData("PartDMHoleCmd", null, true, false, false)]
-    [InlineData("PartDMHoleCmd", HoleCommandOwner.Awb, false, false, false)]
-    [InlineData("PartDMHoleCmd", HoleCommandOwner.Awb, true, true, false)]
-    [InlineData("PartHoleCmd", HoleCommandOwner.Awb, true, false, false)]
-    [InlineData("partdmholecmd", HoleCommandOwner.Awb, true, false, false)]
-    [InlineData(null, HoleCommandOwner.Awb, true, false, false)]
-    public void MiniToolbarBackstop_StopsInventorsHole_OnlyWhenAwbOwnsItAndNotAskedFor(
-        string? command, HoleCommandOwner? owner, bool isPart, bool askedFor, bool expected) =>
-        Assert.Equal(expected, HoleTakeoverRules.StopsInventorMiniToolbarHole(command, owner, isPart, askedFor));
+    [InlineData("PartDMHoleCmd", HoleCommandOwner.Awb, true, false, false, true)]
+    [InlineData(" PartDMHoleCmd ", HoleCommandOwner.Awb, true, false, false, true)]
+    [InlineData("PartDMHoleCmd", HoleCommandOwner.Inventor, true, false, false, false)]
+    [InlineData("PartDMHoleCmd", null, true, false, false, false)]
+    [InlineData("PartDMHoleCmd", HoleCommandOwner.Awb, false, false, false, false)]
+    [InlineData("PartDMHoleCmd", HoleCommandOwner.Awb, true, false, true, false)]
+    [InlineData("PartHoleCmd", HoleCommandOwner.Awb, true, false, false, true)]
+    [InlineData("PartHoleCmd", HoleCommandOwner.Awb, true, false, true, false)]
+    [InlineData("PartHoleCmd", HoleCommandOwner.Inventor, true, false, false, false)]
+    [InlineData("PartHoleCmd", HoleCommandOwner.Awb, false, false, false, false)]
+    [InlineData("PartExtrudeCmd", HoleCommandOwner.Awb, true, false, false, false)]
+    [InlineData("partdmholecmd", HoleCommandOwner.Awb, true, false, false, false)]
+    [InlineData(null, HoleCommandOwner.Awb, true, false, false, false)]
+    [InlineData("PartHoleCmd", HoleCommandOwner.Awb, true, true, false, false)]
+    [InlineData("PartDMHoleCmd", HoleCommandOwner.Awb, true, true, false, false)]
+    public void Backstop_StopsInventorsHole_OnlyWhenAwbOwnsItNotInFlatPatternAndNotAskedFor(
+        string? command, HoleCommandOwner? owner, bool isPart, bool inFlatPattern, bool askedFor, bool expected) =>
+        Assert.Equal(expected, HoleTakeoverRules.StopsInventorHole(command, owner, isPart, inFlatPattern, askedFor));
+
+    [Theory]
+    [InlineData(HoleCommandOwner.Awb, true, false, true)]
+    [InlineData(HoleCommandOwner.Awb, true, true, false)]
+    [InlineData(HoleCommandOwner.Awb, false, false, false)]
+    [InlineData(HoleCommandOwner.Inventor, true, false, false)]
+    [InlineData(null, true, false, false)]
+    public void TakesOverHoleEntries_OnlyWhenAwbOwnsItInAPartOutsideTheFlatPattern(
+        HoleCommandOwner? owner, bool isPart, bool inFlatPattern, bool expected) =>
+        Assert.Equal(expected, HoleTakeoverRules.TakesOverHoleEntries(owner, isPart, inFlatPattern));
+
+    [Theory]
+    [InlineData(true, "PMxPartEnvironment", true)]
+    [InlineData(true, null, true)]
+    [InlineData(false, "PMxPartEnvironment", false)]
+    [InlineData(false, "MBxSheetMetalEnvironment", false)]
+    [InlineData(false, "SomeFlatPatternEnvironment", true)]
+    [InlineData(false, "someflatpatternenv", true)]
+    [InlineData(false, null, false)]
+    public void InFlatPattern_EditObjectOrEnvironmentName(bool editObjectIsFlatPattern, string? environment, bool expected) =>
+        Assert.Equal(expected, HoleTakeoverRules.InFlatPattern(editObjectIsFlatPattern, environment));
 
     [Fact]
     public void RunRequest_NothingAsked_NoStartIsAskedFor()
@@ -194,12 +221,12 @@ public sealed class HoleTakeoverRulesTests
     }
 
     [Fact]
-    public void RunRequest_RibbonHoleStartOnTheWay_KeepsTheRequest()
+    public void RunRequest_RibbonHoleStartOnTheWay_IsLetThroughAndKeepsTheRequest()
     {
         var request = new InventorHoleRunRequest();
         request.Ask();
 
-        Assert.False(request.StartIsAskedFor(HoleTakeoverRules.InventorHoleCommand));
+        Assert.True(request.StartIsAskedFor(HoleTakeoverRules.InventorHoleCommand));
         Assert.True(request.IsPending);
         Assert.True(request.StartIsAskedFor(InventorsMiniHole));
     }
@@ -480,12 +507,12 @@ public sealed class HoleTakeoverRulesTests
     [Fact]
     public void InventorHole_StartOfItsCommand_KeepsTheRunRequest_ForTheMiniToolbarBackstop()
     {
-        // Task 133's follow-up: Inventor Hole asks first, then runs PartHoleCmd; that start must not use up or clear the
-        // request, and the mini toolbar's Hole is let through once.
+        // Task 133's follow-up: Inventor Hole asks first, then runs PartHoleCmd; that start is let through (task 142's
+        // backstop) and must not use up or clear the request, and the mini toolbar's Hole is let through once.
         var request = new InventorHoleRunRequest();
         request.Ask();
 
-        Assert.False(request.StartIsAskedFor(HoleTakeoverRules.InventorHoleRunCommand));
+        Assert.True(request.StartIsAskedFor(HoleTakeoverRules.InventorHoleRunCommand));
         Assert.True(request.IsPending);
         Assert.True(request.StartIsAskedFor(HoleTakeoverRules.InventorMiniToolbarHoleCommand));
         Assert.False(request.IsPending);
@@ -565,4 +592,212 @@ public sealed class HoleTakeoverRulesTests
     [InlineData(CommandNames.Settings, null)]
     public void DropdownIconName_OnlyForTheDropdownCommands(string command, string? expected) =>
         Assert.Equal(expected, HoleTakeoverRules.DropdownIconName(command));
+
+    // ---- task 142: the radial marking menu ----
+
+    // A part's default ring as read in Inventor 2026 (task 142), clockwise from north.
+    private static readonly string?[] PartRing =
+    [
+        "PartFilletCmd", "PartExtrudeCmd", "PartRevolveCmd", "PartHoleCmd",
+        "AppSketch2DWrapperCmd", "PartWorkPlaneCmd", "AppUndoCmd", "AppMeasureDistanceCmd",
+    ];
+
+    private static string?[] RingWith(int slot, string? command)
+    {
+        var ring = (string?[])PartRing.Clone();
+        ring[slot] = command;
+        return ring;
+    }
+
+    [Fact]
+    public void RingSlots_AreTheEightCompassPointsClockwiseFromNorth() =>
+        Assert.Equal(
+            ["north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west"],
+            HoleTakeoverRules.RingSlots);
+
+    [Theory]
+    [InlineData("PartHoleCmd", true)]
+    [InlineData("PartDMHoleCmd", true)]
+    [InlineData(" PartHoleCmd ", true)]
+    [InlineData("partholecmd", false)]
+    [InlineData("PartNGxHoleEditCtxCmd", false)]
+    [InlineData(null, false)]
+    public void IsInventorHole_EitherHoleCommand(string? command, bool expected) =>
+        Assert.Equal(expected, HoleTakeoverRules.IsInventorHole(command));
+
+    [Fact]
+    public void RingHoleSlots_PartRing_IsTheSouthEastSlot() =>
+        Assert.Equal([3], HoleTakeoverRules.RingHoleSlots(PartRing, Ours));
+
+    [Fact]
+    public void RingHoleSlots_MiniToolbarHoleInASlot_IsFoundToo() =>
+        Assert.Equal([3], HoleTakeoverRules.RingHoleSlots(RingWith(3, InventorsMiniHole), Ours));
+
+    [Fact]
+    public void RingHoleSlots_EmptySlotsAreFine()
+    {
+        string?[] ring = [null, null, null, "PartHoleCmd", null, null, "AppUndoCmd", null];
+
+        Assert.Equal([3], HoleTakeoverRules.RingHoleSlots(ring, Ours));
+    }
+
+    [Fact]
+    public void RingHoleSlots_NoHole_None() =>
+        Assert.Empty(HoleTakeoverRules.RingHoleSlots(RingWith(3, "PartChamferCmd"), Ours));
+
+    [Fact]
+    public void RingHoleSlots_OursAlreadyThere_None()
+    {
+        var ring = RingWith(0, Ours);
+
+        Assert.Empty(HoleTakeoverRules.RingHoleSlots(ring, Ours));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    public void RingHoleSlots_AnUnreadableSlotName_None(string unreadable) =>
+        Assert.Empty(HoleTakeoverRules.RingHoleSlots(RingWith(0, unreadable), Ours));
+
+    [Fact]
+    public void RingHoleSlots_NotEightSlots_None() =>
+        Assert.Empty(HoleTakeoverRules.RingHoleSlots(["PartHoleCmd", "AppUndoCmd"], Ours));
+
+    [Fact]
+    public void RingHoleSlots_TwoHoles_BothSlots()
+    {
+        var ring = RingWith(0, InventorsMiniHole);
+
+        Assert.Equal([0, 3], HoleTakeoverRules.RingHoleSlots(ring, Ours));
+    }
+
+    [Fact]
+    public void RingHoleSlots_BadArguments_Throw()
+    {
+        Assert.Throws<ArgumentNullException>(() => HoleTakeoverRules.RingHoleSlots(null!, Ours));
+        Assert.Throws<ArgumentException>(() => HoleTakeoverRules.RingHoleSlots(PartRing, " "));
+    }
+
+    [Fact]
+    public void SwappedRing_OursInHolesSlot_TheRestUnchanged() =>
+        Assert.Equal(RingWith(3, Ours), HoleTakeoverRules.SwappedRing(PartRing, Ours));
+
+    [Fact]
+    public void SwappedRing_NoHole_Unchanged()
+    {
+        var ring = RingWith(3, null);
+
+        Assert.Equal(ring, HoleTakeoverRules.SwappedRing(ring, Ours));
+    }
+
+    [Fact]
+    public void RingSwapHeld_OursInHolesSlot_True() =>
+        Assert.True(HoleTakeoverRules.RingSwapHeld(PartRing, RingWith(3, Ours), Ours));
+
+    [Fact]
+    public void RingSwapHeld_InventorsHoleStillThere_False() =>
+        Assert.False(HoleTakeoverRules.RingSwapHeld(PartRing, PartRing, Ours));
+
+    [Fact]
+    public void RingSwapHeld_SlotLeftEmpty_False() =>
+        Assert.False(HoleTakeoverRules.RingSwapHeld(PartRing, RingWith(3, null), Ours));
+
+    [Fact]
+    public void RingSwapHeld_AnotherSlotChanged_False()
+    {
+        var after = RingWith(3, Ours);
+        after[0] = null;
+
+        Assert.False(HoleTakeoverRules.RingSwapHeld(PartRing, after, Ours));
+    }
+
+    [Fact]
+    public void RingSwapHeld_UnreadableNameAfter_False() =>
+        Assert.False(HoleTakeoverRules.RingSwapHeld(PartRing, RingWith(3, ""), Ours));
+
+    [Fact]
+    public void RingSwapHeld_NothingToSwap_False()
+    {
+        var ring = RingWith(3, null);
+
+        Assert.False(HoleTakeoverRules.RingSwapHeld(ring, ring, Ours));
+    }
+
+    [Fact]
+    public void SameRing_EmptySlotsMatch_UnreadableNamesDoNot()
+    {
+        Assert.True(HoleTakeoverRules.SameRing(RingWith(1, null), RingWith(1, null)));
+        Assert.True(HoleTakeoverRules.SameRing(RingWith(1, " PartExtrudeCmd "), PartRing));
+        Assert.False(HoleTakeoverRules.SameRing(RingWith(1, ""), RingWith(1, "")));
+        Assert.False(HoleTakeoverRules.SameRing(RingWith(1, null), PartRing));
+        Assert.False(HoleTakeoverRules.SameRing(PartRing, PartRing[..7]));
+    }
+
+    [Fact]
+    public void RingSlotsToRestore_OnlyTheSlotsThatChanged()
+    {
+        var now = RingWith(3, null);
+        now[6] = "PartChamferCmd";
+
+        Assert.Equal([3, 6], HoleTakeoverRules.RingSlotsToRestore(PartRing, now));
+    }
+
+    [Fact]
+    public void RingSlotsToRestore_Alike_None() =>
+        Assert.Empty(HoleTakeoverRules.RingSlotsToRestore(PartRing, PartRing));
+
+    [Fact]
+    public void RingSlotsToRestore_ShorterNow_TheMissingSlots() =>
+        Assert.Equal([6, 7], HoleTakeoverRules.RingSlotsToRestore(PartRing, PartRing[..6]));
+
+    [Fact]
+    public void RingMessage_NamesEachSlotAndTheStage()
+    {
+        string message = HoleTakeoverRules.RingMessage(MiniToolbarStage.BeforeSwap, " None ", RingWith(6, null), sheetMetal: false);
+
+        Assert.Equal(
+            "Hole takeover: the marking menu ring 'None' in a part, before the swap: north PartFilletCmd, " +
+            "north-east PartExtrudeCmd, east PartRevolveCmd, south-east PartHoleCmd, south AppSketch2DWrapperCmd, " +
+            "south-west PartWorkPlaneCmd, west (empty), north-west AppMeasureDistanceCmd.",
+            message);
+    }
+
+    [Theory]
+    [InlineData(MiniToolbarStage.AfterSwap, "after the swap")]
+    [InlineData(MiniToolbarStage.PutBack, "after Inventor's ring was put back")]
+    public void RingMessage_OtherStagesAndSheetMetal(MiniToolbarStage stage, string when)
+    {
+        string message = HoleTakeoverRules.RingMessage(stage, null, RingWith(4, ""), sheetMetal: true);
+
+        Assert.StartsWith($"Hole takeover: the marking menu ring '(unnamed)' in a sheet metal part, {when}: ", message);
+        Assert.Contains("south (unnamed)", message);
+    }
+
+    [Fact]
+    public void RingLogKey_DiffersByRingAndPartKind()
+    {
+        Assert.Equal(HoleTakeoverRules.RingLogKey("None", false), HoleTakeoverRules.RingLogKey(" None ", false));
+        Assert.NotEqual(HoleTakeoverRules.RingLogKey("None", false), HoleTakeoverRules.RingLogKey("None", true));
+        Assert.NotEqual(HoleTakeoverRules.RingLogKey("None", false), HoleTakeoverRules.RingLogKey("Face", false));
+    }
+
+    [Fact]
+    public void RingSwapFailedMessage_NamesBothRingsAndTheError()
+    {
+        string message = HoleTakeoverRules.RingSwapFailedMessage(RingWith(3, Ours), PartRing, " refused ");
+
+        Assert.StartsWith("Hole takeover: replacing Hole on the marking menu ring should have left ", message);
+        Assert.Contains($"south-east {Ours}", message);
+        Assert.Contains("but left north PartFilletCmd", message);
+        Assert.Contains("The swap threw: refused", message);
+        Assert.Contains(AwbHoleViewModel.CommandName, message);
+    }
+
+    [Theory]
+    [InlineData("PartDMHoleCmd", "from the mini toolbar")]
+    [InlineData("PartHoleCmd", "(PartHoleCmd: the marking menu, a shortcut or the command search)")]
+    public void InventorHoleStoppedMessage_SaysWhereItCameFrom(string command, string from) =>
+        Assert.Equal(
+            $"Hole takeover: Inventor's Hole {from} started; {AwbHoleViewModel.CommandName} opens instead.",
+            HoleTakeoverRules.InventorHoleStoppedMessage(command));
 }

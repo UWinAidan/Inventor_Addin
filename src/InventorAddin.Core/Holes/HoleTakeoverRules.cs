@@ -27,7 +27,7 @@ public enum HoleButtonKind
     PlainButton,
 }
 
-/// <summary>When a sketch point mini toolbar's entries are logged (task 141).</summary>
+/// <summary>When a sketch point mini toolbar's entries (task 141), or a marking menu ring's slots (task 142), are logged.</summary>
 public enum MiniToolbarStage
 {
     /// <summary>As Inventor gave them, before AWB Hole is swapped in.</summary>
@@ -255,8 +255,8 @@ public static class HoleTakeoverRules
 
     /// <summary>
     /// The command Inventor Hole runs, on the 3D Model tab and on the Sheet Metal tab alike: the Sheet Metal tab's Hole
-    /// button runs <see cref="InventorHoleCommand"/> too (task 128). The mini toolbar backstop lets it through
-    /// (<see cref="InventorHoleRunRequest"/>).
+    /// button runs <see cref="InventorHoleCommand"/> too (task 128). The backstop (<see cref="StopsInventorHole"/>)
+    /// lets this start through, and the mini toolbar's Hole that may follow it (<see cref="InventorHoleRunRequest"/>).
     /// </summary>
     public const string InventorHoleRunCommand = InventorHoleCommand;
 
@@ -325,15 +325,66 @@ public static class HoleTakeoverRules
         string.Equals(command?.Trim(), InventorMiniToolbarHoleCommand, StringComparison.Ordinal);
 
     /// <summary>
-    /// The mini toolbar backstop (<c>OnActivateCommand</c>; task 133): true when the command starting is Inventor's
-    /// mini toolbar Hole, AWB Hole has the Hole command (<paramref name="owner"/>; null when the takeover is not
-    /// running), a part is being edited, and the add-in did not ask for this start (<paramref name="askedFor"/>: the
-    /// split button's "Inventor Hole", task 129). Inventor's is then stopped once its event has returned and AWB Hole
-    /// opened on the part.
+    /// True for either of Inventor's Hole commands the backstop stops: the mini toolbar's
+    /// (<see cref="InventorMiniToolbarHoleCommand"/>; task 133) and the ribbon's (<see cref="InventorHoleCommand"/>),
+    /// which is also the radial marking menu's Hole (task 142). Internal names match exactly.
     /// </summary>
-    public static bool StopsInventorMiniToolbarHole(
-        string? startedCommand, HoleCommandOwner? owner, bool documentIsPart, bool askedFor) =>
-        owner == HoleCommandOwner.Awb && documentIsPart && !askedFor && IsInventorMiniToolbarHole(startedCommand);
+    public static bool IsInventorHole(string? command) =>
+        IsInventorMiniToolbarHole(command) ||
+        string.Equals(command?.Trim(), InventorHoleCommand, StringComparison.Ordinal);
+
+    /// <summary>
+    /// The Flat Pattern tab keeps Inventor's Hole (Aidan, 2026-10-25 and 2026-11-09; task 128), and its Hole is
+    /// <see cref="InventorHoleCommand"/> too. True while a flat pattern is being edited: Inventor's
+    /// <c>ActiveEditObject</c> is the <c>FlatPattern</c>, or the active environment's
+    /// internal name names the flat pattern (<see cref="IsFlatPatternEnvironment"/>).
+    /// </summary>
+    /// <param name="editObjectIsFlatPattern">Whether <c>Application.ActiveEditObject</c> is a <c>FlatPattern</c>.</param>
+    /// <param name="activeEnvironment">The active environment's <c>InternalName</c>, or null when unreadable.</param>
+    public static bool InFlatPattern(bool editObjectIsFlatPattern, string? activeEnvironment) =>
+        editObjectIsFlatPattern || IsFlatPatternEnvironment(activeEnvironment);
+
+    /// <summary>
+    /// True when an environment's internal name contains "FlatPattern", ignoring case. The flat pattern environment's
+    /// exact name is not confirmed in Inventor 2026 (task 142); this is only the fallback to
+    /// <c>ActiveEditObject</c>.
+    /// </summary>
+    public static bool IsFlatPatternEnvironment(string? environmentInternalName) =>
+        environmentInternalName?.Contains("FlatPattern", StringComparison.OrdinalIgnoreCase) == true;
+
+    /// <summary>
+    /// Whether the mini toolbar's and the marking menu ring's Hole entries are swapped for AWB Hole now (tasks 133, 141,
+    /// 142): AWB Hole has the Hole command, a part is being edited, and not its flat pattern.
+    /// </summary>
+    public static bool TakesOverHoleEntries(HoleCommandOwner? owner, bool documentIsPart, bool inFlatPattern) =>
+        owner == HoleCommandOwner.Awb && documentIsPart && !inFlatPattern;
+
+    /// <summary>
+    /// The backstop (<c>OnActivateCommand</c>; tasks 133 and 142): true when the command starting is one of Inventor's
+    /// Hole commands (<see cref="IsInventorHole"/>), the Hole entries are taken over (<see cref="TakesOverHoleEntries"/>:
+    /// AWB Hole has Hole, a part is being edited, not in its flat pattern), and the add-in did not ask for this start
+    /// (<paramref name="askedFor"/>: the split button's "Inventor Hole", task 129). Inventor's is then stopped once its
+    /// event has returned and AWB Hole opened on the part.
+    /// </summary>
+    /// <remarks>
+    /// While AWB Hole has Hole, Inventor's Hole button is hidden on the 3D Model and Sheet Metal tabs and H is AWB
+    /// Hole's, so outside the flat pattern a start of <see cref="InventorHoleCommand"/> the add-in did not ask for comes
+    /// from somewhere the takeover did not reach: the marking menu's ring when its swap did not hold, a shortcut the user
+    /// set on it, or the command search. The Flat Pattern tab's Hole stays visible and is Inventor's, so nothing is
+    /// stopped there.
+    /// </remarks>
+    public static bool StopsInventorHole(
+        string? startedCommand, HoleCommandOwner? owner, bool documentIsPart, bool inFlatPattern, bool askedFor) =>
+        TakesOverHoleEntries(owner, documentIsPart, inFlatPattern) && !askedFor && IsInventorHole(startedCommand);
+
+    /// <summary>The log line when the backstop stops one of Inventor's Hole commands and opens AWB Hole instead.</summary>
+    public static string InventorHoleStoppedMessage(string? startedCommand)
+    {
+        var from = IsInventorMiniToolbarHole(startedCommand)
+            ? "from the mini toolbar"
+            : $"({startedCommand?.Trim()}: the marking menu, a shortcut or the command search)";
+        return $"Hole takeover: Inventor's Hole {from} started; {AwbHoleViewModel.CommandName} opens instead.";
+    }
 
     /// <summary>
     /// The mini toolbar's entries the swap should leave (task 141): Inventor's, in order, with
@@ -524,6 +575,201 @@ public static class HoleTakeoverRules
         return $"Hole takeover: Inventor's mini toolbar list was cleared and added back entry by entry; {notAdded}{lost}.";
     }
 
+    // ---- The radial marking menu (task 142) ----
+
+    /// <summary>
+    /// The radial marking menu's eight slots (<c>RadialMarkingMenu</c>'s <c>NorthControl</c> to
+    /// <c>NorthwestControl</c>), clockwise from north: the order the add-in reads them in, and their names in the log.
+    /// </summary>
+    public static IReadOnlyList<string> RingSlots { get; } =
+        ["north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west"];
+
+    /// <summary>
+    /// The 0-based slots of the ring that hold Inventor's Hole (<see cref="IsInventorHole"/>; in a part's default ring,
+    /// <see cref="InventorHoleCommand"/> in the south-east slot, read in Inventor 2026), where AWB Hole's button goes.
+    /// Empty when no slot holds it, ours is already there, the list is not the eight slots, or a filled slot's name
+    /// could not be read (the ring could not then be checked after the swap).
+    /// </summary>
+    /// <param name="slots">
+    /// Each slot's command in <see cref="RingSlots"/> order: null for an empty slot, an empty string for a filled slot
+    /// whose name could not be read.
+    /// </param>
+    /// <param name="ourCommand">AWB Hole's internal name.</param>
+    public static IReadOnlyList<int> RingHoleSlots(IReadOnlyList<string?> slots, string ourCommand)
+    {
+        ArgumentNullException.ThrowIfNull(slots);
+        ArgumentException.ThrowIfNullOrWhiteSpace(ourCommand);
+
+        if (slots.Count != RingSlots.Count
+            || IndexOf(slots, ourCommand) >= 0
+            || slots.Any(s => s is not null && string.IsNullOrWhiteSpace(s)))
+        {
+            return [];
+        }
+
+        var found = new List<int>();
+        for (var i = 0; i < slots.Count; i++)
+        {
+            if (IsInventorHole(slots[i]))
+            {
+                found.Add(i);
+            }
+        }
+
+        return found;
+    }
+
+    /// <summary>
+    /// The ring the swap should leave: <paramref name="before"/> with each slot of <see cref="RingHoleSlots"/> holding
+    /// <paramref name="ourCommand"/> and the rest as they were. Names are trimmed.
+    /// </summary>
+    public static IReadOnlyList<string?> SwappedRing(IReadOnlyList<string?> before, string ourCommand)
+    {
+        ArgumentNullException.ThrowIfNull(before);
+        ArgumentException.ThrowIfNullOrWhiteSpace(ourCommand);
+
+        var swap = RingHoleSlots(before, ourCommand);
+        var expected = new List<string?>(before.Count);
+        for (var i = 0; i < before.Count; i++)
+        {
+            expected.Add(swap.Contains(i) ? ourCommand.Trim() : before[i]?.Trim());
+        }
+
+        return expected;
+    }
+
+    /// <summary>
+    /// True when the ring after the swap is exactly <see cref="SwappedRing"/> of the ring before, and there was a Hole
+    /// to swap. Anything else (Inventor's Hole still there, ours missing, another slot changed) is false, and the slots
+    /// that changed are put back (<see cref="RingSlotsToRestore"/>).
+    /// </summary>
+    public static bool RingSwapHeld(IReadOnlyList<string?> before, IReadOnlyList<string?> after, string ourCommand)
+    {
+        ArgumentNullException.ThrowIfNull(after);
+        if (RingHoleSlots(before, ourCommand).Count == 0)
+        {
+            return false;
+        }
+
+        return SameRing(SwappedRing(before, ourCommand), after);
+    }
+
+    /// <summary>
+    /// True when two rings hold the same thing in each slot: names trimmed and matched exactly, two empty slots alike,
+    /// and an unreadable name (an empty string) matching nothing.
+    /// </summary>
+    public static bool SameRing(IReadOnlyList<string?> first, IReadOnlyList<string?> second)
+    {
+        ArgumentNullException.ThrowIfNull(first);
+        ArgumentNullException.ThrowIfNull(second);
+        if (first.Count != second.Count)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < first.Count; i++)
+        {
+            if (!SameSlot(first[i], second[i]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// The 0-based slots whose contents differ between Inventor's ring and the ring now (as <see cref="SameRing"/>
+    /// compares them), each of which is set back to what Inventor gave when the swap did not hold. Empty when the
+    /// rings are alike.
+    /// </summary>
+    public static IReadOnlyList<int> RingSlotsToRestore(IReadOnlyList<string?> before, IReadOnlyList<string?> now)
+    {
+        ArgumentNullException.ThrowIfNull(before);
+        ArgumentNullException.ThrowIfNull(now);
+
+        var restore = new List<int>();
+        for (var i = 0; i < before.Count; i++)
+        {
+            if (i >= now.Count || !SameSlot(before[i], now[i]))
+            {
+                restore.Add(i);
+            }
+        }
+
+        return restore;
+    }
+
+    /// <summary>
+    /// The Info line naming a ring's slots at <paramref name="stage"/> (task 142): "north PartFilletCmd, ..., west
+    /// (empty)".
+    /// </summary>
+    /// <param name="stage">Before the swap, after it, or after Inventor's ring was put back.</param>
+    /// <param name="ringName">The ring's <c>InternalName</c>, or null when unreadable.</param>
+    /// <param name="slots">Each slot's command, as for <see cref="RingHoleSlots"/>.</param>
+    /// <param name="sheetMetal">Whether the part is a sheet metal part.</param>
+    public static string RingMessage(MiniToolbarStage stage, string? ringName, IReadOnlyList<string?> slots, bool sheetMetal)
+    {
+        ArgumentNullException.ThrowIfNull(slots);
+        var when = stage switch
+        {
+            MiniToolbarStage.BeforeSwap => "before the swap",
+            MiniToolbarStage.AfterSwap => "after the swap",
+            _ => "after Inventor's ring was put back",
+        };
+        var part = sheetMetal ? "a sheet metal part" : "a part";
+        var name = string.IsNullOrWhiteSpace(ringName) ? "(unnamed)" : ringName.Trim();
+        return $"Hole takeover: the marking menu ring '{name}' in {part}, {when}: {RingSlotList(slots)}.";
+    }
+
+    /// <summary>
+    /// The key under which a ring is logged once per session (task 142): its name and the part kind, since Inventor
+    /// gives a different ring for each kind of selection.
+    /// </summary>
+    public static string RingLogKey(string? ringName, bool sheetMetal) =>
+        $"{(sheetMetal ? "sheet metal" : "part")}|{ringName?.Trim()}";
+
+    /// <summary>
+    /// The warning when the ring swap did not leave the expected ring (task 142): the slots that changed are put back,
+    /// so the ring shows Inventor's Hole, whose start the backstop still turns into AWB Hole.
+    /// </summary>
+    /// <param name="expected">The ring the swap should have left (<see cref="SwappedRing"/>).</param>
+    /// <param name="after">The ring it left.</param>
+    /// <param name="error">The swap's exception message, if it threw.</param>
+    public static string RingSwapFailedMessage(IReadOnlyList<string?> expected, IReadOnlyList<string?> after, string? error = null)
+    {
+        ArgumentNullException.ThrowIfNull(expected);
+        ArgumentNullException.ThrowIfNull(after);
+        var threw = string.IsNullOrWhiteSpace(error) ? string.Empty : $" The swap threw: {error.Trim()}";
+        return $"Hole takeover: replacing Hole on the marking menu ring should have left {RingSlotList(expected)} but left " +
+               $"{RingSlotList(after)}.{threw} The slots that changed are put back, so the ring shows Inventor's Hole, " +
+               $"which opens {AwbHoleViewModel.CommandName} through the backstop.";
+    }
+
+    private static bool SameSlot(string? a, string? b)
+    {
+        if (a is null || b is null)
+        {
+            return a is null && b is null;
+        }
+
+        var x = a.Trim();
+        return x.Length > 0 && string.Equals(x, b.Trim(), StringComparison.Ordinal);
+    }
+
+    private static string RingSlotList(IReadOnlyList<string?> slots)
+    {
+        var entries = new List<string>(slots.Count);
+        for (var i = 0; i < slots.Count; i++)
+        {
+            var where = i < RingSlots.Count ? RingSlots[i] : $"slot {i + 1}";
+            var what = slots[i] is null ? "(empty)" : Entry(slots[i]);
+            entries.Add($"{where} {what}");
+        }
+
+        return entries.Count == 0 ? "(none)" : string.Join(", ", entries);
+    }
+
     private static string Names(IReadOnlyList<string?> names) =>
         names.Count == 0 ? "(none)" : string.Join(", ", names.Select(Entry));
 
@@ -544,14 +790,15 @@ public static class HoleTakeoverRules
 }
 
 /// <summary>
-/// Whether a start of Inventor's mini toolbar Hole is one the add-in asked for (task 133), so the backstop lets it
-/// run: the split button's "Inventor Hole" (task 129) runs Inventor's Hole once and calls <see cref="Ask"/> first.
+/// Whether a start of one of Inventor's Hole commands is one the add-in asked for (tasks 133 and 142), so the backstop
+/// lets it run: the split button's "Inventor Hole" (task 129) runs Inventor's Hole once and calls <see cref="Ask"/>
+/// first.
 /// </summary>
 /// <remarks>
 /// The request is used up by the next start of <see cref="HoleTakeoverRules.InventorMiniToolbarHoleCommand"/>. A start
-/// of Inventor's ribbon Hole (<see cref="HoleTakeoverRules.InventorHoleCommand"/>) keeps it, since that may be how
-/// Inventor's Hole comes to run; any other command clears it, so a request whose Hole never started cannot let a later
-/// one through.
+/// of Inventor's ribbon Hole (<see cref="HoleTakeoverRules.InventorHoleCommand"/>, the command "Inventor Hole" runs) is
+/// let through and keeps the request, since it may in turn start the mini toolbar's Hole; any other command clears it,
+/// so a request whose Hole never started cannot let a later one through.
 /// </remarks>
 public sealed class InventorHoleRunRequest
 {
@@ -564,8 +811,8 @@ public sealed class InventorHoleRunRequest
     public void Ask() => _asked = true;
 
     /// <summary>
-    /// A command started (<c>OnActivateCommand</c>): true when it is Inventor's mini toolbar Hole and a request was
-    /// waiting, which this uses up. See the remarks for which starts keep or clear the request.
+    /// A command started (<c>OnActivateCommand</c>): true when it is one of Inventor's Hole commands and a request was
+    /// waiting. The mini toolbar's Hole uses the request up; the ribbon's keeps it. See the remarks.
     /// </summary>
     public bool StartIsAskedFor(string? startedCommand)
     {
@@ -576,11 +823,12 @@ public sealed class InventorHoleRunRequest
             return asked;
         }
 
-        if (!string.Equals(startedCommand?.Trim(), HoleTakeoverRules.InventorHoleCommand, StringComparison.Ordinal))
+        if (string.Equals(startedCommand?.Trim(), HoleTakeoverRules.InventorHoleCommand, StringComparison.Ordinal))
         {
-            _asked = false;
+            return _asked;
         }
 
+        _asked = false;
         return false;
     }
 }

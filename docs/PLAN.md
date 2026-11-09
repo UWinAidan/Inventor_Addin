@@ -401,7 +401,7 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 - [x] 138 A colour swatch on a toleranced hole's Tolerance row
 - [x] 140 Hand colours on a remade hole: the feature's colour kept, new faces take the bore's
 - [x] 141 The sketch point mini toolbar keeps every button, with AWB Hole in Hole's place
-- [ ] 142 The marking menu's Hole follows the takeover
+- [x] 142 The marking menu's Hole follows the takeover
 - [ ] 143 Picked hole centres are highlighted in a part edited in place
 - [ ] 144 Hole types in the order Simple, Clearance, Tapped, Taper Tapped
 - [ ] 145 Clicking a sketch in the browser picks its hole centres

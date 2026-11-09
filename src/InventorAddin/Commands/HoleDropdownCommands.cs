@@ -18,9 +18,9 @@ namespace InventorAddin.Commands
     /// <para>
     /// Inventor's Hole is run after this command's event has returned (<c>Dispatcher.BeginInvoke</c>), so an open AWB
     /// Hole session has ended (pressing another command cancels it) before Inventor's Hole starts, and Inventor's command
-    /// is not started from inside ours. The mini toolbar backstop is told first
-    /// (<see cref="HoleEditRedirect.InventorHoleAsked"/>; task 133), so it lets this start through. Nothing else stops
-    /// <c>PartHoleCmd</c>: task 092 stops only Inventor's hole edit.
+    /// is not started from inside ours. The backstop is told first (<see cref="HoleEditRedirect.InventorHoleAsked"/>;
+    /// tasks 133 and 142), so it lets this start of <c>PartHoleCmd</c> through, and the mini toolbar's Hole if that
+    /// follows; an unasked start of either is stopped while AWB Hole has Hole, except in a flat pattern.
     /// </para>
     /// <para>
     /// The command itself changes nothing, so it is query-only; Inventor's Hole runs as Inventor's own command. Its icon

@@ -19,8 +19,10 @@ namespace InventorAddin.Holes
     /// it made opens our window, and Inventor's own hole edit, if it starts anyway, is stopped and our window opened.
     /// The mini toolbar's Hole entry, shown on a sketch point (<c>PartDMHoleCmd</c>, not the ribbon's Hole), is swapped
     /// for AWB Hole's button the same way, and Inventor's, if it starts anyway, is stopped and AWB Hole opened for a new
-    /// hole (spike 103; task 133). <see cref="HoleEditRules"/> and <see cref="HoleTakeoverRules"/> make every decision;
-    /// this reads Inventor, asks them, and applies the answer.
+    /// hole (spike 103; task 133). The right-click marking menu's ring gets AWB Hole's button in the slot of Inventor's
+    /// Hole (<c>PartHoleCmd</c>), and Inventor's ribbon Hole, if it starts anyway, is stopped the same way (task 142).
+    /// <see cref="HoleEditRules"/> and <see cref="HoleTakeoverRules"/> make every decision; this reads Inventor, asks
+    /// them, and applies the answer.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -64,6 +66,9 @@ namespace InventorAddin.Holes
         // The hole the last menu or mini toolbar was built for, in case the selection is gone when our entry runs.
         private HoleFeature? _offeredHole;
 
+        // The marking menu rings already logged this session (task 142), by HoleTakeoverRules.RingLogKey.
+        private readonly HashSet<string> _loggedRings = new(StringComparer.Ordinal);
+
         /// <summary>The redirect running in this session, or null before the ribbon is built or after unloading.</summary>
         internal static HoleEditRedirect? Active { get; private set; }
 
@@ -93,13 +98,14 @@ namespace InventorAddin.Holes
 
             _input = _app.CommandManager.UserInputEvents;
             _input.OnLinearMarkingMenu += OnLinearMarkingMenu;
+            _input.OnRadialMarkingMenu += OnRadialMarkingMenu;
             _input.OnContextualMiniToolbar += OnContextualMiniToolbar;
             _input.OnDoubleClick += OnDoubleClick;
             _input.OnActivateCommand += OnActivateCommand;
             Active = this;
             _log.Info($"Hole edit: Edit Feature and double-click on a hole open {AwbHoleViewModel.CommandName} while it has taken over Inventor's Hole.");
             if (_awbHole == null)
-                _log.Warn($"Command {CommandNames.AwbHole} is not registered, so the mini toolbar's Hole opens Inventor's Hole.");
+                _log.Warn($"Command {CommandNames.AwbHole} is not registered, so the mini toolbar's and the marking menu's Hole show Inventor's Hole.");
         }
 
         /// <summary>
@@ -199,6 +205,156 @@ namespace InventorAddin.Holes
             }
         }
 
+        /// <summary>
+        /// The right-click marking menu's ring (task 142): AWB Hole's button put in the slot of Inventor's Hole, except in
+        /// a flat pattern, which keeps Inventor's Hole (<see cref="HoleTakeoverRules.TakesOverHoleEntries"/>). The ring
+        /// is a <c>RadialMarkingMenu</c> of eight slots, not a <c>NameValueMap</c>; the API reference says changes made
+        /// to it here are transient, used for this display only.
+        /// </summary>
+        private void OnRadialMarkingMenu(ObjectsEnumerator selected, SelectionDeviceEnum device, RadialMarkingMenu ring, NameValueMap info)
+        {
+            try
+            {
+                PartDocument? doc = CurrentPart();
+                if (_awbHole == null || !HoleTakeoverRules.TakesOverHoleEntries(_owner(), doc != null, InFlatPattern()))
+                    return;
+
+                ReplaceRingHole(ring, doc!);
+            }
+            catch (Exception ex)
+            {
+                _log.Error("Hole takeover: replacing Hole on the marking menu failed; Inventor's may be left.", ex);
+            }
+        }
+
+        /// <summary>
+        /// Puts AWB Hole's <c>ButtonDefinition</c> in each slot holding Inventor's Hole
+        /// (<see cref="HoleTakeoverRules.RingHoleSlots"/>), then reads the ring back, as task 141 does for the mini
+        /// toolbar. Each ring is logged at Info once per session, by its name and the part kind
+        /// (<see cref="HoleTakeoverRules.RingLogKey"/>), before and after the swap.
+        /// </summary>
+        /// <remarks>
+        /// If the ring after the swap is not Inventor's with only Hole's slot changed
+        /// (<see cref="HoleTakeoverRules.RingSwapHeld"/>), a warning is logged and each slot that changed is set back to
+        /// the object Inventor gave (<see cref="HoleTakeoverRules.RingSlotsToRestore"/>), each on its own so one refusal
+        /// does not stop the rest; the ring is then logged again. Its Hole then runs <c>PartHoleCmd</c>, which the
+        /// backstop (<see cref="StopInventorsHole"/>) turns into AWB Hole.
+        /// </remarks>
+        private void ReplaceRingHole(RadialMarkingMenu ring, PartDocument doc)
+        {
+            object?[] controls = RingControls(ring);
+            List<string?> before = RingNames(controls);
+            string? ringName = ComSafe.Get(() => ring.InternalName);
+            bool sheetMetal = DocumentKinds.Of((Document)doc) == DocumentKind.SheetMetalPart;
+            bool firstTime = _loggedRings.Add(HoleTakeoverRules.RingLogKey(ringName, sheetMetal));
+            if (firstTime)
+                _log.Info(HoleTakeoverRules.RingMessage(MiniToolbarStage.BeforeSwap, ringName, before, sheetMetal));
+
+            IReadOnlyList<int> slots = HoleTakeoverRules.RingHoleSlots(before, CommandNames.AwbHole);
+            if (slots.Count == 0)
+                return;
+
+            string? error = null;
+            try
+            {
+                foreach (int slot in slots)
+                    SetRingSlot(ring, slot, _awbHole);
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+            }
+
+            List<string?> after = RingNames(RingControls(ring));
+            if (error == null && HoleTakeoverRules.RingSwapHeld(before, after, CommandNames.AwbHole))
+            {
+                if (firstTime)
+                    _log.Info(HoleTakeoverRules.RingMessage(MiniToolbarStage.AfterSwap, ringName, after, sheetMetal));
+                return;
+            }
+
+            _log.Warn(HoleTakeoverRules.RingSwapFailedMessage(
+                HoleTakeoverRules.SwappedRing(before, CommandNames.AwbHole), after, error));
+            var failed = new List<string>();
+            foreach (int slot in HoleTakeoverRules.RingSlotsToRestore(before, after))
+            {
+                int index = slot;
+                ComSafe.Run(() => SetRingSlot(ring, index, controls[index]), failed, HoleTakeoverRules.RingSlots[index]);
+            }
+
+            if (failed.Count > 0)
+                _log.Error($"Hole takeover: putting the marking menu ring back failed for: {string.Join("; ", failed)}.");
+            _log.Info(HoleTakeoverRules.RingMessage(
+                MiniToolbarStage.PutBack, ringName, RingNames(RingControls(ring)), sheetMetal));
+        }
+
+        /// <summary>
+        /// The ring's eight slots, in <see cref="HoleTakeoverRules.RingSlots"/> order; null for an empty slot, or one that
+        /// could not be read.
+        /// </summary>
+        private static object?[] RingControls(RadialMarkingMenu ring)
+        {
+            var controls = new object?[HoleTakeoverRules.RingSlots.Count];
+            for (int i = 0; i < controls.Length; i++)
+            {
+                int index = i;
+                controls[i] = ComSafe.Get(() => GetRingSlot(ring, index));
+            }
+
+            return controls;
+        }
+
+        /// <summary>
+        /// Each slot's command name: a command's <c>InternalName</c>, "submenu " and a sub-menu's name, null for an empty
+        /// slot, and an empty string for anything whose name could not be read.
+        /// </summary>
+        private static List<string?> RingNames(object?[] controls)
+        {
+            var names = new List<string?>(controls.Length);
+            foreach (object? control in controls)
+            {
+                names.Add(control switch
+                {
+                    null => null,
+                    ButtonDefinition button => ComSafe.Get(() => button.InternalName) ?? string.Empty,
+                    ControlDefinition definition => ComSafe.Get(() => definition.InternalName) ?? string.Empty,
+                    RadialMarkingMenu submenu => "submenu " + (ComSafe.Get(() => submenu.InternalName) ?? "(unnamed)"),
+                    _ => string.Empty,
+                });
+            }
+
+            return names;
+        }
+
+        private static object? GetRingSlot(RadialMarkingMenu ring, int index) => index switch
+        {
+            0 => ring.NorthControl,
+            1 => ring.NortheastControl,
+            2 => ring.EastControl,
+            3 => ring.SoutheastControl,
+            4 => ring.SouthControl,
+            5 => ring.SouthwestControl,
+            6 => ring.WestControl,
+            7 => ring.NorthwestControl,
+            _ => throw new ArgumentOutOfRangeException(nameof(index)),
+        };
+
+        private static void SetRingSlot(RadialMarkingMenu ring, int index, object? control)
+        {
+            switch (index)
+            {
+                case 0: ring.NorthControl = control; break;
+                case 1: ring.NortheastControl = control; break;
+                case 2: ring.EastControl = control; break;
+                case 3: ring.SoutheastControl = control; break;
+                case 4: ring.SouthControl = control; break;
+                case 5: ring.SouthwestControl = control; break;
+                case 6: ring.WestControl = control; break;
+                case 7: ring.NorthwestControl = control; break;
+                default: throw new ArgumentOutOfRangeException(nameof(index));
+            }
+        }
+
         /// <summary>A double-click on a hole, in the browser or on a face it made: our window, not Inventor's.</summary>
         private void OnDoubleClick(
             ObjectsEnumerator selected, SelectionDeviceEnum device, MouseButtonEnum button, ShiftStateEnum shiftKeys,
@@ -250,7 +406,8 @@ namespace InventorAddin.Holes
         /// </remarks>
         private void ReplaceMiniToolbarHole(ObjectsEnumerator selected, NameValueMap displayed, PartDocument doc)
         {
-            if (_awbHole == null)
+            // The Flat Pattern tab keeps Inventor's Hole (task 142).
+            if (_awbHole == null || !HoleTakeoverRules.TakesOverHoleEntries(_owner(), true, InFlatPattern()))
                 return;
 
             try
@@ -387,8 +544,8 @@ namespace InventorAddin.Holes
         }
 
         /// <summary>
-        /// Each command Inventor starts; the run request (task 129) sees every one. Inventor's mini toolbar Hole, started
-        /// by some other route, is stopped and AWB Hole opened (task 133). Inventor's hole edit, the backstop for Edit
+        /// Each command Inventor starts; the run request (task 129) sees every one. Inventor's mini toolbar Hole, or its
+        /// ribbon Hole (the marking menu's), started by some other route, is stopped and AWB Hole opened (tasks 133, 142). Inventor's hole edit, the backstop for Edit
         /// Feature, is stopped and our window opened on the selected hole (spike 081). Each is done once Inventor's event
         /// has returned.
         /// </summary>
@@ -397,9 +554,9 @@ namespace InventorAddin.Holes
             try
             {
                 bool asked = _holeRunRequest.StartIsAskedFor(commandName);
-                if (HoleTakeoverRules.IsInventorMiniToolbarHole(commandName))
+                if (HoleTakeoverRules.IsInventorHole(commandName))
                 {
-                    StopInventorsMiniToolbarHole(commandName, asked);
+                    StopInventorsHole(commandName, asked);
                     return;
                 }
 
@@ -443,14 +600,15 @@ namespace InventorAddin.Holes
         }
 
         /// <summary>
-        /// The mini toolbar backstop (task 133): Inventor's <c>PartDMHoleCmd</c> started while AWB Hole has Hole, and the
-        /// add-in did not ask for it. Once its event has returned it is stopped and AWB Hole opened on the part, as its
-        /// button does.
+        /// The backstop (tasks 133 and 142): Inventor's <c>PartDMHoleCmd</c> (the mini toolbar's Hole) or
+        /// <c>PartHoleCmd</c> (the ribbon's, which the marking menu's ring shows) started while AWB Hole has Hole, and
+        /// the add-in did not ask for it, outside a flat pattern (the Flat Pattern tab keeps Inventor's Hole). Once its
+        /// event has returned it is stopped and AWB Hole opened on the part, as its button does.
         /// </summary>
-        private void StopInventorsMiniToolbarHole(string commandName, bool asked)
+        private void StopInventorsHole(string commandName, bool asked)
         {
             PartDocument? doc = CurrentPart();
-            if (!HoleTakeoverRules.StopsInventorMiniToolbarHole(commandName, _owner(), doc != null, asked))
+            if (!HoleTakeoverRules.StopsInventorHole(commandName, _owner(), doc != null, InFlatPattern(), asked))
             {
                 if (asked)
                     _log.Info("Hole takeover: Inventor's Hole was asked for; it is left to run.");
@@ -465,12 +623,12 @@ namespace InventorAddin.Holes
                 }
                 catch (Exception ex)
                 {
-                    _log.Error("Hole takeover: stopping Inventor's Hole from the mini toolbar failed.", ex);
+                    _log.Error($"Hole takeover: stopping Inventor's Hole ({commandName}) failed.", ex);
                 }
 
                 try
                 {
-                    _log.Info($"Hole takeover: Inventor's Hole from the mini toolbar started; {AwbHoleViewModel.CommandName} opens instead.");
+                    _log.Info(HoleTakeoverRules.InventorHoleStoppedMessage(commandName));
                     AwbHoleWindowLauncher.ShowNew(doc!);
                 }
                 catch (Exception ex)
@@ -534,6 +692,17 @@ namespace InventorAddin.Holes
             }
 
             return names;
+        }
+
+        /// <summary>
+        /// True while a flat pattern is being edited (task 142): <c>ActiveEditObject</c> is the <c>FlatPattern</c>, or the
+        /// active environment's name says so (<see cref="HoleTakeoverRules.InFlatPattern"/>).
+        /// </summary>
+        private bool InFlatPattern()
+        {
+            object? editing = ComSafe.Get(() => _app.ActiveEditObject);
+            string? environment = ComSafe.Get(() => _app.UserInterfaceManager.ActiveEnvironment.InternalName);
+            return HoleTakeoverRules.InFlatPattern(editing is FlatPattern, environment);
         }
 
         /// <summary>True when editing opens AWB Hole now, with a part being edited.</summary>
@@ -647,7 +816,10 @@ namespace InventorAddin.Holes
             }
         }
 
-        /// <summary>The add-in is unloading: the events are released, and Inventor's Edit Feature is its own again.</summary>
+        /// <summary>
+        /// The add-in is unloading: the events are released, and Inventor's Edit Feature, its mini toolbar Hole and its
+        /// marking menu Hole are its own again.
+        /// </summary>
         public void Dispose()
         {
             if (ReferenceEquals(Active, this))
@@ -662,6 +834,7 @@ namespace InventorAddin.Holes
             try
             {
                 input.OnLinearMarkingMenu -= OnLinearMarkingMenu;
+                input.OnRadialMarkingMenu -= OnRadialMarkingMenu;
                 input.OnContextualMiniToolbar -= OnContextualMiniToolbar;
                 input.OnDoubleClick -= OnDoubleClick;
                 input.OnActivateCommand -= OnActivateCommand;
