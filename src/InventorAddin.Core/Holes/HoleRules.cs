@@ -41,6 +41,9 @@ public enum HoleField
 
     /// <summary>A Custom tolerance's Lower box (task 113).</summary>
     ToleranceLower,
+
+    /// <summary>A Custom tolerance's ISO 286 code box (task 150).</summary>
+    ToleranceCode,
 }
 
 /// <summary>One reason a hole cannot be built, with the message the window shows.</summary>
@@ -356,6 +359,13 @@ public static class HoleRules
     /// <summary>Under Seat when a taper tapped hole has a counterbore, which Inventor does not allow (spike 108).</summary>
     public const string TaperCounterboreText =
         "A taper tapped hole cannot have a counterbore; Inventor does not allow one. Choose another seat.";
+
+    /// <summary>
+    /// The limits of a Custom tolerance's ISO 286 code (task 150) at a modelled diameter in <paramref name="units"/>:
+    /// a capital letter is a hole class, a lowercase one a shaft class (<see cref="Iso286.Limits"/>).
+    /// </summary>
+    public static Iso286Limits CustomCodeLimits(decimal nominal, HoleUnits units, string? code) =>
+        Iso286.Limits(IsoNominalMm(nominal, units), code);
 
     /// <summary>Under the Upper box when a Custom tolerance has no upper limit (task 113).</summary>
     public const string CustomUpperMissingText = "Enter an upper limit.";
@@ -950,7 +960,15 @@ public static class HoleRules
             if (spec.CustomTolerance)
             {
                 _colour = HolePrecision.Colour(spec, null, workbook.Settings);
-                ResolveCustomTolerance();
+                if (spec.HasCustomCode)
+                {
+                    ResolveCustomCode(nominal);
+                }
+                else
+                {
+                    ResolveCustomTolerance();
+                }
+
                 return;
             }
 
@@ -1045,6 +1063,29 @@ public static class HoleRules
             }
 
             _tolerance = new HoleTolerance(HolePrecision.CustomName, null, ToCm(upper, Units), ToCm(lower, Units));
+        }
+
+        /// <summary>
+        /// A Custom tolerance given as an ISO 286 code (task 150): its limits at <paramref name="nominal"/>, the modelled
+        /// diameter, by <see cref="CustomCodeLimits"/>; Inventor applies the code as a fit, as for an ISO row. A code
+        /// that is not one, or has no limits at this size, is a problem under the Code box. None when the size is not
+        /// known; the size's own problem says why.
+        /// </summary>
+        private void ResolveCustomCode(decimal? nominal)
+        {
+            if (nominal is not { } size || size <= 0)
+            {
+                return;
+            }
+
+            var limits = CustomCodeLimits(size, Units, spec.CustomCode);
+            if (!limits.Succeeded)
+            {
+                Problem(HoleField.ToleranceCode, limits.Message);
+                return;
+            }
+
+            _tolerance = new HoleTolerance(HolePrecision.CustomName, limits.Code, limits.UpperMm / 10, limits.LowerMm / 10);
         }
 
         private void ResolveDepthAndDrillPoint()

@@ -185,7 +185,11 @@ namespace InventorAddin.Holes
                 || type == ToleranceTypeEnum.kLimitsFitsLinearTolerance
                 || type == ToleranceTypeEnum.kLimitsFitsShowSizeTolerance
                 || type == ToleranceTypeEnum.kLimitsFitsShowTolerance;
+            // A hole class (H7) is the fit's hole tolerance; a shaft class (k6), which a Custom code may be (task 150),
+            // its shaft tolerance. Kept in the case Inventor gives it.
             string? code = fits ? ComSafe.Get(() => tolerance.HoleTolerance) : null;
+            if (string.IsNullOrWhiteSpace(code))
+                code = fits ? ComSafe.Get(() => tolerance.ShaftTolerance) : null;
             if (string.IsNullOrWhiteSpace(code))
                 code = null;
 

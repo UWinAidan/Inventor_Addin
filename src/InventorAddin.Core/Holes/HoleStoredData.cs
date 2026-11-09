@@ -97,11 +97,12 @@ public static class HoleStateComparison
             return stored.HasTolerance == current.HasTolerance;
         }
 
-        // An ISO fit matches by its code when the hole reports one; otherwise by its limits.
+        // An ISO fit matches by its code when the hole reports one; otherwise by its limits. Case counts: H7 is a hole
+        // class and h7 a shaft class (task 150).
         if (stored.ToleranceIsoCode is not null && current.ToleranceIsoCode is not null)
         {
             return string.Equals(
-                stored.ToleranceIsoCode.Trim(), current.ToleranceIsoCode.Trim(), StringComparison.OrdinalIgnoreCase);
+                stored.ToleranceIsoCode.Trim(), current.ToleranceIsoCode.Trim(), StringComparison.Ordinal);
         }
 
         if (stored.ToleranceIsoCode is null && current.ToleranceIsoCode is not null)
@@ -188,14 +189,23 @@ public sealed record HoleStoredDataReadResult(HoleStoredData? Data, string Messa
 /// thread depth is below the seat, as a blind hole's. Data without it (every hole stored before task 136) reads as
 /// ticked, which is how those holes were made, so the version is unchanged.
 /// </para>
+/// <para>
+/// Version 6 (task 150): a Custom tolerance may be an ISO 286 code, stored as <see cref="CustomCodeName"/> in the case
+/// typed, with no <see cref="CustomUpperName"/> or <see cref="CustomLowerName"/>. The version is bumped so an add-in
+/// from before refuses such data instead of asking for limits it does not have. Versions 1 to 5 hold no code, and read
+/// as before.
+/// </para>
 /// </summary>
 public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
 {
     /// <summary>The attribute set's name on the hole feature.</summary>
     public const string AttributeSetName = Branding.ShortName + "_Hole";
 
-    /// <summary>The version written now (task 116).</summary>
-    public const int CurrentVersion = 5;
+    /// <summary>The version written now (task 150).</summary>
+    public const int CurrentVersion = 6;
+
+    /// <summary>The first version that may store a Custom tolerance as an ISO 286 code (task 150).</summary>
+    public const int CustomCodeVersion = 6;
 
     /// <summary>
     /// The first version whose threaded depths are measured from the bottom of the seat (task 116); data of an older
@@ -244,6 +254,7 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
     public const string CustomToleranceName = "CustomTolerance";
     public const string CustomUpperName = "CustomUpper";
     public const string CustomLowerName = "CustomLower";
+    public const string CustomCodeName = "CustomCode";
     public const string FullDepthName = "FullDepth";
     public const string AppliedDiameterName = "AppliedDiameterCm";
     public const string AppliedIsoCodeName = "AppliedToleranceIsoCode";
@@ -317,6 +328,7 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
 
         AddNumber(CustomUpperName, spec.CustomUpper);
         AddNumber(CustomLowerName, spec.CustomLower);
+        AddText(CustomCodeName, spec.CustomCode);
         AddNumber(ThreadDepthName, spec.ThreadDepth);
         AddNumber(DrillDepthName, spec.DrillDepth);
         attributes.Add(new HoleAttribute(TerminationName, spec.Termination.ToString()));
@@ -427,11 +439,14 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
             Require(spec.SpotfaceDepth is not null, SpotfaceDepthName);
         }
 
-        // A precision hole has its row, or a Custom tolerance with both limits (task 113).
+        // A precision hole has its row, or a Custom tolerance with both limits (task 113) or an ISO 286 code (task 150).
         if (spec.CustomTolerance)
         {
-            Require(spec.CustomUpper is not null, CustomUpperName);
-            Require(spec.CustomLower is not null, CustomLowerName);
+            if (!spec.HasCustomCode)
+            {
+                Require(spec.CustomUpper is not null, CustomUpperName);
+                Require(spec.CustomLower is not null, CustomLowerName);
+            }
         }
         else if (spec.IsPrecision)
         {
@@ -478,6 +493,9 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
             var toleranced = version >= 4 && HolePrecision.CanBeToleranced(kind) && OptionalFlag(TolerancedName);
             var precise = kind == HoleKind.Dowel || toleranced;
             var custom = precise && version >= 4 && OptionalFlag(CustomToleranceName);
+            // From version 6 (task 150) a Custom tolerance may be an ISO 286 code instead of limits.
+            var customCode = custom && version >= CustomCodeVersion ? OptionalText(CustomCodeName) : null;
+            var customLimits = custom && customCode is null;
             var clearanceFitStored = kind == HoleKind.Clearance
                 && (seat is HoleSeat.None or HoleSeat.Spotface || string.IsNullOrWhiteSpace(fastener));
 
@@ -512,8 +530,9 @@ public sealed record HoleStoredData(HoleSpec Spec, HoleAppliedState Applied)
                 DiameterExpression = simple ? OptionalText(DiameterExpressionName) : null,
                 Toleranced = toleranced,
                 CustomTolerance = custom,
-                CustomUpper = custom ? RequiredDecimal(CustomUpperName) : null,
-                CustomLower = custom ? RequiredDecimal(CustomLowerName) : null,
+                CustomUpper = customLimits ? RequiredDecimal(CustomUpperName) : null,
+                CustomLower = customLimits ? RequiredDecimal(CustomLowerName) : null,
+                CustomCode = customCode,
                 // A Through All tapped hole's Full depth (task 136); missing reads as ticked, as every hole stored
                 // before it was made.
                 FullDepth = !(kind == HoleKind.Tapped && termination == HoleTermination.ThroughAll)

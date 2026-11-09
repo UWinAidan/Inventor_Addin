@@ -369,3 +369,8 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-09 | Editing dimensions on the preview in the model is parked as a later idea, not this round | Aidan | first look, 2026-11-07 |
 | 2026-11-09 | The Flat Pattern tab keeps Inventor's Hole only; no AWB Hole there | Aidan | checklist 128-5, 2026-11-09 |
 | 2026-11-09 | Choosing "Custom..." on the countersink angle keeps the current angle in the box, selected, rather than clearing it (clearing would disable OK and lose the angle on a change of mind) | Default | task 146 |
+| 2026-11-09 | Custom tolerance's typed code has its own Code row before Upper and Lower (same box width, hint "e.g. H7 or k6"); with a code, Upper and Lower show its limits read-only | Default | task 150 |
+| 2026-11-09 | A typed ISO 286 code keeps its case: capitals are a hole class, lowercase a shaft class (f, g, h, js, k, m, n, p at IT5 to IT11 added); mixed case such as Js7 is refused; codes are matched case-sensitively on read-back and re-apply | Default | task 150 |
+| 2026-11-09 | A shaft class goes to Inventor as a fit with only the shaft class set; if Inventor refuses it, its limits go on as deviations and a warning is logged | Default | task 150 |
+| 2026-11-09 | The code applies live like the number boxes; typed limits stay behind a code (not stored) and come back when it is cleared; the code is kept across size, units, type and tolerance changes; inch limits show 6 decimals | Default | task 150 |
+| 2026-11-09 | An Inventor hole whose fit code no Precision Tol row has opens as Custom with that code (replaces task 113's Default of opening on the default row) | Default | task 150 |

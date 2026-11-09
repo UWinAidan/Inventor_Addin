@@ -275,11 +275,24 @@ public sealed record HoleSpec(
     /// </summary>
     public bool CustomTolerance { get; init; }
 
-    /// <summary>A Custom tolerance's upper limit, in the spec's units, relative to the modelled diameter.</summary>
+    /// <summary>
+    /// A Custom tolerance's upper limit, in the spec's units, relative to the modelled diameter. Null when the Custom
+    /// tolerance is a <see cref="CustomCode"/>.
+    /// </summary>
     public decimal? CustomUpper { get; init; }
 
-    /// <summary>A Custom tolerance's lower limit, in the spec's units, relative to the modelled diameter.</summary>
+    /// <summary>A Custom tolerance's lower limit, as <see cref="CustomUpper"/>.</summary>
     public decimal? CustomLower { get; init; }
+
+    /// <summary>
+    /// A Custom tolerance given as an ISO 286 code instead of limits (Aidan, 2026-11-09; task 150), for example <c>H8</c>
+    /// or <c>k6</c>, kept in the case typed (H7 and h7 are different classes). The limits are worked out at the modelled
+    /// diameter by <see cref="Iso286.Limits"/>, and Inventor applies the code as a fit, as for an ISO row. Null for limits.
+    /// </summary>
+    public string? CustomCode { get; init; }
+
+    /// <summary>True for a Custom tolerance given as an ISO 286 code (<see cref="CustomCode"/>; task 150).</summary>
+    public bool HasCustomCode => CustomTolerance && !string.IsNullOrWhiteSpace(CustomCode);
 
     /// <summary>True for a hole with a tolerance on its diameter: a dowel, or a toleranced Clearance or Simple hole.</summary>
     public bool IsPrecision => HolePrecision.IsPrecision(this);
@@ -316,6 +329,8 @@ public sealed record HoleSpec(
         var toleranced = Toleranced && HolePrecision.CanBeToleranced(Kind);
         var precise = Kind == HoleKind.Dowel || toleranced;
         var custom = precise && CustomTolerance;
+        // A Custom code replaces the typed limits (task 150).
+        var customCode = custom && !string.IsNullOrWhiteSpace(CustomCode) ? CustomCode.Trim() : null;
         return this with
         {
             Size = simple ? "" : Size.Trim(),
@@ -337,8 +352,9 @@ public sealed record HoleSpec(
             Tolerance = precise && !custom ? Tolerance?.Trim() : null,
             Toleranced = toleranced,
             CustomTolerance = custom,
-            CustomUpper = custom ? CustomUpper : null,
-            CustomLower = custom ? CustomLower : null,
+            CustomUpper = custom && customCode is null ? CustomUpper : null,
+            CustomLower = custom && customCode is null ? CustomLower : null,
+            CustomCode = customCode,
             ThreadDepth = tapped ? ThreadDepth : null,
             // Full depth applies only to a Through All tapped hole (task 136); every other hole is ticked.
             FullDepth = !TakesFullDepth || FullDepth,

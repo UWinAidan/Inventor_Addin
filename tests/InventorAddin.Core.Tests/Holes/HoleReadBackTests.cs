@@ -164,8 +164,9 @@ public sealed class HoleReadBackTests
     }
 
     [Fact]
-    public void DiameterWithAToleranceNotInTheWorkbook_IsADowel_WithTheDefaultTolerance()
+    public void DiameterWithAToleranceNotInTheWorkbook_IsADowel_WithACustomCode()
     {
+        // An ISO code no row has opens as a Custom code (task 150; before, the default tolerance was picked).
         var facts = PlainFacts(0.7) with { ToleranceIsoCode = "K6", ToleranceUpperCm = 0.0003, ToleranceLowerCm = -0.0006 };
 
         var result = HoleReadBack.Read(null, facts, Workbook, HoleUnits.Metric);
@@ -174,8 +175,10 @@ public sealed class HoleReadBackTests
         Assert.Equal("7 mm", result.Spec.Size);
         Assert.Equal(PrecisionFit.Normal, result.Spec.PrecisionFit);
         Assert.Null(result.Spec.Tolerance);
+        Assert.True(result.Spec.CustomTolerance);
+        Assert.Equal("K6", result.Spec.CustomCode);
         Assert.Equal(
-            "The hole's tolerance is not in the Precision Tol tab; the default tolerance is picked.",
+            "The hole's tolerance is not in the Precision Tol tab; it is shown as a Custom tolerance.",
             Assert.Single(result.Notes));
     }
 

@@ -262,7 +262,7 @@ public sealed class HoleFullDepthTests
 
         Assert.True(read.Succeeded, read.Message);
         Assert.True(read.Data!.Spec.FullDepth);
-        Assert.Equal(5, HoleStoredData.CurrentVersion);
+        Assert.Equal(6, HoleStoredData.CurrentVersion);
     }
 
     [Fact]

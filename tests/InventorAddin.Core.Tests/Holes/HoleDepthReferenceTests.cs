@@ -602,12 +602,14 @@ public sealed class HoleDepthReferenceTests
     }
 
     [Fact]
-    public void StoredData_IsWrittenAtVersion5()
+    public void StoredData_IsWrittenAtVersion6_WithDepthsBelowTheSeat()
     {
         var attributes = Stored(Build(SeatedTapped(HoleSeat.Counterbore))).ToAttributes();
 
-        Assert.Equal(new HoleAttribute(HoleStoredData.VersionName, 5), attributes[0]);
-        Assert.Equal(5, HoleStoredData.Read(attributes).Data!.Version);
+        // Version 6 (task 150) keeps version 5's depths below the seat.
+        Assert.Equal(new HoleAttribute(HoleStoredData.VersionName, 6), attributes[0]);
+        Assert.Equal(6, HoleStoredData.Read(attributes).Data!.Version);
+        Assert.True(HoleStoredData.CurrentVersion >= HoleStoredData.DepthsBelowSeatVersion);
     }
 
     [Fact]

@@ -507,21 +507,23 @@ public static class HoleReadBack
                 }
 
                 var tolerance = workbook.PrecisionTolerances.FirstOrDefault(t => t.Units == units && MatchesTolerance(t, units));
-                var custom = tolerance is null ? CustomLimits(units) : null;
+                var customCode = tolerance is null ? CustomCode() : null;
+                var custom = tolerance is null && customCode is null ? CustomLimits(units) : null;
                 if (tolerance is null)
                 {
-                    notes.Add(custom is null ? NotInTabDefaultText : NotInTabCustomText);
+                    notes.Add(customCode is null && custom is null ? NotInTabDefaultText : NotInTabCustomText);
                 }
 
                 // A dowel's seat is its own (task 106): the hole's sizes, not a same-size row's. Limits no row has open as
-                // a Custom tolerance (task 113).
+                // a Custom tolerance (task 113), and so does an ISO code no row has, as a Custom code (task 150).
                 return WithDowelSeatFromHole(
                     Blank(units, HoleKind.Dowel, seat, termination) with
                     {
                         Size = row.Size,
                         PrecisionFit = tolerance?.Fit ?? PrecisionFit.Normal,
                         Tolerance = tolerance?.Name,
-                        CustomTolerance = custom is not null,
+                        CustomTolerance = customCode is not null || custom is not null,
+                        CustomCode = customCode,
                         CustomUpper = custom?.Upper,
                         CustomLower = custom?.Lower,
                     },
@@ -539,8 +541,9 @@ public static class HoleReadBack
 
         /// <summary>
         /// A Clearance or Simple hole with a tolerance on its diameter (task 113): toleranced, with the Precision Tol row
-        /// of its units, any fit, whose code or limits it has; else, when Inventor gives both deviations and no ISO code
-        /// no row has, a Custom tolerance of them; else the default row, with a note.
+        /// of its units, any fit, whose code or limits it has; else, for an ISO code no row has, a Custom tolerance of
+        /// that code (task 150); else, when Inventor gives both deviations and no ISO code, a Custom tolerance of them;
+        /// else the default row, with a note.
         /// </summary>
         private HoleSpec Toleranced(HoleSpec spec)
         {
@@ -549,6 +552,12 @@ public static class HoleReadBack
             if (row is not null)
             {
                 return spec with { Toleranced = true, Tolerance = row.Name, PrecisionFit = row.Fit };
+            }
+
+            if (CustomCode() is { } code)
+            {
+                notes.Add(NotInTabCustomText);
+                return spec with { Toleranced = true, CustomTolerance = true, CustomCode = code };
             }
 
             if (CustomLimits(units) is { } custom)
@@ -567,6 +576,13 @@ public static class HoleReadBack
             var fallback = HoleRules.FindAnyTolerance(workbook, units, null);
             return spec with { Toleranced = true, Tolerance = fallback?.Name, PrecisionFit = fallback?.Fit ?? PrecisionFit.Normal };
         }
+
+        /// <summary>
+        /// The hole's ISO fit code, for a Custom tolerance when no row has it (task 150; this answers task 113's
+        /// follow-up), in the case Inventor gives it; null when the tolerance is not a fit.
+        /// </summary>
+        private string? CustomCode() =>
+            string.IsNullOrWhiteSpace(facts.ToleranceIsoCode) ? null : facts.ToleranceIsoCode.Trim();
 
         /// <summary>
         /// The hole's deviations in <paramref name="units"/>, for a Custom tolerance: only when Inventor reports both
@@ -595,7 +611,7 @@ public static class HoleReadBack
             if (row.Kind == ToleranceKind.Iso)
             {
                 return facts.ToleranceIsoCode is { } code && row.IsoCode is { } rowCode
-                    && string.Equals(code.Trim(), rowCode.Trim(), StringComparison.OrdinalIgnoreCase);
+                    && string.Equals(code.Trim(), rowCode.Trim(), StringComparison.Ordinal);
             }
 
             return facts.ToleranceIsoCode is null

@@ -448,15 +448,17 @@ public sealed class HoleTolerancedTests
     }
 
     [Fact]
-    public void ReadBack_AnIsoCodeNoRowHas_TakesTheDefaultRow_WithANote()
+    public void ReadBack_AnIsoCodeNoRowHas_OpensAsACustomCode_WithANote()
     {
+        // Task 150: before, the default row was taken.
         var facts = FactsOf(Built(HoleTestWorkbook.Clearance()).Geometry!) with { ToleranceIsoCode = "K6" };
 
         var read = HoleReadBack.Read(null, facts, Workbook, HoleUnits.Metric);
 
         Assert.True(read.Spec.Toleranced);
-        Assert.Equal("Test location", read.Spec.Tolerance);
-        Assert.Contains(read.Notes, n => n.Contains("default tolerance"));
+        Assert.True(read.Spec.CustomTolerance);
+        Assert.Equal("K6", read.Spec.CustomCode);
+        Assert.Contains(read.Notes, n => n.Contains("Custom"));
     }
 
     [Fact]

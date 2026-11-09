@@ -322,6 +322,7 @@ public sealed class AwbHoleViewModel : ObservableObject
     private bool _toleranced;
     private decimal? _toleranceUpper;
     private decimal? _toleranceLower;
+    private string? _toleranceCode;
     private decimal? _threadDepth;
 
     // A Through All tapped hole's Full depth checkbox (task 136): ticked for each new hole, kept while the window is
@@ -460,6 +461,7 @@ public sealed class AwbHoleViewModel : ObservableObject
             _toleranced = spec.Toleranced;
             _toleranceUpper = spec.CustomUpper;
             _toleranceLower = spec.CustomLower;
+            _toleranceCode = spec.CustomCode;
             _threadDepth = spec.ThreadDepth;
             _fullDepth = spec.FullDepth;
             _drillDepth = spec.DrillDepth;
@@ -1084,18 +1086,104 @@ public sealed class AwbHoleViewModel : ObservableObject
         });
     }
 
-    /// <summary><see cref="ToleranceUpper"/> as text: a number, signed or not, in the units' length; blank empties it.</summary>
+    /// <summary>
+    /// <see cref="ToleranceUpper"/> as text: a number, signed or not, in the units' length; blank empties it. While a
+    /// <see cref="ToleranceCode"/> is given, the code's upper limit at the size, read-only (task 150), or blank when it
+    /// has none.
+    /// </summary>
     public string ToleranceUpperText
     {
-        get => TextOf(HoleField.ToleranceUpper, _toleranceUpper);
-        set => SetText(HoleField.ToleranceUpper, value, nameof(ToleranceUpperText), v => ToleranceUpper = v);
+        get => HasToleranceCode
+            ? FormatNumber(CodeLimitsInUnits()?.Upper)
+            : TextOf(HoleField.ToleranceUpper, _toleranceUpper);
+        set
+        {
+            if (HasToleranceCode)
+            {
+                OnPropertyChanged();
+                return;
+            }
+
+            SetText(HoleField.ToleranceUpper, value, nameof(ToleranceUpperText), v => ToleranceUpper = v);
+        }
     }
 
-    /// <summary><see cref="ToleranceLower"/> as text: a number, signed or not, in the units' length; blank empties it.</summary>
+    /// <summary><see cref="ToleranceLower"/> as text, as <see cref="ToleranceUpperText"/>.</summary>
     public string ToleranceLowerText
     {
-        get => TextOf(HoleField.ToleranceLower, _toleranceLower);
-        set => SetText(HoleField.ToleranceLower, value, nameof(ToleranceLowerText), v => ToleranceLower = v);
+        get => HasToleranceCode
+            ? FormatNumber(CodeLimitsInUnits()?.Lower)
+            : TextOf(HoleField.ToleranceLower, _toleranceLower);
+        set
+        {
+            if (HasToleranceCode)
+            {
+                OnPropertyChanged();
+                return;
+            }
+
+            SetText(HoleField.ToleranceLower, value, nameof(ToleranceLowerText), v => ToleranceLower = v);
+        }
+    }
+
+    /// <summary>
+    /// A Custom tolerance given as an ISO 286 code instead of limits (Aidan, 2026-11-09; task 150), for example <c>H8</c>
+    /// for a hole class or <c>k6</c> for a shaft class, kept in the case typed. Given, the Upper and Lower boxes show its
+    /// limits at the size, read-only, and Inventor applies it as a fit; blank, the limits are typed as before. The code
+    /// is kept across size, units, type and tolerance changes, as a typed value is (task 124).
+    /// </summary>
+    public string? ToleranceCode
+    {
+        get => _toleranceCode;
+        set
+        {
+            var code = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+            Change(() => Set(ref _toleranceCode, code, nameof(ToleranceCode)));
+        }
+    }
+
+    /// <summary>
+    /// <see cref="ToleranceCode"/> as text, applied live as the other boxes are (task 130): about 300 ms after the last
+    /// key, a blank box on commit.
+    /// </summary>
+    public string ToleranceCodeText
+    {
+        get => _drafts.TryGetValue(HoleField.ToleranceCode, out var draft) ? draft.Text : _toleranceCode ?? "";
+        set => SetRawText(HoleField.ToleranceCode, value, nameof(ToleranceCodeText), raw =>
+        {
+            ToleranceCode = raw;
+            OnPropertyChanged(nameof(ToleranceCodeText));
+        });
+    }
+
+    /// <summary>
+    /// True while Custom is chosen and a code is given (task 150): the Upper and Lower boxes show the code's limits and
+    /// are read-only.
+    /// </summary>
+    public bool HasToleranceCode => ShowsCustomTolerance && !string.IsNullOrWhiteSpace(_toleranceCode);
+
+    /// <summary>Why the code cannot be used: not an ISO 286 code, or none at this size (task 150); else null.</summary>
+    public string? ToleranceCodeProblem => ProblemFor(HoleField.ToleranceCode);
+
+    /// <summary>
+    /// The code's limits at the modelled diameter, in the units' length (inches to 6 decimals); null when the size is not
+    /// known or the code has no limits there.
+    /// </summary>
+    private (decimal Upper, decimal Lower)? CodeLimitsInUnits()
+    {
+        if (ToleranceNominal(Kind) is not { } nominal || nominal <= 0)
+        {
+            return null;
+        }
+
+        var limits = HoleRules.CustomCodeLimits(nominal, _units, _toleranceCode);
+        if (!limits.Succeeded)
+        {
+            return null;
+        }
+
+        decimal InUnits(decimal um) => _units == HoleUnits.Metric ? um / 1000m : Math.Round(um / 25400m, 6);
+        return (InUnits(limits.UpperUm), InUnits(limits.LowerUm));
     }
 
     public string? Tolerance
@@ -1484,10 +1572,12 @@ public sealed class AwbHoleViewModel : ObservableObject
     public string? ToleranceProblem => ProblemFor(HoleField.Tolerance);
 
     /// <summary>Why the Upper box's text is not a number while it is not one, else the field's checks (task 113).</summary>
-    public string? ToleranceUpperProblem => NotANumber(HoleField.ToleranceUpper) ?? ProblemFor(HoleField.ToleranceUpper);
+    public string? ToleranceUpperProblem =>
+        HasToleranceCode ? null : NotANumber(HoleField.ToleranceUpper) ?? ProblemFor(HoleField.ToleranceUpper);
 
     /// <summary>Why the Lower box's text is not a number while it is not one, else the field's checks (task 113).</summary>
-    public string? ToleranceLowerProblem => NotANumber(HoleField.ToleranceLower) ?? ProblemFor(HoleField.ToleranceLower);
+    public string? ToleranceLowerProblem =>
+        HasToleranceCode ? null : NotANumber(HoleField.ToleranceLower) ?? ProblemFor(HoleField.ToleranceLower);
 
     /// <summary>Why the box's text is not a length while it is not one, else the field's checks.</summary>
     public string? ThreadDepthProblem => NotANumber(HoleField.ThreadDepth) ?? ProblemFor(HoleField.ThreadDepth);
@@ -1634,7 +1724,7 @@ public sealed class AwbHoleViewModel : ObservableObject
         _applyingTyping = true;
         try
         {
-            ApplyText(field, draft.Text, draft.Property, draft.Set);
+            draft.Apply(draft.Text);
         }
         finally
         {
@@ -1660,13 +1750,13 @@ public sealed class AwbHoleViewModel : ObservableObject
     }
 
     /// <summary>A box's text as typed, the text property it came from, and how to apply it.</summary>
-    private sealed class TypedDraft(string text, string property, Action<decimal?> set)
+    private sealed class TypedDraft(string text, string property, Action<string> apply)
     {
         public string Text { get; } = text;
 
         public string Property { get; } = property;
 
-        public Action<decimal?> Set { get; } = set;
+        public Action<string> Apply { get; } = apply;
 
         public bool Applied { get; set; }
     }
@@ -2624,6 +2714,7 @@ public sealed class AwbHoleViewModel : ObservableObject
             CustomTolerance = custom,
             CustomUpper = custom ? _toleranceUpper : null,
             CustomLower = custom ? _toleranceLower : null,
+            CustomCode = custom ? _toleranceCode : null,
         }.Normalised();
 
         var build = HoleRules.Build(spec, _workbook, Math.Max(1, _centreCount));
@@ -2653,7 +2744,8 @@ public sealed class AwbHoleViewModel : ObservableObject
         nameof(SpotfaceDiameterProblem), nameof(SpotfaceDepthProblem), nameof(ShowsThreadDepth),
         nameof(ShowsDrillDepth), nameof(ShowsToleranced), nameof(ShowsCustomTolerance), nameof(ToleranceUpperText),
         nameof(ToleranceLowerText), nameof(ToleranceUpperProblem), nameof(ToleranceLowerProblem), nameof(SeatNote),
-        nameof(ShowsToleranceColour), nameof(ToleranceSwatch), nameof(ToleranceColourText),
+        nameof(ShowsToleranceColour), nameof(ToleranceSwatch), nameof(ToleranceColourText), nameof(HasToleranceCode),
+        nameof(ToleranceCodeProblem),
     ];
 
     private void Reevaluate()
@@ -2707,7 +2799,12 @@ public sealed class AwbHoleViewModel : ObservableObject
                 : HoleRules.FindAnyTolerance(_workbook, _units, _tolerance) is { } any && SameText(any.Name, _tolerance)
                     ? any
                     : null;
-        if (ShowsCustomTolerance && _toleranceUpper is { } customUpper && _toleranceLower is { } customLower)
+        if (HasToleranceCode)
+        {
+            // A Custom code shows as an ISO row's does (task 150).
+            tolerance = _toleranceCode!.Trim();
+        }
+        else if (ShowsCustomTolerance && _toleranceUpper is { } customUpper && _toleranceLower is { } customLower)
         {
             tolerance = HoleToleranceOption.LimitsText(customUpper, customLower, _units);
         }
@@ -2837,12 +2934,20 @@ public sealed class AwbHoleViewModel : ObservableObject
     /// A box's text set by the window: applied at once without a typing timer, else kept as typed and applied after
     /// the pause (task 130).
     /// </summary>
-    private void SetText(HoleField field, string? text, string textProperty, Action<decimal?> set)
+    private void SetText(HoleField field, string? text, string textProperty, Action<decimal?> set) =>
+        SetRawText(field, text, textProperty, raw => ApplyText(field, raw, textProperty, set));
+
+    /// <summary>
+    /// A box's text set by the window, applied by <paramref name="apply"/>: at once without a typing timer, else after
+    /// the pause (task 130). <see cref="SetText"/> for the number boxes; the Custom code box's text is applied as it is
+    /// (task 150).
+    /// </summary>
+    private void SetRawText(HoleField field, string? text, string textProperty, Action<string> apply)
     {
         var raw = text ?? "";
         if (_typing is null || _applyingTyping)
         {
-            ApplyText(field, raw, textProperty, set);
+            apply(raw);
             return;
         }
 
@@ -2852,7 +2957,7 @@ public sealed class AwbHoleViewModel : ObservableObject
         }
 
         var wasPending = HasPendingTyping;
-        _drafts[field] = new TypedDraft(raw, textProperty, set);
+        _drafts[field] = new TypedDraft(raw, textProperty, apply);
         _typing.Post(ApplyTypedText);
         if (!wasPending)
         {
@@ -2970,6 +3075,7 @@ public sealed class AwbHoleViewModel : ObservableObject
         HoleField.Diameter => nameof(DiameterProblem),
         HoleField.ToleranceUpper => nameof(ToleranceUpperProblem),
         HoleField.ToleranceLower => nameof(ToleranceLowerProblem),
+        HoleField.ToleranceCode => nameof(ToleranceCodeProblem),
         _ => nameof(DepthProblem),
     };
 

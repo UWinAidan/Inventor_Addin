@@ -205,6 +205,116 @@ public static class Iso286
         }
     }
 
+    /// <summary>The shaft fundamental deviation letters covered, as ISO writes them (task 150).</summary>
+    public static IReadOnlyList<string> ShaftLetters { get; } = new[] { "f", "g", "h", "js", "k", "m", "n", "p" };
+
+    /// <summary>
+    /// The limits of any ISO tolerance class typed as a Custom code (task 150; spec 09, "Toleranced clearance and Simple
+    /// holes"): capital letters are a hole class (<see cref="HoleLimits"/>, for example H7), lowercase letters a shaft
+    /// class (<see cref="ShaftLimits"/>, for example k6). Case is kept as typed, since H7 and h7 are different classes; a
+    /// letter in mixed case (Js7) is refused. Never throws.
+    /// </summary>
+    public static Iso286Limits Limits(double nominalMm, string? code)
+    {
+        var trimmed = (code ?? "").Trim();
+        var split = 0;
+        while (split < trimmed.Length && char.IsLetter(trimmed[split]))
+            split++;
+        var letter = trimmed[..split];
+        if (letter.Length > 0 && letter.All(char.IsLower))
+            return ShaftLimits(nominalMm, trimmed);
+        if (letter.Any(char.IsLower) && letter.Any(char.IsUpper))
+            return Iso286Limits.Failure(trimmed, nominalMm,
+                $"'{trimmed}' is not an ISO 286 code; use capitals for a hole (H7) or lowercase for a shaft (h7).");
+        return HoleLimits(nominalMm, trimmed);
+    }
+
+    /// <summary>True when <paramref name="code"/> starts with a lowercase letter: an ISO shaft class, such as k6.</summary>
+    public static bool IsShaftCode(string? code)
+    {
+        var trimmed = (code ?? "").Trim();
+        return trimmed.Length > 0 && char.IsLower(trimmed[0]);
+    }
+
+    /// <summary>
+    /// The upper (es) and lower (ei) deviations of a shaft of <paramref name="nominalMm"/> with ISO tolerance class
+    /// <paramref name="code"/>, for example "k6" (task 150). Covers f, g, h, js, k, m, n and p at IT5 to IT11, sizes over
+    /// 0 up to 500 mm. Lowercase only; a capital letter (a hole) is refused. Never throws.
+    /// </summary>
+    public static Iso286Limits ShaftLimits(double nominalMm, string? code)
+    {
+        var trimmed = (code ?? "").Trim();
+
+        if (double.IsNaN(nominalMm) || double.IsInfinity(nominalMm) || nominalMm <= 0 || nominalMm > MaxNominalMm)
+            return Iso286Limits.Failure(trimmed, nominalMm,
+                $"ISO 286 limits cover sizes over 0 up to {MaxNominalMm:0} mm; {Format(nominalMm)} mm is outside that.");
+
+        if (trimmed.Length == 0)
+            return Iso286Limits.Failure(trimmed, nominalMm, "No ISO 286 code was given.");
+
+        var split = 0;
+        while (split < trimmed.Length && char.IsLetter(trimmed[split]))
+            split++;
+        var letter = trimmed[..split];
+        var gradeText = trimmed[split..];
+
+        if (letter.Length == 0 || gradeText.Length == 0 || !gradeText.All(char.IsAsciiDigit))
+            return Iso286Limits.Failure(trimmed, nominalMm,
+                $"'{trimmed}' is not an ISO 286 code; expected a letter and a grade, for example h7.");
+
+        if (!letter.All(char.IsLower))
+            return Iso286Limits.Failure(trimmed, nominalMm,
+                $"'{trimmed}' is not a shaft tolerance; shafts use lowercase letters, for example h7.");
+
+        if (!ShaftLetters.Contains(letter))
+            return Iso286Limits.Failure(trimmed, nominalMm,
+                $"Shaft deviation '{letter}' is not supported; supported: {string.Join(", ", ShaftLetters)}.");
+
+        if (!int.TryParse(gradeText, out var grade) || grade < MinGrade || grade > MaxGrade
+            || (gradeText.Length > 1 && gradeText[0] == '0'))
+            return Iso286Limits.Failure(trimmed, nominalMm,
+                $"Grade IT{gradeText} is not supported; supported: IT{MinGrade} to IT{MaxGrade}.");
+
+        var step = StepIndex(nominalMm);
+        decimal it = It(step, grade);
+
+        // Shafts mirror the holes' tables: es of f and g is minus the EI of F and G, h has es = 0, and ei of k, m, n
+        // and p is minus the ES of K, M, N and P before delta (ISO 286-1, Table 2). k takes its value only from IT4 to
+        // IT7; above IT7 its ei is 0.
+        switch (letter)
+        {
+            case "h":
+                return Iso286Limits.Success(trimmed, nominalMm, 0m, -it);
+
+            case "f":
+                return Iso286Limits.Success(trimmed, nominalMm, -FLowerUm[step], -FLowerUm[step] - it);
+
+            case "g":
+                return Iso286Limits.Success(trimmed, nominalMm, -GLowerUm[step], -GLowerUm[step] - it);
+
+            case "js":
+            {
+                var half = grade >= 7 && it % 2 != 0 ? (it - 1) / 2 : it / 2;
+                return Iso286Limits.Success(trimmed, nominalMm, half, -half);
+            }
+
+            case "k":
+                return FromLower(trimmed, nominalMm, grade <= 7 ? -KUpperUm[step] : 0, it);
+
+            case "m":
+                return FromLower(trimmed, nominalMm, -MUpperUm[step], it);
+
+            case "n":
+                return FromLower(trimmed, nominalMm, -NUpperUm[step], it);
+
+            case "p":
+                return FromLower(trimmed, nominalMm, -PUpperUm[step], it);
+
+            default:
+                return Iso286Limits.Failure(trimmed, nominalMm, $"Shaft deviation '{letter}' is not supported.");
+        }
+    }
+
     /// <summary>The standard tolerance IT<paramref name="grade"/> in micrometres for a nominal size, IT5 to IT11.</summary>
     /// <exception cref="ArgumentOutOfRangeException">The size or grade is outside the covered range.</exception>
     public static int StandardToleranceUm(double nominalMm, int grade)

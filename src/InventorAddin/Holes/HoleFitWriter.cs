@@ -42,7 +42,7 @@ namespace InventorAddin.Holes
 
             if (geometry.FitColour is { } colour)
             {
-                ApplyTolerance(hole, geometry.Tolerance);
+                ApplyTolerance(hole, geometry.Tolerance, log);
                 ApplyColour(doc, hole, build.Resolved.PrecisionFit, colour);
             }
             else
@@ -55,9 +55,12 @@ namespace InventorAddin.Holes
 
         /// <summary>
         /// The tolerance on the hole diameter: an ISO fit Inventor works out itself, or upper and lower deviations in
-        /// centimetres; none puts the default back. The model stays at the nominal size (spike 081 section 4).
+        /// centimetres; none puts the default back. The model stays at the nominal size (spike 081 section 4). A Custom
+        /// code (task 150) is applied as an ISO row's is: a hole class (H8) as the fit's hole tolerance, a shaft class
+        /// (k6) as its shaft tolerance. Should Inventor refuse a shaft class on a hole diameter, its limits go on as
+        /// deviations instead, with a warning in the log, so the hole keeps the tolerance the window showed.
         /// </summary>
-        public static void ApplyTolerance(HoleFeature hole, HoleTolerance? tolerance)
+        public static void ApplyTolerance(HoleFeature hole, HoleTolerance? tolerance, ILog? log = null)
         {
             if (hole == null)
                 throw new ArgumentNullException(nameof(hole));
@@ -70,10 +73,27 @@ namespace InventorAddin.Holes
                 return;
             }
 
-            if (tolerance.IsoCode is { } code)
-                diameter.Tolerance.SetToFits(ToleranceTypeEnum.kLimitsFitsStackedTolerance, code, "");
+            if (tolerance.IsoCode is { } code && tolerance.IsShaftCode)
+            {
+                try
+                {
+                    diameter.Tolerance.SetToFits(ToleranceTypeEnum.kLimitsFitsStackedTolerance, "", code);
+                }
+                catch (Exception ex)
+                {
+                    (log ?? NullLog.Instance).Warn(LogPrefix + $"Inventor refused the shaft fit {code} on {ComSafe.Get(() => hole.Name)} "
+                        + $"({ex.Message}); its limits are applied as deviations instead.");
+                    diameter.Tolerance.SetToDeviation(tolerance.UpperCm, tolerance.LowerCm);
+                }
+            }
+            else if (tolerance.IsoCode is { } holeCode)
+            {
+                diameter.Tolerance.SetToFits(ToleranceTypeEnum.kLimitsFitsStackedTolerance, holeCode, "");
+            }
             else
+            {
                 diameter.Tolerance.SetToDeviation(tolerance.UpperCm, tolerance.LowerCm);
+            }
 
             diameter.ModelValueType = ModelValueTypeEnum.kNominalValue;
         }

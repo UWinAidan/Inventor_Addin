@@ -1430,6 +1430,20 @@
         <Setter Property="HorizontalAlignment" Value="Left" />
     </Style>
 
+    <!--
+        A depth box whose value can be worked out instead of typed (the Custom Upper and Lower limits, task 150): while
+        read-only it shows the value muted, with the disabled border, and Tab and the arrow keys pass over it.
+    -->
+    <Style x:Key="WorkedOutTextBox" TargetType="{x:Type TextBox}" BasedOn="{StaticResource DepthTextBox}">
+        <Style.Triggers>
+            <Trigger Property="IsReadOnly" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource DisabledBorderBrush}" />
+                <Setter Property="IsTabStop" Value="False" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
     <!-- What an expression in a depth box comes to, "= 31 mm": muted, 12, 8 after the unit. -->
     <Style x:Key="ExpressionValueText" TargetType="{x:Type TextBlock}" BasedOn="{StaticResource SideNoteText}">
         <Setter Property="FontSize" Value="12" />

@@ -22,7 +22,7 @@
         Type and Seat as icon buttons with the chosen name after them, the diagram (collapsible, remembered by the
         add-in), Standard, Size, Fastener type (seated clearance and tapped holes with a row of their size), the seat
         boxes (every seated hole, task 126), Fit with its
-        colour on the same row, Toleranced (Clearance and Simple, task 115), Tolerance (with a toleranced hole's colour, task 138), and the Custom Upper and Lower
+        colour on the same row, Toleranced (Clearance and Simple, task 115), Tolerance (with a toleranced hole's colour, task 138), and the Custom Code (task 150), Upper and Lower
         boxes; section Depth and direction: Termination as icon buttons, Thread depth and
         Drill depth (blind tapped) or Depth, Drill point as icon buttons, Flip, and the centres on one line ("3 picked",
         how to pick in its tooltip; question 15 b, task 118). A field that does not apply is not shown. Each field's problem from HoleRules is shown under it in the error style. The body scrolls
@@ -42,7 +42,7 @@
         type, A counterbore diameter, B counterbore depth, K countersink diameter, G countersink angle (a dowel's seat,
         task 106), I fit, T tolerance, R termination, H thread depth, D drill depth, P depth, O drill point, L flip,
         M diameter (Simple), C spotface diameter (task 114), N toleranced, W the Custom lower limit (task 115; the Custom
-        upper limit has none, its letters are all taken). Full depth (task 136) has none either.
+        upper limit has none, its letters are all taken). Full depth (task 136) and the Custom code (task 150) have none either.
     -->
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="VisibleWhenTrue" />
@@ -420,9 +420,35 @@
                         </StackPanel>
                     </controls:FieldRow>
                     <!--
+                        Custom code (task 150; Aidan, 2026-11-09): an ISO 286 code such as H8 (a hole class) or k6 (a
+                        shaft class), kept in the case typed, on its own row before Upper and Lower (Default): the same
+                        104-wide box as the limits, so the three boxes line up, and a short hint after it that fits the
+                        316-wide content at 150 percent (task 118). Given, Upper and Lower show its limits at the size,
+                        read-only; blank, they are typed as before. Its problem (not a code, or none at this size) shows
+                        under it. No access key: its letters are taken.
+                    -->
+                    <controls:FieldRow Label="Code"
+                                       Target="{Binding ElementName=ToleranceCodeBox}"
+                                       Visibility="{Binding ShowsCustomTolerance, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBox x:Name="ToleranceCodeBox"
+                                         Style="{DynamicResource DepthTextBox}"
+                                         AutomationProperties.Name="ISO 286 code"
+                                         ToolTip="An ISO 286 code: capitals for a hole class (H7), lowercase for a shaft class (k6). Leave it blank to type Upper and Lower."
+                                         Text="{Binding ToleranceCodeText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBlock Style="{DynamicResource SideNoteText}" Text="e.g. H7 or k6" />
+                            </StackPanel>
+                            <TextBlock Style="{DynamicResource ErrorStatusText}"
+                                       Text="{Binding ToleranceCodeProblem, Mode=OneWay}"
+                                       Visibility="{Binding ToleranceCodeProblem, Mode=OneWay, Converter={StaticResource VisibleWhenText}}" />
+                        </StackPanel>
+                    </controls:FieldRow>
+                    <!--
                         Custom limits (task 115): numbers only, signed as typed, in the window's units, relative to the
                         modelled diameter; Upper must be above Lower. Shown while Custom is the tolerance chosen, for a
-                        dowel and for a toleranced hole. Upper has no access key: its letters are all taken.
+                        dowel and for a toleranced hole. Upper has no access key: its letters are all taken. With a Code
+                        (task 150) they show its limits, read-only and muted, and Tab and the arrow keys pass over them.
                     -->
                     <controls:FieldRow Label="Upper"
                                        Target="{Binding ElementName=ToleranceUpperBox}"
@@ -430,7 +456,8 @@
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <TextBox x:Name="ToleranceUpperBox"
-                                         Style="{DynamicResource DepthTextBox}"
+                                         Style="{DynamicResource WorkedOutTextBox}"
+                                         IsReadOnly="{Binding HasToleranceCode, Mode=OneWay}"
                                          Text="{Binding ToleranceUpperText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding LengthUnitText, Mode=OneWay}" />
                             </StackPanel>
@@ -445,7 +472,8 @@
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <TextBox x:Name="ToleranceLowerBox"
-                                         Style="{DynamicResource DepthTextBox}"
+                                         Style="{DynamicResource WorkedOutTextBox}"
+                                         IsReadOnly="{Binding HasToleranceCode, Mode=OneWay}"
                                          Text="{Binding ToleranceLowerText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding LengthUnitText, Mode=OneWay}" />
                             </StackPanel>

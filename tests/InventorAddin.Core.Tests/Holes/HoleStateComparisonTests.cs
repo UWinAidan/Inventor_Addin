@@ -25,12 +25,14 @@ public sealed class HoleStateComparisonTests
     }
 
     [Fact]
-    public void IsoCode_MatchesByCode_IgnoringCase_WhenTheHoleReportsOne()
+    public void IsoCode_MatchesByCode_InItsCase_WhenTheHoleReportsOne()
     {
-        var current = IsoDowel with { ToleranceIsoCode = "g7", ToleranceUpperCm = null, ToleranceLowerCm = null };
+        var current = IsoDowel with { ToleranceIsoCode = " G7 ", ToleranceUpperCm = null, ToleranceLowerCm = null };
 
         Assert.True(HoleStateComparison.Compare(IsoDowel, current).Matches);
         Assert.False(HoleStateComparison.Compare(IsoDowel, current with { ToleranceIsoCode = "H7" }).Matches);
+        // g7 is a shaft class, not the hole class G7 (task 150).
+        Assert.False(HoleStateComparison.Compare(IsoDowel, current with { ToleranceIsoCode = "g7" }).Matches);
     }
 
     [Fact]

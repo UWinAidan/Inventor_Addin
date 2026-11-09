@@ -145,9 +145,13 @@ public sealed record HoleThread(
 /// carry the code, which Inventor applies as a fit and works out itself; the limits are worked out by
 /// <see cref="Iso286"/> for showing and checking. Limits rows and Custom carry no code; Inventor takes the limits as
 /// upper and lower deviations. Deviations are relative to the modelled diameter, in centimetres. A Custom tolerance is
-/// named <see cref="HolePrecision.CustomName"/>.
+/// named <see cref="HolePrecision.CustomName"/>; one given as an ISO 286 code (task 150) carries its code as an ISO row
+/// does, in the case typed: a lowercase code is a shaft class (<see cref="IsShaftCode"/>).
 /// </summary>
 public sealed record HoleTolerance(string Name, string? IsoCode, double UpperCm, double LowerCm)
 {
     public bool IsIso => IsoCode is not null;
+
+    /// <summary>True when <see cref="IsoCode"/> is a shaft class, such as k6 (task 150).</summary>
+    public bool IsShaftCode => Iso286.IsShaftCode(IsoCode);
 }
