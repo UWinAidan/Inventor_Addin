@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Inventor;
 using InventorAddin.Core.Holes;
 using InventorAddin.Core.Logging;
@@ -172,32 +173,31 @@ namespace InventorAddin.Holes
         /// <summary>
         /// Reads the hand colours on <paramref name="hole"/> and the role of each of its faces at
         /// <paramref name="centres"/> (<see cref="HoleFaceColours.Classify"/>). A face whose shape or appearance cannot
-        /// be read counts as having no hand colour.
+        /// be read counts as having no hand colour. The feature's own colour is kept when its source counts as set by hand
+        /// (<see cref="HoleFaceColours.IsFeatureHandSource"/>) and at least one face takes its colour from somewhere other
+        /// than its own override (<see cref="HoleFaceColours.KeepFeatureColour"/>, task 140); the decision is logged at Info.
         /// </summary>
-        public static HandColours ReadHandColours(HoleFeature hole, IReadOnlyList<HoleVector> centres)
+        public static HandColours ReadHandColours(HoleFeature hole, IReadOnlyList<HoleVector> centres, ILog? log = null)
         {
             if (hole == null)
                 throw new ArgumentNullException(nameof(hole));
             if (centres == null)
                 throw new ArgumentNullException(nameof(centres));
-
-            Asset? featureAppearance = null;
-            if (ComSafe.Get(() => (AppearanceSourceTypeEnum?)hole.AppearanceSourceType) == AppearanceSourceTypeEnum.kFeatureAppearance)
-            {
-                Asset? asset = ComSafe.Get(() => hole.Appearance);
-                if (asset != null && IsHandColour(asset))
-                    featureAppearance = asset;
-            }
+            log ??= NullLog.Instance;
 
             var shapes = new List<HoleFaceShape?>();
             var names = new List<string?>();
+            var faceSources = new List<string?>();
             var assets = new Dictionary<string, Asset>(StringComparer.Ordinal);
             foreach (Face face in FacesOf(hole))
             {
                 shapes.Add(ReadShape(face));
 
+                AppearanceSourceTypeEnum? faceSource = ComSafe.Get(() => (AppearanceSourceTypeEnum?)face.AppearanceSourceType);
+                faceSources.Add(faceSource?.ToString());
+
                 string? name = null;
-                if (ComSafe.Get(() => (AppearanceSourceTypeEnum?)face.AppearanceSourceType) == AppearanceSourceTypeEnum.kOverrideAppearance
+                if (faceSource == AppearanceSourceTypeEnum.kOverrideAppearance
                     && ComSafe.Get(() => face.Appearance) is { } asset
                     && IsHandColour(asset))
                 {
@@ -208,6 +208,26 @@ namespace InventorAddin.Holes
 
                 names.Add(name);
             }
+
+            // The feature's own colour (task 140): kept when its source is one set on the feature and at least one
+            // face takes its colour from the feature, so a face override that moves the feature's source cannot
+            // spread one face's colour over the whole new hole.
+            Asset? featureAppearance = null;
+            AppearanceSourceTypeEnum? source = ComSafe.Get(() => (AppearanceSourceTypeEnum?)hole.AppearanceSourceType);
+            Asset? ownAsset = ComSafe.Get(() => hole.Appearance);
+            string? ownName = ownAsset == null ? null : AssetKey(ownAsset);
+            bool handSource = HoleFaceColours.IsFeatureHandSource(source?.ToString());
+            bool keep = HoleFaceColours.KeepFeatureColour(source?.ToString(), faceSources);
+            if (keep && ownAsset != null && IsHandColour(ownAsset))
+                featureAppearance = ownAsset;
+            int overridden = faceSources.Count(f => f == nameof(AppearanceSourceTypeEnum.kOverrideAppearance));
+            string decision = featureAppearance != null
+                ? "kept as the hole's own colour."
+                : handSource && !keep
+                    ? "not kept: no face takes its colour from the hole, so it is not a colour set on the hole."
+                    : "not a colour set on the hole.";
+            log.Info(LogPrefix + $"{ComSafe.Get(() => hole.Name)} reports appearance source {source?.ToString() ?? "(unread)"}, "
+                + $"appearance {ownName ?? "(unread)"}, {overridden} of {faceSources.Count} face(s) overridden; " + decision);
 
             return new HandColours(HoleFaceColours.Classify(shapes, centres, SeatOf(hole)), names, assets, featureAppearance);
         }
@@ -237,6 +257,8 @@ namespace InventorAddin.Holes
                 try
                 {
                     hole.Appearance = featureAppearance;
+                    log.Info(LogPrefix + $"the hole's own colour {AssetKey(featureAppearance)} put back on {name}; it now reports "
+                        + $"appearance source {ComSafe.Get(() => (AppearanceSourceTypeEnum?)hole.AppearanceSourceType)?.ToString() ?? "(unread)"}.");
                 }
                 catch (Exception ex)
                 {

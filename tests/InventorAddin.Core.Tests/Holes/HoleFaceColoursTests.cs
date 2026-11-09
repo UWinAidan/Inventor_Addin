@@ -178,8 +178,9 @@ public sealed class HoleFaceColoursTests
         var oldKeys = HoleFaceColours.Classify(Counterbored, OneCentre, HoleSeat.Counterbore);
         var newKeys = HoleFaceColours.Classify(TappedBlind, OneCentre, HoleSeat.None);
 
-        // Bore blue, floor uncoloured, seat wall red.
-        Assert.Equal([null, "Blue"], HoleFaceColours.Carry(oldKeys, ["Blue", null, "Red"], newKeys));
+        // Bore blue, floor uncoloured, seat wall red. The red goes with the seat; the drill point is new to the hole
+        // (the old one went through), so it takes the bore's blue (task 140).
+        Assert.Equal(["Blue", "Blue"], HoleFaceColours.Carry(oldKeys, ["Blue", null, "Red"], newKeys));
     }
 
     [Fact]
@@ -222,6 +223,103 @@ public sealed class HoleFaceColoursTests
     {
         HoleFaceKey?[] newKeys = [Key(HoleFaceRole.Bore)];
         Assert.Equal([null], HoleFaceColours.Carry([], [], newKeys));
+    }
+
+    [Fact]
+    public void Carry_NewSeatOnABoreColouredHole_TakesTheBoreColour()
+    {
+        // A blind clearance hole, bore blue and drill point uncoloured, made again with a counterbore.
+        HoleFaceShape?[] clearanceBlind = [Cylinder(0, 0.45, -1), Cone(0, -2.1)];
+        HoleFaceShape?[] counterboredBlind = [Cylinder(0, 0.8, -0.3), Plane(0, -0.6), Cylinder(0, 0.45, -1.4), Cone(0, -2.1)];
+        var oldKeys = HoleFaceColours.Classify(clearanceBlind, OneCentre, HoleSeat.None);
+        var newKeys = HoleFaceColours.Classify(counterboredBlind, OneCentre, HoleSeat.Counterbore);
+
+        // Wall and floor are new: they take the bore's blue. The drill point existed uncoloured and stays so.
+        Assert.Equal(["Blue", "Blue", "Blue", null], HoleFaceColours.Carry(oldKeys, ["Blue", null], newKeys));
+    }
+
+    [Fact]
+    public void Carry_NewSeatWithNoBoreColour_TakesNone()
+    {
+        HoleFaceShape?[] clearanceBlind = [Cylinder(0, 0.45, -1), Cone(0, -2.1)];
+        var oldKeys = HoleFaceColours.Classify(clearanceBlind, OneCentre, HoleSeat.None);
+        var newKeys = HoleFaceColours.Classify(Counterbored, OneCentre, HoleSeat.Counterbore);
+
+        // Only the drill point was coloured; the new hole has none, and nothing takes its colour.
+        Assert.Equal([null, null, null], HoleFaceColours.Carry(oldKeys, [null, "Red"], newKeys));
+    }
+
+    [Fact]
+    public void Carry_ExistingSeatWithItsOwnColour_KeepsIt()
+    {
+        // A counterbore with its wall red and bore blue, made again as a spotface.
+        var oldKeys = HoleFaceColours.Classify(Counterbored, OneCentre, HoleSeat.Counterbore);
+        HoleFaceShape?[] spotfaced = [Cylinder(0, 0.8, -0.1), Plane(0, -0.2), Cylinder(0, 0.45, -1.2)];
+        var newKeys = HoleFaceColours.Classify(spotfaced, OneCentre, HoleSeat.Spotface);
+
+        // Bore blue, floor uncoloured (it existed, so it does not take the bore's colour), wall red.
+        Assert.Equal(["Red", null, "Blue"], HoleFaceColours.Carry(oldKeys, ["Blue", null, "Red"], newKeys));
+    }
+
+    [Fact]
+    public void Carry_NewSeatTakesTheBoreColourOfItsOwnCentre()
+    {
+        HoleFaceKey?[] oldKeys = [Key(HoleFaceRole.Bore, 0), Key(HoleFaceRole.Bore, 1)];
+        HoleFaceKey?[] newKeys =
+        [
+            Key(HoleFaceRole.SeatWall, 0), Key(HoleFaceRole.Bore, 0),
+            Key(HoleFaceRole.SeatWall, 1), Key(HoleFaceRole.Bore, 1),
+        ];
+        Assert.Equal([null, null, "Blue", "Blue"], HoleFaceColours.Carry(oldKeys, [null, "Blue"], newKeys));
+    }
+
+    [Fact]
+    public void Carry_NewFaceWithNoKey_TakesNoBoreColour()
+    {
+        HoleFaceKey?[] oldKeys = [Key(HoleFaceRole.Bore), Key(HoleFaceRole.DrillPoint)];
+        HoleFaceKey?[] newKeys = [Key(HoleFaceRole.Bore), null];
+        Assert.Equal(["Blue", null], HoleFaceColours.Carry(oldKeys, ["Blue", null], newKeys));
+    }
+
+    [Theory]
+    [InlineData("kFeatureAppearance", true)]
+    [InlineData("kOverrideAppearance", true)]
+    [InlineData("kBodyAppearance", false)]
+    [InlineData("kPartAppearance", false)]
+    [InlineData("kMaterialAppearance", false)]
+    [InlineData("kDefaultAppearance", false)]
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    public void IsFeatureHandSource_OnlySourcesSetOnTheFeature(string? source, bool expected) =>
+        Assert.Equal(expected, HoleFaceColours.IsFeatureHandSource(source));
+
+    [Fact]
+    public void KeepFeatureColour_SomeFaceTakesTheFeatureColour_Kept()
+    {
+        Assert.True(HoleFaceColours.KeepFeatureColour("kOverrideAppearance", ["kFeatureAppearance", "kFeatureAppearance"]));
+        Assert.True(HoleFaceColours.KeepFeatureColour("kFeatureAppearance", ["kOverrideAppearance", "kFeatureAppearance"]));
+    }
+
+    [Fact]
+    public void KeepFeatureColour_EveryFaceOverridden_NotKept()
+    {
+        // A one-face hole whose bore was coloured by hand: the feature's override source may only reflect that face.
+        Assert.False(HoleFaceColours.KeepFeatureColour("kOverrideAppearance", ["kOverrideAppearance"]));
+        Assert.False(HoleFaceColours.KeepFeatureColour("kOverrideAppearance", ["kOverrideAppearance", null]));
+    }
+
+    [Fact]
+    public void KeepFeatureColour_NoFacesOrNoneRead_NotKept()
+    {
+        Assert.False(HoleFaceColours.KeepFeatureColour("kOverrideAppearance", []));
+        Assert.False(HoleFaceColours.KeepFeatureColour("kOverrideAppearance", [null, ""]));
+    }
+
+    [Fact]
+    public void KeepFeatureColour_InheritedSource_NotKept()
+    {
+        Assert.False(HoleFaceColours.KeepFeatureColour("kBodyAppearance", ["kBodyAppearance"]));
+        Assert.False(HoleFaceColours.KeepFeatureColour(null, ["kFeatureAppearance"]));
     }
 
     [Fact]

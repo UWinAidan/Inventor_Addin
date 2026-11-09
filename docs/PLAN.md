@@ -399,7 +399,7 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 - [x] 136 Full depth checkbox on a Through All tapped hole
 - [x] 137 A seat on a clearance size with no row of its size
 - [x] 138 A colour swatch on a toleranced hole's Tolerance row
-- [ ] 140 Hand colours on a remade hole: the feature's colour kept, new faces take the bore's
+- [x] 140 Hand colours on a remade hole: the feature's colour kept, new faces take the bore's
 - [ ] 141 The sketch point mini toolbar keeps every button, with AWB Hole in Hole's place
 - [ ] 142 The marking menu's Hole follows the takeover
 - [ ] 143 Picked hole centres are highlighted in a part edited in place

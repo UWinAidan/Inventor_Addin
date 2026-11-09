@@ -503,7 +503,7 @@ namespace InventorAddin.Holes
             HoleFitWriter.HandColours? handColours = null;
             try
             {
-                handColours = HoleFitWriter.ReadHandColours(old, centrePoints);
+                handColours = HoleFitWriter.ReadHandColours(old, centrePoints, log);
             }
             catch (Exception ex)
             {
