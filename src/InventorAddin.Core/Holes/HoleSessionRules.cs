@@ -121,10 +121,12 @@ public static class HoleSessionRules
 
     /// <summary>
     /// The hole centres a new hole starts with, as Inventor's Hole picks them (task 117; spec 09, "Hole centres";
-    /// Aidan, 2026-10-24, question 11): the sketch the user selected, else the sketch of the points the user selected,
-    /// each with all its hole centres, used by a feature or not (task 094: a selection wins); else, per point, the
-    /// newest visible sketch that has hole-centre points no feature uses yet, with only those points. A sketch whose
-    /// centres are all used is skipped for the next newest. <see cref="DefaultCentresFrom.None"/> when there is none.
+    /// Aidan, 2026-10-24, question 11): the sketch the user selected, with its free hole centres (those no feature uses
+    /// yet), or all of them when every one is used (task 154; Aidan, 2026-11-10, checklist 117-4; a selection wins,
+    /// task 094); else the sketch of the points the user selected, with all its hole centres, used or not; else, per
+    /// point, the newest visible sketch that has hole-centre points no feature uses yet, with only those points. There
+    /// a sketch whose centres are all used is skipped for the next newest. <see cref="DefaultCentresFrom.None"/> when
+    /// there is none.
     /// </summary>
     /// <param name="selectedSketch">The first selected sketch, or null.</param>
     /// <param name="sketchOfSelectedPoint">The sketch of the first selected sketch point, or null.</param>
@@ -133,8 +135,8 @@ public static class HoleSessionRules
     /// lazily.</param>
     /// <param name="holeCentres">A sketch's points marked as hole centres, in sketch order. Asked only for the
     /// chosen selection or for a visible sketch.</param>
-    /// <param name="usedByFeature">Whether a feature already uses a hole-centre point. Asked only when nothing is
-    /// selected.</param>
+    /// <param name="usedByFeature">Whether a feature already uses a hole-centre point. Asked for a selected sketch's
+    /// centres and when nothing is selected, never for the sketch of a selected point.</param>
     public static DefaultCentres<TSketch, TPoint> DefaultCentres<TSketch, TPoint>(
         TSketch? selectedSketch,
         TSketch? sketchOfSelectedPoint,
@@ -150,7 +152,8 @@ public static class HoleSessionRules
         if (selectedSketch is not null)
         {
             var all = holeCentres(selectedSketch).ToList();
-            return new(selectedSketch, all, DefaultCentresFrom.SelectedSketch, all.Count);
+            var (points, allUsed) = FreeOrAll(all, usedByFeature);
+            return new(selectedSketch, points, DefaultCentresFrom.SelectedSketch, all.Count, allUsed);
         }
 
         if (sketchOfSelectedPoint is not null)
@@ -178,22 +181,27 @@ public static class HoleSessionRules
     }
 
     /// <summary>
-    /// The hole centres a sketch clicked in the browser while the window is open gives (task 145; spec 09, "Hole
-    /// centres"; Aidan, 2026-11-09): all its hole-centre points, used by a feature or not, as for a sketch selected
-    /// before the window opens. They replace the picks. A sketch with none leaves the picks as they were, and so do a
-    /// sketch of another document (another part, or the assembly itself, when the part is edited in place) and an
-    /// edit, whose centres stay in the hole's own sketch.
+    /// The hole centres a sketch clicked in the browser while the window is open gives (task 145, changed by task 154;
+    /// spec 09, "Hole centres"; Aidan, 2026-11-10, checklist 145-3): its free hole-centre points, those no feature
+    /// uses yet, or all of them when every one is used, as for a sketch selected before the window opens. A used point
+    /// can still be picked by clicking it. They replace the picks. A sketch with none leaves the picks as they were,
+    /// and so do a sketch of another document (another part, or the assembly itself, when the part is edited in place)
+    /// and an edit, whose centres stay in the hole's own sketch.
     /// </summary>
     /// <param name="edit">The session edits an existing hole.</param>
     /// <param name="inSessionPart">The sketch belongs to the part the session works on.</param>
     /// <param name="holeCentres">The sketch's points marked as hole centres, in sketch order. Asked only for a sketch
     /// of the session's part, and not for an edit.</param>
+    /// <param name="usedByFeature">Whether a feature already uses a hole-centre point. Asked only for the sketch's
+    /// hole centres.</param>
     public static PickedSketchCentres<TPoint> CentresOfPickedSketch<TPoint>(
         bool edit,
         bool inSessionPart,
-        Func<IEnumerable<TPoint>> holeCentres)
+        Func<IEnumerable<TPoint>> holeCentres,
+        Func<TPoint, bool> usedByFeature)
     {
         ArgumentNullException.ThrowIfNull(holeCentres);
+        ArgumentNullException.ThrowIfNull(usedByFeature);
 
         if (!inSessionPart)
         {
@@ -206,9 +214,25 @@ public static class HoleSessionRules
         }
 
         var all = holeCentres().ToList();
-        return all.Count == 0
-            ? new([], PickedSketchOutcome.NoHoleCentres, 0)
-            : new(all, PickedSketchOutcome.Replaced, all.Count);
+        if (all.Count == 0)
+        {
+            return new([], PickedSketchOutcome.NoHoleCentres, 0);
+        }
+
+        var (points, allUsed) = FreeOrAll(all, usedByFeature);
+        return new(points, PickedSketchOutcome.Replaced, all.Count, allUsed);
+    }
+
+    /// <summary>
+    /// A chosen sketch's hole centres (task 154): those no feature uses yet, or all of them when every one is used.
+    /// <c>AllUsed</c> is true only for a sketch that has hole centres and none of them free.
+    /// </summary>
+    private static (List<TPoint> Points, bool AllUsed) FreeOrAll<TPoint>(
+        List<TPoint> all,
+        Func<TPoint, bool> usedByFeature)
+    {
+        var free = all.Where(point => !usedByFeature(point)).ToList();
+        return free.Count > 0 || all.Count == 0 ? (free, false) : (all, true);
     }
 
     /// <summary>What the preview does for a window change.</summary>
@@ -281,7 +305,9 @@ public enum DefaultCentresFrom
     /// <summary>No selection, and no visible sketch has a hole centre no feature uses.</summary>
     None,
 
-    /// <summary>The sketch the user selected: all its hole centres.</summary>
+    /// <summary>
+    /// The sketch the user selected: its hole centres no feature uses, or all of them when every one is used (task 154).
+    /// </summary>
     SelectedSketch,
 
     /// <summary>The sketch of the points the user selected: all its hole centres.</summary>
@@ -298,11 +324,14 @@ public enum DefaultCentresFrom
 /// <param name="Points">The picked centres, in sketch order.</param>
 /// <param name="From">How the sketch and points were chosen.</param>
 /// <param name="HoleCentresInSketch">How many hole-centre points the sketch has, used or not.</param>
+/// <param name="AllUsed">A selected sketch whose hole centres are all used by a feature, so all are picked
+/// (task 154).</param>
 public sealed record DefaultCentres<TSketch, TPoint>(
     TSketch? Sketch,
     IReadOnlyList<TPoint> Points,
     DefaultCentresFrom From,
-    int HoleCentresInSketch)
+    int HoleCentresInSketch,
+    bool AllUsed = false)
     where TSketch : class
 {
     /// <summary>
@@ -311,7 +340,10 @@ public sealed record DefaultCentres<TSketch, TPoint>(
     /// </summary>
     public string? Describe() => From switch
     {
-        DefaultCentresFrom.SelectedSketch => $"selected, all {HoleCentresInSketch} hole centres",
+        DefaultCentresFrom.SelectedSketch when HoleCentresInSketch == 0 => "selected, no hole centres",
+        DefaultCentresFrom.SelectedSketch when AllUsed =>
+            $"selected, all {HoleCentresInSketch} hole centres are used, so all are picked",
+        DefaultCentresFrom.SelectedSketch => $"selected, {Points.Count} free of {HoleCentresInSketch} hole centres",
         DefaultCentresFrom.SketchOfSelectedPoints => $"of the selected points, all {HoleCentresInSketch} hole centres",
         DefaultCentresFrom.NewestWithFreeCentres =>
             $"newest visible with free centres, {Points.Count} of {HoleCentresInSketch} hole centres",
@@ -322,7 +354,9 @@ public sealed record DefaultCentres<TSketch, TPoint>(
 /// <summary>What a sketch clicked in the browser did to the picked centres (task 145).</summary>
 public enum PickedSketchOutcome
 {
-    /// <summary>The picks are now all the sketch's hole centres.</summary>
+    /// <summary>
+    /// The picks are now the sketch's free hole centres, or all of them when every one is used (task 154).
+    /// </summary>
     Replaced,
 
     /// <summary>The sketch has no hole-centre points: the picks are kept.</summary>
@@ -345,10 +379,12 @@ public enum PickedSketchOutcome
 /// <param name="Points">The centres that replace the picks, in sketch order; empty when the picks are kept.</param>
 /// <param name="Outcome">Whether the picks are replaced, and why not.</param>
 /// <param name="HoleCentresInSketch">How many hole-centre points the sketch has, used or not.</param>
+/// <param name="AllUsed">Every hole centre of the sketch is used by a feature, so all are picked (task 154).</param>
 public sealed record PickedSketchCentres<TPoint>(
     IReadOnlyList<TPoint> Points,
     PickedSketchOutcome Outcome,
-    int HoleCentresInSketch)
+    int HoleCentresInSketch,
+    bool AllUsed = false)
 {
     /// <summary>True when the picks are replaced by <see cref="Points"/>.</summary>
     public bool Replaces => Outcome == PickedSketchOutcome.Replaced;
@@ -359,8 +395,10 @@ public sealed record PickedSketchCentres<TPoint>(
         var name = string.IsNullOrWhiteSpace(sketchName) ? "a sketch" : sketchName;
         return Outcome switch
         {
+            PickedSketchOutcome.Replaced when AllUsed =>
+                $"{name} was clicked in the browser: all {HoleCentresInSketch} of its hole centres are used, so all are picked.",
             PickedSketchOutcome.Replaced =>
-                $"{name} was clicked in the browser: all its {HoleCentresInSketch} hole centres are picked.",
+                $"{name} was clicked in the browser: its {Points.Count} free hole centres of {HoleCentresInSketch} are picked.",
             PickedSketchOutcome.NoHoleCentres =>
                 $"{name} was clicked in the browser but has no hole centres; the picks are kept.",
             PickedSketchOutcome.OtherDocument =>

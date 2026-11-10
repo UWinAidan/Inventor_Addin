@@ -360,9 +360,10 @@ namespace InventorAddin.Holes
         }
 
         /// <summary>
-        /// A new hole's centres, as Inventor's Hole picks them (task 117): the selected sketch, else the sketch of the
-        /// selected points, with all their hole centres; else, per point, the newest visible sketch with hole centres
-        /// no hole feature uses yet, and only those.
+        /// A new hole's centres, as Inventor's Hole picks them (tasks 117 and 154): the selected sketch with its free
+        /// hole centres, or all of them when every one is used; else the sketch of the selected points with all its
+        /// hole centres; else, per point, the newest visible sketch with hole centres no hole feature uses yet, and
+        /// only those.
         /// </summary>
         private void StartDefaultPicks()
         {
@@ -462,14 +463,23 @@ namespace InventorAddin.Holes
         /// <summary>
         /// The sketch points the part's hole features already use as centres (task 117). Only hole features are read:
         /// they are what uses hole-centre points (Default, task 117). Read once, when the first point is asked about.
+        /// <paramref name="except"/> is left out: the session's own preview hole, whose centres are the picks, not
+        /// points another feature uses (task 154). It is matched as the same object or by its name.
         /// </summary>
-        private List<UsedCentre> CentresUsedByHoles()
+        private List<UsedCentre> CentresUsedByHoles(HoleFeature? except = null)
         {
             var used = new List<UsedCentre>();
+            string? exceptName = except == null ? null : ComSafe.Get(() => except.Name);
             ComSafe.Run(() =>
             {
                 foreach (HoleFeature hole in _doc.ComponentDefinition.Features.HoleFeatures)
                 {
+                    if (except != null
+                        && (ReferenceEquals(hole, except)
+                            || (!string.IsNullOrEmpty(exceptName)
+                                && string.Equals(ComSafe.Get(() => hole.Name), exceptName, StringComparison.Ordinal))))
+                        continue;
+
                     ObjectCollection? points = ComSafe.Get(() => hole.HoleCenterPoints);
                     if (points == null)
                         continue;
@@ -658,8 +668,9 @@ namespace InventorAddin.Holes
         }
 
         /// <summary>
-        /// A sketch clicked in the browser (task 145): all its hole centres replace the picks, as for a sketch
-        /// selected before the window opens, and the sketch is shown as the default sketch is (<see cref="HoleSessionRules.CentresOfPickedSketch"/>). A
+        /// A sketch clicked in the browser (tasks 145 and 154): its free hole centres, or all of them when every one is
+        /// used by a hole, replace the picks, as for a sketch selected before the window opens, and the sketch is shown
+        /// as the default sketch is (<see cref="HoleSessionRules.CentresOfPickedSketch"/>). A
         /// sketch picked in the graphics window is not taken: there only points are picked. Returns true when the
         /// picks changed. What happened is logged either way, with the selection device Inventor reported.
         /// </summary>
@@ -673,8 +684,12 @@ namespace InventorAddin.Holes
                 return false;
             }
 
+            List<UsedCentre>? used = null;
             PickedSketchCentres<SketchPoint> chosen = HoleSessionRules.CentresOfPickedSketch(
-                _edit, InSessionPart(sketch), () => HoleCentres(sketch));
+                _edit,
+                InSessionPart(sketch),
+                () => HoleCentres(sketch),
+                point => IsUsed(point, used ??= CentresUsedByHoles(except: _hole)));
             _log.Info(LogPrefix + chosen.Describe(name) + $" (selection device {device})");
             if (!chosen.Replaces)
                 return false;

@@ -179,30 +179,61 @@ public sealed class HoleSessionRulesTests
     }
 
     [Fact]
-    public void DefaultCentres_TheSelectedSketchFirst_WithAllItsCentres()
+    public void DefaultCentres_TheSelectedSketchFirst_WithOnlyItsFreeCentres()
     {
-        var selected = WithCentres("selected", "used a", "free b", "used c");
+        // Task 154: a selected sketch gives the centres no feature uses yet.
+        var selected = WithCentres("selected", "used a", "free b", "used c", "free d", "used e");
         var ofPoint = WithCentres("of point", "free a");
 
         var result = Default(selected, ofPoint, Entry(WithCentres("newest", "free a")));
 
         Assert.Same(selected, result.Sketch);
-        Assert.Equal(["used a", "free b", "used c"], result.Points.Select(p => p.Name));
+        Assert.Equal(["free b", "free d"], result.Points.Select(p => p.Name));
         Assert.Equal(DefaultCentresFrom.SelectedSketch, result.From);
-        Assert.Equal("selected, all 3 hole centres", result.Describe());
+        Assert.Equal(5, result.HoleCentresInSketch);
+        Assert.False(result.AllUsed);
+        Assert.Equal("selected, 2 free of 5 hole centres", result.Describe());
+    }
+
+    [Fact]
+    public void DefaultCentres_ASelectedSketchWithEveryCentreUsed_GivesThemAll()
+    {
+        var selected = WithCentres("selected", "used a", "used b", "used c");
+
+        var result = Default(selected, null, Entry(WithCentres("newest", "free a")));
+
+        Assert.Same(selected, result.Sketch);
+        Assert.Equal(["used a", "used b", "used c"], result.Points.Select(p => p.Name));
+        Assert.Equal(DefaultCentresFrom.SelectedSketch, result.From);
+        Assert.True(result.AllUsed);
+        Assert.Equal("selected, all 3 hole centres are used, so all are picked", result.Describe());
+    }
+
+    [Fact]
+    public void DefaultCentres_ASelectedSketchWithEveryCentreFree_GivesThemAll()
+    {
+        var selected = WithCentres("selected", "free a", "free b");
+
+        var result = Default(selected, null);
+
+        Assert.Equal(["free a", "free b"], result.Points.Select(p => p.Name));
+        Assert.False(result.AllUsed);
+        Assert.Equal("selected, 2 free of 2 hole centres", result.Describe());
     }
 
     [Fact]
     public void DefaultCentres_ThenTheSketchOfTheSelectedPoints_WithAllItsCentres()
     {
-        var ofPoint = WithCentres("of point", "used a", "used b");
+        // A selected point's sketch is unchanged by task 154: all its centres, used or not.
+        var ofPoint = WithCentres("of point", "used a", "free b", "used c");
 
         var result = Default(null, ofPoint, Entry(WithCentres("newest", "free a")));
 
         Assert.Same(ofPoint, result.Sketch);
-        Assert.Equal(["used a", "used b"], result.Points.Select(p => p.Name));
+        Assert.Equal(["used a", "free b", "used c"], result.Points.Select(p => p.Name));
         Assert.Equal(DefaultCentresFrom.SketchOfSelectedPoints, result.From);
-        Assert.Equal("of the selected points, all 2 hole centres", result.Describe());
+        Assert.False(result.AllUsed);
+        Assert.Equal("of the selected points, all 3 hole centres", result.Describe());
     }
 
     [Fact]
@@ -214,6 +245,8 @@ public sealed class HoleSessionRulesTests
 
         Assert.Same(selected, result.Sketch);
         Assert.Empty(result.Points);
+        Assert.False(result.AllUsed);
+        Assert.Equal("selected, no hole centres", result.Describe());
     }
 
     [Fact]
@@ -259,13 +292,13 @@ public sealed class HoleSessionRulesTests
     }
 
     [Fact]
-    public void DefaultCentres_ASelectionDoesNotAskWhichPointsAreUsed()
+    public void DefaultCentres_ASelectedPointsSketchDoesNotAskWhichPointsAreUsed()
     {
         var asked = false;
 
         HoleSessionRules.DefaultCentres(
-            WithCentres("selected", "a"),
             null,
+            WithCentres("of point", "a"),
             Array.Empty<(PtSketch, Func<bool>)>(),
             s => s.Centres,
             _ => asked = true);
@@ -341,29 +374,57 @@ public sealed class HoleSessionRulesTests
         Assert.Equal(expected, HoleSessionRules.FinishFailed(reason));
     }
 
-    // Task 145: a sketch clicked in the browser. A point named "used" is one a feature already uses.
+    // Tasks 145 and 154: a sketch clicked in the browser. A point named "used" is one a feature already uses.
     private static PickedSketchCentres<Pt> Clicked(PtSketch sketch, bool edit = false, bool inSessionPart = true) =>
-        HoleSessionRules.CentresOfPickedSketch(edit, inSessionPart, () => sketch.Centres);
+        HoleSessionRules.CentresOfPickedSketch(
+            edit, inSessionPart, () => sketch.Centres, p => p.Name.StartsWith("used"));
 
     [Fact]
-    public void PickedSketch_GivesAllItsCentres_UsedOrNot_AsForASelectedSketch()
+    public void PickedSketch_GivesOnlyItsFreeCentres_AsForASelectedSketch()
     {
-        var result = Clicked(WithCentres("other", "used a", "free b", "free c"));
+        var result = Clicked(WithCentres("other", "used a", "free b", "free c", "used d", "free e"));
 
         Assert.True(result.Replaces);
         Assert.Equal(PickedSketchOutcome.Replaced, result.Outcome);
-        Assert.Equal(["used a", "free b", "free c"], result.Points.Select(p => p.Name));
-        Assert.Equal(3, result.HoleCentresInSketch);
-        Assert.Equal("other was clicked in the browser: all its 3 hole centres are picked.", result.Describe("other"));
+        Assert.Equal(["free b", "free c", "free e"], result.Points.Select(p => p.Name));
+        Assert.Equal(5, result.HoleCentresInSketch);
+        Assert.False(result.AllUsed);
+        Assert.Equal(
+            "other was clicked in the browser: its 3 free hole centres of 5 are picked.",
+            result.Describe("other"));
     }
 
     [Fact]
-    public void PickedSketch_WithAllCentresUsed_StillPicksThemAll()
+    public void PickedSketch_WithAllCentresUsed_PicksThemAll_AndSaysSo()
     {
-        var result = Clicked(WithCentres("done", "used a", "used b"));
+        var result = Clicked(WithCentres("done", "used a", "used b", "used c", "used d", "used e"));
 
         Assert.True(result.Replaces);
-        Assert.Equal(["used a", "used b"], result.Points.Select(p => p.Name));
+        Assert.Equal(["used a", "used b", "used c", "used d", "used e"], result.Points.Select(p => p.Name));
+        Assert.True(result.AllUsed);
+        Assert.Equal(
+            "done was clicked in the browser: all 5 of its hole centres are used, so all are picked.",
+            result.Describe("done"));
+    }
+
+    [Fact]
+    public void PickedSketch_WithEveryCentreFree_PicksThemAll()
+    {
+        var result = Clicked(WithCentres("new", "free a", "free b"));
+
+        Assert.True(result.Replaces);
+        Assert.Equal(["free a", "free b"], result.Points.Select(p => p.Name));
+        Assert.False(result.AllUsed);
+    }
+
+    [Fact]
+    public void PickedSketch_WithNoHoleCentres_DoesNotAskWhichPointsAreUsed()
+    {
+        var asked = false;
+
+        HoleSessionRules.CentresOfPickedSketch<Pt>(false, true, () => [], _ => asked = true);
+
+        Assert.False(asked);
     }
 
     [Fact]
@@ -390,7 +451,8 @@ public sealed class HoleSessionRulesTests
             {
                 read = true;
                 return [new Pt("free a")];
-            });
+            },
+            _ => false);
 
         Assert.False(result.Replaces);
         Assert.Equal(PickedSketchOutcome.OtherDocument, result.Outcome);
@@ -412,7 +474,8 @@ public sealed class HoleSessionRulesTests
             {
                 read = true;
                 return [new Pt("free a")];
-            });
+            },
+            _ => false);
 
         Assert.False(result.Replaces);
         Assert.Equal(PickedSketchOutcome.Editing, result.Outcome);
