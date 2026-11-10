@@ -60,6 +60,14 @@ namespace InventorAddin.Commands
                 return;
             }
 
+            // The flat pattern uses Inventor's Hole everywhere, H included (Aidan, 2026-11-10; task 153).
+            if (HoleTakeoverRules.AwbHoleRunsInventorHole(true, HoleEditRedirect.InFlatPattern(InventorHost.App)))
+            {
+                AddinServices.Log.Info(HoleTakeoverRules.FlatPatternHoleMessage);
+                InventorHoleCommand.RunInventorsHole(InternalName, DisplayName);
+                return;
+            }
+
             AwbHoleWindowLauncher.ShowNew((PartDocument)doc);
         }
     }

@@ -114,27 +114,55 @@ namespace InventorAddin.Holes
         /// </summary>
         internal void InventorHoleAsked() => _holeRunRequest.Ask();
 
-        /// <summary>Our Edit Feature was pressed: the window opens on the selected hole.</summary>
+        /// <summary>
+        /// Our Edit Feature was pressed: the window opens on the selected hole. In a flat pattern, where it is not put on
+        /// the menus but one built just before could still show it, Inventor's own Edit Feature runs instead (task 153).
+        /// </summary>
         internal void EditFeaturePressed()
         {
             HoleFeature? offered = _offeredHole;
             _offeredHole = null;
 
             PartDocument? doc = CurrentPart();
-            if (doc == null)
+            switch (HoleTakeoverRules.EditFeaturePressedAction(doc != null, InFlatPattern(_app)))
             {
-                _log.Info($"Command {CommandNames.AwbHoleEdit} not run: no part is being edited.");
-                return;
+                case EditFeatureAction.NotRun:
+                    _log.Info($"Command {CommandNames.AwbHoleEdit} not run: no part is being edited.");
+                    return;
+                case EditFeatureAction.RunInventorsEdit:
+                    RunInventorsEdit();
+                    return;
             }
 
-            HoleFeature? hole = SelectedHoleNow(doc) ?? offered;
+            HoleFeature? hole = SelectedHoleNow(doc!) ?? offered;
             if (hole == null)
             {
                 _log.Warn($"Command {CommandNames.AwbHoleEdit} not run: no single hole is selected.");
                 return;
             }
 
-            Open(doc, hole, RouteMenu);
+            Open(doc!, hole, RouteMenu);
+        }
+
+        /// <summary>
+        /// Inventor's own Edit Feature for the selected hole (task 153), run once our command's event has returned, as
+        /// task 129's "Inventor Hole" runs Inventor's Hole. In a flat pattern the backstop in
+        /// <see cref="OnActivateCommand"/> leaves it to run (<see cref="Redirects"/> is false there).
+        /// </summary>
+        private void RunInventorsEdit()
+        {
+            _log.Info(HoleTakeoverRules.FlatPatternEditMessage);
+            System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() =>
+            {
+                try
+                {
+                    _app.CommandManager.ControlDefinitions[HoleEditRules.InventorEditCommand].Execute();
+                }
+                catch (Exception ex)
+                {
+                    _log.Error("Hole edit: running Inventor's Edit Feature in the flat pattern failed.", ex);
+                }
+            }));
         }
 
         // ---- events ----
@@ -216,7 +244,7 @@ namespace InventorAddin.Holes
             try
             {
                 PartDocument? doc = CurrentPart();
-                if (_awbHole == null || !HoleTakeoverRules.TakesOverHoleEntries(_owner(), doc != null, InFlatPattern()))
+                if (_awbHole == null || !HoleTakeoverRules.TakesOverHoleEntries(_owner(), doc != null, InFlatPattern(_app)))
                     return;
 
                 ReplaceRingHole(ring, doc!);
@@ -407,7 +435,7 @@ namespace InventorAddin.Holes
         private void ReplaceMiniToolbarHole(ObjectsEnumerator selected, NameValueMap displayed, PartDocument doc)
         {
             // The Flat Pattern tab keeps Inventor's Hole (task 142).
-            if (_awbHole == null || !HoleTakeoverRules.TakesOverHoleEntries(_owner(), true, InFlatPattern()))
+            if (_awbHole == null || !HoleTakeoverRules.TakesOverHoleEntries(_owner(), true, InFlatPattern(_app)))
                 return;
 
             try
@@ -608,7 +636,7 @@ namespace InventorAddin.Holes
         private void StopInventorsHole(string commandName, bool asked)
         {
             PartDocument? doc = CurrentPart();
-            if (!HoleTakeoverRules.StopsInventorHole(commandName, _owner(), doc != null, InFlatPattern(), asked))
+            if (!HoleTakeoverRules.StopsInventorHole(commandName, _owner(), doc != null, InFlatPattern(_app), asked))
             {
                 if (asked)
                     _log.Info("Hole takeover: Inventor's Hole was asked for; it is left to run.");
@@ -698,18 +726,21 @@ namespace InventorAddin.Holes
         /// True while a flat pattern is being edited (task 142): <c>ActiveEditObject</c> is the <c>FlatPattern</c>, or the
         /// active environment's name says so (<see cref="HoleTakeoverRules.InFlatPattern"/>).
         /// </summary>
-        private bool InFlatPattern()
+        internal static bool InFlatPattern(Application app)
         {
-            object? editing = ComSafe.Get(() => _app.ActiveEditObject);
-            string? environment = ComSafe.Get(() => _app.UserInterfaceManager.ActiveEnvironment.InternalName);
+            object? editing = ComSafe.Get(() => app.ActiveEditObject);
+            string? environment = ComSafe.Get(() => app.UserInterfaceManager.ActiveEnvironment.InternalName);
             return HoleTakeoverRules.InFlatPattern(editing is FlatPattern, environment);
         }
 
-        /// <summary>True when editing opens AWB Hole now, with a part being edited.</summary>
+        /// <summary>
+        /// True when editing opens AWB Hole now, with a part being edited, not in its flat pattern: there Edit Feature and
+        /// double-click are left to Inventor (<see cref="HoleTakeoverRules.EditOpensAwbHole"/>; task 153).
+        /// </summary>
         private bool Redirects(out PartDocument? doc)
         {
             doc = CurrentPart();
-            return HoleEditRules.Redirects(_owner(), doc != null);
+            return HoleTakeoverRules.EditOpensAwbHole(_owner(), doc != null, InFlatPattern(_app));
         }
 
         /// <summary>

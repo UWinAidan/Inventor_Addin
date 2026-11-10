@@ -189,6 +189,41 @@ public sealed class HoleTakeoverRulesTests
         Assert.Equal(expected, HoleTakeoverRules.TakesOverHoleEntries(owner, isPart, inFlatPattern));
 
     [Theory]
+    [InlineData(true, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(false, true, false)]
+    [InlineData(false, false, false)]
+    public void AwbHoleRunsInventorHole_OnlyInAPartsFlatPattern(bool isPart, bool inFlatPattern, bool expected) =>
+        Assert.Equal(expected, HoleTakeoverRules.AwbHoleRunsInventorHole(isPart, inFlatPattern));
+
+    [Theory]
+    [InlineData(HoleCommandOwner.Awb, true, false, true)]
+    [InlineData(HoleCommandOwner.Awb, true, true, false)]
+    [InlineData(HoleCommandOwner.Awb, false, false, false)]
+    [InlineData(HoleCommandOwner.Inventor, true, false, false)]
+    [InlineData(HoleCommandOwner.Inventor, true, true, false)]
+    [InlineData(null, true, false, false)]
+    public void EditOpensAwbHole_OutsideTheFlatPatternOnly(
+        HoleCommandOwner? owner, bool isPart, bool inFlatPattern, bool expected) =>
+        Assert.Equal(expected, HoleTakeoverRules.EditOpensAwbHole(owner, isPart, inFlatPattern));
+
+    [Theory]
+    [InlineData(true, false, EditFeatureAction.OpenAwbHole)]
+    [InlineData(true, true, EditFeatureAction.RunInventorsEdit)]
+    [InlineData(false, false, EditFeatureAction.NotRun)]
+    [InlineData(false, true, EditFeatureAction.NotRun)]
+    public void EditFeaturePressed_RunsInventorsEditInAFlatPattern(bool isPart, bool inFlatPattern, EditFeatureAction expected) =>
+        Assert.Equal(expected, HoleTakeoverRules.EditFeaturePressedAction(isPart, inFlatPattern));
+
+    [Fact]
+    public void FlatPatternMessages_NameInventorsCommands()
+    {
+        Assert.Contains("Inventor's Hole", HoleTakeoverRules.FlatPatternHoleMessage);
+        Assert.Contains("flat pattern", HoleTakeoverRules.FlatPatternHoleMessage);
+        Assert.Contains("Inventor's Edit Feature", HoleTakeoverRules.FlatPatternEditMessage);
+    }
+
+    [Theory]
     [InlineData(true, "PMxPartEnvironment", true)]
     [InlineData(true, null, true)]
     [InlineData(false, "PMxPartEnvironment", false)]

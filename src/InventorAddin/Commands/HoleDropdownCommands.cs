@@ -35,9 +35,18 @@ namespace InventorAddin.Commands
 
         protected override void Execute()
         {
-            ILog log = AddinServices.Log;
-            log.Info(HoleTakeoverRules.InventorHoleRunMessage);
+            AddinServices.Log.Info(HoleTakeoverRules.InventorHoleRunMessage);
+            RunInventorsHole(InternalName, DisplayName);
+        }
 
+        /// <summary>
+        /// Runs Inventor's Hole once our command's event has returned, telling the backstop first so it lets this start
+        /// through. Also used by AWB Hole in a flat pattern (task 153). A failure is logged and shown, titled
+        /// <paramref name="displayName"/>.
+        /// </summary>
+        internal static void RunInventorsHole(string internalName, string displayName)
+        {
+            ILog log = AddinServices.Log;
             System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() =>
             {
                 try
@@ -47,9 +56,9 @@ namespace InventorAddin.Commands
                 }
                 catch (Exception ex)
                 {
-                    log.Error($"Command {InternalName}: running Inventor's Hole failed.", ex);
-                    string text = ErrorMessages.CommandFailed(DisplayName, ex, AddinServices.LogFilePath);
-                    Forms.MessageBox.Show(text, DisplayName, Forms.MessageBoxButtons.OK, Forms.MessageBoxIcon.Error);
+                    log.Error($"Command {internalName}: running Inventor's Hole failed.", ex);
+                    string text = ErrorMessages.CommandFailed(displayName, ex, AddinServices.LogFilePath);
+                    Forms.MessageBox.Show(text, displayName, Forms.MessageBoxButtons.OK, Forms.MessageBoxIcon.Error);
                 }
             }));
         }

@@ -418,7 +418,7 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 - [x] 149 No name text after the icon rows
 - [x] 150 Custom tolerance takes a typed ISO 286 code
 - [x] 152 New faces take the bore's hand colour when a hole is changed in place
-- [ ] 153 In a flat pattern, H, double-click and Edit Feature open Inventor's Hole
+- [x] 153 In a flat pattern, H, double-click and Edit Feature open Inventor's Hole
 - [ ] 154 A sketch clicked in the browser, or selected before the window opens, picks its free hole centres
 
 **Order.** 082 and 083, 084, 085, 086 and 087 alongside, then 088, 089, 090. Aidan checked 090 on 2026-10-18; his three bugs and seven requests became tasks 093 to 105 (Aidan, 2026-10-18). Then: 093 to 101 one after another (fixes, then answers and requests), 091, 092, then 102 (mockup). Aidan then checks 091 to 101, approves or changes the mockup, and runs spike 103 with the parent session. Aidan approved the mockup on 2026-10-23 with changes (revised in task 102) and decided dowel seats (task 106). Then 106, 104, 091, 092; spike 103 and 105 with Aidan; and a last check.

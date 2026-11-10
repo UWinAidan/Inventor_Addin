@@ -40,6 +40,19 @@ public enum MiniToolbarStage
     PutBack,
 }
 
+/// <summary>What our Edit Feature does when pressed (task 153).</summary>
+public enum EditFeatureAction
+{
+    /// <summary>No part is being edited: nothing runs.</summary>
+    NotRun,
+
+    /// <summary>The AWB Hole window opens on the selected hole.</summary>
+    OpenAwbHole,
+
+    /// <summary>A flat pattern is being edited: Inventor's own Edit Feature runs for the selected hole.</summary>
+    RunInventorsEdit,
+}
+
 /// <summary>
 /// How a broken mini toolbar swap is undone (task 141): only what changed.
 /// </summary>
@@ -385,6 +398,44 @@ public static class HoleTakeoverRules
             : $"({startedCommand?.Trim()}: the marking menu, a shortcut or the command search)";
         return $"Hole takeover: Inventor's Hole {from} started; {AwbHoleViewModel.CommandName} opens instead.";
     }
+
+    /// <summary>
+    /// Flat Pattern uses Inventor's Hole everywhere (Aidan, 2026-11-10; task 153): when the AWB Hole command starts (its
+    /// H shortcut, or a button) while a part's flat pattern is being edited, it runs Inventor's Hole
+    /// (<see cref="InventorHoleCommand"/>, asked for so the backstop lets it through) instead of opening its window.
+    /// </summary>
+    /// <param name="documentIsPart">Whether the document being edited is a part (a sheet metal part, in a flat pattern).</param>
+    /// <param name="inFlatPattern">Whether its flat pattern is being edited (<see cref="InFlatPattern"/>).</param>
+    public static bool AwbHoleRunsInventorHole(bool documentIsPart, bool inFlatPattern) =>
+        documentIsPart && inFlatPattern;
+
+    /// <summary>The log line when the AWB Hole command runs Inventor's Hole in a flat pattern (task 153).</summary>
+    public const string FlatPatternHoleMessage =
+        AwbHoleViewModel.CommandName + ": a flat pattern is being edited, so Inventor's Hole runs instead (the flat pattern uses Inventor's Hole).";
+
+    /// <summary>
+    /// Whether editing a hole (our Edit Feature put on the menus, a double-click, Inventor's edit stopped by the
+    /// backstop) opens AWB Hole now (task 092): AWB Hole has Hole and a part is being edited
+    /// (<see cref="HoleEditRules.Redirects"/>), and not its flat pattern, where Edit Feature and double-click stay
+    /// Inventor's (Aidan, 2026-11-10; task 153). The same condition as <see cref="TakesOverHoleEntries"/>.
+    /// </summary>
+    public static bool EditOpensAwbHole(HoleCommandOwner? owner, bool documentIsPart, bool inFlatPattern) =>
+        HoleEditRules.Redirects(owner, documentIsPart) && !inFlatPattern;
+
+    /// <summary>
+    /// What our Edit Feature does when pressed (task 153). It is put on the menus only outside a flat pattern, but a menu
+    /// built just before the flat pattern was entered could still show it: there it runs Inventor's edit for the hole.
+    /// </summary>
+    /// <param name="documentIsPart">Whether a part is being edited.</param>
+    /// <param name="inFlatPattern">Whether its flat pattern is being edited.</param>
+    public static EditFeatureAction EditFeaturePressedAction(bool documentIsPart, bool inFlatPattern) =>
+        !documentIsPart ? EditFeatureAction.NotRun
+        : inFlatPattern ? EditFeatureAction.RunInventorsEdit
+        : EditFeatureAction.OpenAwbHole;
+
+    /// <summary>The log line when our Edit Feature, pressed in a flat pattern, runs Inventor's edit (task 153).</summary>
+    public const string FlatPatternEditMessage =
+        "Hole edit: a flat pattern is being edited, so Inventor's Edit Feature runs instead of " + AwbHoleViewModel.CommandName + ".";
 
     /// <summary>
     /// The mini toolbar's entries the swap should leave (task 141): Inventor's, in order, with
