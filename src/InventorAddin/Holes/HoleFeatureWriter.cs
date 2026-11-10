@@ -70,7 +70,8 @@ namespace InventorAddin.Holes
         /// Changes <paramref name="hole"/> in place to <paramref name="geometry"/>: centres, diameter, depth,
         /// termination, seat and drill point. A change between tapped and untapped, between straight and tapered, of
         /// the thread or its tap drill, or of a taper tapped hole's seat, is not made in place, so the feature is made again in the same place in the browser; the result
-        /// then carries the new feature.
+        /// then carries the new feature. On an in-place change, faces the change adds take the bore's hand colour
+        /// (task 152, <see cref="HoleFitWriter.ApplyHandColoursToNewFaces"/>); faces that existed are left as they are.
         /// </summary>
         public static HoleWriteResult Change(
             PartDocument doc, HoleFeature hole, HoleGeometry geometry, ObjectCollection centres, Face? endFace, ILog log)
@@ -92,6 +93,21 @@ namespace InventorAddin.Holes
 
             if (NeedsRecreate(hole, geometry))
                 return Recreate(doc, hole, geometry, centres, endFace, log);
+
+            // The hand colours before the change (task 152): Inventor keeps a face's colour across an in-place change
+            // but makes the faces it adds (a new seat, a new drill point) uncoloured, so those take the bore's colour
+            // afterwards. Reading them never stops the change.
+            IReadOnlyList<HoleVector> centrePoints = HoleFitWriter.CentrePoints(centres);
+            HoleFitWriter.HandColours? handColours = null;
+            try
+            {
+                handColours = HoleFitWriter.ReadHandColours(hole, centrePoints, log);
+            }
+            catch (Exception ex)
+            {
+                log.Warn(LogPrefix + $"the hand colours on {ComSafe.Get(() => hole.Name)} could not be read; new faces take none: "
+                    + ex.Message);
+            }
 
             try
             {
@@ -135,6 +151,20 @@ namespace InventorAddin.Holes
             {
                 log.Warn(LogPrefix + $"Inventor refused the change to {ComSafe.Get(() => hole.Name)}: " + ex.Message);
                 return HoleWriteResult.Refused(HoleFeatureMessages.Refused(ex.Message), hole, notes);
+            }
+
+            if (handColours != null && HoleFaceColours.AnyColour(handColours.Names))
+            {
+                try
+                {
+                    ComSafe.Run(() => doc.Update());
+                    HoleFitWriter.ApplyHandColoursToNewFaces(hole, handColours, geometry.Seat, centrePoints, log);
+                }
+                catch (Exception ex)
+                {
+                    log.Warn(LogPrefix + $"the bore's hand colour could not be put on the new faces of {ComSafe.Get(() => hole.Name)}: "
+                        + ex.Message);
+                }
             }
 
             return Check(doc, hole, geometry, notes, recreated: false, log);

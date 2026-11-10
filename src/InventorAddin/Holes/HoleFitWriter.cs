@@ -289,6 +289,45 @@ namespace InventorAddin.Holes
             if (!HoleFaceColours.AnyColour(colours.Names))
                 return;
 
+            (int kept, int total) = ColourFaces(hole, colours, seat, centres, HoleFaceColours.Carry, name, log);
+            log.Info(LogPrefix + $"hand colours put back on {kept} of {total} face(s) of {name}.");
+        }
+
+        /// <summary>
+        /// After <paramref name="hole"/> was changed in place (task 152), gives the faces the change added, those whose
+        /// role and centre the hole did not have before, the colour <see cref="HoleFaceColours.CarryToNewFaces"/> picks
+        /// from <paramref name="colours"/> (read before the change): the bore's hand colour. Faces that existed keep
+        /// what Inventor kept on them, and the feature's own colour is not written again (Inventor keeps it in place).
+        /// A colour Inventor refuses is logged and left off.
+        /// </summary>
+        /// <param name="seat">The hole's seat after the change, as its geometry has it.</param>
+        public static void ApplyHandColoursToNewFaces(
+            HoleFeature hole, HandColours colours, HoleSeat seat, IReadOnlyList<HoleVector> centres, ILog log)
+        {
+            if (hole == null)
+                throw new ArgumentNullException(nameof(hole));
+            if (colours == null)
+                throw new ArgumentNullException(nameof(colours));
+            if (centres == null)
+                throw new ArgumentNullException(nameof(centres));
+            log ??= NullLog.Instance;
+            if (!HoleFaceColours.AnyColour(colours.Names))
+                return;
+
+            string? name = ComSafe.Get(() => hole.Name);
+            (int coloured, int total) = ColourFaces(hole, colours, seat, centres, HoleFaceColours.CarryToNewFaces, name, log);
+            log.Info(LogPrefix + $"{coloured} new face(s) of {total} on {name} took the bore's hand colour after the change in place.");
+        }
+
+        /// <summary>
+        /// Classifies the hole's faces now and puts on each the colour <paramref name="carry"/> picks for it; returns
+        /// how many faces took a colour and how many the hole has.
+        /// </summary>
+        private static (int Coloured, int Total) ColourFaces(
+            HoleFeature hole, HandColours colours, HoleSeat seat, IReadOnlyList<HoleVector> centres,
+            Func<IReadOnlyList<HoleFaceKey?>, IReadOnlyList<string?>, IReadOnlyList<HoleFaceKey?>, IReadOnlyList<string?>> carry,
+            string? name, ILog log)
+        {
             var faces = new List<Face>();
             var shapes = new List<HoleFaceShape?>();
             foreach (Face face in FacesOf(hole))
@@ -298,8 +337,8 @@ namespace InventorAddin.Holes
             }
 
             IReadOnlyList<HoleFaceKey?> keys = HoleFaceColours.Classify(shapes, centres, seat);
-            IReadOnlyList<string?> carried = HoleFaceColours.Carry(colours.Keys, colours.Names, keys);
-            int kept = 0;
+            IReadOnlyList<string?> carried = carry(colours.Keys, colours.Names, keys);
+            int coloured = 0;
             for (int i = 0; i < faces.Count; i++)
             {
                 if (carried[i] is not { } key || !colours.Assets.TryGetValue(key, out Asset? asset))
@@ -307,15 +346,15 @@ namespace InventorAddin.Holes
                 try
                 {
                     faces[i].Appearance = asset;
-                    kept++;
+                    coloured++;
                 }
                 catch (Exception ex)
                 {
-                    log.Warn(LogPrefix + $"a hand colour could not be put back on a face of {name}: " + ex.Message);
+                    log.Warn(LogPrefix + $"a hand colour could not be put on a face of {name}: " + ex.Message);
                 }
             }
 
-            log.Info(LogPrefix + $"hand colours put back on {kept} of {faces.Count} face(s) of {name}.");
+            return (coloured, faces.Count);
         }
 
         /// <summary>A hand colour is any appearance that is not an AWB fit appearance or the preview appearance.</summary>

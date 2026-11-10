@@ -281,6 +281,82 @@ public sealed class HoleFaceColoursTests
         Assert.Equal(["Blue", null], HoleFaceColours.Carry(oldKeys, ["Blue", null], newKeys));
     }
 
+    [Fact]
+    public void CarryToNewFaces_CounterboreAddedInPlace_OnlyTheNewSeatTakesTheBoreColour()
+    {
+        // Checklist 140-2: a blind clearance hole, bore blue, drill point uncoloured, given a counterbore in place.
+        HoleFaceShape?[] clearanceBlind = [Cylinder(0, 0.45, -1), Cone(0, -2.1)];
+        HoleFaceShape?[] counterboredBlind = [Cylinder(0, 0.8, -0.3), Plane(0, -0.6), Cylinder(0, 0.45, -1.4), Cone(0, -2.1)];
+        var oldKeys = HoleFaceColours.Classify(clearanceBlind, OneCentre, HoleSeat.None);
+        var newKeys = HoleFaceColours.Classify(counterboredBlind, OneCentre, HoleSeat.Counterbore);
+
+        // Wall and floor are new and take blue; the bore keeps its own (Inventor keeps it, so it is left alone), and
+        // the drill point existed uncoloured and stays so.
+        Assert.Equal(["Blue", "Blue", null, null], HoleFaceColours.CarryToNewFaces(oldKeys, ["Blue", null], newKeys));
+    }
+
+    [Fact]
+    public void CarryToNewFaces_CountersinkAddedInPlace_TakesTheBoreColour()
+    {
+        HoleFaceKey?[] oldKeys = [Key(HoleFaceRole.Bore), Key(HoleFaceRole.Bottom)];
+        HoleFaceKey?[] newKeys = [Key(HoleFaceRole.CountersinkCone), Key(HoleFaceRole.Bore), Key(HoleFaceRole.Bottom)];
+        Assert.Equal(["Blue", null, null], HoleFaceColours.CarryToNewFaces(oldKeys, ["Blue", "Red"], newKeys));
+    }
+
+    [Fact]
+    public void CarryToNewFaces_ThroughHoleMadeBlind_DrillPointTakesTheBoreColour()
+    {
+        var oldKeys = HoleFaceColours.Classify(Clearance, OneCentre, HoleSeat.None);
+        HoleFaceShape?[] blind = [Cylinder(0, 0.45, -1), Cone(0, -2.1)];
+        var newKeys = HoleFaceColours.Classify(blind, OneCentre, HoleSeat.None);
+        Assert.Equal([null, "Blue"], HoleFaceColours.CarryToNewFaces(oldKeys, ["Blue"], newKeys));
+    }
+
+    [Fact]
+    public void CarryToNewFaces_ThroughHoleMadeBlindWithFlatBottom_BottomTakesTheBoreColour()
+    {
+        HoleFaceKey?[] oldKeys = [Key(HoleFaceRole.Bore)];
+        HoleFaceKey?[] newKeys = [Key(HoleFaceRole.Bottom), Key(HoleFaceRole.Bore)];
+        Assert.Equal(["Blue", null], HoleFaceColours.CarryToNewFaces(oldKeys, ["Blue"], newKeys));
+    }
+
+    [Fact]
+    public void CarryToNewFaces_ExistingFacesUntouched_EvenWhenTheWholeHoleWasOneColour()
+    {
+        // Every old face blue: the new seat takes blue, the faces that existed are left to Inventor.
+        HoleFaceKey?[] oldKeys = [Key(HoleFaceRole.Bore), Key(HoleFaceRole.DrillPoint)];
+        HoleFaceKey?[] newKeys = [Key(HoleFaceRole.SeatWall), Key(HoleFaceRole.Bore), Key(HoleFaceRole.DrillPoint), null];
+        Assert.Equal(["Blue", null, null, null], HoleFaceColours.CarryToNewFaces(oldKeys, ["Blue", "Blue"], newKeys));
+    }
+
+    [Fact]
+    public void CarryToNewFaces_ExistingUncolouredSeat_StaysUncoloured()
+    {
+        // A counterbore that existed, wall uncoloured, after a diameter change in place: nothing new, nothing coloured.
+        HoleFaceKey?[] keys = [Key(HoleFaceRole.SeatWall), Key(HoleFaceRole.SeatFloor), Key(HoleFaceRole.Bore)];
+        Assert.Equal([null, null, null], HoleFaceColours.CarryToNewFaces(keys, [null, null, "Blue"], keys));
+    }
+
+    [Fact]
+    public void CarryToNewFaces_NewSeatWithNoBoreColour_TakesNone()
+    {
+        HoleFaceKey?[] oldKeys = [Key(HoleFaceRole.Bore), Key(HoleFaceRole.DrillPoint)];
+        HoleFaceKey?[] newKeys = [Key(HoleFaceRole.SeatWall), Key(HoleFaceRole.Bore), Key(HoleFaceRole.DrillPoint)];
+        Assert.Equal([null, null, null], HoleFaceColours.CarryToNewFaces(oldKeys, [null, "Red"], newKeys));
+    }
+
+    [Fact]
+    public void CarryToNewFaces_NewSeatTakesTheBoreColourOfItsOwnCentre()
+    {
+        HoleFaceKey?[] oldKeys = [Key(HoleFaceRole.Bore, 0), Key(HoleFaceRole.Bore, 1)];
+        HoleFaceKey?[] newKeys =
+        [
+            Key(HoleFaceRole.SeatWall, 0), Key(HoleFaceRole.Bore, 0),
+            Key(HoleFaceRole.SeatWall, 1), Key(HoleFaceRole.Bore, 1),
+        ];
+        Assert.Equal([null, null, "Blue", null], HoleFaceColours.CarryToNewFaces(oldKeys, [null, "Blue"], newKeys));
+    }
+
     [Theory]
     [InlineData("kFeatureAppearance", true)]
     [InlineData("kOverrideAppearance", true)]

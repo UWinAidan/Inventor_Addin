@@ -417,7 +417,7 @@ Spike 081 ran first, in six rounds with Aidan on 2026-10-17; tasks 082 to 092 ar
 - [x] 148 AWB icon redesign and light-mode colours: mockup for Aidan
 - [x] 149 No name text after the icon rows
 - [x] 150 Custom tolerance takes a typed ISO 286 code
-- [ ] 152 New faces take the bore's hand colour when a hole is changed in place
+- [x] 152 New faces take the bore's hand colour when a hole is changed in place
 - [ ] 153 In a flat pattern, H, double-click and Edit Feature open Inventor's Hole
 - [ ] 154 A sketch clicked in the browser, or selected before the window opens, picks its free hole centres
 

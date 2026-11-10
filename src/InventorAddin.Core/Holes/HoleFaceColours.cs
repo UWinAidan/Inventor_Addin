@@ -202,6 +202,33 @@ public static class HoleFaceColours
     }
 
     /// <summary>
+    /// The hand colour each face takes after the hole is changed in place (task 152), in the order of
+    /// <paramref name="newKeys"/>; null leaves a face as it is. Inventor keeps a face's colour across an in-place change
+    /// and makes the faces it adds uncoloured, so only a face that is new, one whose role and centre the old hole had no
+    /// face for, takes a colour, by the <see cref="Carry"/> rule: the bore's colour at its centre, or the whole hole's
+    /// one colour. A face the old hole had keeps its own colour or lack of one, and a face with no key takes none (it
+    /// may be one that existed).
+    /// </summary>
+    /// <param name="oldKeys">The hole's face keys before the change (<see cref="Classify"/>).</param>
+    /// <param name="oldColours">The hand colour on each face before the change; null for none.</param>
+    /// <param name="newKeys">The hole's face keys after the change.</param>
+    public static IReadOnlyList<string?> CarryToNewFaces(
+        IReadOnlyList<HoleFaceKey?> oldKeys, IReadOnlyList<string?> oldColours, IReadOnlyList<HoleFaceKey?> newKeys)
+    {
+        IReadOnlyList<string?> carried = Carry(oldKeys, oldColours, newKeys);
+        var oldFaces = new HashSet<HoleFaceKey>(oldKeys.Where(k => k != null).Select(k => k!.Value));
+
+        var result = new string?[newKeys.Count];
+        for (int i = 0; i < newKeys.Count; i++)
+        {
+            if (newKeys[i] is { } key && !oldFaces.Contains(key))
+                result[i] = carried[i];
+        }
+
+        return result;
+    }
+
+    /// <summary>
     /// The appearance sources Inventor reports for a colour the hole inherits rather than one set on it: from the body,
     /// the part, the material, or none at all. Names of Inventor's <c>AppearanceSourceTypeEnum</c>.
     /// </summary>
