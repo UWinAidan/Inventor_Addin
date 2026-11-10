@@ -117,6 +117,10 @@ Folded in from `TODO.md` follow-ups: the empty gap in Part Properties (029), the
 
 Left out until Aidan agrees: the reviewer styling checklist and the PowerShell build script that spec 08 proposes. Task 031 checks the window rules with a test instead of a reviewer checklist; it is a default Aidan can drop.
 
+**Icon redesign** (Aidan, 2026-11-09, from the task 148 mockup): task 151 builds the new window-icon look with the Outline chosen state, ribbon option C, and Aidan's 7j AWB Hole icon. It runs on a new branch off `main` after PR #29 (M4 part 1) is merged.
+
+- [ ] 151 Icon redesign: window icons, Outline chosen state, ribbon option C, and the 7j AWB Hole icon
+
 ### M2: Part creation and numbering (spec 02)
 
 Part numbers `AWB-10001` from a register on the NAS with a local copy on each PC, file names `NAME,AWB-10001.ipt` (name first since 2026-10-11), and the commands that create, copy, rename, print and bulk-update files. Aidan answered the spec's numbering questions on 2026-10-10; the rest have defaults.
