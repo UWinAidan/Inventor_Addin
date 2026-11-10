@@ -6,16 +6,13 @@ Last updated: 2026-11-10
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-10. Branch `claude/m4-hole-generator`, all pushed (latest 90ae133). PR #29 open against `main`; its description has a "Fixes 152 to 154" section with the checklist.
-- Goal: close M4 part 1. Aidan runs `docs/checklists/m4-fixes-152-154.md`; when it passes, PR #29 is merged.
-- Done: Aidan's 140-150 results logged (all passed except 140-2; decisions on Flat Pattern and free centres in DECISIONS.md; 7j SVGs stay as they are). Tasks 152 (5deae2b), 153 (2a63131), 154 (72fdb30): implementer + reviewer, PASS each. Follow-ups in TODO.md.
-- State: build 0 errors, deployed; Core tests 4569 pass. Nothing of 152 to 154 run in Inventor.
-- Next steps:
-  1. Aidan's results for the 152-154 checklist; failures become fix tasks (next number 155).
-  2. After Aidan merges PR #29: delete local spike branches (103, 107, 108, 139; check `git branch`); ask before deleting remote branches.
-  3. Task 151 (icons) on a new branch off `main`, own PR.
-- Gotchas: check `tasklist //FI "IMAGENAME eq Inventor.exe"` before building; `-p:DeployToInventor=false` while it runs. Bash heredocs with apostrophes inside a long multi-file command failed ("unexpected EOF"); use the Write tool for task files. Edit tracking files with Python `newline=''` and an assert per replace. `$TEMP/done.py NNN x` marks a task done in its file and PLAN.md. Numbering timing tests can fail under parallel load.
-- Read first: `docs/checklists/m4-fixes-152-154.md`, `TODO.md` "Next up", `docs/tasks/151-icon-redesign-build.md`.
+- Updated: 2026-11-10. Branch `claude/m1b-icon-redesign` (off `main` at f73cc29), pushed with this handoff only.
+- Done: Aidan's 152-154 check passed; PR #29 merged (M4 part 1 closed). Local spike branches 103, 107, 108, 139 deleted. 17 merged remote branches deleted (Aidan approved).
+- Task 151 (icons): not started. An implementer was launched and stopped before it changed any file. Restart it with `docs/tasks/151-icon-redesign-build.md`, then reviewer, commit, own PR to `main`.
+- Waiting on Aidan: `origin/claude/tasks-026-to-031-e9rrxe` is the one unmerged remote branch (2 commits, tracking edits from M1b, last d6c8411). Its only still-useful content is the "No `UseLayoutRounding` in windows" rule for `CLAUDE.md` and the matching 2026-10-07 Aidan line in `DECISIONS.md` (the code on `main` already follows it). Recommended: add those two lines, then delete the branch. Aidan has not answered.
+- Gotchas: check `tasklist //FI "IMAGENAME eq Inventor.exe"` before building; `-p:DeployToInventor=false` while it runs. Tracking files are CRLF: edit with Python `newline=''`, replace `
+` with the file's line ending, assert per replace. Numbering timing tests can fail under parallel load.
+- Read first: `docs/tasks/151-icon-redesign-build.md`, task 148's Follow-ups, `docs/ui-mockups/awb-icons-redesign.html`.
 
 ## Big items
 
