@@ -2,13 +2,13 @@
 
 Everything that needs doing and is not already a task in `docs/PLAN.md`. Kept current by the parent session: items are added when they come up and removed when they are done or turned into a task. Where the project stands is in `STATUS.md`; why things are the way they are is in `DECISIONS.md`.
 
-Last updated: 2026-11-09
+Last updated: 2026-11-10
 
 ## Next up
 
-1. M4 part 1: the round is planned: tasks 103 to 134 (2026-10-25). Spike 103 is done (rounds 1 and 2 with Aidan, 2026-10-25); it gave tasks 105 and 109 in full and two new tasks, 133 (the mini toolbar's Hole button) and 134 (Save As and Replace renames the occurrence; Aidan's Rename report). 105, 109, 133 and 134 are done (not yet run in Inventor). Spikes 107 and 108 are done (with Aidan, 2026-10-28); task 110 is confirmed from 107's final result (round 4: drill point, seats off the edge and end caps all pass), tasks 114, 115 and 127 are completed from 108. 135, 120, 121, 128, 129, 123, 124, 125, 122, 126, 111, 112, 137 (Aidan's answer to spec 09 question 26), 113, 119, 131, 132, 127, 130, 110, 117, 114, 115, 116, 136, 118 and 138 (swatch on a toleranced hole, Aidan's answer to spec 09 question 28) are done. Aidan checked the round in Inventor (2026-11-07 to 2026-11-09). Tasks 140 to 150 (the fixes and requests from that check) are done (2026-11-09), built on Windows, not yet run in Inventor. Aidan ran the combined check (2026-11-10): everything passed except 140-2, plus two decisions (Flat Pattern, 145-3). Fix tasks 152 to 154 are done (2026-11-10), built and deployed, not yet run in Inventor. **Next:** Aidan's short check, `docs/checklists/m4-fixes-152-154.md`; then PR #29 is merged.
-2. Icon redesign: decided by Aidan (2026-11-09) and planned as task 151 (M1b), to run on a new branch off `main` after PR #29 is merged.
-3. After PR #29 is merged: delete the local spike branches (103, 107, 108, 139). Ask Aidan before deleting any remote branch. **Later, not this round** (Aidan, 2026-10-25): every AWB icon gets a more polished look, done together with the colour option.
+1. M4 part 1: the round is planned: tasks 103 to 134 (2026-10-25). Spike 103 is done (rounds 1 and 2 with Aidan, 2026-10-25); it gave tasks 105 and 109 in full and two new tasks, 133 (the mini toolbar's Hole button) and 134 (Save As and Replace renames the occurrence; Aidan's Rename report). 105, 109, 133 and 134 are done (not yet run in Inventor). Spikes 107 and 108 are done (with Aidan, 2026-10-28); task 110 is confirmed from 107's final result (round 4: drill point, seats off the edge and end caps all pass), tasks 114, 115 and 127 are completed from 108. 135, 120, 121, 128, 129, 123, 124, 125, 122, 126, 111, 112, 137 (Aidan's answer to spec 09 question 26), 113, 119, 131, 132, 127, 130, 110, 117, 114, 115, 116, 136, 118 and 138 (swatch on a toleranced hole, Aidan's answer to spec 09 question 28) are done. Aidan checked the round in Inventor (2026-11-07 to 2026-11-09). Tasks 140 to 150 (the fixes and requests from that check) are done (2026-11-09), built on Windows, not yet run in Inventor. Aidan ran the combined check (2026-11-10): everything passed except 140-2, plus two decisions (Flat Pattern, 145-3). Fix tasks 152 to 154 are done (2026-11-10); Aidan's check of them passed (2026-11-10) and PR #29 was merged, closing M4 part 1.
+2. Icon redesign: decided by Aidan (2026-11-09) and planned as task 151 (M1b), running on its own branch off `main`.
+3. **Later, not this round** (Aidan, 2026-10-25): every AWB icon gets a more polished look, done together with the colour option.
 4. Aidan finishes the remaining Part Properties checks below.
 
 ## Waiting on Aidan: checks in Inventor
@@ -37,10 +37,9 @@ Last updated: 2026-11-09
 - Aidan's requests: type order (144), a browser sketch picks its centres (145), countersink angle Custom... (146), arrow keys between fields (147), icon redesign and light-mode colours, mockup first (148, from 118-10).
 - Noted passes: 114-11 (blind tapped M6 with a 1 mm spotface, thread 7.5, drill 10: the thread starts at the spotface floor and ends 8.5 from the top face, plain bore and point below), 110-4, 118-7, 138-11.
 
-- [ ] **Fixes and requests 140 to 150**: built on Windows (2026-11-09), not yet run in Inventor. Checklist: `docs/checklists/m4-fixes-140-150.md` (also in PR #29's description); its three questions were answered on 2026-11-09 (`DECISIONS.md`). When it passes (after any fixes), PR #29 is merged to close M4 part 1.
+**M4 part 1 fixes 140 to 150** were checked on 2026-11-10 (`docs/checklists/m4-fixes-140-150.md`): everything passed except 140-2, now task 152; Flat Pattern and 145-3 became decisions, now tasks 153 and 154. **Fixes 152 to 154** were checked on 2026-11-10 (`docs/checklists/m4-fixes-152-154.md`): every step passed. PR #29 merged into main on 2026-11-10.
 
 Aidan's first look (2026-11-07), answered 2026-11-09: cut-off text is task 149, a typed ISO code in Custom tolerance is task 150, Flat Pattern keeps Inventor's Hole (`DECISIONS.md`), and dimensions on the preview are parked under "Proposed work".
-- [ ] Delete the local branch `spike/139-selftest` once Aidan no longer needs the self-test (it is never merged or pushed).
 
 From Part Properties (task 019):
 
@@ -107,7 +106,6 @@ Small things noticed while building. None is urgent. The parent turns these into
 
 - Hand colours in place (task 152): if a centre moves more than 0.5 mm in the same change that adds a seat, the new seat takes no colour (old faces are classified against the new centres, as in `Recreate`); reading the old hole's own `HoleCenterPoints` would fix it. `ReadHandColours` logs an Info line on every live edit now; consider Debug.
 - Flat pattern (task 153): the AWB Addin tab's AWB Hole button also runs Inventor's Hole in a flat pattern; change if Aidan prefers a message. Unconfirmed in Inventor: `PartNGxHoleEditCtxCmd` run from our stale Edit Feature edits a flat pattern hole. `HoleEditRules` remarks still say editing does not work in place (out of date since task 105).
-- Free centres (task 154): if checklist step 2 picks 5 not 3, the preview hole was not matched; try matching it by the session's recorded hole name.
 - AWB Hole in place (task 105): check the switch rule with a new, unsaved assembly or part (names are empty; only the object comparison is left). In place, picked sketch points and edited holes are not checked to belong to the part being edited; if Inventor ever offers another component's, guard on the document (reviewer: the double-click would open the window on a hole of another part).
 - Commands in place (task 109): Part Properties' property writes and Generate start their transaction on the edited part, not `ActiveDocument` (only Change beside Material does); 109 checklist step 5 passed (one Undo in the assembly reverts Designer), so this stays as it is. `MaterialFinishCommand`, `AwbHoleCommand` and `HoleEditRedirect` still read their documents directly instead of through `AddinCommand.CommandTargetDocument()`; move them when next touched.
 - Save As and Replace occurrence name (task 134): if the name set fails and the sub-assembly save then fails too, the thrown save message hides the name note (only the log has it); append it. `NewPartCreatorTests` has no direct test of `Notice` with `Note`. `OccurrenceNameKeptMessage` could name the copy's file to rename to. Untested in Inventor: `proxy.NativeObject` after `Replace` accepting a `Name` set, one Undo reverting both, a throwing `Name` set leaving the transaction able to end.
