@@ -468,8 +468,8 @@
         The structure follows WPF's default: a ToggleButton over the whole box opens the list, a ContentPresenter
         shows the selection (through the window's ItemTemplate, which this style leaves alone), and a Popup holds the
         items in a ScrollViewer. The list is at least as wide as the box and grows to fit its entries.
-        Only non-editable dropdowns are styled: this template has no PART_EditableTextBox, so an editable ComboBox
-        would show its selection but could not be typed into. Add an editable template if a window ever needs one.
+        This template has no PART_EditableTextBox, so an editable ComboBox would show its selection but could not be
+        typed into: an editable dropdown uses the EditableComboBox style below.
         Hover lays the same thin TextPrimary veil as the buttons over the box.
     -->
     <Style TargetType="{x:Type ComboBox}">
@@ -569,6 +569,122 @@
                 <Setter Property="Foreground" Value="{DynamicResource DisabledTextBrush}" />
             </Trigger>
         </Style.Triggers>
+    </Style>
+
+    <!--
+        The text box inside an editable dropdown: no border or fill of its own (the dropdown draws them), the shared
+        caret and focus outline. Its right padding leaves room for the dropdown's arrow.
+    -->
+    <Style x:Key="ComboBoxEditableText" TargetType="{x:Type TextBox}">
+        <Setter Property="FocusVisualStyle" Value="{DynamicResource FocusOutline}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="CaretBrush" Value="{DynamicResource TextStrongBrush}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="8,0,28,0" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type TextBox}">
+                    <Border Background="{TemplateBinding Background}">
+                        <ScrollViewer x:Name="PART_ContentHost"
+                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                      Focusable="False"
+                                      HorizontalScrollBarVisibility="Hidden"
+                                      VerticalScrollBarVisibility="Hidden" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        An editable dropdown (the countersink angle, task 127): a box to type in, 104 wide like a depth box, with a list
+        of quick choices behind the arrow. The text box covers the whole box, so it takes the clicks and the focus
+        outline; the arrow on top of its right end opens the list. The popup and the entries are the dropdown's own.
+        The window binds Text, not the selection.
+    -->
+    <Style x:Key="EditableComboBox" TargetType="{x:Type ComboBox}" BasedOn="{StaticResource {x:Type ComboBox}}">
+        <Setter Property="IsEditable" Value="True" />
+        <!-- As in WPF's own theme: the inner text box is the tab stop, so Shift+Tab can leave the box. -->
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="Width" Value="104" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ComboBox}">
+                    <Grid x:Name="TemplateRoot" SnapsToDevicePixels="True">
+                        <Border x:Name="Chrome"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4" />
+                        <Border x:Name="Veil"
+                                Background="{DynamicResource TextPrimaryBrush}"
+                                CornerRadius="4"
+                                Opacity="0"
+                                IsHitTestVisible="False" />
+                        <TextBox x:Name="PART_EditableTextBox"
+                                 Style="{StaticResource ComboBoxEditableText}"
+                                 Foreground="{TemplateBinding Foreground}"
+                                 HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                 IsReadOnly="{Binding IsReadOnly, RelativeSource={RelativeSource TemplatedParent}}" />
+                        <!-- Only the arrow's end of the box opens the list; the rest is for typing. -->
+                        <ToggleButton Width="28"
+                                      HorizontalAlignment="Right"
+                                      Focusable="False"
+                                      ClickMode="Press"
+                                      Foreground="{TemplateBinding Foreground}"
+                                      IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                            <ToggleButton.Template>
+                                <ControlTemplate TargetType="{x:Type ToggleButton}">
+                                    <Border Background="Transparent">
+                                        <Path Margin="0,0,11,0"
+                                              HorizontalAlignment="Right"
+                                              VerticalAlignment="Center"
+                                              Data="M 0,0 L 4,4 L 8,0"
+                                              Stroke="{TemplateBinding Foreground}"
+                                              StrokeThickness="1.5"
+                                              SnapsToDevicePixels="False" />
+                                    </Border>
+                                </ControlTemplate>
+                            </ToggleButton.Template>
+                        </ToggleButton>
+                        <Popup x:Name="PART_Popup"
+                               AllowsTransparency="True"
+                               Placement="Bottom"
+                               Focusable="False"
+                               PopupAnimation="{DynamicResource {x:Static SystemParameters.ComboBoxPopupAnimationKey}}"
+                               IsOpen="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                            <Border Margin="0,2,0,0"
+                                    Padding="2"
+                                    MinWidth="{Binding ActualWidth, ElementName=TemplateRoot}"
+                                    MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                                    Background="{DynamicResource InputBackgroundBrush}"
+                                    BorderBrush="{DynamicResource InputBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    SnapsToDevicePixels="True">
+                                <ScrollViewer Focusable="False"
+                                              HorizontalScrollBarVisibility="Disabled"
+                                              VerticalScrollBarVisibility="Auto">
+                                    <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"
+                                                    SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                                </ScrollViewer>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Veil" Property="Opacity" Value="0.06" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Veil" Property="Opacity" Value="0" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!--
@@ -958,7 +1074,10 @@
 
     <!-- ===== Shared pieces (UI/Controls) ===== -->
 
-    <!-- Header band: icon tile, title, subline; 18 above the first section. -->
+    <!--
+        Header band: icon tile, title, subline; 18 above the first section. A Trailing control (AWB Hole's Units, task
+        118) sits on the header's line against the right edge, 12 after the title; without one nothing is drawn there.
+    -->
     <Style TargetType="{x:Type controls:DialogHeader}">
         <Setter Property="Margin" Value="0,0,0,18" />
         <Setter Property="Template">
@@ -968,6 +1087,7 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <Border Grid.Column="0"
                                 Width="36"
@@ -986,8 +1106,16 @@
                                        Style="{DynamicResource HeaderSublineText}"
                                        Text="{TemplateBinding Subline}" />
                         </StackPanel>
+                        <ContentPresenter x:Name="TrailingPresenter"
+                                          Grid.Column="2"
+                                          Margin="12,0,0,0"
+                                          VerticalAlignment="Center"
+                                          Content="{TemplateBinding Trailing}" />
                     </Grid>
                     <ControlTemplate.Triggers>
+                        <Trigger Property="Trailing" Value="{x:Null}">
+                            <Setter TargetName="TrailingPresenter" Property="Visibility" Value="Collapsed" />
+                        </Trigger>
                         <Trigger Property="Subline" Value="{x:Null}">
                             <Setter TargetName="SublineText" Property="Visibility" Value="Collapsed" />
                         </Trigger>
@@ -1108,6 +1236,21 @@
         </Setter>
     </Style>
 
+    <!--
+        A square of a colour that is data (a dowel hole's fit colour, AWB Hole, task 090): 14 square, radius 3, an input
+        border round it so a light colour still shows on the light theme, 8 before the text beside it. The control sets
+        the fill from the data; nothing here does.
+    -->
+    <Style TargetType="{x:Type controls:ColourSwatch}">
+        <Setter Property="Width" Value="14" />
+        <Setter Property="Height" Value="14" />
+        <Setter Property="CornerRadius" Value="3" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
+        <Setter Property="Margin" Value="0,0,8,0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
     <!-- Row: label column 100 wide, 12 to the value, 9 below each row. -->
     <Style TargetType="{x:Type controls:FieldRow}">
         <Setter Property="Margin" Value="0,0,0,9" />
@@ -1186,6 +1329,465 @@
                         <Trigger Property="Status" Value="">
                             <Setter TargetName="StatusLine" Property="Visibility" Value="Collapsed" />
                             <Setter TargetName="ErrorLine" Property="Visibility" Value="Collapsed" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ===== AWB Hole (task 104) ===== -->
+
+    <!--
+        The AWB Hole window's tighter spacing (Aidan, 2026-10-24, spec 09 question 15; task 118), so the common holes fit
+        at 150 percent on a 1080p screen. Spec 08's spacing table stays for every other window: these styles reach only
+        the window whose root panel is in CompactDialogContent, through its Style.Resources below.
+        Rows 4 apart (9 elsewhere); a section's heading 6 above its first row, and sections 10 apart (9 and 18); the
+        header 12 above the body (18). The gaps are even, so at 150 percent they are whole pixels (DialogWindow's note).
+    -->
+    <Style x:Key="CompactFieldRow" TargetType="{x:Type controls:FieldRow}" BasedOn="{StaticResource {x:Type controls:FieldRow}}">
+        <Setter Property="Margin" Value="0,0,0,4" />
+    </Style>
+
+    <Style x:Key="CompactFormSection" TargetType="{x:Type controls:FormSection}" BasedOn="{StaticResource {x:Type controls:FormSection}}">
+        <Setter Property="Margin" Value="0,0,0,6" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type controls:FormSection}">
+                    <StackPanel>
+                        <StackPanel x:Name="HeadingPanel" Margin="0,0,0,6">
+                            <TextBlock Style="{DynamicResource SectionHeadingText}"
+                                       Text="{TemplateBinding DisplayHeading}"
+                                       AutomationProperties.Name="{TemplateBinding Heading}" />
+                            <Border Height="1" Margin="0,4,0,0" Background="{DynamicResource DividerBrush}" />
+                        </StackPanel>
+                        <ItemsPresenter />
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="HasHeading" Value="False">
+                            <Setter TargetName="HeadingPanel" Property="Visibility" Value="Collapsed" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="CompactDialogHeader" TargetType="{x:Type controls:DialogHeader}" BasedOn="{StaticResource {x:Type controls:DialogHeader}}">
+        <Setter Property="Margin" Value="0,0,0,12" />
+    </Style>
+
+    <!--
+        A compact window's root panel (AWB Hole, Aidan 2026-10-23: 360 wide): as DialogContent, but the content is
+        always 316 wide, so with the 22 margins the window is 360 wide, and 14 above and below (18 elsewhere). Its
+        rows, sections and header take the tighter spacing above (task 118); the label column is unchanged.
+    -->
+    <Style x:Key="CompactDialogContent" TargetType="{x:Type FrameworkElement}" BasedOn="{StaticResource DialogContent}">
+        <Style.Resources>
+            <Style TargetType="{x:Type controls:FieldRow}" BasedOn="{StaticResource CompactFieldRow}" />
+            <Style TargetType="{x:Type controls:FormSection}" BasedOn="{StaticResource CompactFormSection}" />
+            <Style TargetType="{x:Type controls:DialogHeader}" BasedOn="{StaticResource CompactDialogHeader}" />
+        </Style.Resources>
+        <Setter Property="Margin" Value="22,14,22,14" />
+        <Setter Property="MinWidth" Value="316" />
+        <Setter Property="MaxWidth" Value="316" />
+    </Style>
+
+    <!--
+        A line across the whole window above the footer (AWB Hole, mockup choice 13), so a body that scrolls has a
+        visible edge while the footer stays put. It reaches past the content margins to the window's edges; 10 below it
+        (task 118).
+    -->
+    <Style x:Key="FooterDivider" TargetType="{x:Type Border}">
+        <Setter Property="Height" Value="1" />
+        <Setter Property="Margin" Value="-22,0,-22,10" />
+        <Setter Property="Background" Value="{DynamicResource DividerBrush}" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+    </Style>
+
+    <!-- A dropdown beside something on its row (Fit with its colour): 112 wide, kept to the left. -->
+    <Style x:Key="ShortComboBox" TargetType="{x:Type ComboBox}" BasedOn="{StaticResource {x:Type ComboBox}}">
+        <Setter Property="Width" Value="112" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+    </Style>
+
+    <!-- A colour square beside a dropdown on the same row (Fit's colour): 8 after the dropdown, 8 before its name. -->
+    <Style x:Key="SideColourSwatch" TargetType="{x:Type controls:ColourSwatch}" BasedOn="{StaticResource {x:Type controls:ColourSwatch}}">
+        <Setter Property="Margin" Value="8,0,8,0" />
+    </Style>
+
+    <!--
+        A colour square last on its row, with no name after it (a toleranced hole's colour beside Tolerance, task 138):
+        8 after the dropdown and nothing after it, so the dropdown keeps the rest of the 316-wide content.
+    -->
+    <Style x:Key="TrailingColourSwatch" TargetType="{x:Type controls:ColourSwatch}" BasedOn="{StaticResource {x:Type controls:ColourSwatch}}">
+        <Setter Property="Margin" Value="8,0,0,0" />
+    </Style>
+
+    <!-- A depth box: 104 wide, so the unit and the value of an expression fit after it in the 360-wide window. -->
+    <Style x:Key="DepthTextBox" TargetType="{x:Type TextBox}" BasedOn="{StaticResource {x:Type TextBox}}">
+        <Setter Property="Width" Value="104" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+    </Style>
+
+    <!--
+        A depth box whose value can be worked out instead of typed (the Custom Upper and Lower limits, task 150): while
+        read-only it shows the value muted, with the disabled border, and Tab and the arrow keys pass over it.
+    -->
+    <Style x:Key="WorkedOutTextBox" TargetType="{x:Type TextBox}" BasedOn="{StaticResource DepthTextBox}">
+        <Style.Triggers>
+            <Trigger Property="IsReadOnly" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource DisabledBorderBrush}" />
+                <Setter Property="IsTabStop" Value="False" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- What an expression in a depth box comes to, "= 31 mm": muted, 12, 8 after the unit. -->
+    <Style x:Key="ExpressionValueText" TargetType="{x:Type TextBlock}" BasedOn="{StaticResource SideNoteText}">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        <Setter Property="TextWrapping" Value="NoWrap" />
+    </Style>
+
+    <!--
+        One of the AWB Hole icons (UI/Controls/HoleIcon): a 20 by 20 drawing shown 24 square in the button's text colour.
+        The material is filled at 45 percent and outlined; thin lines (arrows, marks) and a heavy line (an end face).
+    -->
+    <Style TargetType="{x:Type controls:HoleIcon}">
+        <Setter Property="Width" Value="24" />
+        <Setter Property="Height" Value="24" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type controls:HoleIcon}">
+                    <Viewbox Stretch="Uniform">
+                        <Canvas Width="20" Height="20">
+                            <Path Data="{TemplateBinding MaterialGeometry}" Fill="{TemplateBinding Foreground}" Opacity="0.45" />
+                            <Path Data="{TemplateBinding MaterialGeometry}"
+                                  Stroke="{TemplateBinding Foreground}"
+                                  StrokeThickness="1.2"
+                                  StrokeLineJoin="Round" />
+                            <Path Data="{TemplateBinding LineGeometry}"
+                                  Stroke="{TemplateBinding Foreground}"
+                                  StrokeThickness="1"
+                                  StrokeLineJoin="Round"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round" />
+                            <Path Data="{TemplateBinding ThickGeometry}"
+                                  Stroke="{TemplateBinding Foreground}"
+                                  StrokeThickness="2.2"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round" />
+                        </Canvas>
+                    </Viewbox>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        The icons (ours, drawn for the task 102 mockup and redrawn after Aidan's comments of 2026-10-23 so no two look
+        alike). Each is in a 20 by 20 box: the part in section with the material shaded and the hole left empty.
+    -->
+    <!-- Type: a plain hole has straight walls; a tapped hole's walls are a deep saw-tooth thread. -->
+    <Geometry x:Key="HoleIcon.Clearance.Material">M2 3H7V17H2Z M18 3H13V17H18Z</Geometry>
+    <Geometry x:Key="HoleIcon.Tapped.Material">M2 3H7.5L5 4.75L7.5 6.5L5 8.25L7.5 10L5 11.75L7.5 13.5L5 15.25L7.5 17H2Z M18 3H12.5L15 4.75L12.5 6.5L15 8.25L12.5 10L15 11.75L12.5 13.5L15 15.25L12.5 17H18Z</Geometry>
+    <!-- Simple (task 119): a wider plain hole with its diameter dimensioned across the top, arrows out to the walls. -->
+    <Geometry x:Key="HoleIcon.Simple.Material">M1 3H5.5V17H1Z M19 3H14.5V17H19Z</Geometry>
+    <Geometry x:Key="HoleIcon.Simple.Line">M6.3 6.5H13.7 M7.8 5L6.3 6.5L7.8 8 M12.2 5L13.7 6.5L12.2 8</Geometry>
+    <!-- Taper Tapped (task 119): the saw-tooth thread of Tapped, narrowing from the top to the bottom. -->
+    <Geometry x:Key="HoleIcon.TaperTapped.Material">M1 3H5L2.94 4.75L5.88 6.5L3.81 8.25L6.75 10L4.69 11.75L7.62 13.5L5.56 15.25L8.5 17H1Z M19 3H15L17.06 4.75L14.12 6.5L16.19 8.25L13.25 10L15.31 11.75L12.38 13.5L14.44 15.25L11.5 17H19Z</Geometry>
+    <!-- Seat: the top of the hole. -->
+    <Geometry x:Key="HoleIcon.SeatNone.Material">M2 4H7.5V17H2Z M18 4H12.5V17H18Z</Geometry>
+    <Geometry x:Key="HoleIcon.SeatNone.Line">M1 4H19</Geometry>
+    <Geometry x:Key="HoleIcon.Counterbore.Material">M2 4H4.5V9.5H7.5V17H2Z M18 4H15.5V9.5H12.5V17H18Z</Geometry>
+    <Geometry x:Key="HoleIcon.Countersink.Material">M2 4H3.5L7.5 9V17H2Z M18 4H16.5L12.5 9V17H18Z</Geometry>
+    <!-- Spotface (task 119): a shallow seat much wider than a counterbore's, leaving a thin lip at the edge. -->
+    <Geometry x:Key="HoleIcon.Spotface.Material">M1 4H3V6H7.5V17H1Z M19 4H17V6H12.5V17H19Z</Geometry>
+    <!-- Termination: Distance is a narrow blind hole with a flat stop and its depth dimensioned beside it. -->
+    <Geometry x:Key="HoleIcon.Distance.Material">M1 4H5V13H10.5V4H13V18H1Z</Geometry>
+    <Geometry x:Key="HoleIcon.Distance.Line">M14.5 4H19 M14.5 13H19 M17 4.6V12.4 M15.6 6L17 4.6L18.4 6 M15.6 11L17 12.4L18.4 11</Geometry>
+    <!-- Through All: through the part, the arrow leaves the bottom. -->
+    <Geometry x:Key="HoleIcon.ThroughAll.Material">M1 3H6V15H1Z M19 3H14V15H19Z</Geometry>
+    <Geometry x:Key="HoleIcon.ThroughAll.Line">M10 1.5V18.5 M8.2 16.7L10 18.5L11.8 16.7</Geometry>
+    <!-- To: through one plate to the face of the next, the face drawn heavy. -->
+    <Geometry x:Key="HoleIcon.ToFace.Material">M1 2H6V9H1Z M19 2H14V9H19Z M1 14H19V19H1Z</Geometry>
+    <Geometry x:Key="HoleIcon.ToFace.Line">M10 2.5V12.5 M8.2 10.7L10 12.5L11.8 10.7</Geometry>
+    <Geometry x:Key="HoleIcon.ToFace.Thick">M1.5 14H18.5</Geometry>
+    <!-- Drill point: a close-up of the bottom, the walls wide apart so the cone angle reads. 118: a shallow cone. -->
+    <Geometry x:Key="HoleIcon.PointShallow.Material">M1 2H3V9L10 13.2L17 9V2H19V18H1Z</Geometry>
+    <!-- 90: a steep cone. -->
+    <Geometry x:Key="HoleIcon.PointSteep.Material">M1 2H3V9L10 16L17 9V2H19V18H1Z</Geometry>
+    <!-- 60 (task 131): a sharp cone, the same width and tip as 90, so it starts almost at the top. -->
+    <Geometry x:Key="HoleIcon.PointSharp.Material">M1 2H3V3.9L10 16L17 3.9V2H19V18H1Z</Geometry>
+    <Geometry x:Key="HoleIcon.FlatBottom.Material">M1 2H3V12H17V2H19V18H1Z</Geometry>
+
+    <!--
+        A button in a row of icon buttons (mockup choice 2): 40 by 28 (32 until task 118), icon only, 4 apart. Muted while not chosen; the
+        mouse over it shows an input border; the chosen one has the icon tile fill, a lighter (label colour) border and
+        the strong text colour, not the accent. Keyboard focus shows the shared Accent outline. Its tooltip and its name
+        for screen readers are the choice's text.
+    -->
+    <Style x:Key="IconChoiceItem" TargetType="{x:Type ListBoxItem}">
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusOutline}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Width" Value="40" />
+        <Setter Property="Height" Value="28" />
+        <Setter Property="Margin" Value="0,0,4,0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="ToolTip" Value="{Binding Text, Mode=OneWay}" />
+        <Setter Property="AutomationProperties.Name" Value="{Binding Text, Mode=OneWay}" />
+        <!-- A choice listed but not offered (HoleOption.IsEnabled; task 114: Counterbore on Taper Tapped) is greyed out, its reason in the tooltip. -->
+        <Setter Property="IsEnabled" Value="{Binding IsEnabled, Mode=OneWay, FallbackValue=True}" />
+        <Setter Property="ToolTipService.ShowOnDisabled" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ListBoxItem}">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="4"
+                            SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+            </Trigger>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="{DynamicResource IconTileBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource TextLabelBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource TextStrongBrush}" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Foreground" Value="{DynamicResource DisabledTextBrush}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!--
+        A row of icon buttons of which one is chosen (UI/Controls/ChoiceList): no frame of its own, the buttons side by
+        side, each showing its option's icon (HoleOption.Icon).
+    -->
+    <Style x:Key="IconChoiceList" TargetType="{x:Type ListBox}">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="KeyboardNavigation.DirectionalNavigation" Value="Contained" />
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled" />
+        <Setter Property="ItemContainerStyle" Value="{StaticResource IconChoiceItem}" />
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="ItemTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <!-- The icon takes the button's text colour, which it inherits. -->
+                    <controls:HoleIcon Icon="{Binding Icon, Mode=OneWay}" />
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ListBox}">
+                    <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        A two-part toggle (Units, mockup choice 1; on the header's line since task 118): one frame in the input border,
+        30 high, the parts side by side with a line between them, 10 either side of each name. The chosen part has the icon tile fill and semibold strong text; the other is muted.
+    -->
+    <Style x:Key="SegmentedChoiceItem" TargetType="{x:Type ListBoxItem}">
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusOutline}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1,0,0,0" />
+        <Setter Property="Padding" Value="10,0,10,0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="AutomationProperties.Name" Value="{Binding Text, Mode=OneWay}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ListBoxItem}">
+                    <Border x:Name="Part"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+                        <ContentPresenter VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="ItemsControl.AlternationIndex" Value="0">
+                            <Setter TargetName="Part" Property="CornerRadius" Value="3,0,0,3" />
+                        </Trigger>
+                        <Trigger Property="ItemsControl.AlternationIndex" Value="1">
+                            <Setter TargetName="Part" Property="CornerRadius" Value="0,3,3,0" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="ItemsControl.AlternationIndex" Value="0">
+                <Setter Property="BorderThickness" Value="0" />
+            </Trigger>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+            </Trigger>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="{DynamicResource IconTileBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource TextStrongBrush}" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="SegmentedChoiceList" TargetType="{x:Type ListBox}">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Height" Value="30" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="AlternationCount" Value="2" />
+        <Setter Property="KeyboardNavigation.DirectionalNavigation" Value="Contained" />
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled" />
+        <Setter Property="ItemContainerStyle" Value="{StaticResource SegmentedChoiceItem}" />
+        <Setter Property="DisplayMemberPath" Value="Text" />
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ListBox}">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="4"
+                            SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+                        <ItemsPresenter />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        The hole diagram (UI/Controls/HoleDiagramView; mockup choice 3): 104 tall (134 until task 118), the full width inside its frame. Its
+        colours are the theme's, never a fit colour: the outline and labels in the primary text colour, the part's edges
+        in the input border, the section hatched in the divider and input border colours, dimensions in the muted text
+        colour, the centre line in the placeholder colour. Labels are Segoe UI 11.
+    -->
+    <Style TargetType="{x:Type controls:HoleDiagramView}">
+        <Setter Property="Height" Value="104" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+        <Setter Property="OutlineBrush" Value="{DynamicResource TextPrimaryBrush}" />
+        <Setter Property="EdgeBrush" Value="{DynamicResource InputBorderBrush}" />
+        <Setter Property="CentreLineBrush" Value="{DynamicResource TextPlaceholderBrush}" />
+        <Setter Property="DimensionBrush" Value="{DynamicResource TextMutedBrush}" />
+        <Setter Property="HatchBrush" Value="{DynamicResource DividerBrush}" />
+        <Setter Property="HatchLineBrush" Value="{DynamicResource InputBorderBrush}" />
+        <Setter Property="ExpressionBrush" Value="{DynamicResource TextMutedBrush}" />
+        <Setter Property="SnapsToDevicePixels" Value="False" />
+    </Style>
+
+    <!--
+        The diagram's frame (mockup choice 12): a CollapsibleSection in a 1 px divider frame, radius 4, 4 below as after a
+        row in this window (task 118). Its 22-high header (24 until task 118) is the button, as a collapsible section's heading is: the chevron, "DIAGRAM" and, while
+        collapsed, the summary in muted text cut short with an ellipsis (its tooltip has it all). Collapsed, only the
+        header shows. Click it, or press Space when it has focus.
+    -->
+    <Style x:Key="DiagramSection" TargetType="{x:Type controls:CollapsibleSection}">
+        <Setter Property="Margin" Value="0,0,0,4" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type controls:CollapsibleSection}">
+                    <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" CornerRadius="4">
+                        <StackPanel>
+                            <ToggleButton FocusVisualStyle="{DynamicResource FocusOutline}"
+                                          Height="22"
+                                          Padding="8,0,8,0"
+                                          HorizontalContentAlignment="Stretch"
+                                          Cursor="Hand"
+                                          AutomationProperties.Name="{TemplateBinding Heading}"
+                                          IsChecked="{Binding IsExpanded, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="{x:Type ToggleButton}">
+                                        <Border Background="Transparent" Padding="{TemplateBinding Padding}">
+                                            <ContentPresenter VerticalAlignment="Center"
+                                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
+                                        </Border>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                                <DockPanel>
+                                    <Path x:Name="Chevron"
+                                          DockPanel.Dock="Left"
+                                          Width="8"
+                                          Height="8"
+                                          Margin="0,0,8,0"
+                                          VerticalAlignment="Center"
+                                          Data="M 0,2 L 4,6 L 8,2"
+                                          Stroke="{DynamicResource SectionHeadingBrush}"
+                                          StrokeThickness="1.5"
+                                          RenderTransformOrigin="0.5,0.5"
+                                          SnapsToDevicePixels="False">
+                                        <Path.RenderTransform>
+                                            <RotateTransform Angle="0" />
+                                        </Path.RenderTransform>
+                                    </Path>
+                                    <TextBlock DockPanel.Dock="Left"
+                                               Style="{DynamicResource SectionHeadingText}"
+                                               VerticalAlignment="Center"
+                                               Text="{TemplateBinding DisplayHeading}" />
+                                    <TextBlock x:Name="SummaryText"
+                                               Style="{DynamicResource SectionSummaryText}"
+                                               Text="{TemplateBinding Summary}"
+                                               ToolTip="{TemplateBinding Summary}"
+                                               Visibility="Collapsed" />
+                                </DockPanel>
+                            </ToggleButton>
+                            <ItemsPresenter x:Name="Rows" />
+                        </StackPanel>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsExpanded" Value="False">
+                            <Setter TargetName="Rows" Property="Visibility" Value="Collapsed" />
+                            <Setter TargetName="SummaryText" Property="Visibility" Value="Visible" />
+                            <Setter TargetName="Chevron" Property="RenderTransform">
+                                <Setter.Value>
+                                    <RotateTransform Angle="-90" />
+                                </Setter.Value>
+                            </Setter>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

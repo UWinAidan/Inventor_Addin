@@ -75,12 +75,13 @@
   </ItemGroup>
 
   <!--
-    The starter library files (task 070), copied to libraries\ in the output so the deploy step below copies them into
+    The starter library files (task 070) and hole workbook (task 086), copied to libraries\ in the output so the deploy step below copies them into
     Inventor's add-in folder; LibraryPaths in Core finds them there when a setting is blank. The .adsklib is copied
     only when it exists, so the build does not fail before task 071 creates it.
   -->
   <ItemGroup>
     <None Include="..\..\libraries\finishes.csv" Link="libraries\finishes.csv" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\libraries\AWB_Holes.xlsx" Link="libraries\AWB_Holes.xlsx" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\libraries\StarterMaterials.adsklib" Link="libraries\StarterMaterials.adsklib" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\..\libraries\StarterMaterials.adsklib')" />
   </ItemGroup>
 

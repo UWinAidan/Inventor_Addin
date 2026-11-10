@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -19,6 +20,9 @@ namespace InventorAddin.UI.Controls
 
         public static readonly DependencyProperty SublineProperty = DependencyProperty.Register(
             nameof(Subline), typeof(string), typeof(DialogHeader), new FrameworkPropertyMetadata(null));
+
+        public static readonly DependencyProperty TrailingProperty = DependencyProperty.Register(
+            nameof(Trailing), typeof(object), typeof(DialogHeader), new FrameworkPropertyMetadata(null, OnTrailingChanged));
 
         static DialogHeader()
         {
@@ -48,6 +52,35 @@ namespace InventorAddin.UI.Controls
         {
             get => (string?)GetValue(SublineProperty);
             set => SetValue(SublineProperty, value);
+        }
+
+        /// <summary>
+        /// A control on the header's line after the title, against the right edge, for example AWB Hole's Units toggle
+        /// (task 118). The title is cut short with an ellipsis before it. Nothing is drawn when it is null, as in every
+        /// other window. It is a logical child of the header, so bindings, names and access keys work as in the body.
+        /// </summary>
+        public object? Trailing
+        {
+            get => GetValue(TrailingProperty);
+            set => SetValue(TrailingProperty, value);
+        }
+
+        protected override IEnumerator LogicalChildren
+        {
+            get
+            {
+                if (Trailing != null)
+                    yield return Trailing;
+            }
+        }
+
+        private static void OnTrailingChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            var header = (DialogHeader)d;
+            if (e.OldValue != null)
+                header.RemoveLogicalChild(e.OldValue);
+            if (e.NewValue != null)
+                header.AddLogicalChild(e.NewValue);
         }
     }
 }

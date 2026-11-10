@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 using Inventor;
+using InventorAddin.Commands;
 using InventorAddin.Core;
 using InventorAddin.UI;
 
@@ -30,6 +31,9 @@ namespace InventorAddin
             AddinServices.Log.Info(
                 $"{Branding.ProductName} {version?.ToString() ?? "unknown"} started in Inventor major version {inventorMajor?.ToString() ?? "unknown"}.");
 
+            // A reload from the Add-In Manager passes false; the ribbon is built the same either way (task 121).
+            AddinServices.Log.Info($"Inventor activated the add-in with firstTime = {firstTime}.");
+
             _ribbon = new RibbonSetup(InventorHost.App, ClientId, AddinServices.Settings, AddinServices.Log);
             _ribbon.Create();
 
@@ -39,6 +43,9 @@ namespace InventorAddin
 
         public void Deactivate()
         {
+            // An open AWB Hole session is cancelled, so the part is left as it was (task 089).
+            AwbHoleWindowLauncher.Shutdown();
+
             _startupTab?.Dispose();
             _startupTab = null;
 

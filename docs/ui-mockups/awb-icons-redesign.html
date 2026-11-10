@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AWB icons redesign</title>
+<!--
+  Source of awb-icons-redesign.png (task 148). A mockup only: nothing here is used by the add-in.
+  Every icon is drawn here by us. The "today" hole icons copy the geometry in
+  src/InventorAddin/UI/Theme/Styles.xaml (HoleIcon.*) and its HoleIcon template; the "today" ribbon icons are the
+  PNG files in src/InventorAddin/UI/Icons, loaded by relative path. No screenshot of any other software is used.
+
+  Render (from the repository root; the page is 1600 wide; render.py-style crop of the empty bottom afterwards):
+    "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --headless --disable-gpu
+      --hide-scrollbars --force-device-scale-factor=1 --window-size=1600,4200
+      --screenshot="<repo>\docs\ui-mockups\awb-icons-redesign.png" "file:///<repo>/docs/ui-mockups/awb-icons-redesign.html"
+  then trim the empty rows at the bottom (the page background, #E9EBEF) with Pillow.
+
+  For the build task:
+  - The hole icon geometry does not change. Only the HoleIcon template and the colours change:
+    material: solid fill (HoleIconMaterial), 45 deg hatch lines clipped to the material, outline 1.3 (HoleIconInk);
+    lines 1.1; the heavy end face 2.4. In WPF the hatch is a Path of parallel lines whose Clip is the material geometry.
+  - Every colour is in the NEW object below, by theme, and is printed on the page with its contrast ratio.
+-->
+<style>
+  :root { --Page: #E9EBEF; --PageText: #1B2029; --PageMuted: #55606F; --Note: #8A5A00; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--Page); color: var(--PageText); font: 13px "Segoe UI", sans-serif; }
+  .page { width: 1600px; padding: 24px 28px 36px; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 4px; }
+  h2 { font-size: 17px; font-weight: 600; margin: 30px 0 4px; }
+  .lede { color: var(--PageMuted); margin: 0 0 10px; max-width: 1480px; line-height: 1.45; }
+  .lede b { color: var(--PageText); }
+  .flex { display: flex; gap: 14px; align-items: flex-start; }
+  .card { border-radius: 8px; padding: 14px 16px 16px; }
+  .card.light { background: #F3F4F6; color: #1B2029; border: 1px solid #C9CED6; }
+  .card.dark { background: #2B303B; color: #E8EBF0; border: 1px solid #2B303B; }
+  .card h3 { margin: 0 0 10px; font-size: 14px; font-weight: 600; }
+  .cap { font-size: 12px; margin: 0 0 8px; }
+  .light .cap { color: #55606F; } .dark .cap { color: #A9B2C1; }
+  .col { display: flex; flex-direction: column; }
+  .divider { width: 1px; align-self: stretch; }
+  .light .divider { background: #C9CED6; } .dark .divider { background: #3D4554; }
+
+  /* window rows: label column 100, buttons 40 x 28, 4 apart, 4 between rows (task 118) */
+  .rows { display: flex; flex-direction: column; gap: 4px; }
+  .row { display: flex; align-items: center; height: 28px; }
+  .row .lab { width: 100px; flex: none; }
+  .light .lab { color: #4A5361; } .dark .lab { color: #B9C1CE; }
+  .btn { width: 40px; height: 28px; margin-right: 4px; border-radius: 4px; border: 1px solid transparent;
+         display: flex; align-items: center; justify-content: center; position: relative; flex: none; }
+  .btn svg { width: 24px; height: 24px; display: block; }
+  .btn.focus::after { content: ""; position: absolute; inset: -4px; border: 2px solid #0F6CB0; border-radius: 6px; }
+  .z15 { zoom: 1.5; }
+  .z3 { zoom: 3; }
+  .tag { font-size: 11px; margin-left: 6px; }
+  .light .tag { color: #667080; } .dark .tag { color: #8F99A9; }
+
+  /* header tile: 36 square, radius 6, the 32 px icon with margin 2 */
+  .tile { width: 36px; height: 36px; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+  .tile img, .tile svg { width: 32px; height: 32px; display: block; }
+
+  /* Units toggle */
+  .seg { display: inline-flex; height: 30px; border-radius: 4px; overflow: hidden; }
+  .seg span { padding: 0 10px; display: flex; align-items: center; }
+
+  table.tok { border-collapse: collapse; font-size: 12px; }
+  table.tok td, table.tok th { padding: 3px 8px; text-align: left; vertical-align: middle; }
+  table.tok th { font-weight: 600; }
+  .light table.tok tr + tr td { border-top: 1px solid #DDE1E7; }
+  .dark table.tok tr + tr td { border-top: 1px solid #3D4554; }
+  .sw { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -3px; margin-right: 6px;
+        border: 1px solid rgba(128,128,128,.5); }
+  .mono { font-family: Consolas, monospace; }
+  .ok { color: #23824A; font-weight: 600; } .low { color: #B3261E; font-weight: 600; }
+  .dark .ok { color: #62CC88; } .dark .low { color: #FF8A80; }
+
+  /* ribbon */
+  .ribbon { display: flex; border-radius: 4px; padding: 4px 0 0; }
+  .panel { display: flex; flex-direction: column; padding: 0 6px; }
+  .panel + .panel { border-left: 1px solid; }
+  .panel .body { display: flex; gap: 2px; align-items: flex-start; height: 72px; }
+  .panel .pname { text-align: center; font-size: 11px; padding: 2px 0 3px; }
+  .big { width: 58px; display: flex; flex-direction: column; align-items: center; padding-top: 3px; font-size: 11px;
+         text-align: center; line-height: 1.15; }
+  .big .ic { width: 32px; height: 32px; margin-bottom: 3px; }
+  .smalls { display: flex; flex-direction: column; gap: 2px; padding-top: 2px; }
+  .small { display: flex; align-items: center; gap: 5px; height: 21px; font-size: 11px; white-space: nowrap; padding-right: 4px; }
+  .small .ic { width: 16px; height: 16px; }
+  .ic img, .ic svg { width: 100%; height: 100%; display: block; }
+  .rlab { font-size: 12px; font-weight: 600; }
+
+  /* option grid */
+  .og { display: grid; grid-template-columns: 150px repeat(8, 1fr); gap: 0; border-radius: 8px; overflow: hidden; }
+  .og .h { font-size: 12px; font-weight: 600; text-align: center; padding: 6px 0 2px; background: #FFFFFF; }
+  .og .hs { font-size: 11px; color: #55606F; text-align: center; padding: 0 0 6px; background: #FFFFFF; }
+  .og .nm { display: flex; align-items: center; padding-left: 10px; background: #FFFFFF; font-size: 12px; }
+  .og .cell { display: flex; align-items: center; justify-content: center; gap: 14px; height: 80px; }
+  .og .cell .i16 { width: 32px; height: 32px; } .og .cell .i32 { width: 64px; height: 64px; }
+  .og .cell svg, .og .cell img { width: 100%; height: 100%; display: block; }
+
+  .words { max-width: 520px; line-height: 1.45; font-size: 12.5px; }
+  .words p { margin: 0 0 6px; }
+  ul.tight { margin: 4px 0 0 18px; padding: 0; line-height: 1.45; }
+  .callout { background: #FFF7E0; border: 1px solid #E8CF8A; border-radius: 6px; padding: 8px 12px; font-size: 12.5px;
+             line-height: 1.45; max-width: 1540px; }
+</style>
+</head>
+<body>
+<div class="page" id="page"></div>
+<script>
+/* ======================================================================================================== */
+/* Colours                                                                                                  */
+/* ======================================================================================================== */
+
+// Spec 08's tokens used here (Colors.Light.xaml / Colors.Dark.xaml).
+const TOKENS = {
+  light: { bg: "#F3F4F6", muted: "#55606F", strong: "#11151C", primary: "#1B2029", label: "#4A5361", tile: "#DDE1E7",
+           inputBg: "#FFFFFF", inputBorder: "#8D96A5", disabled: "#7A8493", accent: "#0F6CB0" },
+  dark:  { bg: "#2B303B", muted: "#A9B2C1", strong: "#FFFFFF", primary: "#E8EBF0", label: "#B9C1CE", tile: "#3A4150",
+           inputBg: "#1F232C", inputBorder: "#56617A", disabled: "#7F8998", accent: "#0F6CB0" },
+};
+
+// Proposed colours (new tokens for the build task).
+const NEW = {
+  light: {
+    ink: "#1B3F73",        // HoleIconInk: outlines, lines, hatch
+    material: "#87A3CB",   // HoleIconMaterial: the part's fill
+    chosenFill: "#FFFFFF", // Outline option: the chosen button's fill (InputBackground)
+    chosenBorder: "#1B3F73", // Outline option: the chosen button's 2 px border (the ink)
+    solidFill: "#1B3F73",  // Solid option: the chosen button's fill
+    solidInk: "#FFFFFF",   // Solid option: the icon's ink on it
+    solidMaterial: "#87A3CB", // Solid option: the icon's material on it (the same material)
+  },
+  dark: {
+    ink: "#D6E4F7",
+    material: "#5F7EAD",
+    chosenFill: "#1F232C",
+    chosenBorder: "#7DB6F2",
+    solidFill: "#3A7AC6",
+    solidInk: "#FFFFFF",
+    solidMaterial: "#C3D9F5",
+  },
+};
+
+// Ribbon (as in ribbon-icons-colour-options.png on claude/ribbon-icon-colour; the ribbon backgrounds are our
+// stand-ins for Inventor's light and dark ribbons, not measured from Inventor).
+const RIB = {
+  light: { bg: "#F3F4F6", text: "#1B2029", sep: "#C9CED6", o: "#3B4350", f: "#FFFFFF", s: "#D5DAE2", blue: "#0F6CB0" },
+  dark:  { bg: "#3A4150", text: "#E8EBF0", sep: "#4E5668", o: "#E3E7EE", f: "#4D5669", s: "#5E687D", blue: "#5CAEEF" },
+};
+// Panel accents (option B, C) and the pale shape tints (option C), light and dark: the colour-options PNG's values.
+const PANEL = {
+  Create:     { light: "#23824A", dark: "#62CC88", tl: "#DCEBE2", td: "#425D5B" },
+  Properties: { light: "#0F6CB0", dark: "#5CAEEF", tl: "#D9E7F2", td: "#415770" },
+  Drawing:    { light: "#C2570C", dark: "#F5A04E", tl: "#F5E4D8", td: "#5F5450" },
+  Developer:  { light: "#7A4CC2", dark: "#B79AF2", tl: "#EAE2F5", td: "#535370" },
+  AWB:        { light: "#0E7C86", dark: "#4FC7CF", tl: "#D8EAEC", td: "#3E5C69" },
+};
+
+/* WCAG 2 contrast ratio */
+function lum(hex) {
+  const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map(x => x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4));
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+}
+function cr(a, b) { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); }
+function mix(a, b, t) { // a over b at opacity t
+  return "#" + [1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16) * t + parseInt(b.slice(i, i + 2), 16) * (1 - t))
+    .toString(16).padStart(2, "0").toUpperCase()).join("");
+}
+
+/* ======================================================================================================== */
+/* Hole icons: geometry copied from Styles.xaml (HoleIcon.{name}.Material / .Line / .Thick)                  */
+/* ======================================================================================================== */
+
+const HOLE = {
+  Clearance:   { m: "M2 3H7V17H2Z M18 3H13V17H18Z" },
+  Tapped:      { m: "M2 3H7.5L5 4.75L7.5 6.5L5 8.25L7.5 10L5 11.75L7.5 13.5L5 15.25L7.5 17H2Z M18 3H12.5L15 4.75L12.5 6.5L15 8.25L12.5 10L15 11.75L12.5 13.5L15 15.25L12.5 17H18Z" },
+  Simple:      { m: "M1 3H5.5V17H1Z M19 3H14.5V17H19Z", l: "M6.3 6.5H13.7 M7.8 5L6.3 6.5L7.8 8 M12.2 5L13.7 6.5L12.2 8" },
+  TaperTapped: { m: "M1 3H5L2.94 4.75L5.88 6.5L3.81 8.25L6.75 10L4.69 11.75L7.62 13.5L5.56 15.25L8.5 17H1Z M19 3H15L17.06 4.75L14.12 6.5L16.19 8.25L13.25 10L15.31 11.75L12.38 13.5L14.44 15.25L11.5 17H19Z" },
+  SeatNone:    { m: "M2 4H7.5V17H2Z M18 4H12.5V17H18Z", l: "M1 4H19" },
+  Counterbore: { m: "M2 4H4.5V9.5H7.5V17H2Z M18 4H15.5V9.5H12.5V17H18Z" },
+  Countersink: { m: "M2 4H3.5L7.5 9V17H2Z M18 4H16.5L12.5 9V17H18Z" },
+  Spotface:    { m: "M1 4H3V6H7.5V17H1Z M19 4H17V6H12.5V17H19Z" },
+  Distance:    { m: "M1 4H5V13H10.5V4H13V18H1Z", l: "M14.5 4H19 M14.5 13H19 M17 4.6V12.4 M15.6 6L17 4.6L18.4 6 M15.6 11L17 12.4L18.4 11" },
+  ThroughAll:  { m: "M1 3H6V15H1Z M19 3H14V15H19Z", l: "M10 1.5V18.5 M8.2 16.7L10 18.5L11.8 16.7" },
+  ToFace:      { m: "M1 2H6V9H1Z M19 2H14V9H19Z M1 14H19V19H1Z", l: "M10 2.5V12.5 M8.2 10.7L10 12.5L11.8 10.7", t: "M1.5 14H18.5" },
+  PointShallow:{ m: "M1 2H3V9L10 13.2L17 9V2H19V18H1Z" },
+  PointSteep:  { m: "M1 2H3V9L10 16L17 9V2H19V18H1Z" },
+  PointSharp:  { m: "M1 2H3V3.9L10 16L17 3.9V2H19V18H1Z" },
+  FlatBottom:  { m: "M1 2H3V12H17V2H19V18H1Z" },
+};
+
+// The rows of the AWB Hole window, in the window's order (Simple first since task 144). chosen: the index shown chosen.
+const ROWS = [
+  { label: "Type", icons: [["Simple", "Simple"], ["Clearance", "Clearance"], ["Tapped", "Tapped"], ["TaperTapped", "Taper Tapped"]], chosen: 1 },
+  { label: "Seat", icons: [["SeatNone", "None"], ["Counterbore", "Counterbore"], ["Countersink", "Countersink"], ["Spotface", "Spotface"]], chosen: 1 },
+  { label: "Termination", icons: [["Distance", "Distance"], ["ThroughAll", "Through All"], ["ToFace", "To"]], chosen: 0 },
+  { label: "Drill point", icons: [["PointShallow", "118 deg"], ["PointSteep", "90 deg"], ["PointSharp", "60 deg"], ["FlatBottom", "Flat"]], chosen: 0 },
+];
+
+let clipId = 0;
+
+// Today's HoleIcon template: one colour (the button's text colour); material filled at 45 percent and outlined 1.2.
+function holeToday(name, fg) {
+  const g = HOLE[name];
+  return `<svg viewBox="0 0 20 20">
+    <path d="${g.m}" fill="${fg}" fill-opacity="0.45"/>
+    <path d="${g.m}" fill="none" stroke="${fg}" stroke-width="1.2" stroke-linejoin="round"/>
+    ${g.l ? `<path d="${g.l}" fill="none" stroke="${fg}" stroke-width="1" stroke-linejoin="round" stroke-linecap="round"/>` : ""}
+    ${g.t ? `<path d="${g.t}" fill="none" stroke="${fg}" stroke-width="2.2" stroke-linecap="round"/>` : ""}
+  </svg>`;
+}
+
+// Proposed template: solid material, 45 deg hatch clipped to it, a firmer outline, the same geometry.
+function holeNew(name, ink, material, opacity = 1) {
+  const g = HOLE[name];
+  const id = "hc" + (clipId++);
+  let hatch = "";
+  for (let k = -20; k <= 20; k += 3.2) hatch += `M${k} 21L${k + 22} -1 `;
+  return `<svg viewBox="0 0 20 20" style="opacity:${opacity}">
+    <defs><clipPath id="${id}"><path d="${g.m}"/></clipPath></defs>
+    <path d="${g.m}" fill="${material}"/>
+    <path d="${hatch}" fill="none" stroke="${ink}" stroke-width="0.7" stroke-opacity="0.55" clip-path="url(#${id})"/>
+    <path d="${g.m}" fill="none" stroke="${ink}" stroke-width="1.3" stroke-linejoin="round"/>
+    ${g.l ? `<path d="${g.l}" fill="none" stroke="${ink}" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round"/>` : ""}
+    ${g.t ? `<path d="${g.t}" fill="none" stroke="${ink}" stroke-width="2.4" stroke-linecap="round"/>` : ""}
+  </svg>`;
+}
+
+// A button in a given look and state. look: "today" | "outline" | "solid". state: rest | hover | chosen | focus | disabled.
+function holeButton(theme, look, name, state) {
+  const T = TOKENS[theme], N = NEW[theme];
+  const chosen = state === "chosen" || state === "focus";
+  let bg = "transparent", border = "transparent", bw = 1, icon;
+  if (look === "today") {
+    let fg = T.muted;
+    if (state === "hover") { border = T.inputBorder; fg = T.primary; }
+    if (chosen) { bg = T.tile; border = T.label; fg = T.strong; }
+    if (state === "disabled") fg = T.disabled;
+    icon = holeToday(name, fg);
+  } else {
+    let ink = N.ink, mat = N.material, op = 1;
+    if (state === "hover") border = T.inputBorder;
+    if (chosen && look === "outline") { bg = N.chosenFill; border = N.chosenBorder; bw = 2; }
+    if (chosen && look === "solid") { bg = N.solidFill; border = N.solidFill; ink = N.solidInk; mat = N.solidMaterial; }
+    if (state === "disabled") op = 0.4;
+    icon = holeNew(name, ink, mat, op);
+  }
+  return `<div class="btn${state === "focus" ? " focus" : ""}" style="background:${bg};border:${bw}px solid ${border}">${icon}</div>`;
+}
+
+function holeRows(theme, look) {
+  return `<div class="rows">` + ROWS.map(r => `<div class="row"><div class="lab">${r.label}</div>` +
+    r.icons.map(([n], i) => holeButton(theme, look, n, i === r.chosen ? "chosen" : "rest")).join("") +
+    (r.tag ? `<span class="tag">${r.tag}</span>` : "") + `</div>`).join("") + `</div>`;
+}
+
+/* ======================================================================================================== */
+/* Ribbon icons in the proposed style (32 box; the 16 px icon is the same drawing at half size here)         */
+/* Classes: b body (fill F, outline O), bs shaded body (fill S), o outline only, a accent line, af accent    */
+/* fill, ab accent fill with outline, at accent tinted fill with accent outline, ah accent fill with a halo   */
+/* in the ribbon colour. w15/w2/w25: line weights at 32 px.                                                   */
+/* ======================================================================================================== */
+
+const NEWRIB = {
+  PartProperties: { panel: "Properties", d: `
+    <path class="b" d="M7.5 2.5H19.5L25.5 8.5V29.5H7.5Z"/>
+    <path class="bs" d="M19.5 2.5V8.5H25.5Z"/>
+    <path class="a w2" d="M11 14H22M11 18.5H22M11 23H17"/>` },
+  Settings: { panel: "AWB", d: `
+    <path class="o w15" d="M3 7H29M3 16H29M3 25H29"/>
+    <circle class="ab" cx="20.5" cy="7" r="3.5"/><circle class="ab" cx="10.5" cy="16" r="3.5"/><circle class="ab" cx="16.5" cy="25" r="3.5"/>` },
+  About: { panel: "AWB", d: `
+    <circle class="b" cx="16" cy="16" r="13.5"/>
+    <circle class="af" cx="16" cy="9.5" r="2"/><rect class="af" x="14.5" y="13" width="3" height="11"/>` },
+  ExportModelData: { panel: "Developer", d: `
+    <path class="b" d="M3.5 14.5H17.5V28.5H3.5Z"/>
+    <path class="b" d="M3.5 14.5L8.5 9.5H22.5L17.5 14.5Z"/>
+    <path class="bs" d="M17.5 14.5L22.5 9.5V23.5L17.5 28.5Z"/>
+    <path class="a w2" d="M22.5 9.5L27 5"/><path class="af" d="M29.5 2.5V10L22 2.5Z"/>` },
+  ExportLibraries: { panel: "Developer", d: `
+    <rect class="b" x="2.5" y="23.5" width="20" height="6"/><path class="o" d="M6.5 23.5V29.5"/>
+    <rect class="bs" x="4.5" y="17.5" width="20" height="6"/><path class="o" d="M20.5 17.5V23.5"/>
+    <rect class="b" x="2.5" y="11.5" width="17" height="6"/><path class="o" d="M6.5 11.5V17.5"/>
+    <path class="a w2" d="M21.5 10.5L27 5"/><path class="af" d="M29.5 2.5V10L22 2.5Z"/>` },
+  NewPart: { panel: "Create", d: `
+    <path class="b" d="M5.5 2.5H17.5L23.5 8.5V29.5H5.5Z"/>
+    <path class="bs" d="M17.5 2.5V8.5H23.5Z"/>
+    <path class="ah" d="M21.5 16.5H26.5V21.5H31.5V26.5H26.5V31.5H21.5V26.5H16.5V21.5H21.5Z"/>` },
+  SaveAsCopy: { panel: "Create", d: `
+    <path class="b" d="M3.5 2.5H14.5L19.5 7.5V23.5H3.5Z"/>
+    <path class="at" d="M11.75 8.75H21.75L27.25 14.25V29.25H11.75Z"/>
+    <path class="af" d="M21.75 8.75V14.25H27.25Z"/>` },
+  SaveAsReplace: { panel: "Create", d: `
+    <path class="b" d="M2.5 16.5H9.5L13.5 20.5V29.5H2.5Z"/><path class="bs" d="M9.5 16.5V20.5H13.5Z"/>
+    <path class="b" d="M18.5 16.5H25.5L29.5 20.5V29.5H18.5Z"/><path class="bs" d="M25.5 16.5V20.5H29.5Z"/>
+    <path class="a w2" d="M8 13A8 8 0 0 1 23.6 10.5"/><path class="af" d="M20 10H28L24 15Z"/>` },
+  CreatePrint: { panel: "Drawing", d: `
+    <rect class="b" x="2.5" y="5.5" width="27" height="21"/>
+    <rect class="bs" x="2.5" y="21.5" width="27" height="5"/><path class="o" d="M18.5 21.5V26.5"/>
+    <rect class="at" x="10.75" y="9.75" width="10.5" height="8"/>` },
+  MassUpdate: { panel: "Properties", d: `
+    <path class="bs" d="M10.5 2.5H29.5V21.5H10.5Z"/>
+    <path class="bs" d="M6.5 6.5H25.5V25.5H6.5Z"/>
+    <path class="b" d="M2.5 10.5H21.5V29.5H2.5Z"/>
+    <path class="a w25" d="M7 20L10.5 23.5L17 17"/>` },
+  MaterialFinish: { panel: "Properties", d: `
+    <circle class="b" cx="16" cy="16" r="13.5"/>
+    <path class="o w15" d="M13.8 7.79A8.5 8.5 0 0 0 7.79 13.8"/>
+    <path class="a w2" d="M9.41 27.09L27.09 9.41M13.37 28.63L28.63 13.37M18.94 28.56L28.56 18.94"/>
+    <circle class="o" cx="16" cy="16" r="13.5"/>` },
+  AwbHole: { panel: "Create", d: `
+    <path class="b" d="M12.5 4.5H3.5V27.5H28.5V4.5H19.5V17L16 20.5L12.5 17Z"/>
+    <path class="a w15" d="M6 15L10 11M6 21L10 17M8 25.5L12.6 20.9M22 11.5L26 7.5M22 17.5L26 13.5M20.5 25.5L26 20"/>
+    <path class="o" d="M12.5 4.5H3.5V27.5H28.5V4.5H19.5V17L16 20.5L12.5 17Z"/>
+    <path class="a" d="M16 1.5V23" stroke-dasharray="4 1.5 1 1.5"/>` },
+};
+
+const RIB_ORDER = [
+  ["PartProperties", "Part Properties"], ["Settings", "Settings"], ["About", "About"],
+  ["ExportModelData", "Export Model Data"], ["ExportLibraries", "Export Libraries"], ["NewPart", "New Part"],
+  ["SaveAsCopy", "Save As Copy"], ["SaveAsReplace", "Save As and Replace"], ["CreatePrint", "Create Print"],
+  ["MassUpdate", "Mass Update"], ["MaterialFinish", "Material and Finish"], ["AwbHole", "AWB Hole"],
+];
+
+// option: "A" | "B" | "C"; size: 16 | 32
+function ribNew(name, theme, option, size) {
+  const R = RIB[theme], icon = NEWRIB[name], p = PANEL[icon.panel];
+  const X = option === "A" ? R.blue : p[theme];
+  const F = option === "C" ? (theme === "light" ? p.tl : p.td) : R.f;
+  // line weights in 32-box units: at 16 px one unit is half a pixel
+  const w = size === 32 ? { o: 1, w15: 1.5, w2: 2, w25: 2.5, halo: 3 } : { o: 2, w15: 2, w2: 2.5, w25: 3, halo: 3 };
+  const css = `
+    .b{fill:${F};stroke:${R.o};stroke-width:${w.o}}
+    .bs{fill:${option === "C" ? mix(R.o, F, 0.18) : R.s};stroke:${R.o};stroke-width:${w.o}}
+    .o{fill:none;stroke:${R.o};stroke-width:${w.o}}
+    .a{fill:none;stroke:${X};stroke-width:${w.o}}
+    .af{fill:${X};stroke:none}
+    .ab{fill:${X};stroke:${R.o};stroke-width:${w.o}}
+    .at{fill:${mix(X, F, 0.2)};stroke:${X};stroke-width:${w.w15}}
+    .ah{fill:${X};stroke:${R.bg};stroke-width:${w.halo};paint-order:stroke}
+    .w15{stroke-width:${w.w15}} .w2{stroke-width:${w.w2}} .w25{stroke-width:${w.w25};stroke-linecap:round;stroke-linejoin:round}`;
+  const sid = "r" + (clipId++);
+  return `<svg viewBox="0 0 32 32" id="${sid}"><style>${css.replace(/\.(\w+)\{/g, `#${sid} .$1{`)}</style>${icon.d}</svg>`;
+}
+function ribToday(name, theme, size) {
+  return `<img src="../../src/InventorAddin/UI/Icons/${name}.${theme === "light" ? "Light" : "Dark"}.${size}.png" alt="">`;
+}
+
+/* ======================================================================================================== */
+/* Page                                                                                                      */
+/* ======================================================================================================== */
+
+const H = [];
+H.push(`<h1>AWB icons: redesign and light-mode colours (mockup for task 148)</h1>
+<p class="lede">For Aidan's check 118-10: the AWB Hole icons are hard to make out in both themes. Proposal: <b>draw the icons in full colour instead of the muted text colour</b>,
+<b>a solid, hatched material in place of the 45 percent wash</b>, <b>a dark blue for the icons in light mode</b>, and <b>a chosen button you can see</b>
+(today's chosen tile is 1.19:1 against the window in light mode, 1.29:1 in dark). The icon shapes do not change, so the build task changes one template and the colours.
+Everything is drawn at its real size unless a caption says otherwise. Contrast ratios are WCAG 2, worked out on this page from the hex values shown.</p>`);
+
+/* ---- A: icon rows ---- */
+H.push(`<h2>A. The AWB Hole icon rows: today and proposed</h2>
+<p class="lede">Every icon the window uses, in the window's rows and order, with one button chosen in each row. The proposed rows use the <b>Outline</b> chosen state
+(section B shows the <b>Solid</b> alternative). To, the third Termination icon, shows only for an edited hole that ends at a face. Today's chosen button has no name text after the row (task 149).</p>`);
+for (const theme of ["light", "dark"]) {
+  const T = TOKENS[theme];
+  H.push(`<div class="card ${theme}" style="margin-bottom:12px"><h3>${theme === "light" ? "Light theme" : "Dark theme"}</h3><div class="flex" style="gap:22px">
+    <div class="col"><p class="cap">Today, 100%</p>${holeRows(theme, "today")}</div>
+    <div class="col"><p class="cap">Proposed, 100%</p>${holeRows(theme, "outline")}</div>
+    <div class="divider"></div>
+    <div class="col"><p class="cap">Today, 150%</p><div class="z15">${holeRows(theme, "today")}</div></div>
+    <div class="col"><p class="cap">Proposed, 150%</p><div class="z15">${holeRows(theme, "outline")}</div></div>
+  </div>
+  <div class="flex" style="margin-top:14px;align-items:center;gap:12px">
+    <p class="cap" style="margin:0;width:86px">Header tile</p>
+    <div class="tile" style="background:${T.tile}">${ribToday("AwbHole", theme, 32)}</div><span class="cap" style="margin:0">today</span>
+    <div class="tile" style="background:${T.tile};margin-left:14px">${ribNew("AwbHole", theme, "B", 32)}</div><span class="cap" style="margin:0">proposed (the ribbon icon in the new style, option B)</span>
+  </div></div>`);
+}
+
+/* ---- B: states ---- */
+H.push(`<h2>B. Button states: today, Outline (recommended) and Solid, at 150%</h2>
+<p class="lede"><b>Outline</b>: the chosen button is the input fill (white in light mode) with a 2 px border in the icon's dark blue; nothing else changes colour.
+<b>Solid</b>: the chosen button is filled dark blue and its icon turns white with the same material. Both are far easier to see than today's tile. The keyboard focus
+ring stays spec 08's Accent (#0F6CB0) 2 px ring, 3 px outside the button. Disabled (Counterbore on Taper Tapped, task 114) is the icon at 40 percent.
+The Units toggle (text, not an icon) takes the same chosen state, so the window has one "chosen" look.</p>`);
+const STATES = [["rest", "Not chosen"], ["hover", "Mouse over"], ["chosen", "Chosen"], ["focus", "Chosen, focus"], ["disabled", "Disabled"]];
+function unitsToggle(theme, look) {
+  const T = TOKENS[theme], N = NEW[theme];
+  let on;
+  if (look === "today") on = `background:${T.tile};color:${T.strong};font-weight:600`;
+  else if (look === "outline") on = `background:${N.chosenFill};color:${N.chosenBorder};font-weight:600;box-shadow:inset 0 0 0 2px ${N.chosenBorder}`;
+  else on = `background:${N.solidFill};color:${N.solidInk};font-weight:600`;
+  return `<div class="seg" style="border:1px solid ${T.inputBorder}"><span style="${on}">Metric</span><span style="color:${T.muted};border-left:1px solid ${T.inputBorder}">Imperial</span></div>`;
+}
+for (const theme of ["light", "dark"]) {
+  H.push(`<div class="card ${theme}" style="margin-bottom:12px"><h3>${theme === "light" ? "Light theme" : "Dark theme"}</h3>
+  <div class="z15"><div class="rows" style="gap:10px">
+    <div class="row"><div class="lab"></div>${STATES.map(s => `<div style="width:66px;font-size:9px;text-align:center" class="cap">${s[1]}</div>`).join("")}<div style="width:110px;font-size:9px" class="cap">Units</div></div>
+    ${[["today", "Today"], ["outline", "Outline"], ["solid", "Solid"]].map(([look, nm]) => `<div class="row" style="height:32px"><div class="lab" style="font-weight:600">${nm}</div>
+      ${STATES.map(s => `<div style="width:66px;display:flex;justify-content:center">${holeButton(theme, look, "Counterbore", s[0])}</div>`).join("")}
+      <div style="width:110px;zoom:0.6667">${unitsToggle(theme, look)}</div></div>`).join("")}
+  </div></div></div>`);
+}
+
+/* ---- Colours and contrast ---- */
+function ratio(a, b, need) {
+  const r = cr(a, b);
+  return `<span class="${r >= need ? "ok" : "low"}">${r.toFixed(2)}:1</span>`;
+}
+function sw(hex) { return `<span class="sw" style="background:${hex}"></span><span class="mono">${hex}</span>`; }
+H.push(`<h2>C. Colours and contrast against the window</h2>
+<p class="lede">WCAG asks 3:1 for the parts of a graphic needed to understand it (the outline, the chosen marker) and 4.5:1 for text. Green meets that, red does not.
+The material fill does not need 3:1 against the window because the outline bounds it; what matters is that the material reads apart from the empty hole (fill against window)
+and that the outline reads on the fill. New token names are suggestions for <span class="mono">Colors.Light.xaml</span> and <span class="mono">Colors.Dark.xaml</span>.</p>`);
+H.push(`<div class="flex">`);
+for (const theme of ["light", "dark"]) {
+  const T = TOKENS[theme], N = NEW[theme];
+  const todayMat = mix(T.muted, T.bg, 0.45);
+  const rows = [
+    ["<b>Today</b>", "", "", ""],
+    ["Icon (muted text colour)", sw(T.muted), "window " + T.bg, ratio(T.muted, T.bg, 3)],
+    ["Material (45% of it)", sw(todayMat), "window", ratio(todayMat, T.bg, 0) + " (fill vs hole)"],
+    ["Chosen tile (IconTile)", sw(T.tile), "window", ratio(T.tile, T.bg, 3)],
+    ["Chosen border (TextLabel), 1 px", sw(T.label), "window", ratio(T.label, T.bg, 3)],
+    ["<b>Proposed</b>", "", "", ""],
+    ["HoleIconInk: outline, lines, hatch", sw(N.ink), "window", ratio(N.ink, T.bg, 3)],
+    ["HoleIconMaterial", sw(N.material), "window", ratio(N.material, T.bg, 0) + " (fill vs hole)"],
+    ["Ink on material", sw(N.ink), N.material, ratio(N.ink, N.material, 3)],
+    ["Outline: chosen fill (InputBackground)", sw(N.chosenFill), "window", ratio(N.chosenFill, T.bg, 0)],
+    ["Outline: chosen border, 2 px (HoleIconChosenBorder)", sw(N.chosenBorder), "window", ratio(N.chosenBorder, T.bg, 3)],
+    ["Ink on the chosen fill", sw(N.ink), N.chosenFill, ratio(N.ink, N.chosenFill, 3)],
+    ["Solid: chosen fill (HoleIconChosenFill)", sw(N.solidFill), "window", ratio(N.solidFill, T.bg, 3)],
+    ["Solid: icon ink on it", sw(N.solidInk), N.solidFill, ratio(N.solidInk, N.solidFill, 3)],
+    ["Solid: material on it", sw(N.solidMaterial), N.solidFill, ratio(N.solidMaterial, N.solidFill, 0)],
+    ["Solid: Units text on it", sw(N.solidInk), N.solidFill, ratio(N.solidInk, N.solidFill, 4.5)],
+    ["Outline: Units text (the border colour)", sw(N.chosenBorder), N.chosenFill, ratio(N.chosenBorder, N.chosenFill, 4.5)],
+  ];
+  H.push(`<div class="card ${theme}" style="flex:1"><h3>${theme === "light" ? "Light theme (window #F3F4F6)" : "Dark theme (window #2B303B)"}</h3>
+    <table class="tok"><tr><th>Colour</th><th>Value</th><th>Against</th><th>Ratio</th></tr>
+    ${rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td class="mono">${r[2]}</td><td>${r[3]}</td></tr>`).join("")}</table></div>`);
+}
+H.push(`</div>`);
+H.push(`<p class="lede" style="margin-top:8px">Today's icon colour already passes on contrast; what makes the icons hard to read is the muting on every button that is not chosen, the thin
+wash of material (fill against window 1.96:1 light, 2.46:1 dark, so the part and the hole look alike), and a chosen tile that is almost the window colour. The proposal raises the
+material to 2.35:1 light and 3.19:1 dark, keeps the outline at 9.5:1 and 10.3:1, and makes the chosen marker 9.5:1 (light) and 6.2:1 (dark).
+In dark mode the Solid option cannot give both 3:1 for its fill against the window and 4.5:1 for white Units text on it; #3A7AC6 gives 3.01:1 and 4.39:1. Outline has no such trade-off.</p>`);
+
+/* ---- D: ribbon ---- */
+H.push(`<h2>D. The ribbon icons in the same style, at real size on stand-in ribbons</h2>
+<div class="flex" style="gap:40px;margin-bottom:10px">
+<div class="words" style="max-width:740px">
+<p><b>Inventor's own ribbon icons, in words</b> (no screenshot; from memory of Inventor 2026, so please check against yours):</p>
+<ul class="tight">
+<li>Flat: no gradients, glows or 3D bevels.</li>
+<li>Shapes are filled, not just outlined: a sheet is white or pale grey with a thin dark grey edge (about 1 px at 32 px).</li>
+<li>One accent colour carries the meaning (most often a mid blue; also yellow, green, orange or red for particular actions), usually as a filled shape, an arrow or a plus.</li>
+<li>A light-theme and a dark-theme set; on the dark ribbon the edges turn pale and the fills mid grey.</li>
+<li>16 px icons are simplified drawings, not the 32 px drawing shrunk.</li>
+</ul>
+</div><div class="words" style="max-width:740px">
+<p><b>The proposed style follows that</b>: bodies filled (white or panel tint, a shaded face on folds and sides), a 1 px edge, and the accent as a filled
+shape or a line of 1.5 to 2.5 px. The hole icon has hatching and a centre line, like the window's icons. The window's icons and the ribbon's share the idea (filled, hatched
+material, firm edge) but not the window's dark blue, which stays a window colour.</p>
+<p>The 16 px icons here are the 32 px drawings at half size; the build task draws them on the pixel grid as today's are.</p>
+<p>The ribbon colours are the stand-ins used in the colour-options image (#F3F4F6 light, #3A4150 dark), not values measured from Inventor.</p>
+</div></div><div class="col" style="gap:6px">`);
+function ribbonStrip(theme, draw) {
+  const R = RIB[theme];
+  const big = (n, lab) => `<div class="big"><div class="ic">${draw(n, 32)}</div>${lab}</div>`;
+  const small = (n, lab) => `<div class="small"><div class="ic">${draw(n, 16)}</div>${lab}</div>`;
+  const panel = (nm, inner) => `<div class="panel" style="border-color:${R.sep}"><div class="body">${inner}</div><div class="pname" style="color:${theme === "light" ? "#55606F" : "#A9B2C1"}">${nm}</div></div>`;
+  return `<div class="ribbon" style="background:${R.bg};color:${R.text}">
+    ${panel("Create", big("NewPart", "New<br>Part") + `<div class="smalls">${small("SaveAsCopy", "Save As Copy")}${small("SaveAsReplace", "Save As and Replace")}</div>` + big("AwbHole", "AWB<br>Hole"))}
+    ${panel("Properties", big("PartProperties", "Part<br>Properties") + `<div class="smalls">${small("MassUpdate", "Mass Update")}${small("MaterialFinish", "Material and Finish")}</div>`)}
+    ${panel("Drawing", big("CreatePrint", "Create<br>Print"))}
+    ${panel("Developer", `<div class="smalls">${small("ExportModelData", "Export Model Data")}${small("ExportLibraries", "Export Libraries")}</div>`)}
+    ${panel("AWB", `<div class="smalls">${small("Settings", "Settings")}${small("About", "About")}</div>`)}
+  </div>`;
+}
+const STRIPS = [
+  ["Today", (t) => (n, s) => ribToday(n, t, s)],
+  ["A: blue accent", (t) => (n, s) => ribNew(n, t, "A", s)],
+  ["B: accent by panel", (t) => (n, s) => ribNew(n, t, "B", s)],
+  ["C: B + tinted shapes", (t) => (n, s) => ribNew(n, t, "C", s)],
+];
+for (const [nm, f] of STRIPS) {
+  H.push(`<div class="rlab" style="padding-top:6px">${nm}</div><div class="flex" style="gap:12px">${ribbonStrip("light", f("light"))}${ribbonStrip("dark", f("dark"))}</div>`);
+}
+H.push(`</div></div>`);
+
+/* ---- E: options grid ---- */
+H.push(`<h2>E. The three colour options redone in the new style, 16 px and 32 px, enlarged 2x</h2>
+<p class="lede">The same layout as <span class="mono">ribbon-icons-colour-options.png</span> (branch <span class="mono">claude/ribbon-icon-colour</span>), with today's one-colour icons first.
+Panel accents (B and C): Create green, Properties blue, Drawing orange, Developer purple, AWB teal; the hex values are the colour-options image's, darker on the light ribbon
+and lighter on the dark. Option A uses the Properties blue for every icon. Pick a column, which picks the colour and the look together.</p>`);
+const OPTS = [["Today: one colour", null], ["Option A: blue accent", "A"], ["Option B: accent by panel", "B"], ["Option C: B + tinted shapes", "C"]];
+let g = `<div class="og"><div class="h"></div>` + OPTS.map(o => `<div class="h" style="grid-column:span 2">${o[0]}</div>`).join("");
+g += `<div class="hs"></div>` + OPTS.map(() => `<div class="hs">light</div><div class="hs">dark</div>`).join("");
+for (const [n, lab] of RIB_ORDER) {
+  g += `<div class="nm">${lab}<span style="color:#667080;margin-left:6px;font-size:11px">${NEWRIB[n].panel}</span></div>`;
+  for (const [, o] of OPTS) for (const t of ["light", "dark"]) {
+    const d = (s) => o ? ribNew(n, t, o, s) : ribToday(n, t, s);
+    g += `<div class="cell" style="background:${RIB[t].bg}"><div class="i16" style="${o ? "" : "image-rendering:pixelated"}">${d(16)}</div><div class="i32" style="${o ? "" : "image-rendering:pixelated"}">${d(32)}</div></div>`;
+  }
+}
+g += `</div>`;
+H.push(g);
+
+H.push(`<h2>What Aidan picks</h2><div class="callout">
+<b>1.</b> The window icons' new look (section A): yes, or what to change. <b>2.</b> The chosen state: <b>Outline</b> (recommended: calm, and the icon keeps its colours) or <b>Solid</b> (strongest).
+<b>3.</b> The ribbon: option <b>A</b>, <b>B</b> or <b>C</b> in the new style (sections D and E), or today's style with that colour. <b>4.</b> Whether dark mode should also use blue icons (shown) or stay neutral grey-white.
+Spec 08 question 3 (icon style) is answered by 1 and 3.</div>`);
+
+document.getElementById("page").innerHTML = H.join("\n");
+</script>
+</body>
+</html>

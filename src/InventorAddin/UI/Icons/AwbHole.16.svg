@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#3B4350" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter" shape-rendering="crispEdges">
+  <title>AWB Hole, 16 px: a block in section with a blind drilled hole and its drill point</title>
+  <!-- No hatching at 16 px: the solid either side of the hole is three pixels wide, too narrow for a diagonal that does not touch the outline -->
+  <path d="M 5.5,2.5 H 1.5 V 13.5 H 13.5 V 2.5 H 9.5 V 7.5 L 7.5,9.5 L 5.5,7.5 Z"/>
+</svg>

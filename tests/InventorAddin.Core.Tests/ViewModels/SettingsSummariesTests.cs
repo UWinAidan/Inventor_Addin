@@ -41,6 +41,16 @@ public sealed class SettingsSummariesTests
         Assert.Equal(expected, SettingsSummaries.MaterialFinish(library, finishList));
     }
 
+    [Theory]
+    [InlineData("", false, "starter hole data, AWB Hole")]
+    [InlineData(null, true, "starter hole data, Inventor's Hole")]
+    [InlineData(@"B:\Data\AWB_Holes.xlsx", true, "AWB_Holes.xlsx, Inventor's Hole")]
+    [InlineData(@"  \\server\share\Shop holes.xlsx ", false, "Shop holes.xlsx, AWB Hole")]
+    public void Holes_ShowsTheWorkbookAndTheHoleCommand(string? workbook, bool useInventorHole, string expected)
+    {
+        Assert.Equal(expected, SettingsSummaries.Holes(workbook, useInventorHole));
+    }
+
     [Fact]
     public void Developer_SaysWhetherToolsAreShown()
     {

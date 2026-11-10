@@ -478,8 +478,8 @@ public static class RenamePlan
     /// <summary>
     /// The new name of an occurrence of a renamed file (spec 02, "Commands: Rename"; Aidan, 2026-10-11): when
     /// <paramref name="occurrenceName"/> is the old file name without its folder and extension, a colon and one or more
-    /// digits (ignoring case), the new file name without folder and extension, a colon and the same digits. Otherwise
-    /// null: an occurrence given any other name is left alone. <c>BRACKET,AWB-10005:2</c> becomes
+    /// digits (ignoring case), or is any name in the AWB format (Aidan 2026-10-28, task 135), the new file name without
+    /// folder and extension, a colon and the same digits. Otherwise null: an occurrence given any other name is left alone. <c>BRACKET,AWB-10005:2</c> becomes
     /// <c>BRACKET_2,AWB-10005:2</c> when <c>BRACKET,AWB-10005.ipt</c> is renamed to <c>BRACKET_2,AWB-10005.ipt</c>.
     /// </summary>
     /// <remarks>
@@ -487,8 +487,35 @@ public static class RenamePlan
     /// in a closed assembly opened invisibly, <c>ComponentOccurrence.Name</c> reads the new file name after
     /// <c>ReplaceReference</c> while the name stored in the file is still the old one (spike 062), so such an occurrence
     /// must be set again.
+    /// <para>
+    /// Any name in the AWB format (<see cref="IsAwbOccurrenceName"/>) also gives the new name (Aidan 2026-10-28, spec 02
+    /// question 27; task 135), so a name left stale by an earlier Save As and Replace is fixed:
+    /// <c>BRACKET_V4,AWB-10017:1</c> becomes <c>BRACKET_V6,AWB-10022:1</c> when <c>BRACKET_V5,AWB-10022.ipt</c> is
+    /// renamed to <c>BRACKET_V6,AWB-10022.ipt</c>. A name the user gave, not in that format, is still left alone.
+    /// Save As and Replace does not use this wider rule (<see cref="RenamedOccurrenceNamedAfterFile"/>).
+    /// </para>
     /// </remarks>
-    public static string? RenamedOccurrence(string? occurrenceName, string? oldFullFileName, string? newFullFileName)
+    public static string? RenamedOccurrence(string? occurrenceName, string? oldFullFileName, string? newFullFileName) =>
+        NewOccurrenceName(occurrenceName, oldFullFileName, newFullFileName, anyAwbName: true);
+
+    /// <summary>
+    /// As <see cref="RenamedOccurrence"/>, without the AWB-format rule: only a name that is the old or the new file name
+    /// without folder and extension, a colon and digits (ignoring case), gives the new name. Save As and Replace uses
+    /// this (task 134; task 135 kept it apart from Rename's wider rule).
+    /// </summary>
+    public static string? RenamedOccurrenceNamedAfterFile(
+        string? occurrenceName, string? oldFullFileName, string? newFullFileName) =>
+        NewOccurrenceName(occurrenceName, oldFullFileName, newFullFileName, anyAwbName: false);
+
+    /// <summary>
+    /// True when <paramref name="occurrenceName"/> is in the AWB format, <c>NAME,AWB-#####:n</c> (task 135): text before
+    /// the last comma that is not empty, a comma, a part number <see cref="PartNumber.TryParse"/> accepts (any number),
+    /// a colon and one or more ASCII digits. Case is ignored as in the part number.
+    /// </summary>
+    public static bool IsAwbOccurrenceName(string? occurrenceName) => AwbNameDigits(occurrenceName) is not null;
+
+    private static string? NewOccurrenceName(
+        string? occurrenceName, string? oldFullFileName, string? newFullFileName, bool anyAwbName)
     {
         var oldStem = Stem(oldFullFileName);
         var newStem = Stem(newFullFileName);
@@ -497,8 +524,38 @@ public static class RenamePlan
             return null;
         }
 
-        var digits = DigitsAfter(occurrenceName, oldStem) ?? DigitsAfter(occurrenceName, newStem);
+        var digits = DigitsAfter(occurrenceName, oldStem)
+                     ?? DigitsAfter(occurrenceName, newStem)
+                     ?? (anyAwbName ? AwbNameDigits(occurrenceName) : null);
         return digits is null ? null : newStem + ":" + digits;
+    }
+
+    /// <summary>
+    /// The digits after the colon when <paramref name="occurrenceName"/> is in the AWB format
+    /// (<see cref="IsAwbOccurrenceName"/>); otherwise null. The stem before the last colon is split by
+    /// <see cref="PartFileName.SplitStem"/>, the rule file names are read by.
+    /// </summary>
+    private static string? AwbNameDigits(string? occurrenceName)
+    {
+        if (string.IsNullOrEmpty(occurrenceName))
+        {
+            return null;
+        }
+
+        var colon = occurrenceName.LastIndexOf(':');
+        if (colon <= 0)
+        {
+            return null;
+        }
+
+        var stem = occurrenceName[..colon];
+        var digits = DigitsAfter(occurrenceName, stem);
+        if (digits is null || PartFileName.SplitStem(stem, out var nameText) is null || nameText.Length == 0)
+        {
+            return null;
+        }
+
+        return digits;
     }
 
     /// <summary>

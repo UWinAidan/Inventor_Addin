@@ -35,6 +35,12 @@ public static class RibbonLayout
         RibbonEnvironment.Assembly,
     };
 
+    // Spec 09, "The command": AWB Hole works in part files.
+    private static readonly RibbonEnvironment[] PartEnvironments =
+    {
+        RibbonEnvironment.Part,
+    };
+
     // Spec 02, "Commands: New Part" and "Commands: Mass Update": also with no document open.
     private static readonly RibbonEnvironment[] NewFileEnvironments =
     {
@@ -44,7 +50,7 @@ public static class RibbonLayout
     };
 
     // Button sizes (Aidan, 2026-10-11, spec 02): New Part, Part Properties and Create Print are large; every other
-    // button is small.
+    // button is small. AWB Hole is large too (task 090, as spec 09 places it beside Inventor's large Hole button).
     //
     // Panels and their order (Aidan, 2026-10-12, spec 01 "Target"): Create, Properties, Drawing, Developer, AWB, so
     // AWB is always far right. Inventor stacks consecutive small buttons by itself, so the small buttons of a panel
@@ -58,6 +64,9 @@ public static class RibbonLayout
             new(CommandNames.SaveAsCopy, ButtonSize.Small, IconNames.SaveAsCopy, ModelEnvironments),
             // Spec 02, "Commands: Save As and Replace": the selected component in the active assembly.
             new(CommandNames.SaveAsReplace, ButtonSize.Small, IconNames.SaveAsReplace, AssemblyEnvironments),
+            // Spec 09, "The command" (Default, task 090): large, on the part ribbon only. After the small buttons, so
+            // they stay stacked together.
+            new(CommandNames.AwbHole, ButtonSize.Large, IconNames.AwbHole, PartEnvironments),
         }),
         new(RibbonIds.PropertiesPanelId, RibbonIds.PropertiesPanelName, DeveloperOnly: false, new ButtonDefinition[]
         {
