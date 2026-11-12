@@ -389,3 +389,20 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-10-07 | Windows must not use `UseLayoutRounding`; the shared window style uses `SnapsToDevicePixels` instead. With layout rounding on, text boxes and dropdowns lost their bottom border at 150% display scale | Aidan | `CLAUDE.md`, `UI/Theme/Styles.xaml` (recorded 2026-11-12 from branch `claude/tasks-026-to-031-e9rrxe`) |
 | 2026-11-12 | The 16 px AWB Hole is a pixel-fitted 7j with no inner edge lines: the grey faces and the green hole carry the shape, with only a 1 px silhouette outline. The 32 px stays Aidan's 7j files | Aidan | task 151 preview |
 | 2026-11-12 | The other task 151 icons (ribbon option C at 16 and 32 px, window icons, Outline chosen state) ship as shown in the preview | Aidan | `docs/ui-mockups/awb-icons-151-preview.png` |
+| 2026-11-12 | Hole table: ticking Split on a row gives that hole instance its own group and letter | Aidan | spec 04 question 2 |
+| 2026-11-12 | Hole table: "Update Reams" is renamed Update; it refreshes descriptions and positions in both tables after the model changes | Aidan | spec 04 question 3 |
+| 2026-11-12 | Hole table: Align stacks the two tables and snaps them to the corner above the title block | Aidan | spec 04 question 4 |
+| 2026-11-12 | Hole table: the Edit Table tab edits the NOTES column, and re-opens an existing table to swap, delete, split and renumber its rows | Aidan | spec 04 question 5 |
+| 2026-11-12 | Hole table group order: precision table by diameter ascending; clearance table by type (plain: Simple and Clearance; seated: counterbore, countersink, spotface; tapped; taper tapped), then diameter ascending; within a group Y then X. Never by quantity, so letters stay stable when instances are added or removed | Aidan | spec 04 question 6 |
+| 2026-11-12 | Hole table origin: the view's existing ordinate-dimension origin; with none, the wizard stops and says to add one, and never invents one | Aidan | spec 04 question 7 |
+| 2026-11-12 | Hole table scope: counterbored, countersunk, spotfaced, Simple and Taper Tapped holes are all in the first version | Aidan | spec 04 question 8 |
+| 2026-11-12 | Hole table: within the seated type, counterbore, then countersink, then spotface, each by diameter | Default | spec 04 question 9 |
+| 2026-11-12 | Hole table: a threaded hole with a seat sorts as tapped (or taper tapped); the thread decides the type | Default | spec 04 question 10 |
+| 2026-11-12 | Hole table: groups sort by the drilled diameter (the tap drill for threaded holes); ties sort by description text | Default | spec 04 question 11 |
+| 2026-11-12 | Hole table: a split instance's group sits straight after the group it came from and takes the next letter | Default | spec 04 question 12 |
+| 2026-11-12 | Hole table letters run A to Z, then AA, AB; none skipped | Default | spec 04 question 13 |
+| 2026-11-12 | Hole table decimals: millimetres 2 (precision) and 1 (clearance); inches 3 and 2; descriptions use their table's decimals | Default | spec 04 question 14 |
+| 2026-11-12 | Hole table descriptions use plain words (THRU, DP, C'BORE, CSK, SPOTFACE), the seat line after the hole line, the thread line last; spike 160 checks whether Inventor's symbols work in a cell | Default | spec 04 question 15 |
+| 2026-11-12 | Hole table: a hole not seen end on in the view is left out, and the wizard says how many | Default | spec 04 question 16 |
+| 2026-11-12 | Hole table: a view with more than one ordinate origin stops the wizard with a message | Default | spec 04 question 17 |
+| 2026-11-12 | M4 part 2 runs the Core tasks 155 to 159 first; the add-in half waits on spike 160 with Aidan, on a new branch off `main` | Default | `docs/PLAN.md` |

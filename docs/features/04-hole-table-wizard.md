@@ -25,7 +25,7 @@ Seen in the reference:
   - Two lists, **Precision Holes** on the left and **Clearance Holes** on the right. Each row has a Description and a *Split* checkbox.
   - Between the lists: a swap button, which moves the selected row to the other list, and a delete button.
   - Under the lists: *Generate Precision Table* and *Generate Clearance Table*.
-- **Bottom row:** *Align*, *Renumber*, *Update Reams*, *Cancel*, and a progress bar.
+- **Bottom row:** *Align*, *Renumber*, *Update* (the reference calls it *Update Reams*; Aidan, 2026-11-12), *Cancel*, and a progress bar.
 
 After *Analyze View* on a plate with thirteen holes, the lists held one row per hole instance: two toleranced holes on the precision side; six plain through holes of one diameter, one of another, and four tapped holes on the clearance side.
 
@@ -52,6 +52,25 @@ Rules read off the reference result:
 - **NOTES** defaults to `-`.
 - **On the view**, each hole gets its tag beside it. Precision holes appear to be drawn with a distinct centre marker (filled quadrants) so they stand out from clearance holes.
 
+## Decided behaviour (Aidan, 2026-11-12)
+
+- **Holes in scope:** every AWB Hole type and seat in the first version: Simple, Clearance, dowel, counterbored, countersunk, spotfaced, Tapped and Taper Tapped (question 8).
+- **Origin:** the wizard uses the view's existing ordinate-dimension origin. Aidan almost always dimensions with ordinates. If the view has no origin, the wizard stops and says to add one; it never invents one (question 7).
+- **Group order in the precision table:** by diameter, ascending.
+- **Group order in the clearance table:** by type first, then by diameter ascending within a type (question 6). The type order:
+  1. plain: Simple and Clearance
+  2. seated: counterbore, countersink, spotface
+  3. tapped
+  4. taper tapped
+- **Order within a group:** Y ascending, then X ascending, as the reference shows.
+- **Never by quantity.** Letters must stay stable when instances are added or removed, so a group's place never depends on how many holes it has.
+- **Split:** ticking *Split* on a row gives that hole instance its own group and letter (question 2).
+- **Update:** refreshes descriptions and positions in both tables after the model changes (question 3).
+- **Align:** stacks the two tables and snaps them to the corner above the title block (question 4).
+- **Edit Table tab:** edit the NOTES column, and re-open an existing table to swap, delete, split and renumber its rows (question 5).
+
+Defaults chosen while planning (2026-11-12) are in "Open questions" 9 to 17. Each is built as stated until Aidan says otherwise.
+
 ## Core logic (testable without Inventor)
 
 This feature has the most logic that can be built and tested in the cloud.
@@ -75,15 +94,27 @@ This feature has the most logic that can be built and tested in the cloud.
 
 ## Design decision to settle with a spike on Windows
 
-Inventor's own hole table can be created from a view and stays associative, but it may not support two tables with one shared tag sequence, merged description cells and custom titles. The alternative is a custom table plus our own tags, which gives full control and loses associativity. This needs a short experiment in Inventor before the add-in side is planned.
+Inventor's own hole table can be created from a view and stays associative, but it may not support two tables with one shared tag sequence, merged description cells and custom titles. The alternative is a custom table plus our own tags, which gives full control and loses associativity. This needs a short experiment in Inventor before the add-in side is planned. It is spike 160 (`docs/tasks/160-spike-hole-table-in-inventor.md`), which also settles reading a view's holes and its ordinate origin.
 
 ## Open questions
 
 1. ~~**What makes a hole "precision"?**~~ Answered 2026-10-24 (Aidan, spec 09): a toleranced hole is precision: an AWB dowel, and an AWB Clearance or Simple hole with Toleranced ticked. Default: a hole with an Inventor tolerance on its diameter and no AWB data is precision too.
-2. **What does the *Split* checkbox do?** One guess: it gives that instance its own group and tag.
-3. **What does *Update Reams* do?** One guess: it refreshes precision hole descriptions after the model changes.
-4. **What does *Align* do?** One guess: it stacks the tables and snaps them to the corner above the title block.
-5. **What does the *Edit Table* tab contain?**
-6. **How are groups ordered** within the clearance table: by diameter, by type with plain before tapped, or in feature order?
-7. **Where is the origin?** Picked by the user, taken from an existing origin indicator, or a fixed corner of the view.
-8. Are counterbored and countersunk holes in scope for the first version?
+2. ~~**What does the *Split* checkbox do?**~~ Answered 2026-11-12 (Aidan): it gives that hole instance its own group and letter.
+3. ~~**What does *Update Reams* do?**~~ Answered 2026-11-12 (Aidan): it is renamed *Update*, and refreshes descriptions and positions in both tables after the model changes.
+4. ~~**What does *Align* do?**~~ Answered 2026-11-12 (Aidan): it stacks the tables and snaps them to the corner above the title block.
+5. ~~**What does the *Edit Table* tab contain?**~~ Answered 2026-11-12 (Aidan): editing the NOTES column, and re-opening an existing table to swap, delete, split and renumber rows.
+6. ~~**How are groups ordered?**~~ Answered 2026-11-12 (Aidan): see "Decided behaviour".
+7. ~~**Where is the origin?**~~ Answered 2026-11-12 (Aidan): the view's existing ordinate-dimension origin; with none, the wizard stops and says to add one.
+8. ~~Are counterbored and countersunk holes in scope for the first version?~~ Answered 2026-11-12 (Aidan): yes, with spotfaced, Simple and Taper Tapped holes.
+
+Defaults chosen while planning M4 part 2 (2026-11-12). Each is built as written until Aidan says otherwise.
+
+9. **Seated sub-order.** Within the seated type: counterbore, then countersink, then spotface, in the order Aidan listed them; diameter ascending inside each. (Or one seated type ordered by diameter alone?)
+10. **A threaded hole with a seat** sorts as tapped (or taper tapped), not seated. The thread decides the type.
+11. **The diameter a group sorts by** is the drilled diameter: the through hole for plain and seated holes, the tap drill for tapped and taper tapped holes. Groups of one type and diameter that differ (a depth, a seat size) sort by their description text.
+12. **Where a split instance goes:** its new group sits straight after the group it came from, and takes the next letter.
+13. **Letters:** A to Z, then AA, AB and so on. No letters are skipped (some shops skip I, O and Q).
+14. **Decimals in inch drawings:** precision table 3, clearance table 2. Millimetre drawings use the reference's 2 and 1. Descriptions use their table's decimals.
+15. **Description wording:** plain words rather than drawing symbols: `Ø6.6 THRU`, `Ø6.6 x 12.0 DP`, `C'BORE Ø11.0 x 6.4 DP`, `CSK Ø12.4 x 90°`, `SPOTFACE Ø14.0 x 1.0 DP`; a tapped hole's second line is the thread and its depth (`M6x1 x 10.0 DP`, or `M6x1 THRU`). The seat line comes after the hole line. Spike 160 checks whether Inventor's own symbols (counterbore, countersink, depth) can go in a table cell; if they can, Aidan may prefer them.
+16. **Holes the table leaves out:** a hole whose axis is not along the view direction (seen from the side) is not listed. The wizard says how many were left out.
+17. **More than one ordinate origin on a view:** the wizard stops and says the view has several origins, rather than picking one.

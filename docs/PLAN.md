@@ -431,7 +431,25 @@ Spike 103 (2026-10-25) added task 133 (the mini toolbar's Hole button, `PartDMHo
 
 Not in part 1: AWB Hole on the Flat Pattern tab (it keeps Inventor's Hole; the Sheet Metal tab is taken over, Aidan 2026-10-25, task 128), holes placed without a sketch, and Standard and Fastener type beyond spec 09's defaults (questions 2 and 3). Simple and Taper Tapped holes and spotfaces were added to part 1 on 2026-10-24 (Aidan).
 
-**Part 2: the hole table wizard** (spec 04), planned after part 1. Its Core half (classification, grouping, tagging, descriptions, table model) can be planned once spec 04's questions 6 and 7 are answered (question 1 was answered on 2026-10-24: a toleranced hole is precision); the add-in half waits on the Windows spike described in the spec.
+**Part 2: the hole table wizard** (spec 04). Planned 2026-11-12, after Aidan answered spec 04 questions 2 to 8. The Core half runs first; the add-in half waits on spike 160 with Aidan (Inventor's own hole table or a custom table, reading a view's holes and its ordinate origin, where the wizard's edits are kept). The table model, Align, Update, the Edit Table tab's re-opening and every add-in task are written from the spike's results.
+
+| Task | Needs | Depends on | Parallel-safe with |
+|---|---|---|---|
+| 155 | Core | none | 160 |
+| 156 | Core | 155 | 157, 160 |
+| 157 | Core | 155 | 156, 160 |
+| 158 | Core | 155, 156, 157 | 160 |
+| 159 | Core | 158 | 160 |
+| 160 | **windows** (spike, local session with Aidan) | none | 155 to 159 |
+
+- [ ] 155 Core: hole table holes, precision or clearance, and the group order key
+- [ ] 156 Core: hole table descriptions for every hole type
+- [ ] 157 Core: XDIM and YDIM from the view's ordinate origin
+- [ ] 158 Core: groups, tags, Split, swap, delete and Renumber
+- [ ] 159 Core: the Hole Table Wizard view-model (Create Tables tab and row edits)
+- [ ] 160 Spike: Inventor's hole table or a custom table; reading a view's holes and its ordinate origin
+
+**Order.** 155, then 156 and 157 alongside, 158, 159. Spike 160 runs with Aidan whenever he is at his PC, before or alongside the Core tasks; it touches only its own spike branch. On a new branch off `main` (`claude/m4-hole-table`).
 
 ### M5: Drawing tools (spec 05)
 
