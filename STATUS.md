@@ -6,11 +6,17 @@ Last updated: 2026-11-12
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-12. On branch `claude/m4-hole-table` (off `main`): the M4 part 2 plan, committed, not pushed. No task in progress and no open PR.
-- Done this session: remote branch `claude/m1b-icon-redesign` was already gone (auto-deleted on merge). Aidan answered spec 04 questions 2 to 8 (logged in `DECISIONS.md` as his); defaults for the new questions 9 to 17 logged as Default. M4 part 2 planned: Core tasks 155 to 159 and spike 160 (with Aidan on Windows), in `docs/PLAN.md`.
-- Next: run 155, then 156 and 157, 158, 159 (Core; cloud or local). Spike 160 with Aidan whenever he is at his PC; the add-in tasks, the table model, Align, Update and the Edit Table tab's re-opening are written from its results.
-- Gotchas: check `tasklist //FI "IMAGENAME eq Inventor.exe"` before building; `-p:DeployToInventor=false` while it runs. Tracking files, specs and task files are CRLF: edit with Python `newline=''`, turn each LF in the search and replacement text into CRLF, assert per replace; a heredoc append or the Write tool gives LF, so convert after. Numbering timing tests can fail under parallel load.
-- Read first: `docs/features/04-hole-table-wizard.md` ("Decided behaviour", open questions 9 to 17), `docs/tasks/155` to `160`, `docs/PLAN.md` M4 part 2.
+- Updated: 2026-11-12 10:26. Branch `claude/m4-hole-table` (off `main`), plan commit `e44f681`; not pushed. This handoff edit is uncommitted. No open PR.
+- Goal of this session: record Aidan's answers to spec 04 questions 2 to 8 and plan M4 part 2 (hole table wizard) per `docs/WORKFLOW.md`.
+- Done: spec 04 gained "Decided behaviour" and open questions 9 to 17 (Defaults); `DECISIONS.md` (7 Aidan entries, 10 Default); `docs/PLAN.md` M4 part 2 table and task list; `TODO.md` Next up and the spec 04 block; task files `docs/tasks/155` to `160`. Remote branch `claude/m1b-icon-redesign` was already deleted on GitHub (push --delete said the ref does not exist).
+- Current state: plan only, no code changed; nothing built or tested this session. M4 part 2 is Planned.
+- Open: Aidan has not yet said whether to push the branch, or whether to start with task 155 or spike 160.
+- Next steps:
+  1. Ask Aidan: push `claude/m4-hole-table`? Start 155 or spike 160?
+  2. Run 155 (implementer, then reviewer, then commit `task 155: ...`), then 156 and 157 (parallel-safe), 158, 159.
+  3. Spike 160 with Aidan in Inventor on branch `spike/160-hole-table`; record results in its task file, then write the add-in tasks, table model, Align, Update and Edit Table re-open tasks.
+- Gotchas: check `tasklist //FI "IMAGENAME eq Inventor.exe"` before building; `-p:DeployToInventor=false` while it runs. Tracking files, specs and task files are CRLF (a `grep $'\r'` check in Git Bash wrongly reported LF; use Python byte counts). The Write tool and heredoc appends give LF, so convert after. Python `\n` escapes inside bash heredocs got mangled; for one-line fixes use the Edit tool (it keeps CRLF). Numbering timing tests can fail under parallel load.
+- Read first: `docs/features/04-hole-table-wizard.md` ("Decided behaviour", questions 9 to 17), `docs/tasks/155` to `160`, `docs/PLAN.md` M4 part 2. Core inputs: `InventorHoleFacts` (`Holes/HoleReadBack.cs`), `HolePrecision.cs`, `HoleTolerance` (`Holes/HoleGeometry.cs`).
 
 ## Big items
 
