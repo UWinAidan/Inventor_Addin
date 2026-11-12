@@ -7,9 +7,9 @@ Last updated: 2026-11-12
 ## Next up
 
 1. M4 part 1: the round is planned: tasks 103 to 134 (2026-10-25). Spike 103 is done (rounds 1 and 2 with Aidan, 2026-10-25); it gave tasks 105 and 109 in full and two new tasks, 133 (the mini toolbar's Hole button) and 134 (Save As and Replace renames the occurrence; Aidan's Rename report). 105, 109, 133 and 134 are done (not yet run in Inventor). Spikes 107 and 108 are done (with Aidan, 2026-10-28); task 110 is confirmed from 107's final result (round 4: drill point, seats off the edge and end caps all pass), tasks 114, 115 and 127 are completed from 108. 135, 120, 121, 128, 129, 123, 124, 125, 122, 126, 111, 112, 137 (Aidan's answer to spec 09 question 26), 113, 119, 131, 132, 127, 130, 110, 117, 114, 115, 116, 136, 118 and 138 (swatch on a toleranced hole, Aidan's answer to spec 09 question 28) are done. Aidan checked the round in Inventor (2026-11-07 to 2026-11-09). Tasks 140 to 150 (the fixes and requests from that check) are done (2026-11-09), built on Windows, not yet run in Inventor. Aidan ran the combined check (2026-11-10): everything passed except 140-2, plus two decisions (Flat Pattern, 145-3). Fix tasks 152 to 154 are done (2026-11-10); Aidan's check of them passed (2026-11-10) and PR #29 was merged, closing M4 part 1.
-2. Icon redesign (task 151): done and in its own PR to `main`. Aidan runs its Inventor checklist (task file, 10 steps), then merges.
-3. **Later, not this round** (Aidan, 2026-10-25): every AWB icon gets a more polished look, done together with the colour option.
-4. Aidan finishes the remaining Part Properties checks below.
+2. **Later, not this round** (Aidan, 2026-10-25): every AWB icon gets a more polished look, done together with the colour option.
+3. Aidan finishes the remaining Part Properties checks below.
+4. M4 part 2 (hole table wizard): plan it once Aidan answers spec 04 questions 6 and 7 (below).
 
 ## Waiting on Aidan: checks in Inventor
 

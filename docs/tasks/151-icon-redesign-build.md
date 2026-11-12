@@ -2,7 +2,7 @@
 
 - **Milestone:** M1b (window style and icons, spec 08), after M4 part 1 is merged
 - **Feature spec:** `docs/features/08-window-style.md`, `docs/features/09-awb-hole.md`
-- **Status:** done (built on Windows, not yet run in Inventor)
+- **Status:** done, checked in Inventor by Aidan (2026-11-12, all 10 steps passed)
 - **Depends on:** 148 (mockup, approved by Aidan 2026-11-09); PR #29 merged to `main`
 - **Needs:** windows build, **Python with Pillow** (icon renders)
 - **Parallel-safe with:** none
