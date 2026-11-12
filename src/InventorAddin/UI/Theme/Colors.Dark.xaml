@@ -40,4 +40,10 @@
     <SolidColorBrush x:Key="OnAccentBrush" Color="#FFFFFF" po:Freeze="True" />
     <!-- error text in the status line -->
     <SolidColorBrush x:Key="ErrorBrush" Color="#FF8A80" po:Freeze="True" />
+    <!-- the AWB Hole icons: outline, lines and hatch (task 151) -->
+    <SolidColorBrush x:Key="HoleIconInkBrush" Color="#D6E4F7" po:Freeze="True" />
+    <!-- the AWB Hole icons: the part's solid fill -->
+    <SolidColorBrush x:Key="HoleIconMaterialBrush" Color="#5F7EAD" po:Freeze="True" />
+    <!-- the chosen icon button's 2 px border, and the chosen Units part's text -->
+    <SolidColorBrush x:Key="HoleIconChosenBorderBrush" Color="#7DB6F2" po:Freeze="True" />
 </ResourceDictionary>

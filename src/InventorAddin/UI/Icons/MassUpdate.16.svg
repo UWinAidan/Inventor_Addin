@@ -1,7 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#3B4350" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter" shape-rendering="crispEdges">
-  <title>Mass Update, 16 px: a stack of sheets with a check mark</title>
-  <polyline points="5.5,2.5 5.5,1.5 14.5,1.5 14.5,10.5 13.5,10.5"/>
-  <polyline points="3.5,4.5 3.5,3.5 12.5,3.5 12.5,12.5 11.5,12.5"/>
-  <rect x="1.5" y="5.5" width="9" height="9"/>
-  <polyline points="3.5,10.5 5.5,12.5 8.5,9.5"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <rect x="5.5" y="1.5" width="9" height="9" fill="#BDC9D5" stroke="#3B4350" stroke-width="1"/>
+  <rect x="3.5" y="3.5" width="9" height="9" fill="#BDC9D5" stroke="#3B4350" stroke-width="1"/>
+  <rect x="1.5" y="5.5" width="9" height="9" fill="#D9E7F2" stroke="#3B4350" stroke-width="1"/>
+  <path d="M3.5 10.5L5.5 12.5L8.5 8.5" fill="none" stroke="#0F6CB0" stroke-width="1"/>
 </svg>

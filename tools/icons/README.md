@@ -18,6 +18,8 @@ The add-in's ribbon icons are drawn here as SVG and rendered to the PNG files th
 python3 tools/icons/render.py
 ```
 
+SVG sources for the ribbon icons are plain files with the light-set colours written out; edit them by hand.
+
 Needs Python 3.8 or later and Pillow 10.1 or later (with FreeType, which the usual Pillow wheels include). Nothing else.
 
 It rewrites all 48 PNGs and the preview. Commit the sources, the PNGs and the preview together. The output depends only on the sources and the Pillow version, so a second run gives byte-identical files.
@@ -29,7 +31,7 @@ ImageMagick was the first option, but the copy in the cloud session cannot read 
 - The SVG files are the only place the shapes are defined. Any SVG viewer shows them, in the light-set colour.
 - Each icon is drawn at 16 samples per pixel. Strokes are turned into polygons (with miter, bevel or round joins and butt, square or round caps), filled, then averaged down to the target size.
 - A source with `shape-rendering="crispEdges"` is not anti-aliased: a pixel is on when at least half of it is covered. All the 16 px drawings use it, so their diagonals and circles are clean pixel steps instead of grey blur.
-- Every stroke or fill colour in a source is replaced by the colour of the set being rendered. Each PNG therefore has exactly one colour, with transparency as its only other variation.
+- Every colour in a source must be a light-set palette colour from `render.py` (`OUTLINE` and the five `RIBBON_PANELS`: body, shade, accent and accent tint); the dark set swaps each for its dark partner. An icon that has a `{Name}.Dark.svg` (`AwbHole`, Aidan's 7j) draws the dark set from that file, with its own colours, and the shared palette does not apply. A fill of `erase` (and a stroke of `erase`) clears pixels instead of painting them: it gives the New Part plus its halo without baking in a ribbon colour. Every shape needs an explicit `fill`.
 - A PNG is RGBA (32-bit) with a transparent background and no metadata, colour profile or dpi.
 - The script stops with an error if any part of a drawing, including half the stroke width, lies outside the frame.
 
@@ -42,12 +44,12 @@ Elements `line`, `polyline`, `polygon`, `rect` (with `rx`), `circle`, `path` (co
 ## Drawing rules
 
 - **Our own drawings.** Do not trace or copy Inventor's icons, or anyone else's.
-- **Simple line icons, one weight.** 1 px strokes at 16 px and 1.5 px at 32 px. Filled shapes only for small details such as the dot of the `i`.
+- **Option C style (task 151).** Bodies filled with the panel's pale tint, a shaded face on folds and sides, a 1 px outline, and the panel accent as a filled shape or a 1.5 to 2.5 px line. 16 px drawings are pixel-fitted, not halved.
 - **Frame.** `viewBox="0 0 16 16"` or `"0 0 32 32"`, matching the file. Leave about 1 px clear at the edges; nothing may cross the frame.
 - **16 px: on the grid.** Put line centres on pixel centres (`x.5`), use `stroke-linecap="square"` so a line from `1.5` to `8.5` fills pixels 1 to 8 exactly, and keep `shape-rendering="crispEdges"` on the root. Keep diagonals at 45 degrees so they step one pixel at a time.
 - **32 px: edges on the grid.** A 1.5 px line cannot be sharp on both sides. Put one edge on a pixel boundary: centre at `n.75` for a line whose edge is at `n`, or at `n.25` for a line whose edge is at `n + 1`. The outer edges of outlines go on pixel boundaries.
-- **Colour.** Write `#3B4350` in the sources so they preview correctly. The renderer uses `#3B4350` for the light-theme set and `#E3E7EE` for the dark-theme set. No other colours.
-- **Check the preview** after any change. It shows each icon at 16 and 32 px on Inventor's light (`#F3F4F6`) and dark (`#2B303B`) backgrounds, and at 32 px on the window header tile (`#DDE1E7` and `#3A4150`), enlarged four times without smoothing.
+- **Colour.** Write the light-set hex values from the palette in `render.py` so the sources preview correctly; the renderer swaps them for the dark set. A colour not in the palette stops the render. `AwbHole` is Aidan's 7j design: `AwbHole.svg` and `AwbHole.Dark.svg` are his light and dark SVGs with the `<metadata>` (C2PA) block removed; `AwbHole.16.svg` and `AwbHole.Dark.16.svg` are a pixel-fitted simplification of the same shapes and colours.
+- **Check the previews** after any change. `ribbon-icons.png` shows each icon at 16 and 32 px on the light (`#F3F4F6`) and dark (`#3A4150`) ribbon stand-ins and on a header tile, enlarged four times without smoothing. `python3 tools/icons/preview_151.py` writes `docs/ui-mockups/awb-icons-151-preview.png`: all ribbon icons, the AWB Hole at 16, 24, 32 and 48 px (and 8x), and the window's icon buttons in each state.
 
 ## The icons
 

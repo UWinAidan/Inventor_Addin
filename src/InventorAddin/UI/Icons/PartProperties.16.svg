@@ -1,8 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#3B4350" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter" shape-rendering="crispEdges">
-  <title>Part Properties, 16 px: a sheet with a folded corner and lines of text</title>
-  <polygon points="3.5,1.5 9.5,1.5 12.5,4.5 12.5,14.5 3.5,14.5"/>
-  <polyline points="9.5,1.5 9.5,4.5 12.5,4.5"/>
-  <line x1="5.5" y1="7.5" x2="10.5" y2="7.5"/>
-  <line x1="5.5" y1="9.5" x2="10.5" y2="9.5"/>
-  <line x1="5.5" y1="11.5" x2="8.5" y2="11.5"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <path d="M3.5 1.5H10.5L13.5 4.5V14.5H3.5Z" fill="#D9E7F2" stroke="#3B4350" stroke-width="1"/>
+  <path d="M10.5 1.5V4.5H13.5Z" fill="#BDC9D5" stroke="#3B4350" stroke-width="1"/>
+  <path d="M5 7.5H11M5 9.5H11M5 11.5H9" fill="none" stroke="#0F6CB0" stroke-width="1"/>
 </svg>

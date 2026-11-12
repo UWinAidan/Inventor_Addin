@@ -1,7 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#3B4350" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter" shape-rendering="crispEdges">
-  <title>Create Print, 16 px: a landscape sheet with a view and a title block band</title>
-  <rect x="1.5" y="2.5" width="13" height="11"/>
-  <rect x="5.5" y="4.5" width="5" height="4"/>
-  <line x1="1.5" y1="10.5" x2="14.5" y2="10.5"/>
-  <line x1="9.5" y1="10.5" x2="9.5" y2="13.5"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <rect x="1.5" y="3.5" width="13" height="9" fill="#F5E4D8" stroke="#3B4350" stroke-width="1"/>
+  <rect x="1.5" y="10.5" width="13" height="2" fill="#D4C7C0" stroke="#3B4350" stroke-width="1"/>
+  <path d="M9.5 10.5V12.5" fill="none" stroke="#3B4350" stroke-width="1"/>
+  <rect x="4.5" y="5.5" width="5" height="2" fill="#EBC8AF" stroke="#C2570C" stroke-width="1"/>
 </svg>

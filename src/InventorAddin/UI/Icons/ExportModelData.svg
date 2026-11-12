@@ -1,8 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="#3B4350" stroke-width="1.5" stroke-linecap="butt" stroke-linejoin="miter">
-  <title>Export Model Data, 32 px: a box with an arrow leaving it</title>
-  <rect x="2.75" y="14.75" width="14" height="14"/>
-  <polyline points="2.75,14.75 7.75,9.75 21.75,9.75 21.75,23.75 16.75,28.75"/>
-  <line x1="21.75" y1="9.75" x2="16.75" y2="14.75"/>
-  <polyline points="20,3.25 28.75,3.25 28.75,12"/>
-  <line x1="28.25" y1="3.75" x2="23.5" y2="8.5"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <path d="M3.5 14.5H17.5V28.5H3.5Z" fill="#EAE2F5" stroke="#3B4350" stroke-width="1"/>
+  <path d="M3.5 14.5L8.5 9.5H22.5L17.5 14.5Z" fill="#EAE2F5" stroke="#3B4350" stroke-width="1"/>
+  <path d="M17.5 14.5L22.5 9.5V23.5L17.5 28.5Z" fill="#CBC5D7" stroke="#3B4350" stroke-width="1"/>
+  <path d="M22.5 9.5L27 5" fill="none" stroke="#7A4CC2" stroke-width="2"/>
+  <path d="M29.5 2.5V10L22 2.5Z" fill="#7A4CC2"/>
 </svg>
