@@ -1,5 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#3B4350" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter" shape-rendering="crispEdges">
-  <title>AWB Hole, 16 px: a block in section with a blind drilled hole and its drill point</title>
-  <!-- No hatching at 16 px: the solid either side of the hole is three pixels wide, too narrow for a diagonal that does not touch the outline -->
-  <path d="M 5.5,2.5 H 1.5 V 13.5 H 13.5 V 2.5 H 9.5 V 7.5 L 7.5,9.5 L 5.5,7.5 Z"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <polygon points="2.5,4.5 5.5,1.5 14.5,4.5 11.5,7.5" fill="#E2E5E9"/>
+  <polygon points="11.5,7.5 14.5,4.5 14.5,11.5 11.5,14.5" fill="#A8B0B9"/>
+  <polygon points="2.5,4.5 11.5,7.5 11.5,14.5 2.5,11.5" fill="#C8CDD3"/>
+  <polygon points="4,5.2 4.5,4 6,3.4 7.5,3.4 9,4 10,5.2 10,7" fill="#9ED6AA"/>
+  <polygon points="4,5.2 4,7.5 6,8 6,11.5 7.5,12.5 9,11.5 9,8.5 10,8.8 10,7" fill="#9ED6AA"/>
+  <polygon points="6,10.5 9,10.5 9,11.5 7.5,12.5 6,11.5" fill="#D3F0D9"/>
+  <polygon points="4,7.5 6,8 6,8.6 4,8.1" fill="#D3F0D9"/>
+  <polygon points="9,8.5 10,8.8 10,9.3 9,9" fill="#D3F0D9"/>
+  <polygon points="2.5,4.5 5.5,1.5 14.5,4.5 14.5,11.5 11.5,14.5 2.5,11.5" fill="none" stroke="#24364B" stroke-width="1" stroke-linejoin="miter"/>
 </svg>

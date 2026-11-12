@@ -17,8 +17,9 @@ identical files.
 The SVG files are the only place the shapes are defined. This script reads a
 small subset of SVG (see README.md) and draws it itself: it supersamples each
 icon, fills the stroke outlines, and averages back down to the target size.
-Any stroke or fill colour in a source is replaced by the colour of the set
-being rendered.
+Every colour in a source must be one of the palette's light-set colours;
+the dark set is drawn by swapping each for its dark partner (or from a
+{Name}.Dark.svg when the icon has one of its own).
 """
 
 from __future__ import annotations
@@ -52,8 +53,55 @@ ICONS = [
     ("AwbHole", "AWB Hole"),
 ]
 
-# Stroke colour per set. "Light" is for Inventor's light theme (dark strokes).
-SETS = {"Light": "#3B4350", "Dark": "#E3E7EE"}
+SETS = ("Light", "Dark")  # "Light" is for Inventor's light theme (dark strokes)
+
+# --------------------------------------------------------------------------
+# Palette (task 151, option C of the task 148 mockup)
+# --------------------------------------------------------------------------
+
+OUTLINE = ("#3B4350", "#E3E7EE")  # light set, dark set
+ERASE = "erase"  # fill or stroke colour that clears the pixels instead of painting them
+
+
+def _mix(a: str, b: str, t: float) -> str:
+    """Colour a over colour b at opacity t."""
+    return "#" + "".join(
+        f"{round(int(a[i:i + 2], 16) * t + int(b[i:i + 2], 16) * (1 - t)):02X}" for i in (1, 3, 5)
+    )
+
+
+# Panel accent and pale shape tint, (light set, dark set).
+RIBBON_PANELS = {
+    "Create": (("#23824A", "#62CC88"), ("#DCEBE2", "#425D5B")),
+    "Properties": (("#0F6CB0", "#5CAEEF"), ("#D9E7F2", "#415770")),
+    "Drawing": (("#C2570C", "#F5A04E"), ("#F5E4D8", "#5F5450")),
+    "Developer": (("#7A4CC2", "#B79AF2"), ("#EAE2F5", "#535370")),
+    "AWB": (("#0E7C86", "#4FC7CF"), ("#D8EAEC", "#3E5C69")),
+}
+
+
+def panel_colours(panel: str):
+    """The roles of one panel, each as (light, dark): body, shade, accent, accent tint."""
+    (a_l, a_d), (t_l, t_d) = RIBBON_PANELS[panel]
+    return {
+        "body": (t_l, t_d),
+        "shade": (_mix(OUTLINE[0], t_l, 0.18), _mix(OUTLINE[1], t_d, 0.18)),
+        "accent": (a_l, a_d),
+        "tint": (_mix(a_l, t_l, 0.2), _mix(a_d, t_d, 0.2)),
+    }
+
+
+def _palette() -> dict:
+    """Light-set colour -> dark-set colour, for every colour a ribbon source may use."""
+    pairs = {OUTLINE[0]: OUTLINE[1]}
+    for panel in RIBBON_PANELS:
+        for light, dark in panel_colours(panel).values():
+            if pairs.setdefault(light, dark) != dark:
+                raise SystemExit(f"palette clash: {light} maps to two dark colours")
+    return pairs
+
+
+DARK_OF = _palette()
 SIZES = (16, 32)
 
 SUPERSAMPLE = 16  # samples per pixel along each axis
@@ -231,6 +279,7 @@ class Op(NamedTuple):
     width: float = 0.0
     cap: str = "butt"
     join: str = "miter"
+    colour: str = "#000000"  # "#RRGGBB", or ERASE
 
 
 def read_svg(path: Path, size: int):
@@ -260,8 +309,11 @@ def read_svg(path: Path, size: int):
             raise SourceError(f"{path.name}: transforms are not supported")
         subpaths = _shape_subpaths(el)
         crisp = style.get("shape-rendering") == "crispEdges"
-        if style.get("fill", "black") != "none":
-            ops.append(Op("fill", subpaths, crisp))
+        fill = style.get("fill")
+        if fill is None:
+            raise SourceError(f"<{tag}> needs an explicit fill (a colour, or none)")
+        if fill != "none":
+            ops.append(Op("fill", subpaths, crisp, colour=fill))
         if style.get("stroke", "none") != "none":
             ops.append(Op(
                 "stroke",
@@ -270,6 +322,7 @@ def read_svg(path: Path, size: int):
                 float(style.get("stroke-width", "1")),
                 style.get("stroke-linecap", "butt"),
                 style.get("stroke-linejoin", "miter"),
+                style["stroke"],
             ))
 
     try:
@@ -378,10 +431,12 @@ def fill_rings(mask: bytearray, side: int, rings, scale: float):
                 mask[start + c0:start + c1] = b"\xff" * (c1 - c0)
 
 
-def render_icon(ops, size: int, colour: str, name: str) -> Image.Image:
+def render_icon(ops, size: int, colour_of, name: str) -> Image.Image:
+    """Draw the operations in order, each in its own colour, at 16 samples per pixel, then average down."""
     side = size * SUPERSAMPLE
-    smooth, crisp = bytearray(side * side), bytearray(side * side)
+    canvas = Image.new("RGBA", (side, side), (0, 0, 0, 0))
     for op in ops:
+        mask = bytearray(side * side)
         if op.kind == "fill":
             groups = [[pts for pts, _ in op.subpaths]]
         else:
@@ -391,28 +446,55 @@ def render_icon(ops, size: int, colour: str, name: str) -> Image.Image:
             for x, y in (p for ring in rings for p in ring):
                 if x < -1e-6 or y < -1e-6 or x > size + 1e-6 or y > size + 1e-6:
                     raise SourceError(f"{name}: drawing reaches outside the {size} px frame at ({x:.2f}, {y:.2f})")
-            fill_rings(crisp if op.crisp else smooth, side, rings, SUPERSAMPLE)
-    alpha = Image.frombytes("L", (side, side), bytes(smooth)).reduce(SUPERSAMPLE)
-    # crispEdges: a pixel is either on (at least half covered) or off.
-    hard = Image.frombytes("L", (side, side), bytes(crisp)).reduce(SUPERSAMPLE).point(lambda v: 255 if v >= 128 else 0)
-    alpha = ImageChops.lighter(alpha, hard)
-    rgb = Image.new("RGB", (size, size), colour)
-    return Image.merge("RGBA", (*rgb.split(), alpha))
+            fill_rings(mask, side, rings, SUPERSAMPLE)
+        cover = Image.frombytes("L", (side, side), bytes(mask))
+        if op.crisp:
+            # crispEdges: a pixel is either on (at least half covered) or off.
+            cover = (cover.reduce(SUPERSAMPLE).point(lambda v: 255 if v >= 128 else 0)
+                     .resize((side, side), Image.NEAREST))
+        colour = colour_of(op.colour)
+        canvas.paste((0, 0, 0, 0) if colour is None else colour + (255,), (0, 0), cover)
+    # Average in premultiplied form so transparent samples do not darken the edge.
+    return canvas.convert("RGBa").reduce(SUPERSAMPLE).convert("RGBA")
 
 
-def source_for(name: str, size: int) -> Path:
-    if size == 32:
-        return ICON_DIR / f"{name}.svg"
-    return ICON_DIR / f"{name}.{size}.svg"
+def _rgb(hex_colour: str):
+    return tuple(int(hex_colour[i:i + 2], 16) for i in (1, 3, 5))
 
 
-def load_ops(name: str, size: int):
-    path = source_for(name, size)
+def colour_resolver(set_name: str, own_dark_source: bool, name: str):
+    """Maps a source colour to RGB (None for ERASE). A shared source may only use palette colours."""
+    def resolve(colour: str):
+        if colour == ERASE:
+            return None
+        if not re.fullmatch(r"#[0-9A-Fa-f]{6}", colour):
+            raise SourceError(f"{name}: colour {colour!r} is not #RRGGBB")
+        colour = colour.upper()
+        if own_dark_source:
+            return _rgb(colour)
+        if colour not in DARK_OF:
+            raise SourceError(f"{name}: colour {colour} is not in the palette (render.py)")
+        return _rgb(colour if set_name == "Light" else DARK_OF[colour])
+    return resolve
+
+
+def has_own_dark_source(name: str) -> bool:
+    return (ICON_DIR / f"{name}.Dark.svg").exists()
+
+
+def source_for(name: str, size: int, set_name: str = "Light") -> Path:
+    """The source of one icon: {Name}.Dark[.16].svg when the dark set has its own drawing, else the shared one."""
+    stem = f"{name}.Dark" if set_name == "Dark" and has_own_dark_source(name) else name
+    return ICON_DIR / (f"{stem}.svg" if size == 32 else f"{stem}.{size}.svg")
+
+
+def load_ops(name: str, size: int, set_name: str = "Light"):
+    path = source_for(name, size, set_name)
     if path.exists():
         return read_svg(path, size)
     if size == 16:
         # No separate 16 px drawing: halve the 32 px one, with a 1 px stroke.
-        ops = read_svg(source_for(name, 32), 32)
+        ops = read_svg(source_for(name, 32, set_name), 32)
         half = []
         for op in ops:
             subpaths = [([(x / 2, y / 2) for x, y in pts], closed) for pts, closed in op.subpaths]
@@ -429,7 +511,7 @@ PREVIEW_SCALE = 4
 PANELS = [
     # set, title, background, tile, text, muted text
     ("Light", "Light theme", "#F3F4F6", "#DDE1E7", "#1B2029", "#55606F"),
-    ("Dark", "Dark theme", "#2B303B", "#3A4150", "#E8EBF0", "#A9B2C1"),
+    ("Dark", "Dark theme", "#3A4150", "#2B303B", "#E8EBF0", "#A9B2C1"),
 ]
 
 
@@ -458,7 +540,7 @@ def render_preview(icons) -> Image.Image:
         top = p * panel_h
         draw = ImageDraw.Draw(img)
         draw.rectangle([0, top, width - 1, top + panel_h - 1], fill=bg)
-        draw.text((margin, top + 28), f"{title}  ({SETS[set_name]})", font=title_font, fill=text)
+        draw.text((margin, top + 28), f"{title}  (ribbon {bg})", font=title_font, fill=text)
         for x, label, w in ((col16, "16 px", 16 * s), (col32, "32 px", 32 * s), (coltile, "32 px on tile", tile)):
             draw.text((x + w / 2, top + head_h - 22), label, font=small, fill=muted, anchor="ms")
         for i, (name, command) in enumerate(ICONS):
@@ -484,9 +566,10 @@ def main() -> int:
     try:
         for name, _ in ICONS:
             for size in SIZES:
-                ops = load_ops(name, size)
-                for set_name, colour in SETS.items():
-                    icons[(name, set_name, size)] = render_icon(ops, size, colour, name)
+                for set_name in SETS:
+                    ops = load_ops(name, size, set_name)
+                    resolve = colour_resolver(set_name, has_own_dark_source(name), name)
+                    icons[(name, set_name, size)] = render_icon(ops, size, resolve, name)
     except SourceError as e:
         print(f"error: {e}", file=sys.stderr)
         return 1

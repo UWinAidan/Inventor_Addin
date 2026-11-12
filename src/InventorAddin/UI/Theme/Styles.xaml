@@ -1452,9 +1452,12 @@
     </Style>
 
     <!--
-        One of the AWB Hole icons (UI/Controls/HoleIcon): a 20 by 20 drawing shown 24 square in the button's text colour.
-        The material is filled at 45 percent and outlined; thin lines (arrows, marks) and a heavy line (an end face).
+        One of the AWB Hole icons (UI/Controls/HoleIcon): a 20 by 20 drawing shown 24 square (task 151 look). The part is
+        a solid fill (HoleIconMaterial) with 45 degree hatch lines clipped to it, outlined 1.3 in HoleIconInk; thin lines
+        (arrows, marks) are 1.1 and a heavy line (an end face) is 2.4. Not muted when it is not chosen; a disabled
+        button's icon is shown at 40 percent.
     -->
+    <Geometry x:Key="HoleIconHatchGeometry">M-20 21L2 -1 M-16.8 21L5.2 -1 M-13.6 21L8.4 -1 M-10.4 21L11.6 -1 M-7.2 21L14.8 -1 M-4 21L18 -1 M-0.8 21L21.2 -1 M2.4 21L24.4 -1 M5.6 21L27.6 -1 M8.8 21L30.8 -1 M12 21L34 -1 M15.2 21L37.2 -1 M18.4 21L40.4 -1</Geometry>
     <Style TargetType="{x:Type controls:HoleIcon}">
         <Setter Property="Width" Value="24" />
         <Setter Property="Height" Value="24" />
@@ -1462,25 +1465,35 @@
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type controls:HoleIcon}">
                     <Viewbox Stretch="Uniform">
-                        <Canvas Width="20" Height="20">
-                            <Path Data="{TemplateBinding MaterialGeometry}" Fill="{TemplateBinding Foreground}" Opacity="0.45" />
+                        <Canvas x:Name="Drawing" Width="20" Height="20">
+                            <Path Data="{TemplateBinding MaterialGeometry}" Fill="{DynamicResource HoleIconMaterialBrush}" />
+                            <Path Data="{StaticResource HoleIconHatchGeometry}"
+                                  Clip="{TemplateBinding MaterialGeometry}"
+                                  Stroke="{DynamicResource HoleIconInkBrush}"
+                                  StrokeThickness="0.7"
+                                  Opacity="0.55" />
                             <Path Data="{TemplateBinding MaterialGeometry}"
-                                  Stroke="{TemplateBinding Foreground}"
-                                  StrokeThickness="1.2"
+                                  Stroke="{DynamicResource HoleIconInkBrush}"
+                                  StrokeThickness="1.3"
                                   StrokeLineJoin="Round" />
                             <Path Data="{TemplateBinding LineGeometry}"
-                                  Stroke="{TemplateBinding Foreground}"
-                                  StrokeThickness="1"
+                                  Stroke="{DynamicResource HoleIconInkBrush}"
+                                  StrokeThickness="1.1"
                                   StrokeLineJoin="Round"
                                   StrokeStartLineCap="Round"
                                   StrokeEndLineCap="Round" />
                             <Path Data="{TemplateBinding ThickGeometry}"
-                                  Stroke="{TemplateBinding Foreground}"
-                                  StrokeThickness="2.2"
+                                  Stroke="{DynamicResource HoleIconInkBrush}"
+                                  StrokeThickness="2.4"
                                   StrokeStartLineCap="Round"
                                   StrokeEndLineCap="Round" />
                         </Canvas>
                     </Viewbox>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Drawing" Property="Opacity" Value="0.4" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
@@ -1524,14 +1537,14 @@
     <Geometry x:Key="HoleIcon.FlatBottom.Material">M1 2H3V12H17V2H19V18H1Z</Geometry>
 
     <!--
-        A button in a row of icon buttons (mockup choice 2): 40 by 28 (32 until task 118), icon only, 4 apart. Muted while not chosen; the
-        mouse over it shows an input border; the chosen one has the icon tile fill, a lighter (label colour) border and
-        the strong text colour, not the accent. Keyboard focus shows the shared Accent outline. Its tooltip and its name
+        A button in a row of icon buttons (mockup choice 2): 40 by 28 (32 until task 118), icon only, 4 apart. The icon keeps its
+        colours when it is not chosen (task 151); the mouse over it shows an input border; the chosen one has the input
+        fill and a 2 px border in HoleIconChosenBorder (the Outline look of the task 148 mockup). Keyboard focus shows the
+        shared Accent outline. Its tooltip and its name
         for screen readers are the choice's text.
     -->
     <Style x:Key="IconChoiceItem" TargetType="{x:Type ListBoxItem}">
         <Setter Property="FocusVisualStyle" Value="{StaticResource FocusOutline}" />
-        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderBrush" Value="Transparent" />
         <Setter Property="BorderThickness" Value="1" />
@@ -1562,15 +1575,11 @@
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
                 <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
-                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
             </Trigger>
             <Trigger Property="IsSelected" Value="True">
-                <Setter Property="Background" Value="{DynamicResource IconTileBrush}" />
-                <Setter Property="BorderBrush" Value="{DynamicResource TextLabelBrush}" />
-                <Setter Property="Foreground" Value="{DynamicResource TextStrongBrush}" />
-            </Trigger>
-            <Trigger Property="IsEnabled" Value="False">
-                <Setter Property="Foreground" Value="{DynamicResource DisabledTextBrush}" />
+                <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource HoleIconChosenBorderBrush}" />
+                <Setter Property="BorderThickness" Value="2" />
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -1616,7 +1625,7 @@
 
     <!--
         A two-part toggle (Units, mockup choice 1; on the header's line since task 118): one frame in the input border,
-        30 high, the parts side by side with a line between them, 10 either side of each name. The chosen part has the icon tile fill and semibold strong text; the other is muted.
+        30 high, the parts side by side with a line between them, 10 either side of each name. The chosen part has the input fill, a 2 px border and semibold text in HoleIconChosenBorder (task 151, the same chosen look as the icon buttons); the other is muted.
     -->
     <Style x:Key="SegmentedChoiceItem" TargetType="{x:Type ListBoxItem}">
         <Setter Property="FocusVisualStyle" Value="{StaticResource FocusOutline}" />
@@ -1631,20 +1640,33 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ListBoxItem}">
-                    <Border x:Name="Part"
-                            Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            Padding="{TemplateBinding Padding}"
-                            SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-                        <ContentPresenter VerticalAlignment="Center" />
-                    </Border>
+                    <Grid>
+                        <Border x:Name="Part"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+                            <ContentPresenter VerticalAlignment="Center" />
+                        </Border>
+                        <!-- The chosen part's 2 px border, drawn over the part so the layout does not move. -->
+                        <Border x:Name="Mark"
+                                BorderBrush="Transparent"
+                                BorderThickness="2"
+                                IsHitTestVisible="False"
+                                SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="ItemsControl.AlternationIndex" Value="0">
                             <Setter TargetName="Part" Property="CornerRadius" Value="3,0,0,3" />
+                            <Setter TargetName="Mark" Property="CornerRadius" Value="3,0,0,3" />
                         </Trigger>
                         <Trigger Property="ItemsControl.AlternationIndex" Value="1">
                             <Setter TargetName="Part" Property="CornerRadius" Value="0,3,3,0" />
+                            <Setter TargetName="Mark" Property="CornerRadius" Value="0,3,3,0" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Mark" Property="BorderBrush" Value="{DynamicResource HoleIconChosenBorderBrush}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -1658,8 +1680,8 @@
                 <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
             </Trigger>
             <Trigger Property="IsSelected" Value="True">
-                <Setter Property="Background" Value="{DynamicResource IconTileBrush}" />
-                <Setter Property="Foreground" Value="{DynamicResource TextStrongBrush}" />
+                <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource HoleIconChosenBorderBrush}" />
                 <Setter Property="FontWeight" Value="SemiBold" />
             </Trigger>
         </Style.Triggers>

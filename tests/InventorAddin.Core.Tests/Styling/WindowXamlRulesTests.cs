@@ -63,12 +63,13 @@ public sealed class WindowXamlRulesTests
     /// </summary>
     private const string AllowedLiteralColour = "Transparent";
 
-    /// <summary>Spec 08, "Colours": the sixteen tokens. Each is defined in both colour sets as <c>&lt;Token&gt;Brush</c>.</summary>
+    /// <summary>Spec 08, "Colours": the sixteen tokens and the three AWB Hole icon tokens of task 151. Each is defined in both colour sets as <c>&lt;Token&gt;Brush</c>.</summary>
     private static readonly string[] ColourTokens =
     {
         "WindowBackground", "TextPrimary", "TextStrong", "TextLabel", "TextMuted", "TextPlaceholder",
         "SectionHeading", "Divider", "InputBackground", "InputBorder", "IconTile", "DisabledText",
         "DisabledBorder", "Accent", "OnAccent", "Error",
+        "HoleIconInk", "HoleIconMaterial", "HoleIconChosenBorder",
     };
 
     private static readonly XNamespace Xaml = "http://schemas.microsoft.com/winfx/2006/xaml";

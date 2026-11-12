@@ -1,6 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#3B4350" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter" shape-rendering="crispEdges">
-  <title>Save As Copy, 16 px: two overlapping sheets</title>
-  <polyline points="9.5,3.5 9.5,1.5 1.5,1.5 1.5,11.5 4.5,11.5"/>
-  <polygon points="5.5,4.5 10.5,4.5 13.5,7.5 13.5,14.5 5.5,14.5"/>
-  <polyline points="10.5,4.5 10.5,7.5 13.5,7.5"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <path d="M1.5 1.5H7.5L9.5 3.5V11.5H1.5Z" fill="#DCEBE2" stroke="#3B4350" stroke-width="1"/>
+  <path d="M5.5 4.5H10.5L13.5 7.5V14.5H5.5Z" fill="#B7D6C4" stroke="#23824A" stroke-width="1"/>
+  <path d="M10.5 4.5V7.5H13.5Z" fill="#23824A"/>
 </svg>

@@ -119,7 +119,7 @@ Left out until Aidan agrees: the reviewer styling checklist and the PowerShell b
 
 **Icon redesign** (Aidan, 2026-11-09, from the task 148 mockup): task 151 builds the new window-icon look with the Outline chosen state, ribbon option C, and Aidan's 7j AWB Hole icon. It runs on a new branch off `main` after PR #29 (M4 part 1) is merged.
 
-- [ ] 151 Icon redesign: window icons, Outline chosen state, ribbon option C, and the 7j AWB Hole icon
+- [x] 151 Icon redesign: window icons, Outline chosen state, ribbon option C, and the 7j AWB Hole icon
 
 ### M2: Part creation and numbering (spec 02)
 

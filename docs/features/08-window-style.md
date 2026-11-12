@@ -69,6 +69,9 @@ Windows size to their content. There must be no empty band between the last row 
 | `Accent` | `#0F6CB0` | `#0F6CB0` | primary button fill, focus outline |
 | `OnAccent` | `#FFFFFF` | `#FFFFFF` | primary button text |
 | `Error` | `#FF8A80` | `#B3261E` | error text in the status line |
+| `HoleIconInk` | `#D6E4F7` | `#1B3F73` | window icon outline, lines and hatch |
+| `HoleIconMaterial` | `#5F7EAD` | `#87A3CB` | window icon material fill |
+| `HoleIconChosenBorder` | `#7DB6F2` | `#1B3F73` | chosen icon button's 2 px border, chosen Units part's text |
 
 **Buttons**
 
@@ -156,7 +159,7 @@ Every window has the same three bands:
   - Standard, Size (dropdowns); then Fastener type for a seated clearance or tapped hole, or a dowel's seat boxes (Cbore dia and Cbore depth, or Csink dia and Csink angle; task 106).
   - **Fit** in a narrower dropdown (`ShortComboBox`), a dowel's fit colour and its name on the same row (`ColourSwatch`, the one place a data colour is drawn); Tolerance.
 - Section **Depth and direction**: **Termination** as icon buttons (Distance, Through All, and To only for an edited hole that ends at a face, with its note); Full depth (Through All tapped); Thread depth and Drill depth (tapped, blind) or Depth (clearance and dowel, blind); **Drill point** as icon buttons (blind); Direction (Flip); **Centres** on one line, last (spec 09 question 15 b; task 118): the number picked ("3 picked"), how to pick in the row's tooltip, the problem under it when none is, and for an edited hole whose centres are not sketch points a muted "cannot be changed" after the count, the reason in the tooltip.
-- **Icon buttons** (`ChoiceList` in the `IconChoiceList` style): 40 by 28 (32 until task 118), 4 apart, icon only, a tooltip naming each and the same name for screen readers. Not chosen: muted; under the mouse: an input border; chosen: the icon tile fill, a border in the label colour and the strong text colour, not the accent. Tab moves into a row at its chosen button and out again; the arrow keys or Space choose; the label's access key goes to the chosen button. The icons (`HoleIcon`, geometry in `Styles.xaml`) are ours: the part in section, its material shaded and the hole empty, each one different (Aidan): straight walls for Clearance and saw-tooth threads for Tapped; Distance a blind hole with its depth dimensioned beside it, Through All an arrow leaving the bottom, To a heavy end face; drill points as close-ups with a shallow cone (118 deg and any angle from 104), a steep one (below 104) or a flat bottom.
+- **Icon buttons** (`ChoiceList` in the `IconChoiceList` style): 40 by 28 (32 until task 118), 4 apart, icon only, a tooltip naming each and the same name for screen readers. Not chosen: the icon in its own colours, not muted (task 151); under the mouse: an input border; chosen (the Outline look, Aidan 2026-11-09): the input fill and a 2 px border in `HoleIconChosenBorder`, not the accent; disabled: the icon at 40 percent. Tab moves into a row at its chosen button and out again; the arrow keys or Space choose; the label's access key goes to the chosen button. The icons (`HoleIcon`, geometry in `Styles.xaml`) are ours: the part in section, its material a solid `HoleIconMaterial` fill with 45 degree hatch lines clipped to it and a firm `HoleIconInk` outline (1.3; thin lines 1.1, heavy end face 2.4), the hole empty, each one different (Aidan): straight walls for Clearance and saw-tooth threads for Tapped; Distance a blind hole with its depth dimensioned beside it, Through All an arrow leaving the bottom, To a heavy end face; drill points as close-ups with a shallow cone (118 deg and any angle from 104), a steep one (below 104) or a flat bottom.
 - **Depth boxes** (`DepthTextBox`, 104 wide) with the unit (mm or in) after them and, when the text is an expression, what it comes to in muted text (`= 31 mm`, `ExpressionValueText`). Text that is not a length stays in the box with the reason under it and OK disabled.
 - A field that does not apply is not shown. Each field's problem is shown under it in the error colour.
 - Footer: status line (the workbook's problems at open, Inventor's refusal of a change in the error style, or the add-in's notes on the hole as made); OK (primary), Cancel.
@@ -243,7 +246,7 @@ None block planning; each has a default above.
 
 1. The accent colour. Default: blue `#0F6CB0`.
 2. Should the title bar be darkened to match? Default: only if simple and safe.
-3. Icon style. Default: simple line icons, drawn twice (dark strokes for Inventor's light theme, light strokes for its dark theme). The ribbon picks the set for the theme Inventor has when it starts.
+3. Icon style. **Answered by Aidan, 2026-11-09 (task 148 mockup, built by task 151):** full-colour icons with a solid hatched material and a firmer outline. Window icons use three new colour tokens, `HoleIconInk` (outline, lines, hatch; light `#1B3F73`, dark `#D6E4F7`), `HoleIconMaterial` (`#87A3CB`, `#5F7EAD`) and `HoleIconChosenBorder` (the chosen button's 2 px border and the chosen Units part's text; `#1B3F73`, `#7DB6F2`). The chosen state is Outline: the `InputBackground` fill with the 2 px border; the Units toggle takes the same look. The ribbon uses option C: an accent colour by panel (Create green, Properties blue, Drawing orange, Developer purple, AWB teal) with pale tinted shapes, still drawn twice (light and dark sets, 16 and 32 px). The AWB Hole icon is Aidan's design 7j (spec 09).
 
 Added while planning M1b (2026-10-07). Each has a default the tasks build:
 
