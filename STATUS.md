@@ -9,7 +9,7 @@ Last updated: 2026-11-10
 - Updated: 2026-11-10. Branch `claude/m1b-icon-redesign` (off `main` at f73cc29), pushed with this handoff only.
 - Done: Aidan's 152-154 check passed; PR #29 merged (M4 part 1 closed). Local spike branches 103, 107, 108, 139 deleted. 17 merged remote branches deleted (Aidan approved).
 - Task 151 (icons): not started. An implementer was launched and stopped before it changed any file. Restart it with `docs/tasks/151-icon-redesign-build.md`, then reviewer, commit, own PR to `main`.
-- Waiting on Aidan: `origin/claude/tasks-026-to-031-e9rrxe` is the one unmerged remote branch (2 commits, tracking edits from M1b, last d6c8411). Its only still-useful content is the "No `UseLayoutRounding` in windows" rule for `CLAUDE.md` and the matching 2026-10-07 Aidan line in `DECISIONS.md` (the code on `main` already follows it). Recommended: add those two lines, then delete the branch. Aidan has not answered.
+- Old branch `claude/tasks-026-to-031-e9rrxe`: its `UseLayoutRounding` rule added to `CLAUDE.md` and `DECISIONS.md`, branch deleted (Aidan approved 2026-11-12).
 - Gotchas: check `tasklist //FI "IMAGENAME eq Inventor.exe"` before building; `-p:DeployToInventor=false` while it runs. Tracking files are CRLF: edit with Python `newline=''`, replace `
 ` with the file's line ending, assert per replace. Numbering timing tests can fail under parallel load.
 - Read first: `docs/tasks/151-icon-redesign-build.md`, task 148's Follow-ups, `docs/ui-mockups/awb-icons-redesign.html`.

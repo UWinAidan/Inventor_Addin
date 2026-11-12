@@ -48,6 +48,7 @@ The split exists so that most of the work can be built and tested without Invent
 - **Pick the command type that matches what the command changes.** The developer export buttons are query-only; commands that edit documents are not.
 - **Namespace clashes.** The `Inventor` namespace defines `File`, `Path`, `Environment` and `Application`. The add-in project has implicit usings off for that reason. Alias the System types (`using IOPath = System.IO.Path;`).
 - **Confirmed in Inventor 2026.** These were tested by Aidan and need no further checking: property writes made inside a transaction are reverted by one Undo; the standard Cost property accepts a .NET `decimal`; Inventor reports the file name as the Part Number when none has been set; WPF windows shown through `WindowHost` load without extra assembly resolution.
+- **No `UseLayoutRounding` in windows.** Not in window XAML, not in `UI/Theme/`. At 150% display scale it cut off the bottom border of every text box and dropdown in Inventor 2026. The shared window style sets `SnapsToDevicePixels` instead.
 - **`Document` is not `_Document`.** Some API parameters are typed `_Document`, for example `TransactionManager.StartTransaction`. A `Document` does not convert implicitly, so cast it: `(_Document)doc`.
 
 ## What must stay out of the repo
