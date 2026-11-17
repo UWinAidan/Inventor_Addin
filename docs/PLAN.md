@@ -441,6 +441,13 @@ Not in part 1: AWB Hole on the Flat Pattern tab (it keeps Inventor's Hole; the S
 | 158 | Core | 155, 156, 157 | 160 |
 | 159 | Core | 158 | 160 |
 | 160 | **windows** (spike, local session with Aidan) | none | 155 to 159 |
+| 161 | Core | 156, 158 | 159 |
+| 162 | Core | 158, 159 | 161 |
+| 163 | windows (add-in) | 155, 157, 159 | 161, 162 |
+| 164 | windows (add-in) | 161, 163 | 165 |
+| 165 | windows (add-in) | 163 | 164 |
+| 166 | windows (add-in) | 162, 164, 165 | none |
+| 167 | windows (add-in) | 159, 163 | 164, 165 |
 
 - [ ] 155 Core: hole table holes, precision or clearance, and the group order key
 - [ ] 156 Core: hole table descriptions for every hole type
@@ -448,8 +455,15 @@ Not in part 1: AWB Hole on the Flat Pattern tab (it keeps Inventor's Hole; the S
 - [ ] 158 Core: groups, tags, Split, swap, delete and Renumber
 - [ ] 159 Core: the Hole Table Wizard view-model (Create Tables tab and row edits)
 - [x] 160 Spike: Inventor's hole table or a custom table; reading a view's holes and its ordinate origin
+- [ ] 161 Core: hole table layout as a drawing (lines and text), formatted text, and Align
+- [ ] 162 Core: the stored state, Update that keeps tags, and re-opening a table
+- [ ] 163 Add-in: read a drawing view's holes and origin (`IHoleTableSource`)
+- [ ] 164 Add-in: draw the hole tables as sketched symbols, and Align
+- [ ] 165 Add-in: hole tags, precision marks and the AWB Centre Mark
+- [ ] 166 Add-in: store the state, Update, and the Edit Table tab
+- [ ] 167 Add-in: the Hole Table Wizard window and its ribbon button
 
-**Order.** 155, then 156 and 157 alongside, 158, 159. Spike 160 runs with Aidan whenever he is at his PC, before or alongside the Core tasks; it touches only its own spike branch. On a new branch off `main` (`claude/m4-hole-table`).
+**Spike 160 is done** (2026-11-17, Aidan). Tables are drawn as sketched symbols, and every hole gets the one `AWB Centre Mark` style. Tasks 161 to 167 were written from the spike's "Recommendations", and tasks 155, 156 and 159 were updated for it (hole id by reference key, drawing symbols). **Order:** the Core tasks first: 155, then 156 and 157 alongside, then 158, 159, 161 and 162. Then the add-in tasks on Windows: 163, 167, 164, 165 and 166, each built here. Aidan checks them together in Inventor. Spike 160 ran with Aidan whenever he is at his PC, before or alongside the Core tasks; it touches only its own spike branch. On a new branch off `main` (`claude/m4-hole-table`).
 
 ### M5: Drawing tools (spec 05)
 

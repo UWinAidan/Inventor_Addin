@@ -17,7 +17,8 @@ New folder `src/InventorAddin.Core/HoleTable/` (namespace `InventorAddin.Core.Ho
 
 - `HoleTableType` enum, in sort order: `Plain` (Simple, Clearance and dowel holes with no seat), `Counterbore`, `Countersink`, `Spotface`, `Tapped`, `TaperTapped`.
 - `HoleTableHole` record: one hole instance. At least:
-  - `Id`: stable within a drawing: the feature name and the instance's index in the feature's centre list (`Plate Hole 3#2`). Task 160 may replace the index with something steadier; keep `Id` a string so that change stays local.
+  - `Id`: stable across model changes: the feature name and the centre sketch point's reference key, as a string (`Plate Hole 3#<key>`). Spike 160 (C11) showed that the centre index shifts when a centre is removed, while the reference key stays the same (Default, `DECISIONS.md` 2026-11-17). The add-in passes the key in (task 163).
+  - `CentreIndex`: the 1-based index in the feature's centre list, for display and logs only.
   - `FeatureName`, `Units` (`HoleUnits`, the hole's own: the AWB spec's, else the drawing's, passed in)
   - `Type` (`HoleTableType`), `IsPrecision`
   - the hole: `DrillDiameterCm`, `Termination`, `DepthCm`, `FlatBottom`, `DrillPointAngleDeg`
@@ -25,7 +26,7 @@ New folder `src/InventorAddin.Core/HoleTable/` (namespace `InventorAddin.Core.Ho
   - the thread: `ThreadDesignation`, `ThreadType`, `ThreadDepthCm` (null for full depth), `TaperedThread`
   - the tolerance: `HoleTolerance?` (existing record: name, ISO code, upper and lower in cm)
   - the position: `SheetXCm`, `SheetYCm`, the hole centre on the sheet (task 157 turns it into table coordinates)
-- `HoleTableHoles.From(InventorHoleFacts facts, HoleSpec? awbSpec, ...)`: builds the instances of one hole feature, one per centre given. Rules:
+- `HoleTableHoles.From(InventorHoleFacts facts, HoleSpec? awbSpec, ...)`: builds the instances of one hole feature, one per centre given. Each centre comes with its reference key string, its index, and its sheet X and Y. Rules:
   - **Precision** is `HolePrecision.IsPrecision(awbSpec, facts.HasTolerance)`; do not write a second rule (folds the task 113 follow-up in `TODO.md`).
   - **Type:** a thread decides first (question 10): tapered thread → `TaperTapped`, other thread → `Tapped`. Otherwise the seat: Counterbore, Countersink, Spotface; no seat → `Plain`. A dowel is `Plain` (or seated if it has a seat) and precision.
   - **Drill diameter** (question 11): the facts' hole diameter. A taper tapped hole has none in Inventor (spike 108); take the AWB spec's Taper Tapped row tap drill when the spec and workbook give one (pass the row or the value in; do not read the workbook here), else leave it null.
@@ -53,6 +54,7 @@ Out of scope: descriptions (156), coordinates relative to the origin (157), lett
 
 - `InventorHoleFacts` (`Holes/HoleReadBack.cs`) is what `HoleFeatureReader.ReadFacts` returns in the add-in; it is checked in Inventor and is the input here. `HoleStoredData.Read` gives the AWB `HoleSpec`, when a hole has stored data.
 - `HolePrecision.cs` already holds the precision rule, written for this task's use.
+- Spike 160 found that Inventor's tap drill differs from AWB's for Rc 1/8 (8.0 mm against 8.4 mm). Keep the rule above (use AWB's row when given). If a test shows the case, note it under Follow-ups.
 - Follow the Core style: file-scoped namespace, records, XML doc comments that say where a rule came from (Aidan, date, or Default and the spec question).
 
 ## Verification

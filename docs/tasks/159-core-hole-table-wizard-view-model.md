@@ -24,7 +24,7 @@ The wizard's window logic exists in Core as a plain `INotifyPropertyChanged` vie
 - **Enabled states:** Analyze needs a view; Swap and Delete need a selected row; Generate Precision Table and Generate Clearance Table need a non-empty list of their kind; Create Tables needs at least one. The Generate, Create, Align and Update commands are exposed as commands that call the source's (future) table methods through the interface, with the method bodies left to the add-in; for now the interface methods take the plan and return a result message.
 - **Cancel** closes without changes.
 
-Out of scope: the Edit Table tab's re-opening of an existing table (needs spike 160's answer on where edits are stored), the WPF window, anything under `src/InventorAddin`.
+Out of scope: the Edit Table tab's re-opening of an existing table, and Update (both task 162); the WPF window; anything under `src/InventorAddin`.
 
 ## Acceptance criteria
 
