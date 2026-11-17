@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 2
 - **Feature spec:** `docs/features/04-hole-table-wizard.md` ("Decided behaviour": Update, Edit Table tab; open questions 5 and 18)
-- **Status:** todo
+- **Status:** done
 - **Depends on:** 158, 159
 - **Needs:** cloud or windows (Core only)
 - **Parallel-safe with:** 161
@@ -59,13 +59,37 @@ Out of scope: the attribute set calls and drawing (task 166).
 
 ## Verification
 
-Filled in by the implementer.
+- **Ran:** `dotnet build src/InventorAddin.Core` (0 warnings, 0 errors); `dotnet test tests/InventorAddin.Core.Tests`: 4768 passed, 0 failed after review fixes (4707 before). Under load a few Numbering tests failed once in a full run; run alone (862) and with the rest excluded (3906) all pass.
+- **Not compiled (changed under `src/InventorAddin`):** none. Nothing under `src/InventorAddin` implements `IHoleTableSource` yet, so the interface change breaks no add-in code. Task 166 must implement the new members.
+- **Inventor API members not confirmed:** none (Core only).
+- **Manual checklist for Inventor:** none (Core only).
 
-- **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):** none expected
-- **Inventor API members not confirmed:** none expected
-- **Manual checklist for Inventor:** none (Core only)
+### What was built
+
+- `HoleTable/HoleTableState.cs`: `HoleTableTag`, `HoleTableStoredGroup`, `HoleTableStoredTags`, `HoleTableState` (value equality), `HoleTableStateJson.Write` and `Read` (never throws; unknown version or bad text gives null and a reason).
+- `HoleTable/HoleTablePlan.Refresh.cs`: `HoleTablePlan.Refresh`, `ToStoredTags`, `LetterIndex`, `HoleTableRefresh` (plan, cleaned edits, added, gone, description changes, `Summary`).
+- `HoleTablePlan` is now `partial`. `HoleTableMessages` gained `RefreshSummary` and `StaleIdsDropped`.
+- `IHoleTableSource`: `ReadState`, `UpdateTables(sheet, view, plan, state)`; `CreateTables` and `GenerateTable` now also take the `HoleTableState` to store.
+- View-model: `UpdateCommand`, `StoredViews`, `SelectedStoredView`, `OpenStoredViewCommand`, `OpenStoredView(key)`, `Groups` (`HoleTableWizardGroup`: Letter, Table, Description, Notes), `RefreshStoredViews()`.
+
+### Deviations from the brief
+
+- `Refresh` also takes `origin`, `viewScale` and `drawingUnits` (it builds rows with coordinates) and takes a `HoleTableStoredTags` (the id-to-tag map plus a list of what each letter stood for) instead of a bare tag map. The letter list is what lets Update tell a moved hole from one whose description changed, and a split group from an ordinary one. It adds the table, description key and split id per group to the stored state; 200 holes stay well under 32 KB (tested).
+- Renumber does not call the source: the drawing is rewritten only by Create or Update, which store the state. A Renumber in the window changes the lists and the window's tags; the stored state changes on the next Create or Update. Say if Renumber should write straight away.
+- Behaviour choices (defaults, for DECISIONS.md if the parent agrees): "highest in use" for numbers and letters means among the holes and groups present now, so removing the highest hole of a group and adding another reuses its number. A hole keeps its tag only while it stays in its letter's group (same table and description, or still the split hole). A hole that was swapped, split, unsplit, or whose description changed alone is placed as a new hole (next number in a matching group, else next letter). A whole group whose description changed keeps its letter and is reported as a description change. A user-deleted hole drops out silently and is not counted as gone.
+- In the window, Swap, Delete, Split and Notes use `Refresh` (tags kept) once the view was opened, created or updated here, and `Build` (renumber) before that, so the Create Tables tab behaves as before.
 
 ## Follow-ups
 
-Things noticed but not done.
+- Task 166 must implement `ReadState`, `UpdateTables`, and the extra `state` argument on `CreateTables` and `GenerateTable`, store `HoleTableStateJson.Write(state)` in the attribute set, and log `HoleTableRefresh.Summary` (the window shows it already).
+- The window (task for the Edit Table tab XAML) binds `StoredViews`, `SelectedStoredView`, `OpenStoredViewCommand`, `Groups` (Notes) and `UpdateCommand`.
+- Open question for Aidan: should Renumber on an opened table rewrite the drawing at once, or wait for Update?
+
+### Review fixes (round 1)
+
+- `HoleTableStateJson.Read` turns null list entries, bad letters and tag numbers below 1 into a reason; it catches every exception. Four null-entry strings added to the theory.
+- High-water marks: `HoleTableStoredTags` carries the next letter and the highest number used per letter (JSON `nl` and `hn`; missing fields fall back to the stored tags). `Refresh` carries them (`HoleTablePlan.HighWater`); `Build` resets them. A retired tag or letter is never given out again, so `A_whole_group_removed_...` now expects D.
+- View-model: the base tags are replaced only by Open, Create, Update, Generate (each on success) and Renumber; every window edit refreshes against that base, so swap and swap back, or split and unsplit, restore every tag. Analyze View on a view with stored tables opens it as the Edit Table tab does, and Update takes the stored edits whenever the tags come from storage. Generate refreshes `StoredViews`.
+- Spec 04 open question 20 (Renumber on an opened table).
+- Behaviour choice changed from round 0: "highest in use" is now "highest ever used" (the reviewer's request). There is no undelete in the window, so the delete/undelete test was not written.
+- The 32 KB test assumes hole ids of about 75 characters. Task 166 should check the length of one real feature name plus reference key in Inventor.

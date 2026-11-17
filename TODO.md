@@ -74,6 +74,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 **Hole table (spec 04), not blocking**
 - Questions 9 to 17 and 19 in spec 04: seated sub-order, a seated threaded hole, the sort diameter, where a split goes, letters, inch decimals, description wording, holes not seen end on, several origins. Each has a default the Core tasks build
+- Question 20 in spec 04: Renumber on a re-opened table waits for Update to redraw (Default); or should it redraw at once?
 
 **Drawing tools (spec 05), blocks M5**
 - Which of the listed commands are wanted, and what the unclear ones should do
@@ -103,6 +104,8 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Follow-ups from finished tasks
 
+- Hole table stored state (task 162), for tasks 166 and 167: 166 implements `ReadState`, `UpdateTables` and the `state` argument on `CreateTables` and `GenerateTable`, stores `HoleTableStateJson.Write(state)` in the attribute set, and logs `HoleTableRefresh.Summary`; check one real hole id (feature name plus reference key) in Inventor, since the 32 KB test assumes about 75 characters. 167's Edit Table tab binds `StoredViews`, `SelectedStoredView`, `OpenStoredViewCommand`, `Groups` (Notes) and `UpdateCommand`.
+- Task 162 review: `HoleTableStateJson.Read` accepts any `nl` and `hn` value; a corrupted huge `nl` would overflow `Letter(next++)` in `Refresh`. Treat negative or over 18278 (ZZZ) as unreadable. `HoleTablePlan` now carries `HighWater`, so two plans with the same rows but different marks are not equal; mind it if a later task compares plans.
 - Hole table layout (task 161), for task 164: a toleranced group with a seat or thread line is drawn as one stack text plus one text per later line, centred as a block; spike 160 never drew this, so check the stack sits evenly over its two slots and the gap to the next line matches. `IHoleTableTextMeasure` must measure the formatted text as a fitted note renders it (as the spike did), not the raw markup. Check a view name with an apostrophe (`&apos;` in formatted text is untested in Inventor).
 - Task 156 (seen in 161 review): a toleranced hole with no drill diameter attaches its tolerance to `Lines[0]`, which would then be the thread line, so the stack lands in the thread text.
 - Flaky test (seen during task 159): `RenamePlanTests.ListFilesToSearch_AFolderThatDoesNotAnswer_IsSkippedAfterTheProbeTimeout` (RenamePlanTests.cs:564) failed once and passed on a re-run. It depends on a probe timeout; give it more margin or a fake clock.

@@ -101,7 +101,7 @@ public sealed record HoleTableGroup(
 }
 
 /// <summary>The two tables' groups, and the edited <c>Id</c>s that matched no hole.</summary>
-public sealed record HoleTablePlan(
+public sealed partial record HoleTablePlan(
     IReadOnlyList<HoleTableGroup> Precision,
     IReadOnlyList<HoleTableGroup> Clearance,
     IReadOnlyList<string> StaleIds)

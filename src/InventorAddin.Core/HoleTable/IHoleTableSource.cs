@@ -51,9 +51,16 @@ public interface IHoleTableSource
 
     HoleTableViewAnalysis Analyze(string sheetKey, string viewKey);
 
-    string GenerateTable(string sheetKey, string viewKey, HoleTableKind kind, HoleTablePlan plan);
+    /// <summary>Draws one table. <paramref name="state"/> is what the add-in stores on the view (tags, edits, names).</summary>
+    string GenerateTable(string sheetKey, string viewKey, HoleTableKind kind, HoleTablePlan plan, HoleTableState state);
 
-    string CreateTables(string sheetKey, string viewKey, HoleTablePlan plan);
+    string CreateTables(string sheetKey, string viewKey, HoleTablePlan plan, HoleTableState state);
+
+    /// <summary>Rewrites the view's existing tables from the refreshed plan and stores <paramref name="state"/> (Update).</summary>
+    string UpdateTables(string sheetKey, string viewKey, HoleTablePlan plan, HoleTableState state);
+
+    /// <summary>The state stored on the view, or null when it has no stored tables. The Edit Table tab lists views by this.</summary>
+    HoleTableState? ReadState(string sheetKey, string viewKey);
 
     string AlignTables(string sheetKey, string viewKey);
 }

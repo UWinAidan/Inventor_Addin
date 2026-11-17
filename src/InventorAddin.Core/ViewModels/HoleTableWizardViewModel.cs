@@ -56,10 +56,42 @@ public sealed class HoleTableWizardRow : ObservableObject
     internal HoleTableGroup Group => _group;
 }
 
+/// <summary>One group of a Hole Table Wizard plan: its letter, description and NOTES (the Edit Table tab).</summary>
+public sealed class HoleTableWizardGroup : ObservableObject
+{
+    private readonly HoleTableWizardViewModel _owner;
+    private readonly HoleTableGroup _group;
+
+    internal HoleTableWizardGroup(HoleTableWizardViewModel owner, HoleTableGroup group)
+    {
+        _owner = owner;
+        _group = group;
+    }
+
+    public string Letter => _group.Letter;
+
+    public HoleTableKind Table => _group.Table;
+
+    public string Description => _group.Description.PlainText;
+
+    /// <summary>The group's NOTES text, empty when it has none.</summary>
+    public string Notes
+    {
+        get => _group.Note ?? "";
+        set
+        {
+            if (value != Notes)
+            {
+                _owner.SetGroupNote(_group, value);
+            }
+        }
+    }
+}
+
 /// <summary>
 /// The logic of the Hole Table Wizard's Create Tables tab. It reads the drawing through <see cref="IHoleTableSource"/>
 /// and builds the lists with <see cref="HoleTablePlan"/>; the add-in binds a window to it. The Edit Table tab and
-/// Update are a later task.
+/// Update (task 162).
 /// </summary>
 public sealed class HoleTableWizardViewModel : ObservableObject
 {
@@ -69,6 +101,9 @@ public sealed class HoleTableWizardViewModel : ObservableObject
     private HoleTableViewAnalysis? _analysis;
     private SheetPoint _origin;
     private HoleTableEdits _edits = HoleTableEdits.None;
+    private HoleTableStoredTags? _tags;
+    private HoleTableRefresh? _lastRefresh;
+    private HoleTableViewInfo? _selectedStored;
     private HoleTablePlan? _plan;
     private string? _selectedSheet;
     private string? _selectedView;
@@ -89,6 +124,8 @@ public sealed class HoleTableWizardViewModel : ObservableObject
         GenerateClearanceCommand = new RelayCommand(() => Generate(HoleTableKind.Clearance), () => ClearanceRows.Count > 0);
         CreateTablesCommand = new RelayCommand(CreateTables, () => PrecisionRows.Count + ClearanceRows.Count > 0);
         AlignCommand = new RelayCommand(Align, () => !string.IsNullOrEmpty(SelectedView));
+        UpdateCommand = new RelayCommand(Update, () => !string.IsNullOrEmpty(SelectedView));
+        OpenStoredViewCommand = new RelayCommand(() => { if (SelectedStoredView is { } v) OpenStoredView(v.Key); }, () => SelectedStoredView is not null);
         CancelCommand = new RelayCommand(() => CancelRequested?.Invoke(this, EventArgs.Empty));
 
         Sheets = _source.GetSheets();
@@ -108,6 +145,25 @@ public sealed class HoleTableWizardViewModel : ObservableObject
     public ObservableCollection<HoleTableWizardRow> PrecisionRows { get; } = [];
 
     public ObservableCollection<HoleTableWizardRow> ClearanceRows { get; } = [];
+
+    /// <summary>One entry per group, for editing NOTES per group (the Edit Table tab).</summary>
+    public ObservableCollection<HoleTableWizardGroup> Groups { get; } = [];
+
+    /// <summary>The views of the selected sheet that have stored tables: the Edit Table tab's list.</summary>
+    public ObservableCollection<HoleTableViewInfo> StoredViews { get; } = [];
+
+    /// <summary>The Edit Table tab's selected view.</summary>
+    public HoleTableViewInfo? SelectedStoredView
+    {
+        get => _selectedStored;
+        set
+        {
+            if (SetProperty(ref _selectedStored, value))
+            {
+                OpenStoredViewCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
 
     /// <summary>The current plan, or null before a successful Analyze View. The add-in's table methods read it.</summary>
     public HoleTablePlan? Plan => _plan;
@@ -200,6 +256,11 @@ public sealed class HoleTableWizardViewModel : ObservableObject
 
     public RelayCommand AlignCommand { get; }
 
+    public RelayCommand UpdateCommand { get; }
+
+    /// <summary>Opens <see cref="SelectedStoredView"/> on the Edit Table tab.</summary>
+    public RelayCommand OpenStoredViewCommand { get; }
+
     public RelayCommand CancelCommand { get; }
 
     private void LoadViews()
@@ -235,17 +296,51 @@ public sealed class HoleTableWizardViewModel : ObservableObject
 
         ClearAnalysis(NoViewSelectedText);
         RaiseCommandStates();
+        RefreshStoredViews();
     }
 
     private void Analyze()
     {
-        if (_selectedSheet is null || _selectedView is null)
+        // A view with stored tables opens as the Edit Table tab does, so its tags and edits are kept.
+        if (_selectedSheet is not null && _selectedView is not null && HasStoredState(_selectedSheet, _selectedView))
+        {
+            OpenStoredView(_selectedView);
+            return;
+        }
+
+        if (!ReadView(out var analysis))
         {
             return;
         }
 
+        _edits = HoleTableEdits.None;
+        _tags = null;
+        Rebuild(null);
+        Status = FoundText(analysis);
+    }
+
+    private bool HasStoredState(string sheet, string view)
+    {
+        try
+        {
+            return _source.ReadState(sheet, view) is not null;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>Clears the lists, reads the selected view and keeps the analysis; false (with the status set) when it cannot be used.</summary>
+    private bool ReadView(out HoleTableViewAnalysis analysis)
+    {
+        analysis = null!;
+        if (_selectedSheet is null || _selectedView is null)
+        {
+            return false;
+        }
+
         ClearAnalysis(NoViewSelectedText);
-        HoleTableViewAnalysis analysis;
         try
         {
             analysis = _source.Analyze(_selectedSheet, _selectedView);
@@ -253,30 +348,133 @@ public sealed class HoleTableWizardViewModel : ObservableObject
         catch (Exception ex)
         {
             Status = FailureText("analyse the view", ex);
-            return;
+            return false;
         }
 
         if (analysis.FailureMessage is not null)
         {
             Status = analysis.FailureMessage;
-            return;
+            return false;
         }
 
         var origin = HoleTableOriginResult.From(analysis.Origins);
         if (origin.IsStop)
         {
             Status = origin.StopMessage!;
-            return;
+            return false;
         }
 
         _analysis = analysis;
         _origin = origin.Origin!.Value;
-        _edits = HoleTableEdits.None;
-        Rebuild(null);
-
-        var found = analysis.Holes.Count == 1 ? "Found 1 hole." : $"Found {analysis.Holes.Count} holes.";
-        Status = analysis.LeftOutCount > 0 ? $"{found} {HoleTableMessages.HolesLeftOut(analysis.LeftOutCount)}" : found;
+        return true;
     }
+
+    private static string FoundText(HoleTableViewAnalysis analysis)
+    {
+        var found = analysis.Holes.Count == 1 ? "Found 1 hole." : $"Found {analysis.Holes.Count} holes.";
+        return analysis.LeftOutCount > 0 ? $"{found} {HoleTableMessages.HolesLeftOut(analysis.LeftOutCount)}" : found;
+    }
+
+    /// <summary>The Edit Table tab: opens a view that has stored tables, keeping its tags, swaps, deletes, splits and notes.</summary>
+    public void OpenStoredView(string viewKey)
+    {
+        if (_selectedSheet is null)
+        {
+            return;
+        }
+
+        if (_selectedView != viewKey)
+        {
+            SelectedView = viewKey;
+        }
+
+        HoleTableState? state;
+        try
+        {
+            state = _source.ReadState(_selectedSheet, viewKey);
+        }
+        catch (Exception ex)
+        {
+            Status = FailureText("read the stored tables", ex);
+            return;
+        }
+
+        if (state is null)
+        {
+            Status = NoStoredTablesText;
+            return;
+        }
+
+        if (!ReadView(out var analysis))
+        {
+            return;
+        }
+
+        _edits = state.Edits;
+        _tags = state.Tags;
+        Rebuild(null);
+        Status = $"{FoundText(analysis)} Opened the stored tables. {RefreshText()}";
+    }
+
+    /// <summary>
+    /// Update (spec 04 question 18): reads the view again, keeps every remaining hole's tag, and rewrites the tables. It uses
+    /// this window's edits and tags when the view is open here, else the ones stored on the view.
+    /// </summary>
+    private void Update()
+    {
+        if (_selectedSheet is null || _selectedView is null)
+        {
+            return;
+        }
+
+        var sheet = _selectedSheet;
+        var view = _selectedView;
+        var edits = _edits;
+        var tags = _tags;
+        if (tags is null)
+        {
+            HoleTableState? stored;
+            try
+            {
+                stored = _source.ReadState(sheet, view);
+            }
+            catch (Exception ex)
+            {
+                Status = FailureText("read the stored tables", ex);
+                return;
+            }
+
+            if (stored is null)
+            {
+                Status = NoStoredTablesText;
+                return;
+            }
+
+            // The tags come from storage, so the edits made with them do too.
+            tags = stored.Tags;
+            edits = stored.Edits;
+        }
+
+        if (!ReadView(out var analysis))
+        {
+            return;
+        }
+
+        _edits = edits;
+        _tags = tags;
+        Rebuild(null);
+        var summary = RefreshText();
+        var state = CurrentState();
+        var plan = _plan!;
+        if (TryRun("update the tables", () => _source.UpdateTables(sheet, view, plan, state), summary))
+        {
+            _tags = plan.ToStoredTags();
+        }
+
+        RefreshStoredViews();
+    }
+
+    public const string NoStoredTablesText = "This view has no stored hole tables. Create them first.";
 
     private void Swap()
     {
@@ -303,7 +501,11 @@ public sealed class HoleTableWizardViewModel : ObservableObject
         Rebuild(null);
     }
 
-    private void Renumber() => Rebuild(SelectedRow?.HoleId);
+    private void Renumber()
+    {
+        Rebuild(SelectedRow?.HoleId, renumber: true);
+        Status = "Renumbered: every tag is reset from A1 and any gaps are closed.";
+    }
 
     internal void SetSplit(string holeId, bool on)
     {
@@ -320,11 +522,27 @@ public sealed class HoleTableWizardViewModel : ObservableObject
         Rebuild(SelectedRow?.HoleId ?? row.HoleId);
     }
 
+    internal void SetGroupNote(HoleTableGroup group, string text)
+    {
+        _edits = group.SplitHoleId is { } splitId
+            ? _edits.WithSplitNote(splitId, text)
+            : _edits.WithNote(group.Table, group.Description.Key, text);
+        Rebuild(SelectedRow?.HoleId);
+    }
+
     private void Generate(HoleTableKind kind)
     {
         if (_plan is not null && _selectedSheet is not null && _selectedView is not null)
         {
-            Status = Run("generate the table", () => _source.GenerateTable(_selectedSheet, _selectedView, kind, _plan));
+            var sheet = _selectedSheet;
+            var view = _selectedView;
+            var plan = _plan;
+            var state = CurrentState();
+            if (TryRun("generate the table", () => _source.GenerateTable(sheet, view, kind, plan, state)))
+            {
+                _tags = plan.ToStoredTags();
+                RefreshStoredViews();
+            }
         }
     }
 
@@ -332,7 +550,31 @@ public sealed class HoleTableWizardViewModel : ObservableObject
     {
         if (_plan is not null && _selectedSheet is not null && _selectedView is not null)
         {
-            Status = Run("create the tables", () => _source.CreateTables(_selectedSheet, _selectedView, _plan));
+            var sheet = _selectedSheet;
+            var view = _selectedView;
+            var plan = _plan;
+            var state = CurrentState();
+            if (TryRun("create the tables", () => _source.CreateTables(sheet, view, plan, state)))
+            {
+                _tags = plan.ToStoredTags();
+                RefreshStoredViews();
+            }
+        }
+    }
+
+    /// <summary>Runs a source call and sets the status to its result (and <paramref name="suffix"/>), or to the failure; true on success.</summary>
+    private bool TryRun(string what, Func<string> call, string suffix = "")
+    {
+        try
+        {
+            var result = call();
+            Status = string.IsNullOrEmpty(suffix) ? result : $"{result} {suffix}";
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Status = FailureText(what, ex);
+            return false;
         }
     }
 
@@ -364,19 +606,85 @@ public sealed class HoleTableWizardViewModel : ObservableObject
         _analysis = null;
         _plan = null;
         _edits = HoleTableEdits.None;
+        _tags = null;
+        _lastRefresh = null;
         Fill(null);
         Status = status;
     }
 
-    private void Rebuild(string? keepSelectedId)
+    private void Rebuild(string? keepSelectedId, bool renumber = false)
     {
         if (_analysis is null)
         {
             return;
         }
 
-        _plan = HoleTablePlan.Build(_analysis.Holes, _edits, _origin, _analysis.ViewScale, _analysis.DrawingUnits);
+        _lastRefresh = null;
+        if (_tags is null || renumber)
+        {
+            _plan = HoleTablePlan.Build(_analysis.Holes, _edits, _origin, _analysis.ViewScale, _analysis.DrawingUnits);
+            if (_tags is not null)
+            {
+                _tags = _plan.ToStoredTags();
+            }
+        }
+        else
+        {
+            _lastRefresh = HoleTablePlan.Refresh(_analysis.Holes, _edits, _tags, _origin, _analysis.ViewScale, _analysis.DrawingUnits);
+            _plan = _lastRefresh.Plan;
+            _edits = _lastRefresh.Edits;
+        }
+
         Fill(keepSelectedId);
+    }
+
+    /// <summary>What the last Update or Edit Table refresh did, and any stale ids, for the status line.</summary>
+    private string RefreshText()
+    {
+        var parts = new List<string>();
+        if (_lastRefresh is not null)
+        {
+            parts.Add(_lastRefresh.Summary);
+        }
+
+        if (_plan is { StaleIds.Count: > 0 })
+        {
+            parts.Add(HoleTableMessages.StaleIdsDropped(_plan.StaleIds.Count));
+        }
+
+        return string.Join(" ", parts);
+    }
+
+    private HoleTableState CurrentState()
+    {
+        var sheet = Sheets.FirstOrDefault(s => s.Key == _selectedSheet)?.Name ?? "";
+        var view = Views.FirstOrDefault(v => v.Key == _selectedView)?.Name ?? "";
+        return HoleTableState.From(sheet, view, _edits, _plan!);
+    }
+
+    /// <summary>Reads which views of the selected sheet have stored tables. Called when the sheet changes and after Create and Update.</summary>
+    public void RefreshStoredViews()
+    {
+        StoredViews.Clear();
+        if (_selectedSheet is null)
+        {
+            return;
+        }
+
+        foreach (var view in Views)
+        {
+            try
+            {
+                if (_source.ReadState(_selectedSheet, view.Key) is not null)
+                {
+                    StoredViews.Add(view);
+                }
+            }
+            catch (Exception)
+            {
+                // A view whose state cannot be read is simply not listed.
+            }
+        }
     }
 
     private void Fill(string? keepSelectedId)
@@ -388,8 +696,14 @@ public sealed class HoleTableWizardViewModel : ObservableObject
             _selectedClearance = null;
             PrecisionRows.Clear();
             ClearanceRows.Clear();
+            Groups.Clear();
             if (_plan is not null)
             {
+                foreach (var group in _plan.AllGroups)
+                {
+                    Groups.Add(new HoleTableWizardGroup(this, group));
+                }
+
                 foreach (var group in _plan.Precision)
                 {
                     foreach (var row in group.Rows)
@@ -444,5 +758,6 @@ public sealed class HoleTableWizardViewModel : ObservableObject
         GenerateClearanceCommand.RaiseCanExecuteChanged();
         CreateTablesCommand.RaiseCanExecuteChanged();
         AlignCommand.RaiseCanExecuteChanged();
+        UpdateCommand.RaiseCanExecuteChanged();
     }
 }

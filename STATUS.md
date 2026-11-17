@@ -7,9 +7,9 @@ Last updated: 2026-11-13
 ## Session handoff (ContextKeeper)
 
 - Updated: 2026-11-17. Branch `claude/m4-hole-table`, pushed up to `362a59f` (Aidan: push every few tasks as a backup).
-- Goal: run M4 part 2 in order (`docs/WORKFLOW.md` run mode): Core 162; then add-in 163, 167, 164, 165, 166 on this PC. Aidan checks the add-in tasks together in Inventor at the end (collect their checklists).
-- Done this session: tasks 155 to 159 and 161 committed, each reviewed (`df21353`, `49b2467` 157, `7a7aaee` 156, `e733478` 158, `362a59f` 159). `0a907a6` logged Aidan's decisions (the three hole table defaults are his; Hole Table icon is a placeholder until he sends a design).
-- Next: 162 (brief carries review notes from 158 and 159), then the add-in tasks. Core tests: 4707 passing after 161.
+- Goal: run M4 part 2 in order (`docs/WORKFLOW.md` run mode): the Core tasks are done; now add-in 163, 167, 164, 165, 166 on this PC. Aidan checks the add-in tasks together in Inventor at the end (collect their checklists).
+- Done this session: tasks 155 to 159, 161 and 162 committed, each reviewed (`df21353`, `49b2467` 157, `7a7aaee` 156, `e733478` 158, `362a59f` 159). `0a907a6` logged Aidan's decisions (the three hole table defaults are his; Hole Table icon is a placeholder until he sends a design).
+- Next: the add-in tasks 163, 167, 164, 165, 166 (build with `dotnet build InventorAddin.slnx -p:DeployToInventor=false` if Inventor is open). Core tests: 4768 passing after 162 (Numbering timing flakes under load).
 - Gotchas: `IHoleTableSource` passes sheets and views by a stable `Key` (task 163 picks it). `TODO.md`, `DECISIONS.md`, `PLAN.md` and task files are CRLF; STATUS is LF. Bash heredocs with mixed quotes fail; write a script file and run it.
 - Read first: `docs/WORKFLOW.md`, `docs/PLAN.md` M4 part 2, tasks 161 to 167.
 

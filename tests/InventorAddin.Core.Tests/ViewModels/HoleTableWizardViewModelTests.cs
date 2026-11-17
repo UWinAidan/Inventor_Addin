@@ -44,19 +44,43 @@ public class HoleTableWizardViewModelTests
             return Analysis;
         }
 
-        public string GenerateTable(string sheetKey, string viewKey, HoleTableKind kind, HoleTablePlan plan)
+        public string GenerateTable(string sheetKey, string viewKey, HoleTableKind kind, HoleTablePlan plan, HoleTableState state)
         {
             Calls.Add($"generate {kind} {sheetKey}/{viewKey}");
+            Stored[(sheetKey, viewKey)] = state;
             if (Throw) throw new InvalidOperationException("boom");
             return "Generated " + kind;
         }
 
-        public string CreateTables(string sheetKey, string viewKey, HoleTablePlan plan)
+        public string CreateTables(string sheetKey, string viewKey, HoleTablePlan plan, HoleTableState state)
         {
             Calls.Add($"create {sheetKey}/{viewKey}");
+            CreatedState = state;
+            Stored[(sheetKey, viewKey)] = state;
             if (Throw) throw new InvalidOperationException("boom");
             return "Created";
         }
+
+        public Dictionary<(string, string), HoleTableState> Stored { get; } = [];
+
+        public HoleTablePlan? UpdatedPlan { get; private set; }
+
+        public HoleTableState? UpdatedState { get; private set; }
+
+        public HoleTableState? CreatedState { get; private set; }
+
+        public string UpdateTables(string sheetKey, string viewKey, HoleTablePlan plan, HoleTableState state)
+        {
+            Calls.Add($"update {sheetKey}/{viewKey}");
+            if (Throw) throw new InvalidOperationException("boom");
+            UpdatedPlan = plan;
+            UpdatedState = state;
+            Stored[(sheetKey, viewKey)] = state;
+            return "Updated.";
+        }
+
+        public HoleTableState? ReadState(string sheetKey, string viewKey) =>
+            Stored.GetValueOrDefault((sheetKey, viewKey));
 
         public string AlignTables(string sheetKey, string viewKey)
         {
@@ -338,5 +362,259 @@ public class HoleTableWizardViewModelTests
         Assert.Contains("boom", vm.Status);
         Assert.Equal(2, vm.PrecisionRows.Count);
         Assert.NotNull(vm.Plan);
+    }
+
+    // Task 162: stored state, Update and the Edit Table tab.
+
+    private static string[] TagList(HoleTableWizardViewModel vm) =>
+        vm.PrecisionRows.Concat(vm.ClearanceRows).Select(r => r.Tag).ToArray();
+
+    private static Dictionary<string, string> TagMap(HoleTableWizardViewModel vm) =>
+        vm.PrecisionRows.Concat(vm.ClearanceRows).ToDictionary(r => r.HoleId, r => r.Tag);
+
+    private static HoleTableWizardViewModel OpenStored(FakeSource source)
+    {
+        var vm = new HoleTableWizardViewModel(source);
+        vm.SelectedStoredView = vm.StoredViews[0];
+        vm.OpenStoredViewCommand.Execute(null);
+        return vm;
+    }
+
+    // Analyses, swaps the first clearance hole, adds a note, creates; returns the source holding the stored state.
+    private static FakeSource StoredSource()
+    {
+        var (vm, source) = Analyzed();
+        vm.SelectedClearanceRow = vm.ClearanceRows[0];
+        vm.SwapCommand.Execute(null);
+        vm.Groups.First(g => g.Table == HoleTableKind.Clearance).Notes = "Deburr";
+        vm.CreateTablesCommand.Execute(null);
+        return source;
+    }
+
+    [Fact]
+    public void Create_stores_the_state_with_names_tags_and_edits()
+    {
+        var (vm, source) = Analyzed();
+        vm.SelectedClearanceRow = vm.ClearanceRows[2];
+        vm.SwapCommand.Execute(null);
+        vm.CreateTablesCommand.Execute(null);
+
+        var state = source.CreatedState!;
+        Assert.Equal("Sheet:2", state.SheetName);
+        Assert.Equal("VIEW2", state.ViewName);
+        Assert.Equal(5, state.Tags.ByHole.Count);
+        Assert.Single(state.Edits.SwappedIds);
+        Assert.Contains(vm.StoredViews, v => v.Key == "v2");
+    }
+
+    [Fact]
+    public void Generate_one_table_also_stores_the_state()
+    {
+        var (vm, source) = Analyzed();
+        vm.GeneratePrecisionCommand.Execute(null);
+        Assert.Contains("generate Precision s2/v2", source.Calls);
+    }
+
+    [Fact]
+    public void Edit_tab_lists_only_views_with_stored_tables()
+    {
+        var source = new FakeSource();
+        source.Stored[("s2", "v3")] = HoleTableState.From("Sheet:2", "VIEW3", HoleTableEdits.None, HoleTablePlan.Build([], null, new SheetPoint(0, 0), 1, HoleUnits.Metric));
+        var vm = new HoleTableWizardViewModel(source);
+        Assert.Equal(new[] { "v3" }, vm.StoredViews.Select(v => v.Key));
+    }
+
+    [Fact]
+    public void Reopening_a_stored_view_shows_the_stored_tags_and_notes()
+    {
+        var source = StoredSource();
+        var created = source.CreatedState!;
+        var vm = OpenStored(source);
+
+        Assert.Equal(created.Tags.ByHole.ToDictionary(p => p.Key, p => p.Value.Text), TagMap(vm));
+        Assert.Contains(vm.Groups, g => g.Notes == "Deburr");
+        Assert.Contains(vm.ClearanceRows.Concat(vm.PrecisionRows), r => r.Notes == "Deburr");
+        Assert.Contains("0 holes added", vm.Status);
+    }
+
+    [Fact]
+    public void Edits_after_opening_keep_the_tags_of_the_other_holes()
+    {
+        var vm = OpenStored(StoredSource());
+        var before = TagMap(vm);
+
+        var target = vm.ClearanceRows[^1];
+        vm.SelectedClearanceRow = target;
+        vm.DeleteCommand.Execute(null);
+        var after = TagMap(vm);
+        Assert.DoesNotContain(target.HoleId, after.Keys);
+        foreach (var (id, tag) in after)
+        {
+            Assert.Equal(before[id], tag);
+        }
+    }
+
+    [Fact]
+    public void Renumber_after_opening_closes_the_gaps()
+    {
+        var vm = OpenStored(StoredSource());
+        Assert.Equal(new[] { "A1", "B1", "B2" }, TagList(vm).Take(3));
+        vm.SelectedPrecisionRow = vm.PrecisionRows[1];
+        vm.DeleteCommand.Execute(null);
+        var gapped = vm.Plan!.AllGroups.Any(g => !g.Rows.Select(r => r.Number).SequenceEqual(Enumerable.Range(1, g.Rows.Count)));
+        Assert.True(gapped);
+        vm.RenumberCommand.Execute(null);
+
+        Assert.All(vm.Plan.AllGroups, g => Assert.Equal(Enumerable.Range(1, g.Rows.Count), g.Rows.Select(r => r.Number)));
+        Assert.Equal(new[] { "A1", "B1" }, vm.PrecisionRows.Select(r => r.Tag));
+    }
+
+    [Fact]
+    public void Update_calls_the_source_with_the_refreshed_plan_and_keeps_tags()
+    {
+        var source = StoredSource();
+        var oldTags = source.CreatedState!.Tags.ByHole.ToDictionary(p => p.Key, p => p.Value.Text);
+
+        // A hole is added to the model and one is removed.
+        var holes = source.Analysis.Holes.Where(h => h.Id != "D#1").Append(Plain("C#3", 0.5, 3, 2)).ToList();
+        source.Analysis = source.Analysis with { Holes = holes };
+        var vm = new HoleTableWizardViewModel(source);
+        vm.UpdateCommand.Execute(null);
+
+        Assert.Contains("update s2/v2", source.Calls);
+        var tags = source.UpdatedPlan!.AllGroups.SelectMany(g => g.Rows).ToDictionary(r => r.Hole.Id, r => r.Tag);
+        Assert.DoesNotContain("D#1", tags.Keys);
+        foreach (var (id, tag) in tags.Where(t => t.Key != "C#3"))
+        {
+            Assert.Equal(oldTags[id], tag);
+        }
+
+        Assert.Equal(tags["C#3"], TagMap(vm)["C#3"]);
+        Assert.StartsWith("Updated.", vm.Status);
+        Assert.Contains("1 hole added, 1 hole gone, 0 descriptions changed.", vm.Status);
+        Assert.Equal(tags.Count, source.UpdatedState!.Tags.ByHole.Count);
+    }
+
+    [Fact]
+    public void Update_on_a_view_with_no_stored_tables_says_so_and_does_not_write()
+    {
+        var source = new FakeSource();
+        var vm = new HoleTableWizardViewModel(source);
+        vm.UpdateCommand.Execute(null);
+        Assert.Equal(HoleTableWizardViewModel.NoStoredTablesText, vm.Status);
+        Assert.DoesNotContain(source.Calls, c => c.StartsWith("update"));
+    }
+
+    [Fact]
+    public void Update_after_editing_in_the_window_uses_those_edits()
+    {
+        var source = StoredSource();
+        var vm = OpenStored(source);
+        vm.SelectedClearanceRow = vm.ClearanceRows[^1];
+        var id = vm.SelectedClearanceRow.HoleId;
+        vm.DeleteCommand.Execute(null);
+        vm.UpdateCommand.Execute(null);
+
+        Assert.Contains(id, source.UpdatedState!.Edits.DeletedIds);
+        Assert.DoesNotContain(source.UpdatedPlan!.AllGroups.SelectMany(g => g.Rows), r => r.Hole.Id == id);
+    }
+
+    [Fact]
+    public void A_stale_id_in_the_stored_edits_is_reported_and_dropped()
+    {
+        var source = StoredSource();
+        var stored = source.Stored[("s2", "v2")];
+        source.Stored[("s2", "v2")] = stored with { Edits = stored.Edits.WithDeleted("Gone#9") };
+        var vm = OpenStored(source);
+
+        Assert.Equal(new[] { "Gone#9" }, vm.Plan!.StaleIds);
+        Assert.Contains(HoleTableMessages.StaleIdsDropped(1), vm.Status);
+        vm.UpdateCommand.Execute(null);
+        Assert.DoesNotContain("Gone#9", source.UpdatedState!.Edits.DeletedIds);
+    }
+
+    [Fact]
+    public void Group_notes_edit_per_group()
+    {
+        var (vm, _) = Analyzed();
+        Assert.Equal(vm.Plan!.AllGroups.Count(), vm.Groups.Count);
+        var group = vm.Groups.First(g => g.Table == HoleTableKind.Clearance);
+        group.Notes = "Check fit";
+        Assert.Equal("Check fit", vm.Groups.First(g => g.Table == HoleTableKind.Clearance).Notes);
+        Assert.Equal("Check fit", vm.ClearanceRows[0].Notes);
+    }
+
+    [Fact]
+    public void Update_reports_a_failing_source()
+    {
+        var source = StoredSource();
+        var vm = OpenStored(source);
+        source.Throw = true;
+        vm.UpdateCommand.Execute(null);
+        Assert.Contains("boom", vm.Status);
+    }
+
+    [Fact]
+    public void Swapping_a_row_and_swapping_it_back_leaves_every_tag_unchanged()
+    {
+        var vm = OpenStored(StoredSource());
+        var before = TagMap(vm);
+        var id = vm.PrecisionRows[^1].HoleId;
+        vm.SelectedPrecisionRow = vm.PrecisionRows[^1];
+        vm.SwapCommand.Execute(null);
+        Assert.NotEqual(before[id], TagMap(vm)[id]);
+        vm.SwapCommand.Execute(null);
+        Assert.Equal(before, TagMap(vm));
+    }
+
+    [Fact]
+    public void Splitting_a_row_and_unsplitting_it_leaves_every_tag_unchanged()
+    {
+        var vm = OpenStored(StoredSource());
+        var before = TagMap(vm);
+        var row = vm.PrecisionRows[^1];
+        row.IsSplit = true;
+        Assert.NotEqual(before[row.HoleId], TagMap(vm)[row.HoleId]);
+        vm.PrecisionRows.Single(r => r.HoleId == row.HoleId).IsSplit = false;
+        Assert.Equal(before, TagMap(vm));
+    }
+
+    [Fact]
+    public void Update_after_Analyze_on_a_stored_view_keeps_the_stored_edits()
+    {
+        var source = StoredSource();
+        var vm = new HoleTableWizardViewModel(source);
+        vm.AnalyzeCommand.Execute(null);
+        Assert.Contains("Opened the stored tables", vm.Status);
+        Assert.Contains(vm.Groups, g => g.Notes == "Deburr");
+
+        vm.UpdateCommand.Execute(null);
+        Assert.Single(source.UpdatedState!.Edits.SwappedIds);
+        Assert.Equal(source.CreatedState!.Edits.SwappedIds, source.UpdatedState.Edits.SwappedIds);
+        Assert.Single(source.UpdatedState.Edits.NotesByDescription);
+        Assert.Equal(source.CreatedState.Tags.ByHole.ToDictionary(p => p.Key, p => p.Value.Text), TagMap(vm));
+    }
+
+    [Fact]
+    public void A_failed_create_does_not_replace_the_tags()
+    {
+        var (vm, source) = Analyzed();
+        source.Throw = true;
+        vm.CreateTablesCommand.Execute(null);
+        Assert.Contains("boom", vm.Status);
+        source.Throw = false;
+        vm.SelectedClearanceRow = vm.ClearanceRows[0];
+        vm.SwapCommand.Execute(null);
+        // Still the Create tab's renumbering behaviour: no tags were stored.
+        Assert.Equal(HoleTablePlan.Build(source.Analysis.Holes, HoleTableEdits.None.WithSwapped(vm.SelectedRow!.HoleId), new SheetPoint(0, 0), 1, HoleUnits.Metric).AllGroups.SelectMany(g => g.Rows).Select(r => r.Tag), TagList(vm));
+    }
+
+    [Fact]
+    public void Generate_stores_the_tags_and_lists_the_view()
+    {
+        var (vm, source) = Analyzed();
+        vm.GeneratePrecisionCommand.Execute(null);
+        Assert.Contains(vm.StoredViews, v => v.Key == "v2");
+        Assert.Equal(5, source.Stored[("s2", "v2")].Tags.ByHole.Count);
     }
 }
