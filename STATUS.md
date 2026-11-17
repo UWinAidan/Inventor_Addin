@@ -2,21 +2,29 @@
 
 Where each big item stands. One line per item, kept current by the parent session. For the order of work and the task lists see `docs/PLAN.md`; for what needs doing next see `TODO.md`.
 
-Last updated: 2026-11-12
+Last updated: 2026-11-13
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-12 10:26. Branch `claude/m4-hole-table` (off `main`), plan commit `e44f681`; not pushed. This handoff edit is uncommitted. No open PR.
-- Goal of this session: record Aidan's answers to spec 04 questions 2 to 8 and plan M4 part 2 (hole table wizard) per `docs/WORKFLOW.md`.
-- Done: spec 04 gained "Decided behaviour" and open questions 9 to 17 (Defaults); `DECISIONS.md` (7 Aidan entries, 10 Default); `docs/PLAN.md` M4 part 2 table and task list; `TODO.md` Next up and the spec 04 block; task files `docs/tasks/155` to `160`. Remote branch `claude/m1b-icon-redesign` was already deleted on GitHub (push --delete said the ref does not exist).
-- Current state: plan only, no code changed; nothing built or tested this session. M4 part 2 is Planned.
-- Open: Aidan has not yet said whether to push the branch, or whether to start with task 155 or spike 160.
-- Next steps:
-  1. Ask Aidan: push `claude/m4-hole-table`? Start 155 or spike 160?
-  2. Run 155 (implementer, then reviewer, then commit `task 155: ...`), then 156 and 157 (parallel-safe), 158, 159.
-  3. Spike 160 with Aidan in Inventor on branch `spike/160-hole-table`; record results in its task file, then write the add-in tasks, table model, Align, Update and Edit Table re-open tasks.
-- Gotchas: check `tasklist //FI "IMAGENAME eq Inventor.exe"` before building; `-p:DeployToInventor=false` while it runs. Tracking files, specs and task files are CRLF (a `grep $'\r'` check in Git Bash wrongly reported LF; use Python byte counts). The Write tool and heredoc appends give LF, so convert after. Python `\n` escapes inside bash heredocs got mangled; for one-line fixes use the Edit tool (it keeps CRLF). Numbering timing tests can fail under parallel load.
-- Read first: `docs/features/04-hole-table-wizard.md` ("Decided behaviour", questions 9 to 17), `docs/tasks/155` to `160`, `docs/PLAN.md` M4 part 2. Core inputs: `InventorHoleFacts` (`Holes/HoleReadBack.cs`), `HolePrecision.cs`, `HoleTolerance` (`Holes/HoleGeometry.cs`).
+- Updated: 2026-11-17 11:20 (round 7, one centre mark for every hole). Goal: spike 160 for Aidan. No add-in code was changed, so nothing was built or tested. Branch `claude/m4-hole-table`, latest commit `352fa6d`.
+  - Uncommitted here: this file, `TODO.md`, `DECISIONS.md`, `.gitignore` (adds `spike-local/`), and the task 160 results (rounds 2 to 7).
+  - Spike scripts are on branch `spike/160-hole-table` (worktree `../Inventor_Addin-spike160`, folder `spikes/160/`). Pushed up to `c128267` with Aidan's OK. `caff63d` (round 7) is committed but **not pushed**.
+- Aidan reviewed round 6: option 1 is final (each table one sketched symbol, Update redraws it, edits through the wizard). Logged in `DECISIONS.md`, with his centre mark rule.
+- Round 7 on the `_spike` drawing (not saved; `spike160-round7.ps1`, task 160 "Round 7"):
+  - One local style `AWB Centre Mark` (gap 0.0001, mark size 0.01, overshoot and extension 0.2 cm) on every hole's outermost visible circle: seat, thread circle (`kThreadEdge`), or the hole. Round 6's seat style is deleted.
+  - Precision mark symbol lost its own centre lines; the AWB centre mark draws them.
+  - Measured: lines end 2.0 mm past the circle on E3, A1 and B2.
+- Next:
+  1. Aidan checks round 7 (pictures `spike-local/160/round7-*.png`); ask whether to push `caff63d`.
+  2. Write the add-in tasks (task 160 "Then") for the symbol tables: Update redraws the definitions; edits live in attribute sets (C10); hole ids use the reference key (C11, task 155); create `AWB Centre Mark` if missing.
+- Gotchas:
+  - PowerShell: variable names ignore case. An `AttributeSet` is enumerable, so returning one through a helper unrolls it. `Log` inside a function must use `Write-Host`.
+  - `SketchedSymbolDefinition.Edit` needs a by-ref `DispatchWrapper` through `InvokeMember`. The sketch it returns is dead after `ExitEdit`, so read counts before.
+  - Sketched symbols have no `RangeBox`, so work out a table's extent from its widths and heights.
+  - Aborting a part transaction leaves `Dirty` true; clear it when the part is restored.
+  - Centre mark style `GapDistance = 0` is refused ("Value does not fall within the expected range"); 0.0001 cm works. With extension lines on, `OvershootDistance` (not `ExtensionLength`) sets how far the lines run past the circle.
+  - Bash heredocs containing PowerShell `$(...)` failed to parse; write files with the Write tool instead. `TODO.md`, `DECISIONS.md` and the task files are CRLF; `STATUS.md` is LF.
+- Read first: task 160 "Round 6" and "Round 7", `spike-local/160/spike160-round7.ps1`.
 
 ## Big items
 
@@ -28,7 +36,7 @@ Last updated: 2026-11-12
 | Part creation and numbering (M2) | 02 | **Done, tested in Inventor** | Every check passed; the last run 1 checks were reported on 2026-10-17. Run 2 checked on Windows 2026-10-11; fix run 053 to 061 and fix run 2 (spike 062, tasks 063 to 066) checked 2026-10-12 and passed. Merged into main from `claude/m2-fix-run` |
 | Material and finish (M3) | 03 | **Done, tested in Inventor** | Tasks 067 to 080, merged into main from `claude/m3-material-finish` on 2026-10-17: starter library and finish list, Material and Finish window and button, Part Properties Change button and warning, Settings and About on every ribbon, windows that fit the screen, Settings as one resizable page of collapsible sections, dialogs with only a close button, and a themed scroll bar. Every check passed |
 | AWB Hole (M4 part 1) | 09 | **Done, tested in Inventor** | Decided by Aidan 2026-10-17; spike 081 done with Aidan. Tasks 082 to 090 checked by Aidan 2026-10-18 (making, picking, previewing, tapped and dowel holes, OK, Cancel and Undo work). Then built on branch `claude/m4-hole-generator`, compiled on Windows, not yet run in Inventor: fixes and requests 093 to 101, mockup 102 (approved with changes 2026-10-23), dowel seats 106, window redesign 104, takeover of Hole and H 091, Edit Feature and double-click 092. Aidan's first look on 2026-10-24 gave six changes, planned as tasks 103 (in place for every command, top priority), 105 and 107 to 119: client graphics preview, Simple and Taper Tapped types, Spotface, toleranced clearance holes, depths below the seat, centres per point, a window that fits at 150 percent. Aidan checked 091 to 106 on 2026-10-25: six failures and seven requests, planned as tasks 120 to 132 in the same round. That round (105 to 138) was built on Windows (2026-11-07) and checked by Aidan from 2026-11-07 to 2026-11-09, with a temporary self-test (spike 139, local only) for the measurable steps: everything passed except hand colours on a remade hole (122-6, 122-8), the sketch point mini toolbar (133-1, 133-2, 133-5) and the highlight in place (105-1). Those fixes, the marking menu's Hole, and Aidan's requests and his first-look answers became tasks 140 to 150, built on Windows on 2026-11-09 (not yet run in Inventor; checklist `docs/checklists/m4-fixes-140-150.md`). Aidan checked them on 2026-11-10: all passed but 140-2, fixed with two decisions as tasks 152 to 154, which passed the same day. PR #29 merged into main on 2026-11-10 |
-| Hole table wizard (M4 part 2) | 04 | Planned | Planned 2026-11-12 after Aidan answered spec 04 questions 2 to 8. Core tasks 155 to 159 first; spike 160 with Aidan on Windows settles the table type, reading a view's holes and its ordinate origin, and where edits are kept; the add-in tasks follow from it |
+| Hole table wizard (M4 part 2) | 04 | In progress | Spike 160 done with Aidan 2026-11-17: tables drawn as sketched symbols, one `AWB Centre Mark` style on every hole (task 160 "Recommendations"). Core tasks 155 to 159, 161 and 162 run first; then the add-in tasks 163 to 167 |
 | Drawing tools (M5) | 05 | Not started | Waiting on which commands Aidan wants. Will include a custom drawing template |
 | iLogic injection (M6) | 06 | Not started | Waiting on which rules |
 | Distribution (installer, download page) | none yet | Parked | Was to be decided when M2 was planned; still waiting on Aidan |

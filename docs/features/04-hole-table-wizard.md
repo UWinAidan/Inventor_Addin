@@ -92,9 +92,9 @@ This feature has the most logic that can be built and tested in the cloud.
 - Place tags on the view, and the origin indicator.
 - The WPF window, bound to the Core view-model.
 
-## Design decision to settle with a spike on Windows
+## Design decision, settled by spike 160
 
-Inventor's own hole table can be created from a view and stays associative, but it may not support two tables with one shared tag sequence, merged description cells and custom titles. The alternative is a custom table plus our own tags, which gives full control and loses associativity. This needs a short experiment in Inventor before the add-in side is planned. It is spike 160 (`docs/tasks/160-spike-hole-table-in-inventor.md`), which also settles reading a view's holes and its ordinate origin.
+Settled 2026-11-17 (Aidan): each table is drawn as one sketched symbol, one definition per table. Update redraws it, and edits go through the wizard. Inventor's hole table could not merge cells, and a custom table cannot show symbols or stacked text. Every hole gets the same centre mark, in one `AWB Centre Mark` style kept in the drawing: continuous through the hole, ending 2 mm on paper past the outermost visible circle. How each part is done is in `docs/tasks/160-spike-hole-table-in-inventor.md`, "Recommendations".
 
 ## Open questions
 
@@ -115,6 +115,7 @@ Defaults chosen while planning M4 part 2 (2026-11-12). Each is built as written 
 12. **Where a split instance goes:** its new group sits straight after the group it came from, and takes the next letter.
 13. **Letters:** A to Z, then AA, AB and so on. No letters are skipped (some shops skip I, O and Q).
 14. **Decimals in inch drawings:** precision table 3, clearance table 2. Millimetre drawings use the reference's 2 and 1. Descriptions use their table's decimals.
-15. **Description wording:** plain words rather than drawing symbols: `Ø6.6 THRU`, `Ø6.6 x 12.0 DP`, `C'BORE Ø11.0 x 6.4 DP`, `CSK Ø12.4 x 90°`, `SPOTFACE Ø14.0 x 1.0 DP`; a tapped hole's second line is the thread and its depth (`M6x1 x 10.0 DP`, or `M6x1 THRU`). The seat line comes after the hole line. Spike 160 checks whether Inventor's own symbols (counterbore, countersink, depth) can go in a table cell; if they can, Aidan may prefer them.
+15. ~~**Description wording.**~~ Answered 2026-11-17 (Aidan, spike 160 rounds 3 to 7): Inventor's own drawing symbols (diameter, counterbore, countersink, depth, spotface), the deviations stacked, the seat line after the hole line, the thread line last. Examples: `Ø6.6 THRU`, `Ø6.6 ↧12.0`, `⌴Ø11.0 ↧6.4`, `⌵Ø12.4 X 90°`, `SF Ø14.0 ↧1.0`, `M6x1 - 6H ↧10.0`.
 16. **Holes the table leaves out:** a hole whose axis is not along the view direction (seen from the side) is not listed. The wizard says how many were left out.
 17. **More than one ordinate origin on a view:** the wizard stops and says the view has several origins, rather than picking one.
+18. **Update and tags.** Update keeps each remaining hole's tag. A new hole takes the next number in its group, and a new group takes the next unused letter. Only Renumber closes gaps and reorders. (Or should Update renumber too?)

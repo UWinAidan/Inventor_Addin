@@ -2,15 +2,17 @@
 
 Everything that needs doing and is not already a task in `docs/PLAN.md`. Kept current by the parent session: items are added when they come up and removed when they are done or turned into a task. Where the project stands is in `STATUS.md`; why things are the way they are is in `DECISIONS.md`.
 
-Last updated: 2026-11-12
+Last updated: 2026-11-13
 
 ## Next up
 
-1. M4 part 2 (hole table wizard, spec 04) is planned (2026-11-12): Core tasks 155 to 159, and spike 160 with Aidan on Windows (Inventor's hole table or a custom table, reading a view's holes and its ordinate origin). The add-in tasks are written from the spike's results. M4 part 1 is done (PR #29, 2026-11-10).
+1. M4 part 2 (hole table wizard, spec 04): spike 160 is done (2026-11-17; tables as sketched symbols, Aidan). The plan now holds Core tasks 155 to 159, 161 and 162, and the add-in tasks 163 to 167 (`docs/PLAN.md`). The Core tasks run first. M4 part 1 is done (PR #29, 2026-11-10).
 2. **Later, not this round** (Aidan, 2026-10-25): every AWB icon gets a more polished look, done together with the colour option.
 3. Aidan finishes the remaining Part Properties checks below.
 
 ## Waiting on Aidan: checks in Inventor
+
+**Spike 160, left open (not blocking):** which command made VIEW2's ordinates, "Ordinate Dimension Set" or single "Ordinate"? The API listed no set.
 
 **M2 run 2** was checked on 2026-10-11. Six bugs and six changes became tasks 052 to 061; every other run 2 check passed.
 
@@ -54,6 +56,7 @@ Confirmed so far: the window opens on an assembly, pre-fills Designer, Detailer 
 ## Waiting on Aidan: decisions
 
 Each spec lists its own open questions in full. These are the ones that block planning.
+
 
 **Material and finish (spec 03), not blocking**
 - Questions 10 to 17 in spec 03: ambiguous appearance names, where preferred materials are recorded, Show paints, the Finish Thickness text, the starter library's materials, sub-assemblies in a selection, Passivate's AppliesTo, the ribbon button. Each has a default

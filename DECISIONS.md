@@ -406,3 +406,11 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-12 | Hole table: a hole not seen end on in the view is left out, and the wizard says how many | Default | spec 04 question 16 |
 | 2026-11-12 | Hole table: a view with more than one ordinate origin stops the wizard with a message | Default | spec 04 question 17 |
 | 2026-11-12 | M4 part 2 runs the Core tasks 155 to 159 first; the add-in half waits on spike 160 with Aidan, on a new branch off `main` | Default | `docs/PLAN.md` |
+| 2026-11-17 | Hole tables are drawn as sketched symbols, one definition per table, redrawn by Update (option 1). This follows Aidan's rule for round 6: test Inventor's hole table first and fall back at the first failure. It failed on merged cells | Aidan | task 160, round 6 |
+| 2026-11-17 | Hole tables: option 1 is final. Each table is one sketched symbol, Update redraws it, and edits go through the wizard | Aidan | task 160, round 6 review |
+| 2026-11-17 | Centre marks: every hole gets the same mark in one AWB style kept in the drawing. The lines run continuously through the hole and end 2 mm on paper past the outermost visible circle (seat or thread circle if there is one), whatever the hole's type or size. Precision marks use the same mark | Aidan | task 160, round 7 |
+| 2026-11-17 | Spike 160 closed. Aidan passed round 7 | Aidan | task 160 |
+| 2026-11-17 | Hole table descriptions use Inventor's own drawing symbols (AIGDT diameter, counterbore, countersink, depth, spotface) with the deviations stacked, as in spike rounds 3 to 7. Aidan rejected the plain Unicode look in round 2 and passed the symbol look. This replaces the plain-words default of question 15 | Aidan | task 160, rounds 3 to 7 |
+| 2026-11-17 | Hole table id: a hole instance's `Id` is the feature name plus its centre sketch point's reference key. The centre index is for display only | Default | task 160, C11 |
+| 2026-11-17 | Hole table: a table's edits and tags are stored in an attribute set on its sketched symbol; the shared state (letter sequence, view link) is stored on the sheet | Default | task 160, C10 |
+| 2026-11-17 | Hole table Update keeps each remaining hole's tag. A new hole takes the next number in its group; a new group takes the next unused letter. Only Renumber closes gaps | Default | spec 04 question 18 |

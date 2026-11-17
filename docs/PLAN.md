@@ -447,7 +447,7 @@ Not in part 1: AWB Hole on the Flat Pattern tab (it keeps Inventor's Hole; the S
 - [ ] 157 Core: XDIM and YDIM from the view's ordinate origin
 - [ ] 158 Core: groups, tags, Split, swap, delete and Renumber
 - [ ] 159 Core: the Hole Table Wizard view-model (Create Tables tab and row edits)
-- [ ] 160 Spike: Inventor's hole table or a custom table; reading a view's holes and its ordinate origin
+- [x] 160 Spike: Inventor's hole table or a custom table; reading a view's holes and its ordinate origin
 
 **Order.** 155, then 156 and 157 alongside, 158, 159. Spike 160 runs with Aidan whenever he is at his PC, before or alongside the Core tasks; it touches only its own spike branch. On a new branch off `main` (`claude/m4-hole-table`).
 
