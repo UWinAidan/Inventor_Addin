@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 2
 - **Feature spec:** `docs/features/04-hole-table-wizard.md` ("Decided behaviour": Origin; open questions 7, 14, 16, 17)
-- **Status:** todo
+- **Status:** done
 - **Depends on:** 155
 - **Needs:** cloud or windows (Core only)
 - **Parallel-safe with:** 156, 160
@@ -28,10 +28,10 @@ Out of scope: reading the origin and positions from Inventor (spike 160, then an
 
 ## Acceptance criteria
 
-- [ ] No origin and two different origins each give a stop with its message; two origins at the same point give that origin.
-- [ ] A view at 1:2 with a hole 5 cm right and 2.5 cm above the origin on the sheet reads XDIM 100.0 and YDIM 50.0 (mm, clearance table); 100.00 and 50.00 in the precision table; inches convert and use question 14's decimals.
-- [ ] Negative positions, `-0.0` to `0.0`, and the half rounding are tested.
-- [ ] `dotnet test tests/InventorAddin.Core.Tests` passes.
+- [x] No origin and two different origins each give a stop with its message; two origins at the same point give that origin.
+- [x] A view at 1:2 with a hole 5 cm right and 2.5 cm above the origin on the sheet reads XDIM 100.0 and YDIM 50.0 (mm, clearance table); 100.00 and 50.00 in the precision table; inches convert and use question 14's decimals.
+- [x] Negative positions, `-0.0` to `0.0`, and the half rounding are tested.
+- [x] `dotnet test tests/InventorAddin.Core.Tests` passes.
 
 ## Notes for the implementer
 
@@ -42,11 +42,13 @@ Out of scope: reading the origin and positions from Inventor (spike 160, then an
 
 Filled in by the implementer.
 
-- **Ran:**
+- **Ran:** `dotnet test tests/InventorAddin.Core.Tests` on Windows: 4635 passed, 0 failed (includes the new tests in `HoleTableCoordinatesTests.cs`; 156's files may have been present). After review: values are rounded to 9 decimals before the table rounding (floating-point noise), the half-rounding theory uses binary-exact inputs, and origins are checked by spread.
 - **Not compiled (changed under `src/InventorAddin`):** none expected
 - **Inventor API members not confirmed:** none expected
 - **Manual checklist for Inventor:** none (Core only)
 
 ## Follow-ups
 
-Things noticed but not done.
+- `For` takes no `decimals` argument: `HoleTableDecimals` is a static class (`For(precisionTable, units)`), so the method calls it itself from `precisionTable` and `drawingUnits`.
+- `HoleTableMessages` was created here (it did not exist); tasks 158 and 159 add to it.
+- `SheetPoint` is a `readonly record struct (XCm, YCm)` in `HoleTableOrigin.cs`.

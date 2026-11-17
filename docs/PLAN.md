@@ -451,7 +451,7 @@ Not in part 1: AWB Hole on the Flat Pattern tab (it keeps Inventor's Hole; the S
 
 - [x] 155 Core: hole table holes, precision or clearance, and the group order key
 - [ ] 156 Core: hole table descriptions for every hole type
-- [ ] 157 Core: XDIM and YDIM from the view's ordinate origin
+- [x] 157 Core: XDIM and YDIM from the view's ordinate origin
 - [ ] 158 Core: groups, tags, Split, swap, delete and Renumber
 - [ ] 159 Core: the Hole Table Wizard view-model (Create Tables tab and row edits)
 - [x] 160 Spike: Inventor's hole table or a custom table; reading a view's holes and its ordinate origin
