@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 2
 - **Feature spec:** `docs/features/04-hole-table-wizard.md` ("Target dialog", "Decided behaviour")
-- **Status:** todo
+- **Status:** done
 - **Depends on:** 158
 - **Needs:** cloud or windows (Core only)
 - **Parallel-safe with:** 160
@@ -28,11 +28,11 @@ Out of scope: the Edit Table tab's re-opening of an existing table, and Update (
 
 ## Acceptance criteria
 
-- [ ] Sheet and view selection, Analyze with a fake source, the stop messages for no origin and several origins.
-- [ ] Swap, Delete, Split and Renumber change the lists and tags as task 158 says; the selection follows the hole.
-- [ ] Each command's enabled state in the cases above, with `CanExecuteChanged` raised when it changes.
-- [ ] Notes edited on a group survive a Swap or Split elsewhere.
-- [ ] `dotnet test tests/InventorAddin.Core.Tests` passes.
+- [x] Sheet and view selection, Analyze with a fake source, the stop messages for no origin and several origins.
+- [x] Swap, Delete, Split and Renumber change the lists and tags as task 158 says; the selection follows the hole.
+- [x] Each command's enabled state in the cases above, with `CanExecuteChanged` raised when it changes.
+- [x] Notes edited on a group survive a Swap or Split elsewhere.
+- [x] `dotnet test tests/InventorAddin.Core.Tests` passes.
 
 ## Notes for the implementer
 
@@ -43,11 +43,17 @@ Out of scope: the Edit Table tab's re-opening of an existing table, and Update (
 
 Filled in by the implementer.
 
-- **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):** none expected
-- **Inventor API members not confirmed:** none expected
+- **Ran:** `dotnet test tests/InventorAddin.Core.Tests` on Windows: 4676 passed, 0 failed (19 new in `HoleTableWizardViewModelTests`).
+- **Not compiled (changed under `src/InventorAddin`):** none; nothing there was touched.
+- **Inventor API members not confirmed:** none (Core only).
 - **Manual checklist for Inventor:** none (Core only)
 
 ## Follow-ups
 
 Things noticed but not done.
+
+- Update (task 162) is not exposed on the view-model, as agreed; the interface has Generate, Create and Align only. The brief's "Update" command waits for 162.
+- The wizard rows carry `Notes` per row (group note), `IsSplit` and `Tag`; the add-in window decides where Notes shows.
+- `IHoleTableSource` (in `HoleTable/IHoleTableSource.cs`) is a first shape: spike 160's add-in implementation may want to adjust it (for example views identified by more than a name).
+- Review fixes applied: sheets and views are identified by add-in-chosen keys (`HoleTableSheetInfo(Key, Name, IsActive)`, `HoleTableViewInfo(Key, Name)`, `GetViews`); `GenerateTable`, `CreateTables` and `AlignTables` take the sheet and view keys; Align needs a view; the VM catches source exceptions and shows "Could not ...: message"; `CloseRequested` renamed `CancelRequested`.
+- `HoleTablePlan.StaleIds` is not reported in the wizard yet (task 162).

@@ -34,6 +34,8 @@ A **Hole Table** button on the AWB Addin tab of the drawing ribbon opens the Hol
 ## Notes for the implementer
 
 - Follow an existing window for structure and binding, for example `AwbHoleWindow` or `MassUpdateWindow`, and `RibbonSetup` for the drawing ribbon.
+- From task 159's review: every Split toggle and Notes edit rebuilds both row collections. Bind Notes with the default `LostFocus` trigger, not `PropertyChanged`, or each keystroke rebuilds the list and the box loses focus. Prefer a `ListBox` or `ItemsControl` with templated rows over a `DataGrid`, which can throw when its source resets while committing an edit.
+- The spec's header has a "Toggle View Names" button that no task covers yet. Leave it out and note it under Follow-ups.
 
 ## Verification
 

@@ -11,6 +11,8 @@
 
 The add-in implements task 159's `IHoleTableSource`: it lists sheets and views, and analysing a view returns its holes as `HoleTableHole`s, its ordinate origin, its scale and units, and how many holes were left out. It does this the way spike 160 proved.
 
+Task 159 settled the interface: sheets and views are passed by a stable `Key` the add-in chooses, with `Name` for display only (`HoleTableSheetInfo`, `HoleTableViewInfo`), because names change when a view is renamed or sheets are reordered. Pick a key that survives both, for example an attribute set on the `DrawingView` and the `Sheet` written the first time the wizard sees them, and say in Verification what was chosen. The view-model catches exceptions from the source, but still report through `ComSafe` warnings where the add-in has them.
+
 ## Scope
 
 - **`src/InventorAddin/HoleTable/HoleTableSource.cs`.** Names follow the folder's style; this is a new folder.

@@ -1,0 +1,448 @@
+using System.Collections.ObjectModel;
+using InventorAddin.Core.HoleTable;
+
+namespace InventorAddin.Core.ViewModels;
+
+/// <summary>One hole instance in a Hole Table Wizard list (spec 04, "Target dialog").</summary>
+public sealed class HoleTableWizardRow : ObservableObject
+{
+    private readonly HoleTableWizardViewModel _owner;
+    private readonly HoleTableGroup _group;
+    private readonly HoleTableRow _row;
+
+    internal HoleTableWizardRow(HoleTableWizardViewModel owner, HoleTableGroup group, HoleTableRow row)
+    {
+        _owner = owner;
+        _group = group;
+        _row = row;
+    }
+
+    public string HoleId => _row.Hole.Id;
+
+    public HoleTableKind Table => _group.Table;
+
+    public string Tag => _row.Tag;
+
+    public string GroupLetter => _group.Letter;
+
+    public string Description => _group.Description.PlainText;
+
+    /// <summary>The Split checkbox: this hole gets its own group and letter.</summary>
+    public bool IsSplit
+    {
+        get => _group.SplitHoleId is not null;
+        set
+        {
+            if (value != IsSplit)
+            {
+                _owner.SetSplit(HoleId, value);
+            }
+        }
+    }
+
+    /// <summary>The group's NOTES text, empty when it has none. Editing it changes the whole group's note.</summary>
+    public string Notes
+    {
+        get => _group.Note ?? "";
+        set
+        {
+            if (value != Notes)
+            {
+                _owner.SetNote(this, value);
+            }
+        }
+    }
+
+    internal HoleTableGroup Group => _group;
+}
+
+/// <summary>
+/// The logic of the Hole Table Wizard's Create Tables tab. It reads the drawing through <see cref="IHoleTableSource"/>
+/// and builds the lists with <see cref="HoleTablePlan"/>; the add-in binds a window to it. The Edit Table tab and
+/// Update are a later task.
+/// </summary>
+public sealed class HoleTableWizardViewModel : ObservableObject
+{
+    public const string NoViewSelectedText = "Pick a view, then click Analyze View.";
+
+    private readonly IHoleTableSource _source;
+    private HoleTableViewAnalysis? _analysis;
+    private SheetPoint _origin;
+    private HoleTableEdits _edits = HoleTableEdits.None;
+    private HoleTablePlan? _plan;
+    private string? _selectedSheet;
+    private string? _selectedView;
+    private HoleTableWizardRow? _selectedPrecision;
+    private HoleTableWizardRow? _selectedClearance;
+    private string _status = NoViewSelectedText;
+    private bool _updatingSelection;
+
+    public HoleTableWizardViewModel(IHoleTableSource source)
+    {
+        _source = source ?? throw new ArgumentNullException(nameof(source));
+
+        AnalyzeCommand = new RelayCommand(Analyze, () => !string.IsNullOrEmpty(SelectedView));
+        SwapCommand = new RelayCommand(Swap, () => SelectedRow is not null);
+        DeleteCommand = new RelayCommand(Delete, () => SelectedRow is not null);
+        RenumberCommand = new RelayCommand(Renumber, () => _plan is not null);
+        GeneratePrecisionCommand = new RelayCommand(() => Generate(HoleTableKind.Precision), () => PrecisionRows.Count > 0);
+        GenerateClearanceCommand = new RelayCommand(() => Generate(HoleTableKind.Clearance), () => ClearanceRows.Count > 0);
+        CreateTablesCommand = new RelayCommand(CreateTables, () => PrecisionRows.Count + ClearanceRows.Count > 0);
+        AlignCommand = new RelayCommand(Align, () => !string.IsNullOrEmpty(SelectedView));
+        CancelCommand = new RelayCommand(() => CancelRequested?.Invoke(this, EventArgs.Empty));
+
+        Sheets = _source.GetSheets();
+        _selectedSheet = (Sheets.FirstOrDefault(s => s.IsActive) ?? Sheets.FirstOrDefault())?.Key;
+        LoadViews();
+    }
+
+    /// <summary>Raised when Cancel is clicked; the window closes without changes.</summary>
+    public event EventHandler? CancelRequested;
+
+    public string DrawingName => _source.DrawingName;
+
+    public IReadOnlyList<HoleTableSheetInfo> Sheets { get; }
+
+    public ObservableCollection<HoleTableViewInfo> Views { get; } = [];
+
+    public ObservableCollection<HoleTableWizardRow> PrecisionRows { get; } = [];
+
+    public ObservableCollection<HoleTableWizardRow> ClearanceRows { get; } = [];
+
+    /// <summary>The current plan, or null before a successful Analyze View. The add-in's table methods read it.</summary>
+    public HoleTablePlan? Plan => _plan;
+
+    /// <summary>The key of the selected sheet.</summary>
+    public string? SelectedSheet
+    {
+        get => _selectedSheet;
+        set
+        {
+            if (SetProperty(ref _selectedSheet, value))
+            {
+                LoadViews();
+            }
+        }
+    }
+
+    /// <summary>The key of the selected view.</summary>
+    public string? SelectedView
+    {
+        get => _selectedView;
+        set
+        {
+            if (SetProperty(ref _selectedView, value))
+            {
+                ClearAnalysis(NoViewSelectedText);
+                RaiseCommandStates();
+            }
+        }
+    }
+
+    public string Status
+    {
+        get => _status;
+        private set => SetProperty(ref _status, value);
+    }
+
+    public HoleTableWizardRow? SelectedPrecisionRow
+    {
+        get => _selectedPrecision;
+        set
+        {
+            if (SetProperty(ref _selectedPrecision, value))
+            {
+                if (value is not null && _selectedClearance is not null && !_updatingSelection)
+                {
+                    _selectedClearance = null;
+                    OnPropertyChanged(nameof(SelectedClearanceRow));
+                }
+
+                SelectionChanged();
+            }
+        }
+    }
+
+    public HoleTableWizardRow? SelectedClearanceRow
+    {
+        get => _selectedClearance;
+        set
+        {
+            if (SetProperty(ref _selectedClearance, value))
+            {
+                if (value is not null && _selectedPrecision is not null && !_updatingSelection)
+                {
+                    _selectedPrecision = null;
+                    OnPropertyChanged(nameof(SelectedPrecisionRow));
+                }
+
+                SelectionChanged();
+            }
+        }
+    }
+
+    /// <summary>The selected row of whichever list holds the selection.</summary>
+    public HoleTableWizardRow? SelectedRow => _selectedPrecision ?? _selectedClearance;
+
+    public RelayCommand AnalyzeCommand { get; }
+
+    public RelayCommand SwapCommand { get; }
+
+    public RelayCommand DeleteCommand { get; }
+
+    public RelayCommand RenumberCommand { get; }
+
+    public RelayCommand GeneratePrecisionCommand { get; }
+
+    public RelayCommand GenerateClearanceCommand { get; }
+
+    public RelayCommand CreateTablesCommand { get; }
+
+    public RelayCommand AlignCommand { get; }
+
+    public RelayCommand CancelCommand { get; }
+
+    private void LoadViews()
+    {
+        Views.Clear();
+        if (_selectedSheet is not null)
+        {
+            try
+            {
+                foreach (var view in _source.GetViews(_selectedSheet))
+                {
+                    Views.Add(view);
+                }
+            }
+            catch (Exception ex)
+            {
+                Views.Clear();
+                ClearAnalysis(FailureText("list the views", ex));
+                _selectedView = null;
+                OnPropertyChanged(nameof(SelectedView));
+                RaiseCommandStates();
+                return;
+            }
+        }
+
+        // The first view is a convenience; the user can change it.
+        var first = Views.FirstOrDefault()?.Key;
+        if (!SetProperty(ref _selectedView, first, nameof(SelectedView)))
+        {
+            // Same name on the new sheet still counts as a new view.
+            OnPropertyChanged(nameof(SelectedView));
+        }
+
+        ClearAnalysis(NoViewSelectedText);
+        RaiseCommandStates();
+    }
+
+    private void Analyze()
+    {
+        if (_selectedSheet is null || _selectedView is null)
+        {
+            return;
+        }
+
+        ClearAnalysis(NoViewSelectedText);
+        HoleTableViewAnalysis analysis;
+        try
+        {
+            analysis = _source.Analyze(_selectedSheet, _selectedView);
+        }
+        catch (Exception ex)
+        {
+            Status = FailureText("analyse the view", ex);
+            return;
+        }
+
+        if (analysis.FailureMessage is not null)
+        {
+            Status = analysis.FailureMessage;
+            return;
+        }
+
+        var origin = HoleTableOriginResult.From(analysis.Origins);
+        if (origin.IsStop)
+        {
+            Status = origin.StopMessage!;
+            return;
+        }
+
+        _analysis = analysis;
+        _origin = origin.Origin!.Value;
+        _edits = HoleTableEdits.None;
+        Rebuild(null);
+
+        var found = analysis.Holes.Count == 1 ? "Found 1 hole." : $"Found {analysis.Holes.Count} holes.";
+        Status = analysis.LeftOutCount > 0 ? $"{found} {HoleTableMessages.HolesLeftOut(analysis.LeftOutCount)}" : found;
+    }
+
+    private void Swap()
+    {
+        var row = SelectedRow;
+        if (row is null)
+        {
+            return;
+        }
+
+        var swapped = _edits.SwappedIds.Contains(row.HoleId);
+        _edits = _edits.WithSwapped(row.HoleId, !swapped);
+        Rebuild(row.HoleId);
+    }
+
+    private void Delete()
+    {
+        var row = SelectedRow;
+        if (row is null)
+        {
+            return;
+        }
+
+        _edits = _edits.WithDeleted(row.HoleId);
+        Rebuild(null);
+    }
+
+    private void Renumber() => Rebuild(SelectedRow?.HoleId);
+
+    internal void SetSplit(string holeId, bool on)
+    {
+        _edits = _edits.WithSplit(holeId, on);
+        Rebuild(holeId);
+    }
+
+    internal void SetNote(HoleTableWizardRow row, string text)
+    {
+        var group = row.Group;
+        _edits = group.SplitHoleId is { } splitId
+            ? _edits.WithSplitNote(splitId, text)
+            : _edits.WithNote(group.Table, group.Description.Key, text);
+        Rebuild(SelectedRow?.HoleId ?? row.HoleId);
+    }
+
+    private void Generate(HoleTableKind kind)
+    {
+        if (_plan is not null && _selectedSheet is not null && _selectedView is not null)
+        {
+            Status = Run("generate the table", () => _source.GenerateTable(_selectedSheet, _selectedView, kind, _plan));
+        }
+    }
+
+    private void CreateTables()
+    {
+        if (_plan is not null && _selectedSheet is not null && _selectedView is not null)
+        {
+            Status = Run("create the tables", () => _source.CreateTables(_selectedSheet, _selectedView, _plan));
+        }
+    }
+
+    private void Align()
+    {
+        if (_selectedSheet is not null && _selectedView is not null)
+        {
+            Status = Run("align the tables", () => _source.AlignTables(_selectedSheet, _selectedView));
+        }
+    }
+
+    private static string Run(string what, Func<string> call)
+    {
+        try
+        {
+            return call();
+        }
+        catch (Exception ex)
+        {
+            return FailureText(what, ex);
+        }
+    }
+
+    private static string FailureText(string what, Exception ex) =>
+        $"Could not {what}: {ex.Message}";
+
+    private void ClearAnalysis(string status)
+    {
+        _analysis = null;
+        _plan = null;
+        _edits = HoleTableEdits.None;
+        Fill(null);
+        Status = status;
+    }
+
+    private void Rebuild(string? keepSelectedId)
+    {
+        if (_analysis is null)
+        {
+            return;
+        }
+
+        _plan = HoleTablePlan.Build(_analysis.Holes, _edits, _origin, _analysis.ViewScale, _analysis.DrawingUnits);
+        Fill(keepSelectedId);
+    }
+
+    private void Fill(string? keepSelectedId)
+    {
+        _updatingSelection = true;
+        try
+        {
+            _selectedPrecision = null;
+            _selectedClearance = null;
+            PrecisionRows.Clear();
+            ClearanceRows.Clear();
+            if (_plan is not null)
+            {
+                foreach (var group in _plan.Precision)
+                {
+                    foreach (var row in group.Rows)
+                    {
+                        PrecisionRows.Add(new HoleTableWizardRow(this, group, row));
+                    }
+                }
+
+                foreach (var group in _plan.Clearance)
+                {
+                    foreach (var row in group.Rows)
+                    {
+                        ClearanceRows.Add(new HoleTableWizardRow(this, group, row));
+                    }
+                }
+            }
+
+            if (keepSelectedId is not null)
+            {
+                _selectedPrecision = PrecisionRows.FirstOrDefault(r => r.HoleId == keepSelectedId);
+                _selectedClearance = _selectedPrecision is null
+                    ? ClearanceRows.FirstOrDefault(r => r.HoleId == keepSelectedId)
+                    : null;
+            }
+        }
+        finally
+        {
+            _updatingSelection = false;
+        }
+
+        OnPropertyChanged(nameof(SelectedPrecisionRow));
+        OnPropertyChanged(nameof(SelectedClearanceRow));
+        OnPropertyChanged(nameof(SelectedRow));
+        OnPropertyChanged(nameof(Plan));
+        RaiseCommandStates();
+    }
+
+    private void SelectionChanged()
+    {
+        OnPropertyChanged(nameof(SelectedRow));
+        SwapCommand.RaiseCanExecuteChanged();
+        DeleteCommand.RaiseCanExecuteChanged();
+    }
+
+    private void RaiseCommandStates()
+    {
+        AnalyzeCommand.RaiseCanExecuteChanged();
+        SwapCommand.RaiseCanExecuteChanged();
+        DeleteCommand.RaiseCanExecuteChanged();
+        RenumberCommand.RaiseCanExecuteChanged();
+        GeneratePrecisionCommand.RaiseCanExecuteChanged();
+        GenerateClearanceCommand.RaiseCanExecuteChanged();
+        CreateTablesCommand.RaiseCanExecuteChanged();
+        AlignCommand.RaiseCanExecuteChanged();
+    }
+}

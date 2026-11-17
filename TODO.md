@@ -103,6 +103,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Follow-ups from finished tasks
 
+- Flaky test (seen during task 159): `RenamePlanTests.ListFilesToSearch_AFolderThatDoesNotAnswer_IsSkippedAfterTheProbeTimeout` (RenamePlanTests.cs:564) failed once and passed on a re-run. It depends on a probe timeout; give it more margin or a fake clock.
 - Task 156: a taper thread's description uses Inventor's `ThreadDesignation` as given (for example `1/4`, with the type `NPT` not prefixed). Check on the first Inventor run (task 163 to 166 check) whether the thread line reads right, or needs the type in front.
 
 Small things noticed while building. None is urgent. The parent turns these into tasks when planning a milestone that touches the same code.

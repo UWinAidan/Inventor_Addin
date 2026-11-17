@@ -51,6 +51,7 @@ Out of scope: the attribute set calls and drawing (task 166).
 
 ## Notes for the implementer
 
+- From task 159's review: the Edit Table tab wants NOTES per group, but the view-model only edits notes through a hole row; add a group-level list (Letter, Description, Notes). Report `HoleTablePlan.StaleIds` in the status line.
 - From task 158: `HoleTablePlan.Build` is the Renumber path. Update needs its own path that takes the previous tags and letters (`HoleTableRow.Number` is the number within a group); under Update a new split takes the next unused letter, not the slot after its source. Store the swapped, deleted and split `Id` sets, ordinary notes keyed by (table, description `Key`), and split notes keyed by hole `Id`.
 
 - Spike 160 round 6 proved the refresh in Inventor. Its `Build-Groups` with `$keep` kept letters by hole on refresh (`spikes/160/spike160-round6b.ps1` on branch `spike/160-hole-table`).
