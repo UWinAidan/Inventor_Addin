@@ -179,13 +179,52 @@ namespace InventorAddin.HoleTables
                         return HoleTableDrawResult.Unchanged("That view could not be found on the sheet.");
                     string sheetName = ComSafe.Get(() => sheet.Name) ?? "";
                     string viewName = ComSafe.Get(() => view.Name) ?? "";
-                    return new HoleTableDrawer(_drawing, _log).Draw(sheet, view, sheetKey, viewKey, sheetName, viewName, plan, kinds, align);
+                    HoleTableDrawResult drawn = new HoleTableDrawer(_drawing, _log).Draw(sheet, view, sheetKey, viewKey, sheetName, viewName, plan, kinds, align);
+                    if (!drawn.Changed)
+                        return drawn;
+
+                    // Tags and marks join the tables' transaction (task 165), so one Undo removes everything.
+                    string marks = MarkHoles(sheet, view, sheetKey, viewKey, plan, kinds);
+                    return HoleTableDrawResult.Done(string.IsNullOrEmpty(marks) ? drawn.Message : drawn.Message + " " + marks);
                 }
                 finally
                 {
                     Report(warnings);
                 }
             });
+
+        // Puts the tags, precision marks and centre marks on the view for the holes of the tables just drawn. The view is
+        // analysed again first: the COM objects kept by the last Analyze can be stale by now. The caller holds the transaction.
+        private string MarkHoles(Sheet sheet, DrawingView view, string sheetKey, string viewKey, HoleTablePlan plan, IReadOnlyList<HoleTableKind> kinds)
+        {
+            HoleTableViewAnalysis fresh = Analyze(sheetKey, viewKey);
+            if (fresh.FailureMessage != null)
+                throw new InvalidOperationException(fresh.FailureMessage);
+
+            var centres = fresh.Holes.ToDictionary(h => h.Id, h => new SheetPoint(h.SheetXCm, h.SheetYCm), StringComparer.Ordinal);
+            var targets = new List<HoleMarkTarget>();
+            int missing = 0;
+            foreach (HoleTableKind kind in kinds)
+            {
+                IEnumerable<HoleTableGroup> groups = kind == HoleTableKind.Precision ? plan.Precision : plan.Clearance;
+                foreach (var row in groups.SelectMany(g => g.Rows))
+                {
+                    string id = row.Hole.Id;
+                    HoleTableHoleRef? found = FindHole(sheetKey, viewKey, id);
+                    if (found == null || !centres.TryGetValue(id, out SheetPoint centre))
+                    {
+                        missing++;
+                        _log.Warn(LogPrefix + $"hole '{id}' is no longer in the view; no tag or marks.");
+                        continue;
+                    }
+
+                    targets.Add(new HoleMarkTarget(id, row.Tag, HoleTableMarks.HasPrecisionMark(kind), centre, found));
+                }
+            }
+
+            HoleMarkResult result = new HoleTableMarker(_drawing, _log).Place(sheet, view, viewKey, targets);
+            return HoleTableMarks.Summary(result.Marked, result.Skipped + missing);
+        }
 
         // One transaction around a table action. If none can be started the action does not run, because a failure
         // half way could not be undone. A failure aborts the transaction and is rethrown for the window's status line.

@@ -6,7 +6,7 @@ Last updated: 2026-11-13
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-17 15:55. Branch `claude/m4-hole-table`, latest commit is task 164 (pushed).
+- Updated: 2026-11-17 15:55. Branch `claude/m4-hole-table`, latest commit is task 165 (pushed).
 - Goal: run M4 part 2 in order (`docs/WORKFLOW.md` run mode). Core is done; the add-in tasks are being built on this PC. Aidan checks the add-in tasks together in Inventor at the end.
 - Done this session (each passed the reviewer):
   - `b2656df` task 161
@@ -15,13 +15,13 @@ Last updated: 2026-11-13
   - `d3c0a20` task 167 (window, button, placeholder icon)
   - task 164 (draw tables)
   - Defaults are in DECISIONS, follow-ups in TODO; spec 04 question 20 added.
-- Task 164 committed after two reviews (draw tables as sketched symbols, definition named by stable sheet and view keys, Align, no empty undo on early return).
+- Task 165 committed after two reviews (tags, precision marks, AWB Centre Mark; marks stamped `AWB_HoleMark`). Task 164 committed after two reviews (draw tables as sketched symbols, definition named by stable sheet and view keys, Align, no empty undo on early return).
 - Next:
-  1. Task 165 (tags and marks), then 166 (stored state, Update, Edit Table): implementer, reviewer, one commit each.
+  1. Task 166 (stored state, Update, Edit Table), the last task: implementer, reviewer, one commit each.
   2. At the end: set the STATUS item to Built, put the combined checklists for 163 to 167 in TODO, push, and open the PR per WORKFLOW.
 - Gotchas:
   - Inventor is open on this PC: build with `dotnet build InventorAddin.slnx -p:DeployToInventor=false`, and never drive Inventor.
-  - Core tests: 4805 after 164. 1 to 4 `Numbering` tests flake per full run under load; run them alone before believing a failure.
+  - Core tests: 4815 after 165. 1 to 4 `Numbering` tests flake per full run under load; run them alone before believing a failure.
   - Reviewer subagents can stall (watchdog at 600 s); resume them with SendMessage.
   - Brand strings only via Core constants (`Branding.ShortName`); engineering `if`s go in Core.
   - `TODO.md`, `DECISIONS.md`, `PLAN.md` and the task files are CRLF; STATUS is LF. Edit them with a Python script in the job tmp dir.

@@ -21,7 +21,7 @@ After the model changes, Update redraws both tables with fresh XDIM, YDIM and de
   2. refresh the plan (task 162);
   3. redraw both definitions in place (task 164);
   4. add tags, precision marks and centre marks for new holes;
-  5. delete the ones whose hole is gone (found by their `AWB_HoleTable` attribute);
+  5. delete the ones whose hole is gone (found by task 165's mark attribute set, `HoleTableMarks.AttributeSetName`, with `HoleId`, `ViewKey` and `Role`; it is a different set from the table state's, so tags and marks are never mistaken for tables);
   6. update the tag text of any hole whose tag changed (Renumber).
 
   A table that no longer has any group is deleted along with its definition.
