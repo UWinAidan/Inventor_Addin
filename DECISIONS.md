@@ -421,3 +421,5 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-17 | Hole Table button: a placeholder icon for now; Aidan will send a design | Aidan | task 167 |
 | 2026-11-17 | M4 part 2 run: the add-in tasks' manual checklists are collected for one combined check in Inventor at the end; the branch is pushed every few tasks as a backup | Aidan | session |
 | 2026-11-17 | Hole table description: a blind tapped hole threaded to full depth shows the thread designation alone, with no depth; a taper tapped hole with no known tap drill has no hole line | Default | spec 04 question 19 |
+| 2026-11-17 | Hole table layout: a toleranced hole's seat or thread lines are kept under the stacked line, each as its own text (spike 160 dropped them; spec 04 question 15 puts the seat line after the hole line) | Default | task 161 |
+| 2026-11-17 | Hole table layout: a table with no holes adds nothing to the shared column widths, its title included | Default | task 161 |

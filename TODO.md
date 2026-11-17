@@ -103,6 +103,8 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Follow-ups from finished tasks
 
+- Hole table layout (task 161), for task 164: a toleranced group with a seat or thread line is drawn as one stack text plus one text per later line, centred as a block; spike 160 never drew this, so check the stack sits evenly over its two slots and the gap to the next line matches. `IHoleTableTextMeasure` must measure the formatted text as a fitted note renders it (as the spike did), not the raw markup. Check a view name with an apostrophe (`&apos;` in formatted text is untested in Inventor).
+- Task 156 (seen in 161 review): a toleranced hole with no drill diameter attaches its tolerance to `Lines[0]`, which would then be the thread line, so the stack lands in the thread text.
 - Flaky test (seen during task 159): `RenamePlanTests.ListFilesToSearch_AFolderThatDoesNotAnswer_IsSkippedAfterTheProbeTimeout` (RenamePlanTests.cs:564) failed once and passed on a re-run. It depends on a probe timeout; give it more margin or a fake clock.
 - Task 156: a taper thread's description uses Inventor's `ThreadDesignation` as given (for example `1/4`, with the type `NPT` not prefixed). Check on the first Inventor run (task 163 to 166 check) whether the thread line reads right, or needs the type in front.
 

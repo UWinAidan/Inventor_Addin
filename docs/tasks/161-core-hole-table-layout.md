@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 2
 - **Feature spec:** `docs/features/04-hole-table-wizard.md` ("Target output", "Design decision, settled by spike 160")
-- **Status:** todo
+- **Status:** done
 - **Depends on:** 156, 158
 - **Needs:** cloud or windows (Core only)
 - **Parallel-safe with:** 159
@@ -49,13 +49,18 @@ Out of scope: measuring text in Inventor, drawing, and placing (task 164).
 
 ## Verification
 
-Filled in by the implementer.
-
-- **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):** none expected
-- **Inventor API members not confirmed:** none expected
-- **Manual checklist for Inventor:** none (Core only)
+- **Ran:** `dotnet build src/InventorAddin.Core` (0 warnings, 0 errors). `dotnet test tests/InventorAddin.Core.Tests`: 4707 passed, 0 failed (31 new in `HoleTable/HoleTableLayoutTests.cs`). Intermittent `Numbering` timing failures on loaded runs, unrelated; two clean full runs passed.
+- **Review fixes:** note, tags, XDIM/YDIM and the title (view name) are XML-escaped where measured and drawn; a toleranced group keeps its seat and thread lines as separate texts in one block (stack = 2 pitch slots, later lines 1 each); `viewName` is required; widths round with banker's rounding like the spike.
+- **Not compiled (changed under `src/InventorAddin`):** none. Files added: `src/InventorAddin.Core/HoleTable/HoleTableFormattedText.cs`, `HoleTableLayout.cs` (also holds `HoleTableAlign`).
+- **Inventor API members not confirmed:** none (Core only).
+- **Manual checklist for Inventor:** none (Core only). The strings and geometry follow spike 160 round 6b; task 164 draws them.
 
 ## Follow-ups
 
-Things noticed but not done.
+- Mixed block not seen in Inventor: a toleranced group with a seat or thread line is one stack text plus one text per later line (spike 160 drew the stack alone and dropped the other lines). Task 164 must check how it looks in Inventor.
+- Task 156: a toleranced hole with no drill diameter attaches its tolerance to `Lines[0]`, which would then be the thread line.
+- Titles: `HoleTableLayout.For` takes a required `viewName` and writes `Precision Table: <view>` and `Tap and Clearance Table: <view>` (spec "Target output"). Task 164 passes the view name.
+- Description width is measured on each formatted text separately (markup included), as the spike did; the add-in's `IHoleTableTextMeasure` must measure formatted text the way a fitted note renders it.
+- A symbol part ends with a space, so a plain part right after a symbol loses one leading space (task 156 writes spotface as a symbol, a space, then the diameter; the spike has one space).
+- `HoleTableAlign.Positions` takes nullable heights (null for a missing table) and returns a `HoleTableAlignment` with an optional point per table.
+- An empty table's title and column content are not counted in the shared widths.
