@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 2
 - **Feature spec:** `docs/features/04-hole-table-wizard.md` ("Target output", open question 14; question 15 answered 2026-11-17: drawing symbols)
-- **Status:** todo
+- **Status:** done
 - **Depends on:** 155
 - **Needs:** cloud or windows (Core only)
 - **Parallel-safe with:** 157, 160
@@ -33,10 +33,10 @@ Out of scope: Inventor formatted text and the AIGDT characters (task 161), and a
 
 ## Acceptance criteria
 
-- [ ] One test per type and seat: plain through, plain blind, dowel H7 through, toleranced Simple with Custom limits, counterbore, countersink, spotface, tapped blind, tapped through full depth, tapped through with a thread depth, tapped with a counterbore, taper tapped with and without a known tap drill, termination To.
-- [ ] mm and inch versions of at least the plain, precision and tapped cases, with the decimals of question 14.
-- [ ] Two holes that differ only in position have equal `Key`s; a difference in depth, seat size, thread, tolerance code or deviations gives different `Key`s.
-- [ ] `dotnet test tests/InventorAddin.Core.Tests` passes.
+- [x] One test per type and seat: plain through, plain blind, dowel H7 through, toleranced Simple with Custom limits, counterbore, countersink, spotface, tapped blind, tapped through full depth, tapped through with a thread depth, tapped with a counterbore, taper tapped with and without a known tap drill, termination To.
+- [x] mm and inch versions of at least the plain, precision and tapped cases, with the decimals of question 14.
+- [x] Two holes that differ only in position have equal `Key`s; a difference in depth, seat size, thread, tolerance code or deviations gives different `Key`s.
+- [x] `dotnet test tests/InventorAddin.Core.Tests` passes.
 
 ## Notes for the implementer
 
@@ -47,11 +47,15 @@ Out of scope: Inventor formatted text and the AIGDT characters (task 161), and a
 
 Filled in by the implementer.
 
-- **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):** none expected
-- **Inventor API members not confirmed:** none expected
+- **Ran:** `dotnet test tests/InventorAddin.Core.Tests`: 4640 passed, 0 failed, 0 skipped (40 of them the description tests).
+- **Not compiled (changed under `src/InventorAddin`):** none
+- **Inventor API members not confirmed:** none
 - **Manual checklist for Inventor:** none (Core only)
 
 ## Follow-ups
 
-Things noticed but not done.
+- `HoleTableHole` (task 155) had no thread class and no taper engagement length. Added two `init` properties, `ThreadClass` and `TaperEngagementCm` (cm), to `HoleTableHole.cs`. `HoleTableHoles.From` does not fill them yet: the add-in side (Inventor's `Class`, `TaperedThreadInfo.EngagementLength` mm to cm) must supply them.
+- `HoleTableDescriptions.For(hole, int decimals)`: `HoleTableDecimals` is a static class, so the decimals are an int; `For(hole)` picks `HoleTableDecimals.For(hole.IsPrecision, hole.Units)`.
+- Seat kind: `HoleTableHole.Seat` (HoleSeat?) is now set from `facts.Seat` in `HoleTableHoles.From` and decides the seat symbol; null falls back to the table type.
+- Choice for Aidan: a blind tapped hole with a full-depth thread (no thread depth) shows the thread line as the designation alone (`M6x1 - 6H`), with no depth or THRU. A taper tapped hole with no known tap drill has no hole line at all.
+- A taper thread's `ThreadDesignation` is written as given (spike 108: `NPT` type with `1/4`); the thread type is not prefixed.

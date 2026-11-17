@@ -64,7 +64,17 @@ public sealed record HoleTableHole(
     bool TaperedThread,
     HoleTolerance? Tolerance,
     double SheetXCm,
-    double SheetYCm);
+    double SheetYCm)
+{
+    /// <summary>The seat kind as Inventor reports it, so a tapped hole's seat is described by its own kind (task 156); null falls back to the table type.</summary>
+    public HoleSeat? Seat { get; init; }
+
+    /// <summary>The thread class (<c>6H</c>) for the description's thread line (task 156); null when not read. Set by the add-in side (a later task).</summary>
+    public string? ThreadClass { get; init; }
+
+    /// <summary>Taper tapped holes: the engagement length when known (task 156), in centimetres; null when not read.</summary>
+    public double? TaperEngagementCm { get; init; }
+}
 
 /// <summary>Builds <see cref="HoleTableHole"/> instances from what the add-in reads for a hole feature.</summary>
 public static class HoleTableHoles
@@ -144,7 +154,7 @@ public static class HoleTableHoles
             facts.Tapped && facts.TaperedThread,
             tolerance,
             c.SheetXCm,
-            c.SheetYCm)).ToList().AsReadOnly();
+            c.SheetYCm) { Seat = facts.Seat }).ToList().AsReadOnly();
     }
 
     /// <summary>

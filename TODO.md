@@ -73,7 +73,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - The Defaults dated 2026-10-24 in `DECISIONS.md`: the Spotface and Taper Tapped tab layouts, invented NPT and BSPT starter rows, Simple's Diameter box, the tolerance list for clearance holes
 
 **Hole table (spec 04), not blocking**
-- Questions 9 to 17 in spec 04: seated sub-order, a seated threaded hole, the sort diameter, where a split goes, letters, inch decimals, description wording, holes not seen end on, several origins. Each has a default the Core tasks build
+- Questions 9 to 17 and 19 in spec 04: seated sub-order, a seated threaded hole, the sort diameter, where a split goes, letters, inch decimals, description wording, holes not seen end on, several origins. Each has a default the Core tasks build
 
 **Drawing tools (spec 05), blocks M5**
 - Which of the listed commands are wanted, and what the unclear ones should do
@@ -103,6 +103,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Follow-ups from finished tasks
 
+- Task 156: a taper thread's description uses Inventor's `ThreadDesignation` as given (for example `1/4`, with the type `NPT` not prefixed). Check on the first Inventor run (task 163 to 166 check) whether the thread line reads right, or needs the type in front.
 - Task 155: `HoleTableOrder` compares Y and X with a 0.0005 cm tolerance, which is not transitive. Three holes 0.0004 cm apart in Y could order differently depending on input order. Harmless on real drawings; check it if task 158 needs letters to be exactly stable.
 
 Small things noticed while building. None is urgent. The parent turns these into tasks when planning a milestone that touches the same code.

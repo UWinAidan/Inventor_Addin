@@ -119,3 +119,4 @@ Defaults chosen while planning M4 part 2 (2026-11-12). Each is built as written 
 16. **Holes the table leaves out:** a hole whose axis is not along the view direction (seen from the side) is not listed. The wizard says how many were left out.
 17. **More than one ordinate origin on a view:** the wizard stops and says the view has several origins, rather than picking one.
 18. ~~**Update and tags.**~~ Answered 2026-11-17 (Aidan): Update keeps each remaining hole's tag. A new hole takes the next number in its group, and a new group takes the next unused letter. Only Renumber closes gaps and reorders.
+19. **A blind tapped hole threaded to full depth.** Its thread line is the designation alone (`M6x1 - 6H`), with no depth, since the hole line above already gives the drill depth. A taper tapped hole whose tap drill is unknown has no hole line, only the thread line. (Or should the thread line repeat the depth?)
