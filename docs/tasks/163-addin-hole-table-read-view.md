@@ -19,6 +19,7 @@ The add-in implements task 159's `IHoleTableSource`: it lists sheets and views, 
   - For each unsuppressed `HoleFeature`:
     - **End on.** Take the axis of the first side face that is a cylinder or a cone (`SurfaceType` `kCylinderSurface` or `kConeSurface`, then `Geometry.AxisVector`). The view direction is `Camera.Eye.VectorTo(Camera.Target)`, normalised. If |dot| ≤ 0.999, count the hole's centres as left out (question 16).
     - **Facts.** `HoleFeatureReader.ReadFacts` for the facts, and `HoleStoredData` for the AWB spec, as AWB Hole does. Then task 155's `HoleTableHoles.From`.
+      `From` takes the feature name, the centres, the AWB Taper Tapped row (when there is one), and the tolerance as a separate `HoleTolerance?`. Build the tolerance from the facts' ISO code and deviations (task 155's follow-up).
     - **Centres.** For each centre in `HoleCenterPoints` (a `SketchPoint`): the sheet position is `DrawingView.ModelToSheetSpace(point.Geometry3d)`. The `Id` key comes from `point.GetReferenceKey(ref byte[] key, 0)`, then `ReferenceKeyManager.KeyToString(key)` (spike 160, C11). The 1-based index is kept for display.
   - **Origin.** If `HasOriginIndicator`, use `OriginIndicator.Intent.PointOnSheet`. Otherwise give no origin, and task 157 stops with its message.
   - **Scale.** The view's `Scale`.

@@ -103,6 +103,8 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Follow-ups from finished tasks
 
+- Task 155: `HoleTableOrder` compares Y and X with a 0.0005 cm tolerance, which is not transitive. Three holes 0.0004 cm apart in Y could order differently depending on input order. Harmless on real drawings; check it if task 158 needs letters to be exactly stable.
+
 Small things noticed while building. None is urgent. The parent turns these into tasks when planning a milestone that touches the same code.
 
 - Icons (task 151): the 16 px drawings are the implementer's own pixel fits; Material and Finish and Mass Update at 16 px are the busiest. The ribbon Developer and AWB accents and the dark ribbon colour (`#3A4150`) are mockup stand-ins, not measured from Inventor; change `RIBBON_PANELS` in `tools/icons/render.py` and the SVG sources together. The ribbon SVGs came from a one-off script that is not kept, so palette changes are by hand. `IconChoiceItem` no longer sets `Foreground`; a text-only icon row would need its own colour.

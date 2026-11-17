@@ -414,3 +414,4 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-17 | Hole table id: a hole instance's `Id` is the feature name plus its centre sketch point's reference key. The centre index is for display only | Default | task 160, C11 |
 | 2026-11-17 | Hole table: a table's edits and tags are stored in an attribute set on its sketched symbol; the shared state (letter sequence, view link) is stored on the sheet | Default | task 160, C10 |
 | 2026-11-17 | Hole table Update keeps each remaining hole's tag. A new hole takes the next number in its group; a new group takes the next unused letter. Only Renumber closes gaps | Default | spec 04 question 18 |
+| 2026-11-17 | Hole table group order: two drill diameters within 0.00001 cm count as equal, and the tie-break text decides | Default | task 155 |

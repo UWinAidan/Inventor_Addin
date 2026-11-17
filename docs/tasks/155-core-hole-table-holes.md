@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 2
 - **Feature spec:** `docs/features/04-hole-table-wizard.md` ("Decided behaviour", open questions 1, 6, 8 to 11)
-- **Status:** todo
+- **Status:** done
 - **Depends on:** none
 - **Needs:** cloud or windows (Core only)
 - **Parallel-safe with:** 160
@@ -43,12 +43,12 @@ Out of scope: descriptions (156), coordinates relative to the origin (157), lett
 
 ## Acceptance criteria
 
-- [ ] `From` gives one instance per centre, each with the feature's data and its own sheet position and `Id`.
-- [ ] Type rules: tapped with a counterbore is `Tapped`; taper tapped with a countersink is `TaperTapped`; a seated dowel is its seat type and precision; Simple and Clearance with no seat are `Plain`.
-- [ ] Precision: an AWB toleranced Clearance and Simple hole, every dowel, and an Inventor hole with a tolerance and no AWB data; an AWB untoleranced hole whose Inventor diameter happens to carry a tolerance is not (AWB data decides).
-- [ ] Group order for each table as above, including the tie-break and a null diameter.
-- [ ] Instance order Y then X, with the tolerance.
-- [ ] `dotnet test tests/InventorAddin.Core.Tests` passes.
+- [x] `From` gives one instance per centre, each with the feature's data and its own sheet position and `Id`.
+- [x] Type rules: tapped with a counterbore is `Tapped`; taper tapped with a countersink is `TaperTapped`; a seated dowel is its seat type and precision; Simple and Clearance with no seat are `Plain`.
+- [x] Precision: an AWB toleranced Clearance and Simple hole, every dowel, and an Inventor hole with a tolerance and no AWB data; an AWB untoleranced hole whose Inventor diameter happens to carry a tolerance is not (AWB data decides).
+- [x] Group order for each table as above, including the tie-break and a null diameter.
+- [x] Instance order Y then X, with the tolerance.
+- [x] `dotnet test tests/InventorAddin.Core.Tests` passes.
 
 ## Notes for the implementer
 
@@ -61,7 +61,8 @@ Out of scope: descriptions (156), coordinates relative to the origin (157), lett
 
 Filled in by the implementer.
 
-- **Ran:**
+- **Ran:** `dotnet test tests/InventorAddin.Core.Tests` on Windows: 4589 passed, 0 failed, no warnings from the new files. New: `HoleTable/HoleTableHole.cs` (enum, centre and hole records, `HoleTableHoles.From` and `TypeOf`), `HoleTable/HoleTableOrder.cs` (`HoleTableOrder.Groups(bool precisionTable)`, `.Instances`, `HoleTableDecimals`), `HoleTableTests.cs`.
+- **Signature notes for 156 to 159:** `From(featureName, facts, awbSpec, units, centres, taperTappedRow = null, tolerance = null)`. The AWB Taper Tapped row is passed as a `TaperTappedRow` and its tap drill is converted to cm inside; it wins over Inventor's figure (null for a taper hole otherwise). Seat fields are `SeatDiameterCm`, `SeatDepthCm`, `SeatAngleDeg`. Group sort key is `HoleTableGroupKey(Type, DiameterCm, TieBreak)`. Diameters within 0.00001 cm tie.
 - **Not compiled (changed under `src/InventorAddin`):** none expected
 - **Inventor API members not confirmed:** none expected
 - **Manual checklist for Inventor:** none (Core only)
@@ -69,3 +70,5 @@ Filled in by the implementer.
 ## Follow-ups
 
 Things noticed but not done.
+
+- `From` takes the tolerance as a separate `HoleTolerance?` argument, since `InventorHoleFacts` only holds ISO code and deviations. Task 163 builds it from the facts or the add-in; the Rc 1/8 tap-drill difference (8.0 against 8.4 mm) is covered only as "AWB row wins", with no test of that exact size.

@@ -449,7 +449,7 @@ Not in part 1: AWB Hole on the Flat Pattern tab (it keeps Inventor's Hole; the S
 | 166 | windows (add-in) | 162, 164, 165 | none |
 | 167 | windows (add-in) | 159, 163 | 164, 165 |
 
-- [ ] 155 Core: hole table holes, precision or clearance, and the group order key
+- [x] 155 Core: hole table holes, precision or clearance, and the group order key
 - [ ] 156 Core: hole table descriptions for every hole type
 - [ ] 157 Core: XDIM and YDIM from the view's ordinate origin
 - [ ] 158 Core: groups, tags, Split, swap, delete and Renumber

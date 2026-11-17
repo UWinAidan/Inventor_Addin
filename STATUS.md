@@ -6,25 +6,24 @@ Last updated: 2026-11-13
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-17 11:20 (round 7, one centre mark for every hole). Goal: spike 160 for Aidan. No add-in code was changed, so nothing was built or tested. Branch `claude/m4-hole-table`, latest commit `352fa6d`.
-  - Uncommitted here: this file, `TODO.md`, `DECISIONS.md`, `.gitignore` (adds `spike-local/`), and the task 160 results (rounds 2 to 7).
-  - Spike scripts are on branch `spike/160-hole-table` (worktree `../Inventor_Addin-spike160`, folder `spikes/160/`). Pushed up to `c128267` with Aidan's OK. `caff63d` (round 7) is committed but **not pushed**.
-- Aidan reviewed round 6: option 1 is final (each table one sketched symbol, Update redraws it, edits through the wizard). Logged in `DECISIONS.md`, with his centre mark rule.
-- Round 7 on the `_spike` drawing (not saved; `spike160-round7.ps1`, task 160 "Round 7"):
-  - One local style `AWB Centre Mark` (gap 0.0001, mark size 0.01, overshoot and extension 0.2 cm) on every hole's outermost visible circle: seat, thread circle (`kThreadEdge`), or the hole. Round 6's seat style is deleted.
-  - Precision mark symbol lost its own centre lines; the AWB centre mark draws them.
-  - Measured: lines end 2.0 mm past the circle on E3, A1 and B2.
+- Updated: 2026-11-17 10:31. Branch `claude/m4-hole-table`, latest commit `d86ae73` (not pushed; nothing in the main repo has been pushed this session).
+- Goal: close spike 160, plan the add-in half of M4 part 2, then run the Core tasks from 155 in run mode (`docs/WORKFLOW.md`).
+- Done this session:
+  - Round 7 (one `AWB Centre Mark` on every hole) passed Aidan's check. Spike branch `spike/160-hole-table` pushed up to `caff63d` with his OK.
+  - `9e37563`: task 160 closed (status done, "Recommendations"), spec 04 (question 15 answered: drawing symbols; new question 18: Update keeps tags), DECISIONS, TODO, PLAN tick.
+  - `d86ae73`: new tasks 161 to 167 (161 and 162 Core; 163 to 167 add-in), briefs 155 (hole `Id` = feature name + sketch point reference key, `CentreIndex` for display), 156 (description parts with symbols), 159 (Edit Table moved to 162), PLAN table and order.
+- In progress: an `implementer` subagent was started on task 155 (background). Its result is **unverified**: check `git status` and `src/InventorAddin.Core/HoleTable/` for its files and the task's Verification section.
 - Next:
-  1. Aidan checks round 7 (pictures `spike-local/160/round7-*.png`); ask whether to push `caff63d`.
-  2. Write the add-in tasks (task 160 "Then") for the symbol tables: Update redraws the definitions; edits live in attribute sets (C10); hole ids use the reference key (C11, task 155); create `AWB Centre Mark` if missing.
+  1. Task 155: run the `reviewer` subagent on `docs/tasks/155-core-hole-table-holes.md`. On PASS set it done, tick PLAN, copy follow-ups to TODO, commit `task 155: ...`.
+  2. Then 156 and 157, 158, 159, 161, 162 the same way (implementer, reviewer, one commit each).
+  3. Then the add-in tasks on this PC: 163, 167, 164, 165, 166 (build with `dotnet build InventorAddin.slnx -p:DeployToInventor=false` if Inventor is open). Aidan checks them together in Inventor.
+  4. Ask Aidan: an icon for the Hole Table button (task 167); push permission for the branch.
 - Gotchas:
-  - PowerShell: variable names ignore case. An `AttributeSet` is enumerable, so returning one through a helper unrolls it. `Log` inside a function must use `Write-Host`.
-  - `SketchedSymbolDefinition.Edit` needs a by-ref `DispatchWrapper` through `InvokeMember`. The sketch it returns is dead after `ExitEdit`, so read counts before.
-  - Sketched symbols have no `RangeBox`, so work out a table's extent from its widths and heights.
-  - Aborting a part transaction leaves `Dirty` true; clear it when the part is restored.
-  - Centre mark style `GapDistance = 0` is refused ("Value does not fall within the expected range"); 0.0001 cm works. With extension lines on, `OvershootDistance` (not `ExtensionLength`) sets how far the lines run past the circle.
-  - Bash heredocs containing PowerShell `$(...)` failed to parse; write files with the Write tool instead. `TODO.md`, `DECISIONS.md` and the task files are CRLF; `STATUS.md` is LF.
-- Read first: task 160 "Round 6" and "Round 7", `spike-local/160/spike160-round7.ps1`.
+  - `OvershootDistance` (not `ExtensionLength`) sets how far centre mark lines run past the circle when extension lines are on. `GapDistance = 0` is refused; 0.0001 works.
+  - The spike scripts are read with `git show spike/160-hole-table:spikes/160/<script>`; local copies are in `spike-local/160/` (gitignored).
+  - Bash heredocs with mixed quotes or `$(...)` fail to parse; write a script file with the Write tool and run it. `TODO.md`, `DECISIONS.md`, `PLAN.md` and the task files are CRLF; `STATUS.md` is LF.
+  - `SketchedSymbolDefinition.Edit`: the sketch is dead after `ExitEdit`. Sketched symbols have no `RangeBox`.
+- Read first: `docs/WORKFLOW.md` (run mode), `docs/PLAN.md` M4 part 2, task 160 "Recommendations", tasks 155 to 167.
 
 ## Big items
 
