@@ -36,7 +36,7 @@ namespace InventorAddin.HoleTables
     /// The add-in's <see cref="IHoleTableSource"/> (task 163): lists the active drawing's sheets and views and reads a
     /// part view's holes, ordinate origin, scale and units the way spike 160 proved. Sheets and views are keyed by a
     /// GUID kept in an attribute set (<see cref="HoleTableKeys"/>), written the first time they are listed, so the key
-    /// survives a rename or a reorder. Creating and editing tables is task 166 and later; those members report that
+    /// survives a rename or a reorder. Drawing tables is task 164 (HoleTableDrawer); Update and the stored state are task 166, which still report that
     /// they are not yet available.
     /// </summary>
     public sealed class HoleTableSource : IHoleTableSource
@@ -131,19 +131,85 @@ namespace InventorAddin.HoleTables
         public HoleTableHoleRef? FindHole(string sheetKey, string viewKey, string holeId) =>
             _holeRefs.TryGetValue(sheetKey + "|" + viewKey, out var map) && map.TryGetValue(holeId, out var found) ? found : null;
 
-        // Task 166 and later: the tables themselves.
+        // Each table action is one transaction, so one Undo removes what it drew; a failure aborts it (task 164).
         public string GenerateTable(string sheetKey, string viewKey, HoleTableKind kind, HoleTablePlan plan, HoleTableState state) =>
-            NotYetAvailable;
+            DrawTables(HoleTableNames.GenerateTransactionName(kind), sheetKey, viewKey, plan, new[] { kind }, align: false);
 
         public string CreateTables(string sheetKey, string viewKey, HoleTablePlan plan, HoleTableState state) =>
-            NotYetAvailable;
+            DrawTables(
+                HoleTableNames.CreateTransactionName, sheetKey, viewKey, plan,
+                new[] { HoleTableKind.Precision, HoleTableKind.Clearance }, align: true);
 
+        // Task 166: Update and the stored state.
         public string UpdateTables(string sheetKey, string viewKey, HoleTablePlan plan, HoleTableState state) =>
             NotYetAvailable;
 
         public HoleTableState? ReadState(string sheetKey, string viewKey) => null;
 
-        public string AlignTables(string sheetKey, string viewKey) => NotYetAvailable;
+        public string AlignTables(string sheetKey, string viewKey) =>
+            InTableTransaction(HoleTableNames.AlignTransactionName, () =>
+            {
+                var warnings = new List<string>();
+                try
+                {
+                    Sheet? sheet = FindSheet(sheetKey, warnings);
+                    DrawingView? view = sheet == null ? null : FindView(sheet, viewKey, warnings);
+                    if (sheet == null || view == null)
+                        return HoleTableDrawResult.Unchanged("That view could not be found on the sheet.");
+                    string sheetName = ComSafe.Get(() => sheet.Name) ?? "";
+                    string viewName = ComSafe.Get(() => view.Name) ?? "";
+                    return new HoleTableDrawer(_drawing, _log).Align(sheet, sheetKey, viewKey);
+                }
+                finally
+                {
+                    Report(warnings);
+                }
+            });
+
+        private string DrawTables(
+            string transactionName, string sheetKey, string viewKey, HoleTablePlan plan, IReadOnlyList<HoleTableKind> kinds, bool align) =>
+            InTableTransaction(transactionName, () =>
+            {
+                var warnings = new List<string>();
+                try
+                {
+                    Sheet? sheet = FindSheet(sheetKey, warnings);
+                    DrawingView? view = sheet == null ? null : FindView(sheet, viewKey, warnings);
+                    if (sheet == null || view == null)
+                        return HoleTableDrawResult.Unchanged("That view could not be found on the sheet.");
+                    string sheetName = ComSafe.Get(() => sheet.Name) ?? "";
+                    string viewName = ComSafe.Get(() => view.Name) ?? "";
+                    return new HoleTableDrawer(_drawing, _log).Draw(sheet, view, sheetKey, viewKey, sheetName, viewName, plan, kinds, align);
+                }
+                finally
+                {
+                    Report(warnings);
+                }
+            });
+
+        // One transaction around a table action. If none can be started the action does not run, because a failure
+        // half way could not be undone. A failure aborts the transaction and is rethrown for the window's status line.
+        // A call that changed nothing (no title block, view not found, style unreadable) aborts too, so no empty Undo entry is left.
+
+        private string InTableTransaction(string name, Func<HoleTableDrawResult> action)
+        {
+            Transaction transaction = InventorHost.App.TransactionManager.StartTransaction((_Document)_drawing, name);
+            try
+            {
+                HoleTableDrawResult result = action();
+                if (result.Changed)
+                    transaction.End();
+                else
+                    transaction.Abort();
+                return result.Message;
+            }
+            catch (Exception ex)
+            {
+                _log.Warn(LogPrefix + $"'{name}' failed and was undone: {ex.Message}");
+                try { transaction.Abort(); } catch (Exception) { }
+                throw;
+            }
+        }
 
         private HoleTableViewAnalysis AnalyzeCore(string sheetKey, string viewKey, List<string> warnings)
         {

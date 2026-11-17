@@ -458,7 +458,7 @@ Not in part 1: AWB Hole on the Flat Pattern tab (it keeps Inventor's Hole; the S
 - [x] 161 Core: hole table layout as a drawing (lines and text), formatted text, and Align
 - [x] 162 Core: the stored state, Update that keeps tags, and re-opening a table
 - [x] 163 Add-in: read a drawing view's holes and origin (`IHoleTableSource`)
-- [ ] 164 Add-in: draw the hole tables as sketched symbols, and Align
+- [x] 164 Add-in: draw the hole tables as sketched symbols, and Align
 - [ ] 165 Add-in: hole tags, precision marks and the AWB Centre Mark
 - [ ] 166 Add-in: store the state, Update, and the Edit Table tab
 - [x] 167 Add-in: the Hole Table Wizard window and its ribbon button

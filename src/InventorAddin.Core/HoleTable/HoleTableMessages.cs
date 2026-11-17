@@ -33,5 +33,32 @@ public static class HoleTableMessages
         ? "1 edited hole is no longer in the view and was dropped."
         : $"{count} edited holes are no longer in the view and were dropped.";
 
+    /// <summary>Placing and Align need a title block or a border to stack on.</summary>
+    public const string NoTitleBlockOrBorder =
+        "This sheet has no title block and no border, so there is nothing to stack the hole tables on.";
+
+    /// <summary>Align found no hole tables for the view.</summary>
+    public const string NoTablesToAlign = "This view has no hole tables on the sheet to align.";
+
+    public static string Drawn(IReadOnlyList<HoleTableKind> kinds, string viewName)
+    {
+        if (kinds.Count == 0)
+        {
+            return "There are no holes to put in a table.";
+        }
+
+        var names = string.Join(" and ", kinds.Select(k => k == HoleTableKind.Precision ? "Precision" : "Clearance"));
+        return $"Drew the {names} {(kinds.Count == 1 ? "table" : "tables")} for {viewName}.";
+    }
+
+    public static string HeightUnreadable(HoleTableKind kind) =>
+        $"The {kind} table's height could not be read. Use Create Tables to draw it again.";
+
+    /// <summary>The temporary hole table that gives the style could not be made or read.</summary>
+    public const string StyleUnreadable =
+        "The drawing's hole table style could not be read, so no table was drawn. Check that the view can take a hole table.";
+
+    public static string Aligned(int count) => count == 1 ? "Aligned 1 table." : $"Aligned {count} tables.";
+
     private static string Count(int n, string noun) => n == 1 ? $"1 {noun}" : $"{n} {noun}s";
 }

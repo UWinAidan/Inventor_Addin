@@ -249,8 +249,20 @@ public static class HoleTableLayout
 /// <summary>Where the two tables go on Align (spec 04, question 4).</summary>
 public sealed record HoleTableAlignment(SheetPoint? Clearance, SheetPoint? Precision);
 
+/// <summary>A box on the sheet, in cm.</summary>
+public readonly record struct SheetBox(double MinXCm, double MinYCm, double MaxXCm, double MaxYCm);
+
 public static class HoleTableAlign
 {
+    /// <summary>
+    /// The corner the tables stack on: the title block's top-right (max) corner; without a title block, the border's
+    /// bottom-right corner; with neither, null (task 164).
+    /// </summary>
+    public static SheetPoint? Anchor(SheetBox? titleBlock, SheetBox? border) =>
+        titleBlock is { } t ? new SheetPoint(t.MaxXCm, t.MaxYCm)
+        : border is { } b ? new SheetPoint(b.MaxXCm, b.MinYCm)
+        : null;
+
     /// <summary>
     /// The placement points (each table's bottom-right corner): the clearance table on the title block's top-right
     /// corner, the precision table straight above it. A table that does not exist gets no point and takes no room, so
