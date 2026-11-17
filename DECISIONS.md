@@ -427,3 +427,4 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-17 | Hole table Update: a swapped, split, unsplit or alone-changed hole is placed as new; a group whose description changed keeps its letter and is reported; a hole the user deleted drops out silently | Default | task 162 |
 | 2026-11-17 | Hole table window: Swap, Delete, Split and Notes keep tags (measured against the last Open, Create, Generate, Update or Renumber) once a view's tables exist; before that they renumber. Analyze View on a view with stored tables opens them | Default | task 162 |
 | 2026-11-17 | Hole table Renumber does not redraw; the tables change on the next Update | Default | spec 04 question 20 |
+| 2026-11-17 | Hole table: a hole whose axis or side face cannot be read counts as left out (with a log warning), so it shows in the left-out count | Default | task 163 review |
