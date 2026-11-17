@@ -6,16 +6,16 @@ Last updated: 2026-11-13
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-17 14:15. Branch `claude/m4-hole-table`, latest commit is task 163 (`48dec2a` pushed; 163 not yet pushed).
+- Updated: 2026-11-17 14:15. Branch `claude/m4-hole-table`, latest commit is task 167 (pushed).
 - Goal: run M4 part 2 in order (`docs/WORKFLOW.md` run mode). Core is done; now add-in 163, 167, 164, 165, 166 on this PC. Aidan checks the add-in tasks together in Inventor at the end (collect their checklists).
 - Done this session: `b2656df` task 161 (layout, formatted text, Align); `48dec2a` task 162 (stored state, Update keeps tags with high-water marks, re-open). Both reviewed twice. Defaults logged in DECISIONS; spec 04 question 20 (Renumber redraw) added, listed in TODO.
-- Task 163 committed after two reviews (read a view's holes, keys on sheets and views; Core `HoleTableKeys`, `HoleTableViewRules`, `HoleReadBack.TaperTappedRowFor`). Built on Windows, not run in Inventor.
+- Task 167 committed (window, Hole Table button on the drawing ribbon, placeholder icon; one review, PASS). Task 163 committed after two reviews (read a view's holes, keys on sheets and views; Core `HoleTableKeys`, `HoleTableViewRules`, `HoleReadBack.TaperTappedRowFor`). Built on Windows, not run in Inventor.
 - Next:
-  1. Task 167 (window and button), then 164, 165, 166: implementer, reviewer, one commit each. Push every few tasks.
+  1. Tasks 164, 165, 166: implementer, reviewer, one commit each. Push every few tasks.
   2. At the end: STATUS item to Built, TODO checks section with the combined checklists (163 to 167), push, PR.
 - Gotchas:
   - Inventor is open on this PC: build with `dotnet build InventorAddin.slnx -p:DeployToInventor=false`, and never drive Inventor.
-  - Core tests: 4789 after 163. 1 to 3 `Numbering` tests flake per full run under load (a different set each time); run them alone before believing a failure.
+  - Core tests: 4796 after 167. 1 to 3 `Numbering` tests flake per full run under load (a different set each time); run them alone before believing a failure.
   - The `IHoleTableSource` members from 162 (`ReadState`, `UpdateTables`, `state` args) are placeholders in 163 returning "Not yet available"; task 166 implements them.
   - `TODO.md`, `DECISIONS.md`, `PLAN.md` and the task files are CRLF; STATUS is LF. Edit them with a Python script in the job tmp dir; Bash heredocs with mixed quotes fail.
 - Read first: `docs/WORKFLOW.md`, `docs/PLAN.md` M4 part 2, tasks 163 to 167, TODO "Follow-ups" lines for tasks 161 and 162.

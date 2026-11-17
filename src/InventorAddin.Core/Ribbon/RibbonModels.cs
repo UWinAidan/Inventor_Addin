@@ -98,6 +98,9 @@ public static class CommandNames
     public const string MaterialFinish = Prefix + "MaterialFinish";
     public const string AwbHole = Prefix + "AwbHole";
 
+    /// <summary>The Hole Table Wizard (spec 04; task 167), on the drawing ribbon.</summary>
+    public const string HoleTable = Prefix + "HoleTable";
+
     /// <summary>
     /// Our Edit Feature for holes (task 092): put in place of Inventor's on the browser menu and the mini toolbar, with
     /// Inventor's icon. It has no ribbon button.
@@ -144,4 +147,10 @@ public static class IconNames
 
     // M4 part 1 (task 087). AWB Hole; its command task adds the layout entry.
     public const string AwbHole = "AwbHole";
+
+    /// <summary>
+    /// The Hole Table button's icon (task 167). A placeholder until Aidan sends a design (2026-11-17): its four images
+    /// are copies of <see cref="AwbHole"/>'s, the closest to a table of holes. The design replaces those four files.
+    /// </summary>
+    public const string HoleTable = "HoleTable";
 }

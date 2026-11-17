@@ -41,6 +41,12 @@ public static class RibbonLayout
         RibbonEnvironment.Part,
     };
 
+    // Spec 04, "Target dialog": the Hole Table Wizard works on a drawing.
+    private static readonly RibbonEnvironment[] DrawingEnvironments =
+    {
+        RibbonEnvironment.Drawing,
+    };
+
     // Spec 02, "Commands: New Part" and "Commands: Mass Update": also with no document open.
     private static readonly RibbonEnvironment[] NewFileEnvironments =
     {
@@ -81,6 +87,8 @@ public static class RibbonLayout
         {
             // Spec 02, "Commands: Create Print": a drawing of the active part or assembly.
             new(CommandNames.CreatePrint, ButtonSize.Large, IconNames.CreatePrint, ModelEnvironments),
+            // Spec 04, "Target dialog" (task 167): large, on the drawing ribbon only.
+            new(CommandNames.HoleTable, ButtonSize.Large, IconNames.HoleTable, DrawingEnvironments),
         }),
         new(RibbonIds.DeveloperPanelId, RibbonIds.DeveloperPanelName, DeveloperOnly: true, new ButtonDefinition[]
         {

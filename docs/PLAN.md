@@ -461,7 +461,7 @@ Not in part 1: AWB Hole on the Flat Pattern tab (it keeps Inventor's Hole; the S
 - [ ] 164 Add-in: draw the hole tables as sketched symbols, and Align
 - [ ] 165 Add-in: hole tags, precision marks and the AWB Centre Mark
 - [ ] 166 Add-in: store the state, Update, and the Edit Table tab
-- [ ] 167 Add-in: the Hole Table Wizard window and its ribbon button
+- [x] 167 Add-in: the Hole Table Wizard window and its ribbon button
 
 **Spike 160 is done** (2026-11-17, Aidan). Tables are drawn as sketched symbols, and every hole gets the one `AWB Centre Mark` style. Tasks 161 to 167 were written from the spike's "Recommendations", and tasks 155, 156 and 159 were updated for it (hole id by reference key, drawing symbols). **Order:** the Core tasks first: 155, then 156 and 157 alongside, then 158, 159, 161 and 162. Then the add-in tasks on Windows: 163, 167, 164, 165 and 166, each built here. Aidan checks them together in Inventor. Spike 160 ran with Aidan whenever he is at his PC, before or alongside the Core tasks; it touches only its own spike branch. On a new branch off `main` (`claude/m4-hole-table`).
 

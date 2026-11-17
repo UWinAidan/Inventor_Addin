@@ -37,6 +37,7 @@ public static class CommandDocuments
         [CommandNames.ExportModelData] = CommandDocument.Edited,
         [CommandNames.AwbHole] = CommandDocument.Edited,
         [CommandNames.AwbHoleEdit] = CommandDocument.Edited,
+        [CommandNames.HoleTable] = CommandDocument.Edited,
 
         // The selection is held by the top-level assembly, also while a sub-assembly is edited in place (task 060,
         // spike 052).

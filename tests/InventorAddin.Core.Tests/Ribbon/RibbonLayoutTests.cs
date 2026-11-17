@@ -63,6 +63,7 @@ public sealed class RibbonLayoutTests
         Assert.Equal($"{Branding.IdPrefix}_MassUpdate", CommandNames.MassUpdate);
         Assert.Equal($"{Branding.IdPrefix}_MaterialFinish", CommandNames.MaterialFinish);
         Assert.Equal($"{Branding.IdPrefix}_AwbHole", CommandNames.AwbHole);
+        Assert.Equal($"{Branding.IdPrefix}_HoleTable", CommandNames.HoleTable);
     }
 
     public static TheoryData<RibbonEnvironment, bool> DocumentEnvironmentsAndSetting()
@@ -83,6 +84,8 @@ public sealed class RibbonLayoutTests
 
     private static ButtonLayout Large(string iconName) =>
         new($"{Branding.IdPrefix}_{iconName}", ButtonSize.Large, iconName);
+
+    private static readonly ButtonLayout HoleTableButton = Large("HoleTable");
 
     private static PanelLayout Create(params ButtonLayout[] buttons) =>
         new($"id_Panel_{Branding.IdPrefix}_Create", "Create", buttons);
@@ -148,10 +151,12 @@ public sealed class RibbonLayoutTests
             },
             (RibbonEnvironment.Drawing, false) => new[]
             {
+                DrawingPanel(HoleTableButton),
                 Awb(),
             },
             (RibbonEnvironment.Drawing, true) => new[]
             {
+                DrawingPanel(HoleTableButton),
                 Developer(Small("ExportModelData"), Small("ExportLibraries")),
                 Awb(),
             },
@@ -286,6 +291,7 @@ public sealed class RibbonLayoutTests
     [InlineData(CommandNames.MassUpdate, IconNames.MassUpdate)]
     [InlineData(CommandNames.MaterialFinish, IconNames.MaterialFinish)]
     [InlineData(CommandNames.AwbHole, IconNames.AwbHole)]
+    [InlineData(CommandNames.HoleTable, IconNames.HoleTable)]
     public void EachCommand_UsesItsIconName_InEveryEnvironment(string command, string iconName)
     {
         var buttons = RibbonEnvironments.All
@@ -312,6 +318,7 @@ public sealed class RibbonLayoutTests
     [InlineData(CommandNames.MassUpdate, ButtonSize.Small)]
     [InlineData(CommandNames.MaterialFinish, ButtonSize.Small)]
     [InlineData(CommandNames.AwbHole, ButtonSize.Large)]
+    [InlineData(CommandNames.HoleTable, ButtonSize.Large)]
     [InlineData(CommandNames.ExportModelData, ButtonSize.Small)]
     [InlineData(CommandNames.ExportLibraries, ButtonSize.Small)]
     public void EachCommand_HasItsSize_InEveryEnvironment(string command, ButtonSize size)
@@ -340,7 +347,7 @@ public sealed class RibbonLayoutTests
         Assert.Equal(
             new[]
             {
-                CommandNames.About, CommandNames.AwbHole, CommandNames.CreatePrint, CommandNames.ExportLibraries, CommandNames.ExportModelData,
+                CommandNames.About, CommandNames.AwbHole, CommandNames.CreatePrint, CommandNames.ExportLibraries, CommandNames.ExportModelData, CommandNames.HoleTable,
                 CommandNames.MassUpdate, CommandNames.MaterialFinish, CommandNames.NewPart, CommandNames.PartProperties, CommandNames.SaveAsCopy,
                 CommandNames.SaveAsReplace, CommandNames.Settings,
             }.OrderBy(n => n, StringComparer.Ordinal),
@@ -375,7 +382,7 @@ public sealed class RibbonLayoutTests
             .Select(g => g.First().IconName)
             .ToList();
 
-        Assert.Equal(12, iconNames.Count);
+        Assert.Equal(13, iconNames.Count);
         Assert.Equal(iconNames.Count, iconNames.Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
 

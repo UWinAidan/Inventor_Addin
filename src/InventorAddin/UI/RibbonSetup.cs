@@ -70,6 +70,7 @@ namespace InventorAddin.UI
             yield return new MassUpdateCommand();
             yield return new MaterialFinishCommand();
             yield return new AwbHoleCommand();
+            yield return new HoleTableCommand();
             yield return new HoleEditFeatureCommand();
             yield return new InventorHoleCommand();
             yield return new UseInventorHoleByDefaultCommand();

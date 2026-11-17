@@ -1,0 +1,188 @@
+<Window x:Class="InventorAddin.UI.HoleTableWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:InventorAddin.UI.Controls"
+        SizeToContent="Height"
+        ResizeMode="CanResize"
+        ShowInTaskbar="False">
+    <!--
+        DataContext is a HoleTableWizardViewModel (InventorAddin.Core.ViewModels), set in the constructor.
+        Layout and bindings only: the look comes from UI/Theme, applied by WindowHost after the window is built,
+        so shared styles are referred to with DynamicResource.
+
+        Spec 04, "Target dialog" (task 167). The header names the drawing; the body starts with the Sheet and View
+        lists, then two tabs. Create Tables: Analyze View and Create Tables, the Precision and Clearance lists (Tag,
+        Description and Split on each row) with Swap and Delete between them, and Generate Precision Table and Generate
+        Clearance Table. Edit Table (task 162): the views of the sheet that have stored tables, and the NOTES of each
+        group. The footer holds Align, Renumber, Update and Cancel with the status line; the busy bar above it shows
+        while a table command runs.
+
+        The lists are ListBoxes with templated rows, not DataGrids: every Split and Notes edit rebuilds the lists, which
+        would throw inside a DataGrid committing an edit. NOTES commits when the box loses focus (the default
+        UpdateSourceTrigger), not on each key, or the rebuild would take focus from the box after every letter.
+
+        Access keys: H sheet, V view, C Create Tables tab, E Edit Table tab, A analyze, T create tables, S swap,
+        D delete, P generate precision, L generate clearance, O open, I align, R renumber, U update.
+    -->
+    <Grid Style="{DynamicResource ResizableDialogContent}">
+        <!-- Header, body, busy bar, footer. The body row is star-sized, so it scrolls when the window is shorter than the page. -->
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- The header icon is put in the window's resources by WindowHost (HeaderIcon), in the window's theme. -->
+        <controls:DialogHeader Grid.Row="0"
+                               Icon="{DynamicResource HeaderIcon}"
+                               Title="Hole Table"
+                               Subline="{Binding DrawingName, Mode=OneTime}" />
+
+        <ScrollViewer Grid.Row="1" Style="{DynamicResource DialogBody}">
+            <StackPanel Style="{DynamicResource DialogBodyContent}">
+                <controls:FormSection Heading="View">
+                    <controls:FieldRow Label="S_heet" Target="{Binding ElementName=SheetBox}">
+                        <ComboBox x:Name="SheetBox"
+                                  ItemsSource="{Binding Sheets, Mode=OneTime}"
+                                  DisplayMemberPath="Name"
+                                  SelectedValuePath="Key"
+                                  SelectedValue="{Binding SelectedSheet, Mode=TwoWay}" />
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="_View" Target="{Binding ElementName=ViewBox}">
+                        <ComboBox x:Name="ViewBox"
+                                  ItemsSource="{Binding Views, Mode=OneWay}"
+                                  DisplayMemberPath="Name"
+                                  SelectedValuePath="Key"
+                                  SelectedValue="{Binding SelectedView, Mode=TwoWay}" />
+                    </controls:FieldRow>
+                </controls:FormSection>
+
+                <TabControl Style="{DynamicResource PageTabs}">
+                    <TabItem Header="_Create Tables">
+                        <StackPanel>
+                            <StackPanel Style="{DynamicResource ListItem}" Orientation="Horizontal">
+                                <Button Content="_Analyze View" Command="{Binding AnalyzeCommand}" Click="OnWorkClick" />
+                                <Button Style="{DynamicResource SideButton}" Content="Create _Tables"
+                                        Command="{Binding CreateTablesCommand}" Click="OnWorkClick" />
+                            </StackPanel>
+
+                            <Grid Style="{DynamicResource ListItem}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <controls:FormSection Grid.Column="0" Heading="Precision">
+                                    <ListBox Style="{DynamicResource WideList}"
+                                             Grid.IsSharedSizeScope="True"
+                                             ItemsSource="{Binding PrecisionRows, Mode=OneWay}"
+                                             SelectedItem="{Binding SelectedPrecisionRow, Mode=TwoWay}"
+                                             AutomationProperties.Name="Precision holes">
+                                        <ListBox.ItemTemplate>
+                                            <!-- DataContext is a HoleTableWizardRow. -->
+                                            <DataTemplate>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" SharedSizeGroup="Tag" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" Style="{DynamicResource IdentifierText}" Text="{Binding Tag, Mode=OneWay}" />
+                                                    <TextBlock Grid.Column="1" Style="{DynamicResource RowDescriptionText}"
+                                                               Text="{Binding Description, Mode=OneWay}"
+                                                               ToolTip="{Binding Description, Mode=OneWay}" />
+                                                    <CheckBox Grid.Column="2" Content="Split" IsChecked="{Binding IsSplit, Mode=TwoWay}" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </controls:FormSection>
+
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <Button Style="{DynamicResource BetweenListsButton}" Content="_Swap" Command="{Binding SwapCommand}" />
+                                    <Button Style="{DynamicResource BetweenListsButton}" Content="_Delete" Command="{Binding DeleteCommand}" />
+                                </StackPanel>
+
+                                <controls:FormSection Grid.Column="2" Heading="Clearance">
+                                    <ListBox Style="{DynamicResource WideList}"
+                                             Grid.IsSharedSizeScope="True"
+                                             ItemsSource="{Binding ClearanceRows, Mode=OneWay}"
+                                             SelectedItem="{Binding SelectedClearanceRow, Mode=TwoWay}"
+                                             AutomationProperties.Name="Clearance holes">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" SharedSizeGroup="Tag" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" Style="{DynamicResource IdentifierText}" Text="{Binding Tag, Mode=OneWay}" />
+                                                    <TextBlock Grid.Column="1" Style="{DynamicResource RowDescriptionText}"
+                                                               Text="{Binding Description, Mode=OneWay}"
+                                                               ToolTip="{Binding Description, Mode=OneWay}" />
+                                                    <CheckBox Grid.Column="2" Content="Split" IsChecked="{Binding IsSplit, Mode=TwoWay}" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </controls:FormSection>
+                            </Grid>
+
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="Generate _Precision Table" Command="{Binding GeneratePrecisionCommand}" Click="OnWorkClick" />
+                                <Button Style="{DynamicResource SideButton}" Content="Generate C_learance Table"
+                                        Command="{Binding GenerateClearanceCommand}" Click="OnWorkClick" />
+                            </StackPanel>
+                        </StackPanel>
+                    </TabItem>
+
+                    <TabItem Header="_Edit Table">
+                        <StackPanel>
+                            <controls:FormSection Heading="Stored tables">
+                                <ListBox Style="{DynamicResource WideList}"
+                                         ItemsSource="{Binding StoredViews, Mode=OneWay}"
+                                         DisplayMemberPath="Name"
+                                         SelectedItem="{Binding SelectedStoredView, Mode=TwoWay}"
+                                         AutomationProperties.Name="Views with stored hole tables" />
+                                <Button Style="{DynamicResource BetweenListsButton}" HorizontalAlignment="Left"
+                                        Content="_Open" Command="{Binding OpenStoredViewCommand}" Click="OnWorkClick" />
+                            </controls:FormSection>
+
+                            <controls:FormSection Heading="Notes">
+                                <ItemsControl Focusable="False" ItemsSource="{Binding Groups, Mode=OneWay}">
+                                    <ItemsControl.ItemTemplate>
+                                        <!-- DataContext is a HoleTableWizardGroup. The box commits when it loses focus. -->
+                                        <DataTemplate>
+                                            <StackPanel Style="{DynamicResource ListItem}">
+                                                <TextBlock Style="{DynamicResource ValueText}"
+                                                           Text="{Binding Description, Mode=OneWay}" />
+                                                <controls:FieldRow Label="Notes">
+                                                    <TextBox Style="{DynamicResource MultiLineTextBox}"
+                                                             Text="{Binding Notes, Mode=TwoWay}" />
+                                                </controls:FieldRow>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </controls:FormSection>
+                        </StackPanel>
+                    </TabItem>
+                </TabControl>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Shown by the window for the length of a table command (code-behind). -->
+        <ProgressBar x:Name="BusyIndicator" Grid.Row="2" Style="{DynamicResource BusyBar}" Visibility="Collapsed" />
+
+        <controls:DialogFooter Grid.Row="3" Status="{Binding Status, Mode=OneWay}">
+            <Button Content="Al_ign" Command="{Binding AlignCommand}" Click="OnWorkClick" />
+            <Button Content="_Renumber" Command="{Binding RenumberCommand}" />
+            <Button Style="{DynamicResource PrimaryButton}" Content="_Update" Command="{Binding UpdateCommand}" Click="OnWorkClick" />
+            <!-- IsCancel closes the dialog; Cancel changes nothing in the drawing. -->
+            <Button Content="Cancel" IsCancel="True" Command="{Binding CancelCommand}" />
+        </controls:DialogFooter>
+    </Grid>
+</Window>
