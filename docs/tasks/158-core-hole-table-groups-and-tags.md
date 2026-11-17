@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 2
 - **Feature spec:** `docs/features/04-hole-table-wizard.md` ("Target output", "Decided behaviour", open questions 2, 6, 12, 13)
-- **Status:** todo
+- **Status:** done
 - **Depends on:** 155, 156, 157
 - **Needs:** cloud or windows (Core only)
 - **Parallel-safe with:** 160
@@ -33,12 +33,12 @@ Out of scope: the table's cell layout and titles, Align, persisting edits in the
 
 ## Acceptance criteria
 
-- [ ] A test shaped like the spec's reference plate: two toleranced holes of one kind, six plain through holes of one diameter, one of another, four tapped holes of one thread. Tags `A1`, `A2`, `B1` to `B6`, `C1`, `D1` to `D4`, precision first.
-- [ ] Clearance group order follows type then diameter (plain, counterbore, countersink, spotface, tapped, taper tapped).
-- [ ] Swap, delete, split, and combinations; a stale `Id` is ignored and reported.
-- [ ] Adding an instance to group B leaves every other letter unchanged.
-- [ ] Notes survive a rebuild; a group with no note shows `-`.
-- [ ] `dotnet test tests/InventorAddin.Core.Tests` passes.
+- [x] A test shaped like the spec's reference plate: two toleranced holes of one kind, six plain through holes of one diameter, one of another, four tapped holes of one thread. Tags `A1`, `A2`, `B1` to `B6`, `C1`, `D1` to `D4`, precision first.
+- [x] Clearance group order follows type then diameter (plain, counterbore, countersink, spotface, tapped, taper tapped).
+- [x] Swap, delete, split, and combinations; a stale `Id` is ignored and reported.
+- [x] Adding an instance to group B leaves every other letter unchanged.
+- [x] Notes survive a rebuild; a group with no note shows `-`.
+- [x] `dotnet test tests/InventorAddin.Core.Tests` passes.
 
 ## Notes for the implementer
 
@@ -49,11 +49,16 @@ Out of scope: the table's cell layout and titles, Align, persisting edits in the
 
 Filled in by the implementer.
 
-- **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):** none expected
-- **Inventor API members not confirmed:** none expected
+- **Ran:** `dotnet test tests/InventorAddin.Core.Tests` on Windows: 4658 passed, 0 failed (includes the new `HoleTablePlanTests.cs`).
+- **Not compiled (changed under `src/InventorAddin`):** none
+- **Inventor API members not confirmed:** none
 - **Manual checklist for Inventor:** none (Core only)
 
 ## Follow-ups
 
 Things noticed but not done.
+
+- `HoleTableOrder.SortInstances` (chained Y bands, then X, then `Id`) replaced the non-transitive `HoleTableOrder.Instances`; it is the one instance-ordering rule, so tags never depend on input order.
+- Group order still goes through `HoleTableOrder.Groups` (its 1e-5 cm diameter tolerance is non-transitive in theory). The plan pre-sorts holes by `Id` and uses each group's minimum diameter, so it is deterministic for real data.
+- Persisting edits (a later task) must store the swapped, deleted and split `Id` sets and both note dictionaries: ordinary notes by table and description `Key`, split notes by hole `Id`.
+- `HoleTablePlan.Build` is the Renumber path. Update (task 162) needs a separate path that takes the previous tags and letters, and under Update a new split takes the next unused letter.

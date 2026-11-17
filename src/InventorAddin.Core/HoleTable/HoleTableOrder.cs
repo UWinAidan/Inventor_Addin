@@ -39,15 +39,38 @@ public static class HoleTableOrder
             return byDiameter != 0 ? byDiameter : string.CompareOrdinal(a.TieBreak, b.TieBreak);
         });
 
-    /// <summary>Orders instances within a group: Y ascending, then X ascending, on the sheet position, with tolerance.</summary>
-    public static IComparer<HoleTableHole> Instances { get; } = Comparer<HoleTableHole>.Create((a, b) =>
+    /// <summary>
+    /// Orders instances within a group: Y ascending, then X ascending, on the sheet position (task 155's rule). Y values
+    /// within <see cref="PositionToleranceCm"/> of a neighbour in a chain share a row band; the band is ordered by X,
+    /// then <see cref="HoleTableHole.Id"/>. Pairwise comparison with a tolerance is not transitive, so this clusters
+    /// instead: the result never depends on the input order.
+    /// </summary>
+    public static IReadOnlyList<HoleTableHole> SortInstances(IEnumerable<HoleTableHole> holes)
     {
-        var byY = ComparePosition(a.SheetYCm, b.SheetYCm);
-        return byY != 0 ? byY : ComparePosition(a.SheetXCm, b.SheetXCm);
-    });
+        ArgumentNullException.ThrowIfNull(holes);
 
-    private static int ComparePosition(double a, double b) =>
-        Math.Abs(a - b) <= PositionToleranceCm ? 0 : a.CompareTo(b);
+        var byY = holes.OrderBy(h => h.SheetYCm).ThenBy(h => h.Id, StringComparer.Ordinal).ToList();
+        var result = new List<HoleTableHole>(byY.Count);
+        var band = new List<HoleTableHole>();
+        foreach (var hole in byY)
+        {
+            if (band.Count > 0 && hole.SheetYCm - band[^1].SheetYCm > PositionToleranceCm)
+            {
+                Flush();
+            }
+
+            band.Add(hole);
+        }
+
+        Flush();
+        return result;
+
+        void Flush()
+        {
+            result.AddRange(band.OrderBy(h => h.SheetXCm).ThenBy(h => h.Id, StringComparer.Ordinal));
+            band.Clear();
+        }
+    }
 
     private static int CompareDiameter(double? a, double? b)
     {

@@ -163,7 +163,7 @@ public class HoleTableTests
             new("k3", 3, 9.0, 1.0),
             new("k4", 4, 0.0, 3.0),
         ]);
-        var ids = holes.OrderBy(h => h, HoleTableOrder.Instances).Select(h => h.Id).ToArray();
+        var ids = HoleTableOrder.SortInstances(holes).Select(h => h.Id).ToArray();
         Assert.Equal(new[] { "H#k3", "H#k2", "H#k1", "H#k4" }, ids);
     }
 
