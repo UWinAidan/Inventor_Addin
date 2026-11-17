@@ -22,7 +22,7 @@ A **Hole Table** button on the AWB Addin tab of the drawing ribbon opens the Hol
     - Generate Precision Table and Generate Clearance Table.
   - **Edit Table tab** (task 162): the stored views, and NOTES per group.
   - **Bottom row:** Align, Renumber, Update, Cancel, a status line and a progress bar.
-- **Command.** `Commands/HoleTableCommand.cs` (`Awb_HoleTable`), enabled only when a drawing is active. Its icon follows the task 151 icon set: a new 16 and 32 px icon in the same style, or the closest existing icon until Aidan picks one (Default; ask him).
+- **Command.** `Commands/HoleTableCommand.cs` (`Awb_HoleTable`), enabled only when a drawing is active. Its icon is a placeholder for now (Aidan, 2026-11-17; he will send a design): reuse the closest existing 16 and 32 px icon from the task 151 set, and note which in Follow-ups.
 - Button text and tooltip in our own words.
 - Until tasks 164 to 166 land, the table commands report "not built yet" through the source.
 

@@ -415,3 +415,8 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-17 | Hole table: a table's edits and tags are stored in an attribute set on its sketched symbol; the shared state (letter sequence, view link) is stored on the sheet | Default | task 160, C10 |
 | 2026-11-17 | Hole table Update keeps each remaining hole's tag. A new hole takes the next number in its group; a new group takes the next unused letter. Only Renumber closes gaps | Default | spec 04 question 18 |
 | 2026-11-17 | Hole table group order: two drill diameters within 0.00001 cm count as equal, and the tie-break text decides | Default | task 155 |
+| 2026-11-17 | Hole table id: feature name plus the centre sketch point's reference key (confirms the Default of the same day) | Aidan | task 160, C11 |
+| 2026-11-17 | Hole table edits and tags are stored on the table's sketched symbol, shared state on the sheet (confirms the Default of the same day) | Aidan | task 160, C10 |
+| 2026-11-17 | Hole table Update keeps each remaining hole's tag; only Renumber closes gaps (confirms the Default of the same day) | Aidan | spec 04 question 18 |
+| 2026-11-17 | Hole Table button: a placeholder icon for now; Aidan will send a design | Aidan | task 167 |
+| 2026-11-17 | M4 part 2 run: the add-in tasks' manual checklists are collected for one combined check in Inventor at the end; the branch is pushed every few tasks as a backup | Aidan | session |
