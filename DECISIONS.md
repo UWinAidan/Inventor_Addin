@@ -429,3 +429,6 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-17 | Hole table Renumber does not redraw; the tables change on the next Update | Default | spec 04 question 20 |
 | 2026-11-17 | Hole table: a hole whose axis or side face cannot be read counts as left out (with a log warning), so it shows in the left-out count | Default | task 163 review |
 | 2026-11-17 | Hole table precision mark: a hole gets it when it is in the Precision table, not by its own precision flag, so a hole swapped between tables carries the mark with it | Default | task 165 |
+| 2026-11-18 | Hole table Update stays manual; when the wizard opens it checks each stored view's tables against the model and, if any are out of date (holes moved, added, removed, or no longer seen end on), says so and offers Update for those views | Aidan | spec 04, tasks 171 and 172 |
+| 2026-11-18 | Hole table: the wizard says "no origin" only when the view has none; an origin that exists but cannot be read gets its own message, and the add-in falls back to the view's ordinate dimensions | Aidan | spec 04, task 168 |
+| 2026-11-18 | AWB Hole: a new hole starts on the last hole made with OK (type, standard, size, seat, fastener type, fit, tolerance, termination, drill point), per units; editing a hole still opens on that hole | Aidan | spec 09, task 173 |

@@ -55,7 +55,7 @@ Rules read off the reference result:
 ## Decided behaviour (Aidan, 2026-11-12)
 
 - **Holes in scope:** every AWB Hole type and seat in the first version: Simple, Clearance, dowel, counterbored, countersunk, spotfaced, Tapped and Taper Tapped (question 8).
-- **Origin:** the wizard uses the view's existing ordinate-dimension origin. Aidan almost always dimensions with ordinates. If the view has no origin, the wizard stops and says to add one; it never invents one (question 7).
+- **Origin:** the wizard uses the view's existing ordinate-dimension origin. Aidan almost always dimensions with ordinates. If the view has no origin, the wizard stops and says to add one; it never invents one (question 7). When the view has an origin that cannot be read, the wizard reads it from the view's ordinate dimensions instead, and if that fails too it says the origin could not be read, not that there is none (Aidan, 2026-11-18; task 168).
 - **Group order in the precision table:** by diameter, ascending.
 - **Group order in the clearance table:** by type first, then by diameter ascending within a type (question 6). The type order:
   1. plain: Simple and Clearance
@@ -65,7 +65,7 @@ Rules read off the reference result:
 - **Order within a group:** Y ascending, then X ascending, as the reference shows.
 - **Never by quantity.** Letters must stay stable when instances are added or removed, so a group's place never depends on how many holes it has.
 - **Split:** ticking *Split* on a row gives that hole instance its own group and letter (question 2).
-- **Update:** refreshes descriptions and positions in both tables after the model changes (question 3).
+- **Update:** refreshes descriptions and positions in both tables after the model changes (question 3). Update stays manual, but when the wizard opens it checks each stored view's tables against the model and, if any are out of date (holes moved, added, removed, or no longer seen end on), says so and offers Update for those views (Aidan, 2026-11-18; tasks 171, 172).
 - **Align:** stacks the two tables and snaps them to the corner above the title block (question 4).
 - **Edit Table tab:** edit the NOTES column, and re-open an existing table to swap, delete, split and renumber its rows (question 5).
 

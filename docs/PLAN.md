@@ -465,6 +465,24 @@ Not in part 1: AWB Hole on the Flat Pattern tab (it keeps Inventor's Hole; the S
 
 **Spike 160 is done** (2026-11-17, Aidan). Tables are drawn as sketched symbols, and every hole gets the one `AWB Centre Mark` style. Tasks 161 to 167 were written from the spike's "Recommendations", and tasks 155, 156 and 159 were updated for it (hole id by reference key, drawing symbols). **Order:** the Core tasks first: 155, then 156 and 157 alongside, then 158, 159, 161 and 162. Then the add-in tasks on Windows: 163, 167, 164, 165 and 166, each built here. Aidan checks them together in Inventor. Spike 160 ran with Aidan whenever he is at his PC, before or alongside the Core tasks; it touches only its own spike branch. On a new branch off `main` (`claude/m4-hole-table`).
 
+**Fixes and requests from Aidan's check of 163 to 167** (2026-11-18). 167 passed; Aidan goes on with 163 onward after the origin fix. Fixes: 168 (the view's origin when the origin indicator cannot be read), 169 (a WPF dropdown automation exception caught by the origin read), 170 (the tolerance read on tapped holes). Requests: 171 and 172 (on open, the wizard checks the stored tables and offers Update for out-of-date views; Update stays manual), 173 (a new AWB Hole starts on the last hole made with OK; M4 part 1). **Order:** 168 first, then 169, 170, 171, 172, 173.
+
+| Task | Needs | Depends on | Parallel-safe with |
+|---|---|---|---|
+| 168 | windows (add-in) | 163 | 170 |
+| 169 | windows (add-in) | 168 | 170 |
+| 170 | windows (add-in) | none | 168, 169 |
+| 171 | Core | 162, 168 | 169, 170, 173 |
+| 172 | windows (add-in) | 171, 167 | 173 |
+| 173 | windows (Core and add-in) | none | 171 |
+
+- [ ] 168 Fix: read the view's origin when the origin indicator fails; "no origin" or "could not read it"
+- [ ] 169 Fix: a WPF ComboBox automation exception caught by the origin read
+- [ ] 170 Fix: the hole tolerance read on tapped holes
+- [ ] 171 Core: check each stored view's tables on open and offer Update
+- [ ] 172 Add-in: the Hole Table window shows the out-of-date check
+- [ ] 173 AWB Hole: a new hole starts on the last hole made with OK
+
 ### M5: Drawing tools (spec 05)
 
 Blocked on question 1 of the spec, which decides which commands exist at all. Includes a custom drawing template whose title block reads every property from the model (Aidan, 2026-10-10): custom print templates with several sheet sizes, sheet colours, and a title block designed with Aidan (Aidan, 2026-10-11). Create Drawing moved to M2 as Create Print.
