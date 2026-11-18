@@ -242,14 +242,14 @@ namespace InventorAddin.Holes
 
         /// <summary>
         /// Keeps the depth of a blind clearance or dowel hole kept with OK as the last depth of its units (task 097),
-        /// and a dowel's or tapped hole's seat as the last seat of its units and size (tasks 106 and 126), in the
-        /// settings file, so the next hole starts at them, also after a restart. A failure to save is logged; the hole is kept either way.
+        /// and a dowel's or tapped hole's seat as the last seat of its units and size (tasks 106 and 126), and the hole's
+        /// choices as the last hole of its units (task 173), in the settings file, so the next hole starts at them, also after a restart. A failure to save is logged; the hole is kept either way.
         /// </summary>
         private void RememberDepth(HoleSpec kept)
         {
             try
             {
-                AddinSettings? updated = HoleLastDowelSeats.RememberKept(AddinServices.Settings, kept);
+                AddinSettings? updated = HoleLastHole.RememberKept(AddinServices.Settings, kept);
                 if (updated == null)
                     return;
 

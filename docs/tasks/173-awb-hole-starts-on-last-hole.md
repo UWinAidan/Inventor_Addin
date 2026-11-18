@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 1 (request from Aidan's check, 2026-11-18)
 - **Feature spec:** `docs/features/09-awb-hole.md` ("The window")
-- **Status:** todo
+- **Status:** done
 - **Depends on:** none
 - **Needs:** windows (Core and a little add-in wiring; Aidan checks in Inventor)
 - **Parallel-safe with:** 171
@@ -41,9 +41,16 @@ Out of scope: changing which units a new hole starts in.
 
 Filled in by the implementer.
 
-- **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):**
-- **Inventor API members not confirmed:**
+- **Ran:** `dotnet test tests/InventorAddin.Core.Tests`: 4885 passed, 0 failed (new: `HoleLastHoleTests`, `AwbHoleLastHoleViewModelTests`, and two rows in `SettingsStoreTests.Equality_ComparesEverySetting`). `dotnet build InventorAddin.slnx -p:DeployToInventor=false`: 0 errors, 8 warnings (none in files this task touched).
+- **Defaults chosen (for `DECISIONS.md`, and spec 09 question 29):**
+  - The last hole is applied when the window opens. Switching units afterwards does not load the other units' last hole.
+  - Several holes in one OK remember one: the spec the window had at OK. An OK on an edited hole remembers it too, as the blind depth and seats already do.
+  - A Custom tolerance's Upper and Lower are restored as typed values (they have no table value to follow, and the cascade would blank them otherwise); everything else is a starting value.
+  - A kind the workbook has no sizes for (for example Dowel with no Dowel rows) is not started on; the window opens on the workbook defaults. A size, seat, fastener, fit, tolerance, termination or drill point the workbook does not offer falls back for that box only.
+  - A hole ending at a face (edit only) remembers no termination.
+  - The settings file stores kind, seat and termination as text (`LastHoleMm`, `LastHoleIn`), so no enum converter is needed.
+- **Not compiled (changed under `src/InventorAddin`):** none. Built on Windows with 0 errors: `Commands/AwbHoleCommand.cs` (passes `HoleLastHole.From(settings)` to the view-model) and `Holes/HoleSession.cs` (`RememberDepth` now calls `HoleLastHole.RememberKept`). Neither has been run in Inventor.
+- **Inventor API members not confirmed:** none; no Inventor API is used.
 - **Manual checklist for Inventor:**
   1. With no last hole (fresh settings, or before the first OK): a new AWB Hole opens on the workbook defaults, as now.
   2. Make a counterbored M6 tapped hole, blind, 90 deg drill point, OK. New AWB Hole: it opens on Tapped, AWB Tapped, M6, Counterbore, the same fastener type, Distance, 90 deg.

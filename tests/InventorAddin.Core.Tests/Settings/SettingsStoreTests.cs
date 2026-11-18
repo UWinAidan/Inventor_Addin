@@ -385,6 +385,8 @@ public sealed class SettingsStoreTests : IDisposable
             s => s with { LastSimpleSeatIn = HoleDowelSeat.Empty with { SpotfaceDepth = 0m } },
             s => s with { LastSimpleDiameterMm = 5.5m },
             s => s with { LastSimpleDiameterIn = 0.2m },
+            s => s with { LastHoleMm = new HoleLastChoices { Kind = "Tapped", Size = "M5" } },
+            s => s with { LastHoleIn = new HoleLastChoices { Kind = "Dowel", Fit = "Press" } },
             s => s with { HoleDiagramExpanded = false },
             s => s with { PreferredMaterials = new[] { "Test Steel" } },
         };

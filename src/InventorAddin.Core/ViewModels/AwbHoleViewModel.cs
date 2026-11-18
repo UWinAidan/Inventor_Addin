@@ -302,6 +302,7 @@ public sealed class AwbHoleViewModel : ObservableObject
     private readonly string _partName;
     private readonly HoleLastDepths _lastDepths;
     private readonly HoleLastDowelSeats _lastDowelSeats;
+    private readonly HoleLastHole _lastHole;
     private readonly IHoleExpressionChecker? _expressionChecker;
 
     // The fields, in window order.
@@ -416,7 +417,8 @@ public sealed class AwbHoleViewModel : ObservableObject
         HoleLastDepths? lastDepths,
         IHoleExpressionChecker? expressionChecker,
         HoleLastDowelSeats? lastDowelSeats,
-        HoleReapplyOffer? reapplyOffer = null)
+        HoleReapplyOffer? reapplyOffer = null,
+        HoleLastHole? lastHole = null)
     {
         ArgumentNullException.ThrowIfNull(workbook);
 
@@ -424,6 +426,7 @@ public sealed class AwbHoleViewModel : ObservableObject
         _partName = (partName ?? "").Trim();
         _lastDepths = lastDepths ?? HoleLastDepths.None;
         _lastDowelSeats = lastDowelSeats ?? HoleLastDowelSeats.None;
+        _lastHole = lastHole ?? HoleLastHole.None;
         _expressionChecker = expressionChecker;
         IsEdit = editSpec is not null;
         IsInventorHole = madeByInventor;
@@ -445,6 +448,12 @@ public sealed class AwbHoleViewModel : ObservableObject
             _termination = HoleTermination.ThroughAll;
             _depthUnits = _units;
             Refresh(keepExact: false);
+
+            // Task 173: a new hole starts on the last hole kept with OK in these units, where the workbook still has it.
+            if (_lastHole.For(_units) is { } last)
+            {
+                StartOnLastHole(last);
+            }
         }
         else
         {
@@ -536,14 +545,22 @@ public sealed class AwbHoleViewModel : ObservableObject
     /// Reads depth text that is not a plain number as Inventor does (task 100); without one, such text is refused.
     /// </param>
     /// <param name="lastDowelSeats">The last dowel seat used for each units and size; a dowel's seat starts at it.</param>
+    /// <param name="lastHole">
+    /// The last hole kept with OK in each units (task 173): the hole starts on its type, standard, size, seat, fastener,
+    /// fit, tolerance, termination and drill point, each where the workbook still offers it. None: the workbook's
+    /// defaults.
+    /// </param>
     public AwbHoleViewModel(
         HoleWorkbook workbook,
         string partName,
         IEnumerable<HoleWorkbookProblem>? problems = null,
         HoleLastDepths? lastDepths = null,
         IHoleExpressionChecker? expressionChecker = null,
-        HoleLastDowelSeats? lastDowelSeats = null)
-        : this(workbook, partName, null, false, null, problems, lastDepths, expressionChecker, lastDowelSeats)
+        HoleLastDowelSeats? lastDowelSeats = null,
+        HoleLastHole? lastHole = null)
+        : this(
+            workbook, partName, null, false, null, problems, lastDepths, expressionChecker, lastDowelSeats,
+            lastHole: lastHole)
     {
     }
 
@@ -640,6 +657,101 @@ public sealed class AwbHoleViewModel : ObservableObject
             .Distinct(StringComparer.Ordinal)
             .ToList();
         return fileProblems.Count == 0 ? NoHoleSizesText : string.Join(Environment.NewLine, fileProblems);
+    }
+
+    /// <summary>
+    /// Moves a new hole from the workbook's defaults onto the last hole kept with OK (task 173), a choice at a time in
+    /// the order the window cascades them. A choice the workbook no longer offers for the units and type is left at
+    /// the default for its box, and the rest still apply. These are starting values, not typed ones (task 124), except
+    /// a Custom tolerance's limits, which have no start value to follow.
+    /// </summary>
+    private void StartOnLastHole(HoleLastChoices last)
+    {
+        if (last.KindValue is not { } kind)
+        {
+            return;
+        }
+
+        // Type and Standard: a kind the workbook has no sizes for is not started on (a Simple hole has no sizes).
+        var previous = (_type, _standard);
+        if (Find(TypeOptions, HoleStandards.TypeName(kind)) is { } type)
+        {
+            _type = type;
+            Refresh(keepExact: false);
+            if (kind != HoleKind.Simple && Find(_standardOptions, HoleStandards.StandardName(kind)) is { } standard)
+            {
+                _standard = standard;
+                Refresh(keepExact: false);
+            }
+
+            if (Kind != kind || (kind != HoleKind.Simple && _sizeOptions.Count == 0))
+            {
+                (_type, _standard) = previous;
+                Refresh(keepExact: false);
+                return;
+            }
+        }
+
+        if (kind != HoleKind.Simple && Find(_sizeOptions, last.Size) is { } size)
+        {
+            _size = size;
+            Refresh(keepExact: false);
+        }
+
+        if (last.SeatValue is { } seat && _seatOptions.Any(o => o.Value == seat && o.IsEnabled))
+        {
+            _wantedSeat = seat;
+            Refresh(keepExact: false);
+        }
+
+        if (Find(_fastenerOptions, last.Fastener) is { } fastener)
+        {
+            _fastener = fastener;
+            Refresh(keepExact: false);
+        }
+
+        if (_fitOptions.FirstOrDefault(o => SameText(o.Value, last.Fit)) is { } fit)
+        {
+            _fit = fit.Value;
+            Refresh(keepExact: false);
+        }
+
+        if (last.Toleranced && ShowsToleranced)
+        {
+            _toleranced = true;
+            Refresh(keepExact: false);
+        }
+
+        if (_toleranceOptions.Count > 0)
+        {
+            if (last.CustomTolerance)
+            {
+                _tolerance = HoleToleranceOption.CustomValue;
+                _toleranceCode = string.IsNullOrWhiteSpace(last.CustomCode) ? null : last.CustomCode.Trim();
+                _toleranceUpper = last.CustomUpper;
+                _toleranceLower = last.CustomLower;
+                OpenTyped(HoleField.ToleranceUpper, _toleranceUpper);
+                OpenTyped(HoleField.ToleranceLower, _toleranceLower);
+                Refresh(keepExact: false);
+            }
+            else if (_toleranceOptions.FirstOrDefault(o => SameText(o.Value, last.Tolerance)) is { } tolerance)
+            {
+                _tolerance = tolerance.Value;
+                Refresh(keepExact: false);
+            }
+        }
+
+        if (last.TerminationValue is { } termination && TerminationOptions.Any(o => o.Value == termination))
+        {
+            _termination = termination;
+            Refresh(keepExact: false);
+        }
+
+        if (IsBlind && Find(_drillPointOptions, last.DrillPoint) is { } drillPoint)
+        {
+            _drillPoint = drillPoint;
+            Refresh(keepExact: false);
+        }
     }
 
     /// <summary>
