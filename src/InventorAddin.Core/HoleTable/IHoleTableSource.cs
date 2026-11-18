@@ -51,6 +51,13 @@ public interface IHoleTableSource
 
     IReadOnlyList<HoleTableViewInfo> GetViews(string sheetKey);
 
+    /// <summary>
+    /// The views the on-open check (task 171) should look at: those that can have stored tables. The default is
+    /// <see cref="GetViews"/>. An add-in whose <see cref="GetViews"/> assigns keys (a write) overrides this to list without
+    /// assigning any, because a view with no key cannot have stored tables (task 172).
+    /// </summary>
+    IReadOnlyList<HoleTableViewInfo> GetKeyedViews(string sheetKey) => GetViews(sheetKey);
+
     HoleTableViewAnalysis Analyze(string sheetKey, string viewKey);
 
     /// <summary>Draws one table. <paramref name="state"/> is what the add-in stores on the view (tags, edits, names).</summary>

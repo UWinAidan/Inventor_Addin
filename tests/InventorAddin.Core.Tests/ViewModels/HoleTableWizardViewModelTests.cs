@@ -29,13 +29,20 @@ public class HoleTableWizardViewModelTests
 
         public List<string> Calls { get; } = [];
 
+        /// <summary>GetViews and ReadState calls, kept apart from the calls that draw or analyse.</summary>
+        public List<string> ReadCalls { get; } = [];
+
         public bool Throw { get; set; }
 
         public string DrawingName => "Plate.idw";
 
         public IReadOnlyList<HoleTableSheetInfo> GetSheets() => SheetList;
 
-        public IReadOnlyList<HoleTableViewInfo> GetViews(string sheetKey) => ViewsBySheet[sheetKey];
+        public IReadOnlyList<HoleTableViewInfo> GetViews(string sheetKey)
+        {
+            ReadCalls.Add($"getviews {sheetKey}");
+            return ViewsBySheet[sheetKey];
+        }
 
         public HoleTableViewAnalysis Analyze(string sheetKey, string viewKey)
         {
@@ -79,8 +86,11 @@ public class HoleTableWizardViewModelTests
             return "Updated.";
         }
 
-        public HoleTableState? ReadState(string sheetKey, string viewKey) =>
-            Stored.GetValueOrDefault((sheetKey, viewKey));
+        public HoleTableState? ReadState(string sheetKey, string viewKey)
+        {
+            ReadCalls.Add($"readstate {sheetKey}/{viewKey}");
+            return Stored.GetValueOrDefault((sheetKey, viewKey));
+        }
 
         public string AlignTables(string sheetKey, string viewKey)
         {
@@ -628,5 +638,200 @@ public class HoleTableWizardViewModelTests
         vm.GeneratePrecisionCommand.Execute(null);
         Assert.Contains(vm.StoredViews, v => v.Key == "v2");
         Assert.Equal(5, source.Stored[("s2", "v2")].Tags.ByHole.Count);
+    }
+
+    // ---- Task 171: the on-open check of stored tables ----
+
+    private static (FakeSource Source, HoleTableWizardViewModel Vm) Stored()
+    {
+        var (vm, source) = Analyzed();
+        vm.CreateTablesCommand.Execute(null);
+        source.Calls.Clear();
+        // A second window over the same drawing: nothing is open in it.
+        return (source, new HoleTableWizardViewModel(source));
+    }
+
+    private static void Move(FakeSource source, string id, double x)
+    {
+        source.Analysis = source.Analysis with
+        {
+            Holes = source.Analysis.Holes.Select(h => h.Id == id ? Plain(id, h.DrillDiameterCm ?? 0.6, x, h.SheetYCm, h.IsPrecision) : h).ToList(),
+        };
+    }
+
+    [Fact]
+    public void Check_with_no_stored_tables_lists_nothing()
+    {
+        var vm = new HoleTableWizardViewModel(new FakeSource());
+        vm.CheckStoredTables();
+        Assert.Empty(vm.OutOfDateViews);
+        Assert.Empty(vm.CouldNotCheckViews);
+        Assert.False(vm.HasStoredCheckMessage);
+    }
+
+    [Fact]
+    public void Check_of_an_unchanged_view_lists_nothing()
+    {
+        var (_, vm) = Stored();
+        vm.CheckStoredTables();
+        Assert.Empty(vm.OutOfDateViews);
+        Assert.Empty(vm.CouldNotCheckViews);
+    }
+
+    [Fact]
+    public void Check_lists_a_moved_hole_and_writes_nothing()
+    {
+        var (source, vm) = Stored();
+        Move(source, "P#1", 3);
+        vm.CheckStoredTables();
+
+        var item = Assert.Single(vm.OutOfDateViews);
+        Assert.Equal("VIEW2 on Sheet:2: 1 hole moved.", item.Text);
+        Assert.Contains(HoleTableMessages.OutOfDateHeading, vm.StoredCheckMessage);
+        Assert.Contains("VIEW2 on Sheet:2: 1 hole moved.", vm.StoredCheckMessage);
+        Assert.All(source.Calls, c => Assert.StartsWith("analyze", c));
+        Assert.All(source.ReadCalls, c => Assert.True(c.StartsWith("getviews") || c.StartsWith("readstate"), c));
+        Assert.NotEmpty(source.ReadCalls);
+        Assert.Null(source.UpdatedState);
+    }
+
+    [Fact]
+    public void Check_lists_added_and_removed_holes()
+    {
+        var (source, vm) = Stored();
+        source.Analysis = source.Analysis with
+        {
+            Holes = source.Analysis.Holes.Where(h => h.Id != "C#2").Append(Plain("N#1", 0.5, 9, 9)).ToList(),
+            LeftOutCount = 1,
+        };
+        vm.CheckStoredTables();
+        Assert.Equal("VIEW2 on Sheet:2: 1 hole added, 1 hole removed. " + HoleTableMessages.HolesLeftOut(1), Assert.Single(vm.OutOfDateViews).Text);
+    }
+
+    [Fact]
+    public void Check_covers_every_sheet_not_only_the_selected_one()
+    {
+        var (source, vm) = Stored();
+        source.Stored[("s1", "v1")] = source.Stored[("s2", "v2")] with { SheetName = "Sheet:1", ViewName = "VIEW1" };
+        Move(source, "P#2", 4);
+        vm.CheckStoredTables();
+        Assert.Equal(new[] { "VIEW1", "VIEW2" }, vm.OutOfDateViews.Select(v => v.ViewName).OrderBy(n => n));
+        Assert.Contains("analyze s1/v1", source.Calls);
+    }
+
+    [Fact]
+    public void Check_of_a_version_1_state_skips_moves_without_crashing()
+    {
+        var (source, vm) = Stored();
+        source.Stored[("s2", "v2")] = source.Stored[("s2", "v2")] with { Version = 1, Drawn = null };
+        Move(source, "P#1", 3);
+        vm.CheckStoredTables();
+        Assert.Empty(vm.OutOfDateViews);
+
+        source.Analysis = source.Analysis with { Holes = source.Analysis.Holes.Append(Plain("N#1", 0.5, 9, 9)).ToList() };
+        vm.CheckStoredTables();
+        Assert.Contains("1 hole added", Assert.Single(vm.OutOfDateViews).Reason);
+    }
+
+    [Fact]
+    public void Check_lists_a_failed_analysis_or_a_missing_origin_as_could_not_check()
+    {
+        var (source, vm) = Stored();
+        source.Analysis = HoleTableViewAnalysis.Failed("view gone");
+        vm.CheckStoredTables();
+        Assert.Empty(vm.OutOfDateViews);
+        Assert.Equal("VIEW2 on Sheet:2: view gone", Assert.Single(vm.CouldNotCheckViews).Text);
+        Assert.Contains(HoleTableMessages.CouldNotCheckHeading, vm.StoredCheckMessage);
+
+        source.Analysis = new([], [], 1, HoleUnits.Metric, 0);
+        vm.CheckStoredTables();
+        Assert.Contains(HoleTableMessages.NoOrdinateOrigin, Assert.Single(vm.CouldNotCheckViews).Reason);
+
+        source.Analysis = new([], [], 1, HoleUnits.Metric, 0, null, true);
+        vm.CheckStoredTables();
+        Assert.Contains(HoleTableMessages.OrdinateOriginUnreadable, Assert.Single(vm.CouldNotCheckViews).Reason);
+    }
+
+    [Fact]
+    public void Check_lists_a_view_whose_analysis_throws_as_could_not_check()
+    {
+        var (source, vm) = Stored();
+        source.Throw = true;
+        vm.CheckStoredTables();
+        Assert.Empty(vm.OutOfDateViews);
+        Assert.Contains("boom", Assert.Single(vm.CouldNotCheckViews).Reason);
+    }
+
+    [Fact]
+    public void UpdateOutOfDate_updates_each_view_and_drops_it_from_the_list()
+    {
+        var (source, vm) = Stored();
+        Move(source, "P#1", 3);
+        vm.CheckStoredTables();
+        Assert.True(vm.UpdateOutOfDateCommand.CanExecute(null));
+        vm.UpdateOutOfDateCommand.Execute(null);
+
+        Assert.Contains("update s2/v2", source.Calls);
+        Assert.Empty(vm.OutOfDateViews);
+        Assert.StartsWith("VIEW2 on Sheet:2: Updated.", vm.Status);
+        Assert.Equal(30.0, double.Parse(source.UpdatedState!.Drawn!["P#1"].XText, System.Globalization.CultureInfo.InvariantCulture));
+
+        // What Update stored is what the check calls up to date.
+        vm.CheckStoredTables();
+        Assert.Empty(vm.OutOfDateViews);
+        Assert.False(vm.UpdateOutOfDateCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void UpdateOutOfDate_on_the_open_view_uses_the_windows_own_Update()
+    {
+        var (vm, source) = Analyzed();
+        vm.CreateTablesCommand.Execute(null);
+        Move(source, "P#1", 3);
+        vm.CheckStoredTables();
+        Assert.Single(vm.OutOfDateViews);
+        vm.UpdateOutOfDateCommand.Execute(null);
+        Assert.Empty(vm.OutOfDateViews);
+        Assert.NotNull(source.UpdatedState);
+    }
+
+    [Fact]
+    public void UpdateOutOfDate_writes_the_current_sheet_and_view_names()
+    {
+        var (source, vm) = Stored();
+        source.Stored[("s2", "v2")] = source.Stored[("s2", "v2")] with { SheetName = "Old sheet", ViewName = "Old view" };
+        Move(source, "P#1", 3);
+        vm.CheckStoredTables();
+        vm.UpdateOutOfDateCommand.Execute(null);
+        Assert.Equal("Sheet:2", source.UpdatedState!.SheetName);
+        Assert.Equal("VIEW2", source.UpdatedState.ViewName);
+    }
+
+    [Fact]
+    public void A_failed_Update_keeps_the_view_listed_with_the_reason()
+    {
+        var (source, vm) = Stored();
+        Move(source, "P#1", 3);
+        vm.CheckStoredTables();
+        source.Throw = true;
+        vm.UpdateOutOfDateCommand.Execute(null);
+
+        var item = Assert.Single(vm.OutOfDateViews);
+        Assert.Contains("Update failed", item.Reason);
+        Assert.Contains("boom", item.Reason);
+        Assert.Contains("Update failed", vm.Status);
+    }
+
+    [Fact]
+    public void Dismiss_clears_the_message_without_updating()
+    {
+        var (source, vm) = Stored();
+        Move(source, "P#1", 3);
+        vm.CheckStoredTables();
+        Assert.True(vm.HasStoredCheckMessage);
+        vm.DismissStoredCheckCommand.Execute(null);
+        Assert.False(vm.HasStoredCheckMessage);
+        Assert.Empty(vm.OutOfDateViews);
+        Assert.DoesNotContain(source.Calls, c => c.StartsWith("update"));
     }
 }

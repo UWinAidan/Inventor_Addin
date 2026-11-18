@@ -68,5 +68,38 @@ public static class HoleTableMessages
 
     public static string Aligned(int count) => count == 1 ? "Aligned 1 table." : $"Aligned {count} tables.";
 
+    /// <summary>Heading above the list of views whose tables no longer match the model (task 171).</summary>
+    public const string OutOfDateHeading = "These views' hole tables are out of date:";
+
+    /// <summary>Heading above the list of views the check could not read.</summary>
+    public const string CouldNotCheckHeading = "These views' hole tables could not be checked:";
+
+    /// <summary>One view's reason line, for example <c>2 holes moved, 1 hole added.</c></summary>
+    public static string StalenessText(HoleTableStaleness s)
+    {
+        if (s.Kind == HoleTableStalenessKind.CouldNotCheck)
+        {
+            return s.Reason ?? "The view could not be read.";
+        }
+
+        var parts = new List<string>();
+        if (s.Moved > 0) parts.Add(Count(s.Moved, "hole") + " moved");
+        if (s.Added > 0) parts.Add(Count(s.Added, "hole") + " added");
+        if (s.Removed > 0) parts.Add(Count(s.Removed, "hole") + " removed");
+
+        if (s.DescriptionChanged > 0) parts.Add(Count(s.DescriptionChanged, "description") + " changed");
+        var text = parts.Count == 0 ? "Up to date." : string.Join(", ", parts) + ".";
+        if (s.Removed > 0 && s.LeftOut > 0)
+        {
+            // The left-out count is for the whole view, so state it as a fact beside the removals, not as their cause.
+            text += " " + HolesLeftOut(s.LeftOut);
+        }
+
+        return s.MovesNotChecked ? text + " Moves are not checked for tables stored by an older version." : text;
+    }
+
+    /// <summary>A view's line in the list: <c>VIEW1 on Sheet:1: 2 holes moved.</c></summary>
+    public static string ViewLine(string viewName, string sheetName, string reason) => $"{viewName} on {sheetName}: {reason}";
+
     private static string Count(int n, string noun) => n == 1 ? $"1 {noun}" : $"{n} {noun}s";
 }

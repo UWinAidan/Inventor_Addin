@@ -55,21 +55,33 @@ public sealed record HoleTableStoredTags(
 
     public override int GetHashCode() => HashCode.Combine(ByHole.Count, Groups.Count, NextLetterIndex);
 }
+/// <summary>The XDIM and YDIM text a hole's table row showed when the tables were drawn (task 171).</summary>
+public sealed record HoleTableDrawnPosition(string XText, string YText);
+
 /// <summary>
 /// Everything the wizard must remember about one view's tables, saved by the add-in as a string (spike 160, C10).
 /// </summary>
+/// <param name="Drawn">
+/// Each hole's XDIM and YDIM as the table showed them (the formatted text, so a move smaller than the table's precision is not
+/// seen). A hole's description key is the key stored with its group in <paramref name="Tags"/>. Null for a version 1 state,
+/// which has no positions.
+/// </param>
 public sealed record HoleTableState(
     int Version,
     string SheetName,
     string ViewName,
     HoleTableEdits Edits,
-    HoleTableStoredTags Tags)
+    HoleTableStoredTags Tags,
+    IReadOnlyDictionary<string, HoleTableDrawnPosition>? Drawn = null)
 {
-    public const int CurrentVersion = 1;
+    public const int CurrentVersion = 2;
 
     /// <summary>The state to store for a plan.</summary>
     public static HoleTableState From(string sheetName, string viewName, HoleTableEdits edits, HoleTablePlan plan) =>
-        new(CurrentVersion, sheetName, viewName, edits, plan.ToStoredTags());
+        new(
+            CurrentVersion, sheetName, viewName, edits, plan.ToStoredTags(),
+            plan.AllGroups.SelectMany(g => g.Rows).ToDictionary(
+                r => r.Hole.Id, r => new HoleTableDrawnPosition(r.XText, r.YText), StringComparer.Ordinal));
 
     public bool Equals(HoleTableState? other) =>
         other is not null
@@ -77,6 +89,10 @@ public sealed record HoleTableState(
         && SheetName == other.SheetName
         && ViewName == other.ViewName
         && Tags.Equals(other.Tags)
+        && (Drawn is null
+            ? other.Drawn is null
+            : other.Drawn is not null && Drawn.Count == other.Drawn.Count
+                && Drawn.All(p => other.Drawn.TryGetValue(p.Key, out var d) && d == p.Value))
         && Edits.SwappedIds.SetEquals(other.Edits.SwappedIds)
         && Edits.DeletedIds.SetEquals(other.Edits.DeletedIds)
         && Edits.SplitIds.SetEquals(other.Edits.SplitIds)
@@ -139,6 +155,16 @@ public static class HoleTableStateJson
                     .Where(p => p.Value.Letter == g.Letter)
                     .OrderBy(p => p.Value.Number)
                     .ToDictionary(p => p.Key, p => p.Value.Number, StringComparer.Ordinal),
+                // Positions are keyed by tag number, not hole id: ids can be long and are already stored once above.
+                Positions = state.Drawn is null
+                    ? null
+                    : state.Tags.ByHole
+                        .Where(p => p.Value.Letter == g.Letter && state.Drawn.ContainsKey(p.Key))
+                        .OrderBy(p => p.Value.Number)
+                        .ToDictionary(
+                            p => p.Value.Number.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                            p => state.Drawn[p.Key].XText + ";" + state.Drawn[p.Key].YText,
+                            StringComparer.Ordinal),
             }).ToList(),
         };
         return JsonSerializer.Serialize(dto, Options);
@@ -159,9 +185,9 @@ public static class HoleTableStateJson
                 return new(null, "The stored hole table data is not a hole table record.");
             }
 
-            if (dto.Version != HoleTableState.CurrentVersion)
+            if (dto.Version is < 1 or > HoleTableState.CurrentVersion)
             {
-                return new(null, $"The stored hole table data is version {dto.Version}; this add-in reads version {HoleTableState.CurrentVersion}.");
+                return new(null, $"The stored hole table data is version {dto.Version}; this add-in reads versions 1 to {HoleTableState.CurrentVersion}.");
             }
 
             var edits = new HoleTableEdits
@@ -180,6 +206,7 @@ public static class HoleTableStateJson
 
             var byHole = new Dictionary<string, HoleTableTag>(StringComparer.Ordinal);
             var groups = new List<HoleTableStoredGroup>();
+            Dictionary<string, HoleTableDrawnPosition>? drawn = dto.Version >= 2 ? new(StringComparer.Ordinal) : null;
             foreach (var g in Items(dto.Groups))
             {
                 var letter = g.Letter ?? throw new FormatException("A group has no letter.");
@@ -197,12 +224,18 @@ public static class HoleTableStateJson
                     }
 
                     byHole[id] = new HoleTableTag(letter, number);
+                    if (drawn is not null && g.Positions is not null
+                        && g.Positions.TryGetValue(number.ToString(System.Globalization.CultureInfo.InvariantCulture), out var pos))
+                    {
+                        var parts = (pos ?? "").Split(';');
+                        drawn[id] = parts.Length == 2 ? new HoleTableDrawnPosition(parts[0], parts[1]) : throw new FormatException("A stored position is not X;Y.");
+                    }
                 }
             }
 
             var high = dto.HighNumbers?.ToDictionary(p => p.Key, p => p.Value, StringComparer.Ordinal);
             var tags = new HoleTableStoredTags(byHole, groups, dto.NextLetter, high);
-            return new(new HoleTableState(dto.Version, dto.Sheet ?? "", dto.View ?? "", edits, tags), null);
+            return new(new HoleTableState(dto.Version, dto.Sheet ?? "", dto.View ?? "", edits, tags, drawn), null);
         }
         catch (Exception ex)
         {
@@ -268,5 +301,7 @@ public static class HoleTableStateJson
         [JsonPropertyName("s")] public string? SplitId { get; set; }
 
         [JsonPropertyName("h")] public Dictionary<string, int>? Holes { get; set; }
+
+        [JsonPropertyName("c")] public Dictionary<string, string>? Positions { get; set; }
     }
 }

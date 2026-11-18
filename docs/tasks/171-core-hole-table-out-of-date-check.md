@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 2 (request from Aidan's check, 2026-11-18)
 - **Feature spec:** `docs/features/04-hole-table-wizard.md` ("Decided behaviour": Update)
-- **Status:** todo
+- **Status:** done (Core; not committed)
 - **Depends on:** 162, 168
 - **Needs:** cloud (Core only)
 - **Parallel-safe with:** 169, 170, 173
@@ -29,7 +29,7 @@ Out of scope: the window (task 172); any change under `src/InventorAddin`.
 
 - [ ] The check and Update use the same refresh, so a view the check calls up to date is one Update would not change, and the other way round (test it).
 - [ ] A version 1 state is checked without moves and does not crash.
-- [ ] Nothing is written to the drawing by the check: only `ReadState` and `Analyze` are called (test with the fake).
+- [ ] No table or state is written by the check: only `GetKeyedViews` (default `GetViews`), `ReadState` and `Analyze` are called (test with the fake). In the add-in `GetViews` writes view keys for unkeyed views (its own transaction), so task 172 overrides `GetKeyedViews` to list without assigning keys.
 - [ ] `dotnet test tests/InventorAddin.Core.Tests` passes.
 
 ## Notes for the implementer
@@ -43,11 +43,25 @@ Out of scope: the window (task 172); any change under `src/InventorAddin`.
 
 Filled in by the implementer.
 
-- **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):**
-- **Inventor API members not confirmed:**
+- **Ran:** `dotnet build src/InventorAddin.Core` (0 warnings, 0 errors); `dotnet test tests/InventorAddin.Core.Tests` (4861 passed, 0 failed; 27 new tests in `HoleTableStalenessTests` and `HoleTableWizardViewModelTests`); `dotnet build InventorAddin.slnx -p:DeployToInventor=false` on Windows (0 errors), so the add-in still compiles against the changed Core signatures.
+- **Not compiled (changed under `src/InventorAddin`):** none; nothing under `src/InventorAddin` was edited. It built on Windows as above.
+- **Inventor API members not confirmed:** none; Core only.
 - **Manual checklist for Inventor:** see task 172.
+
+## Defaults chosen (log in DECISIONS.md)
+
+- **What the state stores per hole:** the XDIM and YDIM as the table showed them (the formatted text), so a move smaller than the table's precision is never reported. The description key was already stored per group (`k`), so it is not repeated per hole. Positions are stored inside each group as `c`, keyed by tag number (`"3": "12.50;4.00"`), not by hole id, to stay inside the 32 KB budget (the 200-hole size test still passes). `HoleTableState.Drawn` is null for a version 1 state.
+- **Version:** `CurrentVersion` is 2; versions 1 and 2 read, anything else returns the "reads versions 1 to 2" reason. A version 1 state is checked without moves and the reason text ends "Moves are not checked for tables stored by an older version."
+- **Check = Update's refresh:** `HoleTableStaleness.Check` calls `HoleTablePlan.Refresh`. Out of date means any of: moved (text differs), added, removed (stored tag, hole gone), description changed, or a still-present hole that now gets a different tag (counted under "description changed"). A removed hole with `LeftOutCount > 0` reads "removed (not seen end on)".
+- **Not counted:** stale edit ids (an edit for a hole that no longer exists and never had a tag). Update would drop them silently; the check does not call that out of date.
+- **Could not check:** a failed analysis, an analysis or ReadState that throws, or any origin stop (none, unreadable, several) goes to `CouldNotCheckViews`, a separate list from `OutOfDateViews`.
+- **Update of out-of-date views:** a view open in the window (selected, with tags) uses the button's own Update (window edits kept); any other view uses the edits and tags stored on it, through the same Refresh and `UpdateTables`, without touching the window's lists. Failed views stay listed with "Update failed. <reason>". Status line is one sentence per view.
+- **`GetKeyedViews`:** added to `IHoleTableSource` as a default interface member that falls back to `GetViews`; the check calls it, so task 172 only has to override it in the add-in. Until then the check goes through `GetViews`, which can assign view keys (a write).
+- **"Descriptions changed" count:** whole groups that kept their letter with a new description, plus single holes that now get a different tag (retagged). A retagged hole that also moved counts in both Moved and DescriptionChanged.
+- **Left-out text:** "1 hole removed." and the "holes were left out" sentence are stated separately; the left-out count is for the whole view and is not claimed as the cause of any removal.
+- **Dismiss** clears both lists and the message.
 
 ## Follow-ups
 
-Things noticed but not done.
+- Task 172: give the add-in a listing for the check that does not assign keys, by overriding `IHoleTableSource.GetKeyedViews` (unkeyed views cannot have stored tables). Then bind `StoredCheckMessage`, `HasStoredCheckMessage`, `OutOfDateViews`, `CouldNotCheckViews`, `UpdateOutOfDateCommand`, `DismissStoredCheckCommand` and calls `CheckStoredTables()` after the window opens. The add-in's `ReadState` must return null (not throw) for a view with no stored tables.
+- The add-in reads and writes state through `HoleTableStateJson`; no add-in change was needed, but Aidan should confirm in Inventor that a version 1 state stored earlier still opens.
