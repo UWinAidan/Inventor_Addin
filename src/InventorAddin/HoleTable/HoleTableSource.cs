@@ -369,6 +369,32 @@ namespace InventorAddin.HoleTables
             }
         }
 
+        // Task 169. COM pumps messages while Inventor answers, so an exception from our own UI (a UI Automation
+        // request to a dropdown) can unwind out through this read. That is not an Inventor error: log its type, and
+        // read once more. A COMException (or an Inventor error) is not retried.
+        private Point2d? ReadIndicatorPoint(DrawingView view, List<string> warnings)
+        {
+            for (int attempt = 1; ; attempt++)
+            {
+                try
+                {
+                    return view.OriginIndicator.Intent.PointOnSheet;
+                }
+                catch (Exception ex)
+                {
+                    bool fromInventor = ex is System.Runtime.InteropServices.COMException;
+                    if (fromInventor || attempt >= 2)
+                    {
+                        warnings.Add($"View origin point: {ex.Message}");
+                        if (!fromInventor)
+                            _log.Warn(LogPrefix + $"View origin point failed twice with {ex.GetType().FullName}");
+                        return null;
+                    }
+                    _log.Warn(LogPrefix + $"View origin point read hit {ex.GetType().FullName}, not a COMException; retrying once");
+                }
+            }
+        }
+
         // Task 168. The view's ordinate origin, tried in order: (1) the origin indicator's point; (2) skipped, since
         // RelativeX/RelativeY and the intent's geometry are not confirmed; (3a) an ordinate set's OriginMember on this
         // view; (3b) a point where zero-valued single ordinates of two different DimensionTypes (X and Y) meet, because
@@ -381,7 +407,7 @@ namespace InventorAddin.HoleTables
             bool? hasIndicator = ComSafe.Get(() => (bool?)view.HasOriginIndicator, warnings, "View origin");
             if (hasIndicator == true)
             {
-                Point2d? p = ComSafe.Get(() => view.OriginIndicator.Intent.PointOnSheet, warnings, "View origin point");
+                Point2d? p = ReadIndicatorPoint(view, warnings);
                 if (p != null)
                 {
                     origins.Add(new SheetPoint(p.X, p.Y));

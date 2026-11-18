@@ -76,7 +76,7 @@
             <StackPanel Style="{DynamicResource DialogBodyContent}">
                 <controls:FormSection Heading="Filter">
                     <controls:FieldRow Label="_Category" Target="{Binding ElementName=CategoryBox}">
-                        <ComboBox x:Name="CategoryBox"
+                        <controls:AwbComboBox x:Name="CategoryBox"
                                   IsEditable="False"
                                   ItemsSource="{Binding Categories, Mode=OneTime}"
                                   SelectedItem="{Binding SelectedCategory, Mode=TwoWay}" />

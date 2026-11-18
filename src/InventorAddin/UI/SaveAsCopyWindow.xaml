@@ -56,13 +56,13 @@
                                 dropdown entry shows "code: full name". The template tells the two apart by whether it sits
                                 inside a ComboBoxItem (only dropdown entries do). The full name of the chosen code is beside it.
                             -->
-                            <ComboBox x:Name="PartTypeBox"
+                            <controls:AwbComboBox x:Name="PartTypeBox"
                                       Style="{DynamicResource CodeComboBox}"
                                       IsEditable="False"
                                       ItemsSource="{Binding PartTypeOptions, Mode=OneTime}"
                                       SelectedValuePath="Code"
                                       SelectedValue="{Binding PartType, Mode=TwoWay}">
-                                <ComboBox.ItemTemplate>
+                                <controls:AwbComboBox.ItemTemplate>
                                     <DataTemplate>
                                         <TextBlock x:Name="OptionText" Text="{Binding DisplayText, Mode=OneWay}" />
                                         <DataTemplate.Triggers>
@@ -71,8 +71,8 @@
                                             </DataTrigger>
                                         </DataTemplate.Triggers>
                                     </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
+                                </controls:AwbComboBox.ItemTemplate>
+                            </controls:AwbComboBox>
                             <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding PartTypeFullName, Mode=OneWay}" />
                         </StackPanel>
                     </controls:FieldRow>

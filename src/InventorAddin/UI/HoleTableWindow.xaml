@@ -43,14 +43,14 @@
             <StackPanel Style="{DynamicResource DialogBodyContent}">
                 <controls:FormSection Heading="View">
                     <controls:FieldRow Label="S_heet" Target="{Binding ElementName=SheetBox}">
-                        <ComboBox x:Name="SheetBox"
+                        <controls:AwbComboBox x:Name="SheetBox"
                                   ItemsSource="{Binding Sheets, Mode=OneTime}"
                                   DisplayMemberPath="Name"
                                   SelectedValuePath="Key"
                                   SelectedValue="{Binding SelectedSheet, Mode=TwoWay}" />
                     </controls:FieldRow>
                     <controls:FieldRow Label="_View" Target="{Binding ElementName=ViewBox}">
-                        <ComboBox x:Name="ViewBox"
+                        <controls:AwbComboBox x:Name="ViewBox"
                                   ItemsSource="{Binding Views, Mode=OneWay}"
                                   DisplayMemberPath="Name"
                                   SelectedValuePath="Key"

@@ -134,7 +134,7 @@
                                 The template tells the two apart by whether it sits inside a ComboBoxItem (only dropdown
                                 entries do). The tooltip is null for a blank code, so none is shown rather than an empty one.
                             -->
-                            <ComboBox x:Name="PartTypeBox"
+                            <controls:AwbComboBox x:Name="PartTypeBox"
                                       Style="{DynamicResource CodeComboBox}"
                                       IsEditable="False"
                                       IsEnabled="{Binding IsEditable, Mode=OneWay}"
@@ -142,7 +142,7 @@
                                       SelectedValuePath="Code"
                                       SelectedValue="{Binding PartType, Mode=TwoWay}"
                                       ToolTip="{Binding PartTypeToolTip, Mode=OneWay}">
-                                <ComboBox.ItemTemplate>
+                                <controls:AwbComboBox.ItemTemplate>
                                     <DataTemplate>
                                         <TextBlock x:Name="OptionText" Text="{Binding DisplayText, Mode=OneWay}" />
                                         <DataTemplate.Triggers>
@@ -151,8 +151,8 @@
                                             </DataTrigger>
                                         </DataTemplate.Triggers>
                                     </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
+                                </controls:AwbComboBox.ItemTemplate>
+                            </controls:AwbComboBox>
                             <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding PartTypeFullName, Mode=OneWay}" />
                         </StackPanel>
                     </controls:FieldRow>

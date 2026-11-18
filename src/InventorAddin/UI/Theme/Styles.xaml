@@ -571,6 +571,9 @@
         </Style.Triggers>
     </Style>
 
+    <!-- Task 169: implicit styles match the exact type, so the AwbComboBox subclass needs its own entry. -->
+    <Style TargetType="{x:Type controls:AwbComboBox}" BasedOn="{StaticResource {x:Type ComboBox}}" />
+
     <!--
         The text box inside an editable dropdown: no border or fill of its own (the dropdown draws them), the shared
         caret and focus outline. Its right padding leaves room for the dropdown's arrow.
