@@ -6,25 +6,20 @@ Last updated: 2026-11-18
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-18 10:29. Branch `claude/m4-hole-table`, latest commit `720ea59` (plan for 168 to 173, not pushed). PR #32 to `main` is open.
-- Goal: run fix tasks 168 to 173 from Aidan's check of 163 to 167 (`docs/WORKFLOW.md` run mode). Aidan resumes his checklist (163 onward) after the origin fix (168).
-- Done this session:
-  - Planned 168 to 173: task files in `docs/tasks/168..173-*.md`, table in `docs/PLAN.md` (M4 part 2 fixes), 3 Aidan decisions in `DECISIONS.md`, spec 04 updated (Update/origin). Committed `720ea59`.
-  - Task 168 implemented (uncommitted diff): Core `HoleTableViewAnalysis.OriginUnreadable`, `HoleTableOriginResult.From(origins, unreadable)`, `HoleTableMessages.OrdinateOriginUnreadable`, view-model passes the flag; add-in `HoleTableSource.ReadOrigins`/`OrdinateOnView` (indicator point, then ordinate set OriginMember, then zero-value single ordinates). Build 0 errors, 4833 tests pass. Not run in Inventor.
-- Task 168 passed review (round 2) and is committed: origin fallback to ordinate dimensions (set origin member, or zero ordinates of two directions meeting), "could not be read" message. Build 0 errors, 4834 Core tests pass. Not run in Inventor.
-- Causes found (from `%APPDATA%\AwbAddin\awbaddin.log`):
-  - Origin: `view.OriginIndicator.Intent.PointOnSheet` throws `Unspecified error (0x80004005 (E_FAIL))` on VIEW2 after rotating views (task 168).
-  - `View origin point: Unable to cast ... ComboBoxAutomationPeer to ... IScrollProvider`: a WPF UI Automation exception raised during the COM call's message pump and caught by `ComSafe.Get` (hypothesis, task 169).
-  - `Hole tolerance: Object reference not set`: `hole.HoleDiameter` is null, likely on the tapped and taper tapped holes, in `HoleFeatureReader.ReadTolerance` (unverified, task 170).
+- Updated: 2026-11-18. Branch `claude/m4-hole-table`, pushed; PR #32 to `main` is open and describes 155 to 173.
+- Goal: fix tasks 168 to 173 from Aidan's check of 163 to 167 (`docs/WORKFLOW.md` run mode). All are finished.
+- Done this session (each reviewed, compiled on Windows with 0 errors, none run in Inventor; Core tests 4885 pass):
+  - 168 origin fallback to ordinate dimensions and a "could not be read" message; 169 `AwbComboBox` (no Scroll pattern while closed) in every window; 170 tolerance read skips tapped holes; 171 Core out-of-date check (state version 2 stores drawn XDIM/YDIM); 172 the window runs the check on open and offers Update; 173 a new AWB Hole starts on the last hole made with OK, per units.
 - Next:
-  1. Aidan rebuilds (Inventor closed) and resumes his checklist from 163, plus task 168's checklist.
-  2. Run 169, 170, 171, 172, 173 in that order (implementer, reviewer, commit each). Run sequentially: parallel builds share obj folders.
-  3. After 173: copy defaults to DECISIONS (173's units-switch default goes to spec 09 open questions), update STATUS/TODO, combined checklist in `docs/checklists/`, push, update PR #32.
+  1. Aidan builds (Inventor closed) and works through `docs/checklists/m4-fixes-168-173.md` (168 first), then `docs/checklists/m4-hole-table-163-167.md` from 163.
+  2. Failures become fix tasks (next number 174).
+  3. Open for Aidan: spec 09 question 29 (units switch and the last hole), spec 04 question 20, the Hole Table icon.
 - Gotchas:
-  - Build with `dotnet build InventorAddin.slnx -p:DeployToInventor=false` while Inventor is open.
-  - `TODO.md`, `DECISIONS.md`, `PLAN.md`, specs and task files are CRLF; STATUS is LF.
-  - Subagents can stall or hit limits; resume them with SendMessage, or finish their work by hand.
-- Read first: `docs/PLAN.md` (M4 fixes 168 to 173), the task files, `src/InventorAddin/HoleTable/HoleTableSource.cs` (AnalyzeCore).
+  - With Inventor open, build with `-p:DeployToInventor=false`. Run builds one at a time.
+  - `TODO.md`, `DECISIONS.md`, `PLAN.md`, specs and task files are CRLF; STATUS is LF. Backslashes in Python heredocs get mangled here (a Windows path lost its backslash and gained a bell character); write them as chr(92).
+  - Inventor API members can be checked by reflection on `C:\Program Files\Autodesk\Inventor 2026\Bin\Autodesk.Inventor.Interop.dll`.
+  - Stored hole table state is version 2; an older build refuses it.
+- Read first: the two checklists above and the task files' Verification sections.
 
 ## Big items
 
@@ -36,7 +31,7 @@ Last updated: 2026-11-18
 | Part creation and numbering (M2) | 02 | **Done, tested in Inventor** | Every check passed; the last run 1 checks were reported on 2026-10-17. Run 2 checked on Windows 2026-10-11; fix run 053 to 061 and fix run 2 (spike 062, tasks 063 to 066) checked 2026-10-12 and passed. Merged into main from `claude/m2-fix-run` |
 | Material and finish (M3) | 03 | **Done, tested in Inventor** | Tasks 067 to 080, merged into main from `claude/m3-material-finish` on 2026-10-17: starter library and finish list, Material and Finish window and button, Part Properties Change button and warning, Settings and About on every ribbon, windows that fit the screen, Settings as one resizable page of collapsible sections, dialogs with only a close button, and a themed scroll bar. Every check passed |
 | AWB Hole (M4 part 1) | 09 | **Done, tested in Inventor** | Decided by Aidan 2026-10-17; spike 081 done with Aidan. Tasks 082 to 090 checked by Aidan 2026-10-18 (making, picking, previewing, tapped and dowel holes, OK, Cancel and Undo work). Then built on branch `claude/m4-hole-generator`, compiled on Windows, not yet run in Inventor: fixes and requests 093 to 101, mockup 102 (approved with changes 2026-10-23), dowel seats 106, window redesign 104, takeover of Hole and H 091, Edit Feature and double-click 092. Aidan's first look on 2026-10-24 gave six changes, planned as tasks 103 (in place for every command, top priority), 105 and 107 to 119: client graphics preview, Simple and Taper Tapped types, Spotface, toleranced clearance holes, depths below the seat, centres per point, a window that fits at 150 percent. Aidan checked 091 to 106 on 2026-10-25: six failures and seven requests, planned as tasks 120 to 132 in the same round. That round (105 to 138) was built on Windows (2026-11-07) and checked by Aidan from 2026-11-07 to 2026-11-09, with a temporary self-test (spike 139, local only) for the measurable steps: everything passed except hand colours on a remade hole (122-6, 122-8), the sketch point mini toolbar (133-1, 133-2, 133-5) and the highlight in place (105-1). Those fixes, the marking menu's Hole, and Aidan's requests and his first-look answers became tasks 140 to 150, built on Windows on 2026-11-09 (not yet run in Inventor; checklist `docs/checklists/m4-fixes-140-150.md`). Aidan checked them on 2026-11-10: all passed but 140-2, fixed with two decisions as tasks 152 to 154, which passed the same day. PR #29 merged into main on 2026-11-10 |
-| Hole table wizard (M4 part 2) | 04 | **Built**, not yet run in Inventor | Spike 160 done with Aidan 2026-11-17: tables drawn as sketched symbols, one `AWB Centre Mark` style on every hole. Core tasks 155 to 159, 161 and 162 and add-in tasks 163 to 167 built and reviewed on branch `claude/m4-hole-table` (add-in compiled on Windows 2026-11-17). Aidan's check: `docs/checklists/m4-hole-table-163-167.md` |
+| Hole table wizard (M4 part 2) | 04 | **Built**, not yet run in Inventor | Spike 160 done with Aidan 2026-11-17: tables drawn as sketched symbols, one `AWB Centre Mark` style on every hole. Core tasks 155 to 159, 161 and 162 and add-in tasks 163 to 167 built and reviewed on branch `claude/m4-hole-table` (add-in compiled on Windows 2026-11-17). Aidan's check: `docs/checklists/m4-hole-table-163-167.md` (167 passed 2026-11-18). Fixes and requests from that check, 168 to 173, built and reviewed on Windows 2026-11-18: `docs/checklists/m4-fixes-168-173.md` |
 | Drawing tools (M5) | 05 | Not started | Waiting on which commands Aidan wants. Will include a custom drawing template |
 | iLogic injection (M6) | 06 | Not started | Waiting on which rules |
 | Distribution (installer, download page) | none yet | Parked | Was to be decided when M2 was planned; still waiting on Aidan |

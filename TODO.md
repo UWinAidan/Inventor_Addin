@@ -6,13 +6,15 @@ Last updated: 2026-11-13
 
 ## Next up
 
-1. M4 part 2 (hole table wizard, spec 04): every task is built (Core 155 to 159, 161, 162; add-in 163 to 167, compiled on Windows 2026-11-17). Aidan's check in Inventor is next (below). M4 part 1 is done (PR #29, 2026-11-10).
+1. M4 part 2 (hole table wizard, spec 04): every task is built (Core 155 to 159, 161, 162; add-in 163 to 167, compiled on Windows 2026-11-17). Aidan's check found three failures and asked for two changes (2026-11-18), built as tasks 168 to 173 the same day. Aidan's check in Inventor is next (below). M4 part 1 is done (PR #29, 2026-11-10).
 2. **Later, not this round** (Aidan, 2026-10-25): every AWB icon gets a more polished look, done together with the colour option.
 3. Aidan finishes the remaining Part Properties checks below.
 
 ## Waiting on Aidan: checks in Inventor
 
-**M4 part 2, hole table wizard (163 to 167)**, built on Windows 2026-11-17, not yet run in Inventor: work through `docs/checklists/m4-hole-table-163-167.md` (window, reading a view, drawing tables, tags and marks, Update and Edit Table). Branch `claude/m4-hole-table`.
+**M4 part 2, hole table wizard (163 to 167)**, built on Windows 2026-11-17: Aidan checked 167 on 2026-11-18 (passed); 163 to 166 still to check, after 168. Work through `docs/checklists/m4-hole-table-163-167.md`. Branch `claude/m4-hole-table`.
+
+**M4 fixes and requests (168 to 173)**, built and reviewed on Windows 2026-11-18, not yet run in Inventor: `docs/checklists/m4-fixes-168-173.md` (origin fallback, dropdown automation fix, tolerance read on tapped holes, out-of-date check on open, AWB Hole starts on the last hole).
 
 **Spike 160, left open (not blocking):** which command made VIEW2's ordinates, "Ordinate Dimension Set" or single "Ordinate"? The API listed no set.
 
@@ -58,6 +60,9 @@ Confirmed so far: the window opens on an assembly, pre-fills Designer, Detailer 
 ## Waiting on Aidan: decisions
 
 Each spec lists its own open questions in full. These are the ones that block planning.
+
+**AWB Hole (spec 09), not blocking**
+- Question 29: should switching units in the window load that units' last hole? Default: no, the last hole applies only when the window opens (task 173)
 
 
 **Material and finish (spec 03), not blocking**
