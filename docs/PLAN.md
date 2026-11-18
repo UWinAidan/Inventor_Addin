@@ -480,7 +480,7 @@ Not in part 1: AWB Hole on the Flat Pattern tab (it keeps Inventor's Hole; the S
 - [x] 169 Fix: a WPF ComboBox automation exception caught by the origin read
 - [x] 170 Fix: the hole tolerance read on tapped holes
 - [x] 171 Core: check each stored view's tables on open and offer Update
-- [ ] 172 Add-in: the Hole Table window shows the out-of-date check
+- [x] 172 Add-in: the Hole Table window shows the out-of-date check
 - [ ] 173 AWB Hole: a new hole starts on the last hole made with OK
 
 ### M5: Drawing tools (spec 05)

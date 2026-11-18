@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Threading;
 using InventorAddin.Core.ViewModels;
@@ -19,7 +20,9 @@ namespace InventorAddin.UI
     {
         public const string TitleText = "Hole Table";
 
+        private readonly HoleTableWizardViewModel _viewModel;
         private bool _closing;
+        private bool _checked;
 
         public HoleTableWindow(HoleTableWizardViewModel viewModel)
         {
@@ -28,7 +31,9 @@ namespace InventorAddin.UI
 
             InitializeComponent();
             Title = TitleText;
+            _viewModel = viewModel;
             DataContext = viewModel;
+            ContentRendered += OnContentRendered;
             viewModel.CancelRequested += OnCancelRequested;
             Closing += (_, _) => _closing = true;
         }
@@ -37,6 +42,63 @@ namespace InventorAddin.UI
         {
             if (!_closing)
                 Close();
+        }
+
+        /// <summary>
+        /// Task 172: once the window is on screen, shows the busy bar, then checks every stored view's tables against the
+        /// model. The check writes nothing to the drawing (the source lists only keyed views). A message panel at the top of
+        /// the body shows only when something is out of date or could not be checked.
+        /// </summary>
+        private void OnContentRendered(object? sender, EventArgs e)
+        {
+            if (_checked)
+                return;
+            _checked = true;
+
+            BusyIndicator.Visibility = Visibility.Visible;
+            Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+            {
+                try
+                {
+                    _viewModel.CheckStoredTables();
+                    LogCheck();
+                }
+                catch (Exception ex)
+                {
+                    AddinServices.Log.Warn("Hole table: the check of the stored tables failed: " + ex.Message);
+                }
+                finally
+                {
+                    BusyIndicator.Visibility = Visibility.Collapsed;
+                }
+            }));
+        }
+
+        private void LogCheck()
+        {
+            int outOfDate = _viewModel.OutOfDateViews.Count;
+            int couldNot = _viewModel.CouldNotCheckViews.Count;
+            if (outOfDate == 0 && couldNot == 0)
+            {
+                AddinServices.Log.Info("Hole table: every stored table is up to date.");
+                return;
+            }
+
+            if (outOfDate > 0)
+                AddinServices.Log.Info($"Hole table: {outOfDate} {(outOfDate == 1 ? "view" : "views")} out of date: "
+                    + string.Join("; ", _viewModel.OutOfDateViews.Select(v => v.Text)));
+            if (couldNot > 0)
+                AddinServices.Log.Info($"Hole table: {couldNot} {(couldNot == 1 ? "view" : "views")} could not be checked: "
+                    + string.Join("; ", _viewModel.CouldNotCheckViews.Select(v => v.Text)));
+        }
+
+        /// <summary>Update these views: the busy bar as for any table command, then the per-view results go to the log.</summary>
+        private void OnUpdateStoredClick(object sender, RoutedEventArgs e)
+        {
+            OnWorkClick(sender, e);
+            // Queued after the command (which runs on this click) and after the bar is hidden.
+            Dispatcher.BeginInvoke(DispatcherPriority.Background,
+                new Action(() => AddinServices.Log.Info("Hole table: Update of the out-of-date views: " + _viewModel.Status)));
         }
 
         /// <summary>Raised before a table command runs: draws the busy bar now and hides it once the command is done.</summary>

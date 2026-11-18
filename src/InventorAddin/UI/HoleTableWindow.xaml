@@ -24,6 +24,9 @@
         Access keys: H sheet, V view, C Create Tables tab, E Edit Table tab, A analyze, T create tables, S swap,
         D delete, P generate precision, L generate clearance, O open, I align, R renumber, U update.
     -->
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="VisibleWhenTrue" />
+    </Window.Resources>
     <Grid Style="{DynamicResource ResizableDialogContent}">
         <!-- Header, body, busy bar, footer. The body row is star-sized, so it scrolls when the window is shorter than the page. -->
         <Grid.RowDefinitions>
@@ -41,6 +44,24 @@
 
         <ScrollViewer Grid.Row="1" Style="{DynamicResource DialogBody}">
             <StackPanel Style="{DynamicResource DialogBodyContent}">
+                <!-- Task 172: the on-open check. Shown only when a stored view is out of date or could not be checked. -->
+                <Border Style="{DynamicResource NoticePanel}"
+                        Visibility="{Binding HasStoredCheckMessage, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
+                    <StackPanel>
+                        <StackPanel Style="{DynamicResource ListItem}">
+                            <TextBlock Style="{DynamicResource ValueText}"
+                                       Text="{Binding StoredCheckMessage, Mode=OneWay}"
+                                       AutomationProperties.Name="Stored hole tables check" />
+                        </StackPanel>
+                        <StackPanel Style="{DynamicResource ListItem}" Orientation="Horizontal">
+                            <Button Content="Update these views" Command="{Binding UpdateOutOfDateCommand}"
+                                    Click="OnUpdateStoredClick" />
+                            <Button Style="{DynamicResource SideButton}" Content="Not now"
+                                    Command="{Binding DismissStoredCheckCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
                 <controls:FormSection Heading="View">
                     <controls:FieldRow Label="S_heet" Target="{Binding ElementName=SheetBox}">
                         <controls:AwbComboBox x:Name="SheetBox"

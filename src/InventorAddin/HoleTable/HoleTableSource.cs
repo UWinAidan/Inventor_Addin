@@ -81,7 +81,17 @@ namespace InventorAddin.HoleTables
             return list;
         }
 
-        public IReadOnlyList<HoleTableViewInfo> GetViews(string sheetKey)
+        public IReadOnlyList<HoleTableViewInfo> GetViews(string sheetKey) => ListViews(sheetKey, assignKeys: true);
+
+        /// <summary>
+        /// The views of the sheet that already have a key (task 172), for the on-open check. Unlike <see cref="GetViews"/> it
+        /// never calls <c>WriteKeys</c>, so it starts no transaction: no undo entry, and the drawing is not marked changed.
+        /// A view with no key cannot have stored tables, so leaving it out loses nothing. A key already given out earlier in
+        /// the list (a copied view) is skipped, as <see cref="GetViews"/> would give that view a new key.
+        /// </summary>
+        public IReadOnlyList<HoleTableViewInfo> GetKeyedViews(string sheetKey) => ListViews(sheetKey, assignKeys: false);
+
+        private IReadOnlyList<HoleTableViewInfo> ListViews(string sheetKey, bool assignKeys)
         {
             var warnings = new List<string>();
             var list = new List<HoleTableViewInfo>();
@@ -98,7 +108,8 @@ namespace InventorAddin.HoleTables
 
             var sets = views.Select(v => (Func<AttributeSets>)(() => v.AttributeSets)).ToList();
             List<string?> keys = ReadKeys(sets, warnings, out List<int> needKey);
-            WriteKeys(sets, keys, needKey, warnings, "View key");
+            if (assignKeys)
+                WriteKeys(sets, keys, needKey, warnings, "View key");
             for (int i = 0; i < views.Count; i++)
             {
                 DrawingView view = views[i];

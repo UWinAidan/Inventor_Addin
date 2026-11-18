@@ -899,6 +899,17 @@
         <Setter Property="Margin" Value="0,0,0,9" />
     </Style>
 
+    <!-- A notice at the top of a window body (the Hole Table's on-open check, task 172): a bordered panel in the input colours. -->
+    <Style x:Key="NoticePanel" TargetType="{x:Type Border}">
+        <Setter Property="Margin" Value="0,0,0,9" />
+        <Setter Property="Padding" Value="12,10" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
+        <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+    </Style>
+
     <!-- A checkbox in a line of checkboxes: 12 after it, the gap between a label and its value. -->
     <Style x:Key="InlineCheckBox" TargetType="{x:Type CheckBox}" BasedOn="{StaticResource {x:Type CheckBox}}">
         <Setter Property="Margin" Value="0,0,12,0" />
