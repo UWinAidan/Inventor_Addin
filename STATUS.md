@@ -2,30 +2,26 @@
 
 Where each big item stands. One line per item, kept current by the parent session. For the order of work and the task lists see `docs/PLAN.md`; for what needs doing next see `TODO.md`.
 
-Last updated: 2026-11-13
+Last updated: 2026-11-17
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-17 15:55. Branch `claude/m4-hole-table`, latest commit is task 165 (pushed).
-- Goal: run M4 part 2 in order (`docs/WORKFLOW.md` run mode). Core is done; the add-in tasks are being built on this PC. Aidan checks the add-in tasks together in Inventor at the end.
+- Updated: 2026-11-17. Branch `claude/m4-hole-table`: every M4 part 2 task is committed and pushed, and a PR to `main` is open (see `gh pr list`).
+- Goal: M4 part 2 run (`docs/WORKFLOW.md` run mode). It is finished; Aidan's check in Inventor is next.
 - Done this session (each passed the reviewer):
-  - `b2656df` task 161
-  - `48dec2a` task 162
-  - `bf63c0a` task 163 (`HoleTableSource`)
-  - `d3c0a20` task 167 (window, button, placeholder icon)
-  - task 164 (draw tables)
-  - Defaults are in DECISIONS, follow-ups in TODO; spec 04 question 20 added.
-- Task 165 committed after two reviews (tags, precision marks, AWB Centre Mark; marks stamped `AWB_HoleMark`). Task 164 committed after two reviews (draw tables as sketched symbols, definition named by stable sheet and view keys, Align, no empty undo on early return).
+  - 161, 162 (Core)
+  - 163, 167, 164, 165, 166 (add-in, compiled on Windows)
+  - Item set to Built; combined checklist in `docs/checklists/m4-hole-table-163-167.md`.
+- Current state: Core tests 4831 passing (1 to 4 `Numbering` timing flakes per loaded full run; they pass alone). The add-in builds with 0 errors; the 4 CS8600 warnings are old. Nothing has run in Inventor.
 - Next:
-  1. Task 166 (stored state, Update, Edit Table), the last task: implementer, reviewer, one commit each.
-  2. At the end: set the STATUS item to Built, put the combined checklists for 163 to 167 in TODO, push, and open the PR per WORKFLOW.
+  1. Aidan builds without `-p:DeployToInventor=false` (Inventor closed) and works through the checklist.
+  2. Failures become fix tasks.
+  3. Open questions for Aidan: spec 04 question 20 (Renumber redraw); the Hole Table icon design.
 - Gotchas:
-  - Inventor is open on this PC: build with `dotnet build InventorAddin.slnx -p:DeployToInventor=false`, and never drive Inventor.
-  - Core tests: 4815 after 165. 1 to 4 `Numbering` tests flake per full run under load; run them alone before believing a failure.
-  - Reviewer subagents can stall (watchdog at 600 s); resume them with SendMessage.
-  - Brand strings only via Core constants (`Branding.ShortName`); engineering `if`s go in Core.
-  - `TODO.md`, `DECISIONS.md`, `PLAN.md` and the task files are CRLF; STATUS is LF. Edit them with a Python script in the job tmp dir.
-- Read first: `docs/WORKFLOW.md`, `docs/PLAN.md` M4 part 2, tasks 164 to 166, TODO follow-ups for tasks 161 to 167.
+  - With Inventor open, build with `-p:DeployToInventor=false`.
+  - `TODO.md`, `DECISIONS.md`, `PLAN.md` and the task files are CRLF; STATUS is LF.
+  - Subagents can hit usage limits or stall; resume them with SendMessage, or finish their work by hand.
+- Read first: the checklist above, TODO follow-ups for tasks 161 to 167, and the task files' "Inventor API members not confirmed".
 
 ## Big items
 
@@ -37,7 +33,7 @@ Last updated: 2026-11-13
 | Part creation and numbering (M2) | 02 | **Done, tested in Inventor** | Every check passed; the last run 1 checks were reported on 2026-10-17. Run 2 checked on Windows 2026-10-11; fix run 053 to 061 and fix run 2 (spike 062, tasks 063 to 066) checked 2026-10-12 and passed. Merged into main from `claude/m2-fix-run` |
 | Material and finish (M3) | 03 | **Done, tested in Inventor** | Tasks 067 to 080, merged into main from `claude/m3-material-finish` on 2026-10-17: starter library and finish list, Material and Finish window and button, Part Properties Change button and warning, Settings and About on every ribbon, windows that fit the screen, Settings as one resizable page of collapsible sections, dialogs with only a close button, and a themed scroll bar. Every check passed |
 | AWB Hole (M4 part 1) | 09 | **Done, tested in Inventor** | Decided by Aidan 2026-10-17; spike 081 done with Aidan. Tasks 082 to 090 checked by Aidan 2026-10-18 (making, picking, previewing, tapped and dowel holes, OK, Cancel and Undo work). Then built on branch `claude/m4-hole-generator`, compiled on Windows, not yet run in Inventor: fixes and requests 093 to 101, mockup 102 (approved with changes 2026-10-23), dowel seats 106, window redesign 104, takeover of Hole and H 091, Edit Feature and double-click 092. Aidan's first look on 2026-10-24 gave six changes, planned as tasks 103 (in place for every command, top priority), 105 and 107 to 119: client graphics preview, Simple and Taper Tapped types, Spotface, toleranced clearance holes, depths below the seat, centres per point, a window that fits at 150 percent. Aidan checked 091 to 106 on 2026-10-25: six failures and seven requests, planned as tasks 120 to 132 in the same round. That round (105 to 138) was built on Windows (2026-11-07) and checked by Aidan from 2026-11-07 to 2026-11-09, with a temporary self-test (spike 139, local only) for the measurable steps: everything passed except hand colours on a remade hole (122-6, 122-8), the sketch point mini toolbar (133-1, 133-2, 133-5) and the highlight in place (105-1). Those fixes, the marking menu's Hole, and Aidan's requests and his first-look answers became tasks 140 to 150, built on Windows on 2026-11-09 (not yet run in Inventor; checklist `docs/checklists/m4-fixes-140-150.md`). Aidan checked them on 2026-11-10: all passed but 140-2, fixed with two decisions as tasks 152 to 154, which passed the same day. PR #29 merged into main on 2026-11-10 |
-| Hole table wizard (M4 part 2) | 04 | In progress | Spike 160 done with Aidan 2026-11-17: tables drawn as sketched symbols, one `AWB Centre Mark` style on every hole (task 160 "Recommendations"). Core tasks 155 to 159, 161 and 162 run first; then the add-in tasks 163 to 167 |
+| Hole table wizard (M4 part 2) | 04 | **Built**, not yet run in Inventor | Spike 160 done with Aidan 2026-11-17: tables drawn as sketched symbols, one `AWB Centre Mark` style on every hole. Core tasks 155 to 159, 161 and 162 and add-in tasks 163 to 167 built and reviewed on branch `claude/m4-hole-table` (add-in compiled on Windows 2026-11-17). Aidan's check: `docs/checklists/m4-hole-table-163-167.md` |
 | Drawing tools (M5) | 05 | Not started | Waiting on which commands Aidan wants. Will include a custom drawing template |
 | iLogic injection (M6) | 06 | Not started | Waiting on which rules |
 | Distribution (installer, download page) | none yet | Parked | Was to be decided when M2 was planned; still waiting on Aidan |

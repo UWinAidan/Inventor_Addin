@@ -110,7 +110,7 @@ namespace InventorAddin.HoleTables
             if (target.PrecisionMark && markDef != null)
             {
                 SketchedSymbol mark = AddMark(sheet, markDef, centreIntent, target.Centre, holeRadius);
-                Stamp(mark.AttributeSets, target.HoleId, viewKey, HoleTableMarks.PrecisionMarkRole);
+                StampOrDelete(() => mark.AttributeSets, mark.Delete, target.HoleId, viewKey, HoleTableMarks.PrecisionMarkRole);
             }
 
             double clear = HoleTableMarks.ClearRadiusCm(circles[outerIndex].RadiusCm, target.PrecisionMark, holeRadius);
@@ -121,11 +121,11 @@ namespace InventorAddin.HoleTables
             points.Add(centreIntent);
             SketchedSymbol tag = sheet.SketchedSymbols.AddWithLeader(tagDef, points, 0, 1, new[] { target.Tag }, false, false);
             tag.LeaderVisible = false;
-            Stamp(tag.AttributeSets, target.HoleId, viewKey, HoleTableMarks.TagRole);
+            StampOrDelete(() => tag.AttributeSets, tag.Delete, target.HoleId, viewKey, HoleTableMarks.TagRole);
 
             // Every hole, precision ones included, gets the one centre mark on its outermost visible circle.
             Centermark centre = sheet.Centermarks.Add(sheet.CreateGeometryIntent(outer), true, false, centreStyle);
-            ComSafe.Run(() => Stamp(centre.AttributeSets, target.HoleId, viewKey, HoleTableMarks.CentreMarkRole));
+            StampOrDelete(() => centre.AttributeSets, centre.Delete, target.HoleId, viewKey, HoleTableMarks.CentreMarkRole);
             return true;
         }
 
@@ -153,6 +153,44 @@ namespace InventorAddin.HoleTables
         }
 
         // ---- Existing marks
+
+        /// <summary>The roles of the marks the wizard placed on this view, by hole id (task 166: Update compares them with the plan).</summary>
+        public IReadOnlyDictionary<string, IReadOnlySet<string>> ReadMarks(Sheet sheet, string viewKey)
+        {
+            var found = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+            foreach (SketchedSymbol symbol in sheet.SketchedSymbols)
+                Collect(() => symbol.AttributeSets, viewKey, found);
+            foreach (Centermark centre in sheet.Centermarks)
+                Collect(() => centre.AttributeSets, viewKey, found);
+            return found.ToDictionary(p => p.Key, p => (IReadOnlySet<string>)p.Value, StringComparer.Ordinal);
+        }
+
+        /// <summary>Deletes every tag, precision mark and centre mark of the given holes on this view (Update, for holes that are gone).</summary>
+        public void Remove(Sheet sheet, string viewKey, IReadOnlyCollection<string> holeIds)
+        {
+            if (holeIds.Count > 0)
+                DeleteExisting(sheet, viewKey, holeIds.ToHashSet(StringComparer.Ordinal));
+        }
+
+        private static void Collect(Func<AttributeSets> sets, string viewKey, Dictionary<string, HashSet<string>> found)
+        {
+            (string Id, string Role)? mark = ComSafe.Get(() =>
+            {
+                AttributeSets all = sets();
+                if (!all.NameIsUsed[HoleTableMarks.AttributeSetName])
+                    return ((string, string)?)null;
+                AttributeSet set = all[HoleTableMarks.AttributeSetName];
+                string? view = set.NameIsUsed[HoleTableMarks.ViewKeyAttributeName] ? set[HoleTableMarks.ViewKeyAttributeName].Value as string : null;
+                string? id = set.NameIsUsed[HoleTableMarks.HoleIdAttributeName] ? set[HoleTableMarks.HoleIdAttributeName].Value as string : null;
+                string? role = set.NameIsUsed[HoleTableMarks.RoleAttributeName] ? set[HoleTableMarks.RoleAttributeName].Value as string : null;
+                return view == viewKey && id != null && role != null ? (id, role) : ((string, string)?)null;
+            });
+            if (mark is not { } m)
+                return;
+            if (!found.TryGetValue(m.Id, out HashSet<string>? roles))
+                found[m.Id] = roles = new HashSet<string>(StringComparer.Ordinal);
+            roles.Add(m.Role);
+        }
 
         // Removes the tags, precision marks and centre marks the wizard placed earlier for these holes on this view, so a
         // table drawn again does not stack a second set on the first.
@@ -189,6 +227,23 @@ namespace InventorAddin.HoleTables
                 string? id = set.NameIsUsed[HoleTableMarks.HoleIdAttributeName] ? set[HoleTableMarks.HoleIdAttributeName].Value as string : null;
                 return view == viewKey && id != null && holeIds.Contains(id);
             });
+
+        // A mark that cannot be stamped could not be found again by Update, which would then add a second one every time:
+        // it is deleted and the failure rethrown, so the hole counts as could-not-be-marked.
+        private void StampOrDelete(Func<AttributeSets> sets, Action delete, string holeId, string viewKey, string role)
+        {
+            try
+            {
+                Stamp(sets(), holeId, viewKey, role);
+            }
+            catch (Exception ex)
+            {
+                _log.Warn(LogPrefix + $"the {role} of hole '{holeId}' could not be stamped and was removed: {ex.Message}");
+                try { delete(); }
+                catch (Exception deleteEx) { _log.Warn(LogPrefix + $"the unstamped {role} could not be deleted: {deleteEx.Message}"); }
+                throw;
+            }
+        }
 
         private static void Stamp(AttributeSets sets, string holeId, string viewKey, string role)
         {

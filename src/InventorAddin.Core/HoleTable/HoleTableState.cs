@@ -102,6 +102,12 @@ public static class HoleTableStateJson
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
+    /// <summary>
+    /// A stored text longer than this is logged as a warning: Inventor keeps an attribute string in about 32 KB, so the
+    /// state would soon stop fitting (task 166).
+    /// </summary>
+    public const int WarnLength = 28000;
+
     public static string Write(HoleTableState state)
     {
         ArgumentNullException.ThrowIfNull(state);

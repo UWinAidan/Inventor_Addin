@@ -20,6 +20,23 @@ public static class HoleTableNames
     /// <summary>The readable view name when the table was drawn, for display only.</summary>
     public const string ViewNameAttributeName = "ViewName";
 
+    /// <summary>The attribute set on each placed table symbol that holds the wizard's state (task 166). Not the same set as <see cref="DrawingAttributeSetName"/> (on the definition) or <c>HoleTableMarks.AttributeSetName</c> (on tags and marks).</summary>
+    public const string StateAttributeSetName = Branding.ShortName + "_HoleTable";
+
+    /// <summary>The attribute (a string) that holds the text <c>HoleTableStateJson.Write</c> makes.</summary>
+    public const string StateAttributeName = "State";
+
+    /// <summary>
+    /// The attribute set on the sheet that keeps each view's state, one attribute per view, so Edit Table still lists a
+    /// view whose tables were all deleted (task 166). Distinct from the table state set, the key set and the mark set.
+    /// </summary>
+    public const string SheetRecordAttributeSetName = Branding.ShortName + "_HoleTableViews";
+
+    /// <summary>The sheet record's attribute for a view: the view key with a letter in front, so a key that starts with a digit is still a safe name.</summary>
+    public static string SheetRecordAttributeName(string viewKey) => "View_" + Clean(viewKey);
+
+    public const string UpdateTransactionName = Branding.ShortName + " update hole tables";
+
     public const string CreateTransactionName = Branding.ShortName + " create hole tables";
 
     public const string AlignTransactionName = Branding.ShortName + " align hole tables";

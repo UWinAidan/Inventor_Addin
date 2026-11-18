@@ -15,6 +15,14 @@ namespace InventorAddin.HoleTables
         public static HoleTableDrawResult Unchanged(string message) => new(message, false);
     }
 
+    /// <summary>A table action that changed nothing (its transaction was aborted); its message is the reason, for the window's "Could not ..." line.</summary>
+    internal sealed class HoleTableUnchangedException : InvalidOperationException
+    {
+        public HoleTableUnchangedException(string message) : base(message)
+        {
+        }
+    }
+
     /// <summary>
     /// What the add-in reads from the drawing's hole table style (task 164): the three text styles, the line weights
     /// (cm), the layer and the metrics Core's layout needs.
@@ -221,6 +229,29 @@ namespace InventorAddin.HoleTables
             }
 
             return HoleTableDrawResult.Done(HoleTableMessages.Aligned(found.Count));
+        }
+
+        /// <summary>
+        /// Deletes a table that has no group any more: every placed symbol of its definition, then the definition
+        /// (Update, task 166). False when there was nothing to delete.
+        /// </summary>
+        public bool DeleteTable(Sheet sheet, string sheetKey, string viewKey, HoleTableKind kind)
+        {
+            string name = HoleTableNames.Definition(sheetKey, viewKey, kind);
+            var symbols = new List<SketchedSymbol>();
+            foreach (SketchedSymbol symbol in sheet.SketchedSymbols)
+            {
+                if (ComSafe.Get(() => symbol.Definition.Name) == name)
+                    symbols.Add(symbol);
+            }
+
+            foreach (SketchedSymbol symbol in symbols)
+                symbol.Delete();
+
+            // The symbols go first: a definition that is still placed cannot be deleted.
+            SketchedSymbolDefinition? def = FindDefinition(name);
+            def?.Delete();
+            return symbols.Count > 0 || def != null;
         }
 
         // ---- Anchor

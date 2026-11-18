@@ -58,6 +58,10 @@ public static class HoleTableMessages
     public const string StyleUnreadable =
         "The drawing's hole table style could not be read, so no table was drawn. Check that the view can take a hole table.";
 
+    /// <summary>A state is stored on the view but cannot be read; shown after "Could not read the stored tables: " so it is never taken for "no stored tables".</summary>
+    public static string StoredStateUnreadable(string? reason) =>
+        string.IsNullOrWhiteSpace(reason) ? "The stored hole table data could not be read." : reason;
+
     public static string Aligned(int count) => count == 1 ? "Aligned 1 table." : $"Aligned {count} tables.";
 
     private static string Count(int n, string noun) => n == 1 ? $"1 {noun}" : $"{n} {noun}s";

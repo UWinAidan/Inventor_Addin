@@ -36,13 +36,12 @@ namespace InventorAddin.HoleTables
     /// The add-in's <see cref="IHoleTableSource"/> (task 163): lists the active drawing's sheets and views and reads a
     /// part view's holes, ordinate origin, scale and units the way spike 160 proved. Sheets and views are keyed by a
     /// GUID kept in an attribute set (<see cref="HoleTableKeys"/>), written the first time they are listed, so the key
-    /// survives a rename or a reorder. Drawing tables is task 164 (HoleTableDrawer); Update and the stored state are task 166, which still report that
-    /// they are not yet available.
+    /// survives a rename or a reorder. Drawing tables is task 164 (HoleTableDrawer); tags and marks are task 165; Update and the stored state
+    /// (<see cref="HoleTableStateStore"/>) are task 166.
     /// </summary>
     public sealed class HoleTableSource : IHoleTableSource
     {
         private const string LogPrefix = "Hole table: ";
-        private const string NotYetAvailable = "Not yet available.";
 
         private readonly DrawingDocument _drawing;
         private readonly AddinSettings _settings;
@@ -133,18 +132,55 @@ namespace InventorAddin.HoleTables
 
         // Each table action is one transaction, so one Undo removes what it drew; a failure aborts it (task 164).
         public string GenerateTable(string sheetKey, string viewKey, HoleTableKind kind, HoleTablePlan plan, HoleTableState state) =>
-            DrawTables(HoleTableNames.GenerateTransactionName(kind), sheetKey, viewKey, plan, new[] { kind }, align: false);
+            DrawTables(HoleTableNames.GenerateTransactionName(kind), sheetKey, viewKey, plan, state, new[] { kind }, align: false);
 
         public string CreateTables(string sheetKey, string viewKey, HoleTablePlan plan, HoleTableState state) =>
             DrawTables(
-                HoleTableNames.CreateTransactionName, sheetKey, viewKey, plan,
+                HoleTableNames.CreateTransactionName, sheetKey, viewKey, plan, state,
                 new[] { HoleTableKind.Precision, HoleTableKind.Clearance }, align: true);
 
-        // Task 166: Update and the stored state.
         public string UpdateTables(string sheetKey, string viewKey, HoleTablePlan plan, HoleTableState state) =>
-            NotYetAvailable;
+            InTableTransaction(HoleTableNames.UpdateTransactionName, () =>
+            {
+                var warnings = new List<string>();
+                try
+                {
+                    Sheet? sheet = FindSheet(sheetKey, warnings);
+                    DrawingView? view = sheet == null ? null : FindView(sheet, viewKey, warnings);
+                    if (sheet == null || view == null)
+                        return HoleTableDrawResult.Unchanged("That view could not be found on the sheet.");
+                    return UpdateCore(sheet, view, sheetKey, viewKey, plan, state);
+                }
+                finally
+                {
+                    Report(warnings);
+                }
+            });
 
-        public HoleTableState? ReadState(string sheetKey, string viewKey) => null;
+        // The stored state is read from the view's placed table symbols; null when the view has none.
+        public HoleTableState? ReadState(string sheetKey, string viewKey)
+        {
+            var warnings = new List<string>();
+            try
+            {
+                Sheet? sheet = FindSheet(sheetKey, warnings);
+                return sheet == null ? null : ReadStored(sheet, sheetKey, viewKey);
+            }
+            finally
+            {
+                Report(warnings);
+            }
+        }
+
+        // The stored state from the table symbols, else the sheet's record. A stored text that cannot be read throws with
+        // the reason, so the window says so instead of "no stored tables".
+        private HoleTableState? ReadStored(Sheet sheet, string sheetKey, string viewKey)
+        {
+            HoleTableStoredState stored = new HoleTableStateStore(_log).Read(sheet, sheetKey, viewKey);
+            if (stored.State == null && stored.Reason != null)
+                throw new InvalidOperationException(HoleTableMessages.StoredStateUnreadable(stored.Reason));
+            return stored.State;
+        }
 
         public string AlignTables(string sheetKey, string viewKey) =>
             InTableTransaction(HoleTableNames.AlignTransactionName, () =>
@@ -167,7 +203,7 @@ namespace InventorAddin.HoleTables
             });
 
         private string DrawTables(
-            string transactionName, string sheetKey, string viewKey, HoleTablePlan plan, IReadOnlyList<HoleTableKind> kinds, bool align) =>
+            string transactionName, string sheetKey, string viewKey, HoleTablePlan plan, HoleTableState state, IReadOnlyList<HoleTableKind> kinds, bool align) =>
             InTableTransaction(transactionName, () =>
             {
                 var warnings = new List<string>();
@@ -184,7 +220,10 @@ namespace InventorAddin.HoleTables
                         return drawn;
 
                     // Tags and marks join the tables' transaction (task 165), so one Undo removes everything.
-                    string marks = MarkHoles(sheet, view, sheetKey, viewKey, plan, kinds);
+                    string marks = MarkHoles(sheet, view, sheetKey, viewKey, plan, kinds, null, 0);
+
+                    // The state goes on the placed symbols in the same transaction (task 166).
+                    new HoleTableStateStore(_log).Write(sheet, sheetKey, viewKey, state);
                     return HoleTableDrawResult.Done(string.IsNullOrEmpty(marks) ? drawn.Message : drawn.Message + " " + marks);
                 }
                 finally
@@ -195,7 +234,8 @@ namespace InventorAddin.HoleTables
 
         // Puts the tags, precision marks and centre marks on the view for the holes of the tables just drawn. The view is
         // analysed again first: the COM objects kept by the last Analyze can be stale by now. The caller holds the transaction.
-        private string MarkHoles(Sheet sheet, DrawingView view, string sheetKey, string viewKey, HoleTablePlan plan, IReadOnlyList<HoleTableKind> kinds)
+        private string MarkHoles(Sheet sheet, DrawingView view, string sheetKey, string viewKey, HoleTablePlan plan, IReadOnlyList<HoleTableKind> kinds,
+            ISet<string>? only, int removedCount)
         {
             HoleTableViewAnalysis fresh = Analyze(sheetKey, viewKey);
             if (fresh.FailureMessage != null)
@@ -210,6 +250,8 @@ namespace InventorAddin.HoleTables
                 foreach (var row in groups.SelectMany(g => g.Rows))
                 {
                     string id = row.Hole.Id;
+                    if (only != null && !only.Contains(id))
+                        continue;
                     HoleTableHoleRef? found = FindHole(sheetKey, viewKey, id);
                     if (found == null || !centres.TryGetValue(id, out SheetPoint centre))
                     {
@@ -223,8 +265,77 @@ namespace InventorAddin.HoleTables
             }
 
             HoleMarkResult result = new HoleTableMarker(_drawing, _log).Place(sheet, view, viewKey, targets);
-            return HoleTableMarks.Summary(result.Marked, result.Skipped + missing);
+            return removedCount > 0 || only != null
+                ? HoleTableMarkSync.Summary(result.Marked, result.Skipped + missing, removedCount)
+                : HoleTableMarks.Summary(result.Marked, result.Skipped + missing);
         }
+
+        // Update (task 166), inside the caller's one transaction. The plan is the refreshed one (tags kept); this redraws
+        // the tables in place, deletes a table that has no group left, then brings the tags and marks in line with it.
+        private HoleTableDrawResult UpdateCore(
+            Sheet sheet, DrawingView view, string sheetKey, string viewKey, HoleTablePlan plan, HoleTableState state)
+        {
+            var store = new HoleTableStateStore(_log);
+            HoleTableState? previous = ReadStored(sheet, sheetKey, viewKey);
+            if (previous == null)
+                return HoleTableDrawResult.Unchanged("This view has no stored hole tables. Create them first.");
+
+            string sheetName = ComSafe.Get(() => sheet.Name) ?? "";
+            string viewName = ComSafe.Get(() => view.Name) ?? "";
+            var drawer = new HoleTableDrawer(_drawing, _log);
+
+            var live = new List<HoleTableKind>();
+            var removed = new List<HoleTableKind>();
+            foreach (HoleTableKind kind in new[] { HoleTableKind.Precision, HoleTableKind.Clearance })
+            {
+                if (GroupsOf(plan, kind).Count > 0)
+                    live.Add(kind);
+                else if (drawer.DeleteTable(sheet, sheetKey, viewKey, kind))
+                    removed.Add(kind);
+            }
+
+            string message = "";
+            if (live.Count > 0)
+            {
+                HoleTableDrawResult drawn = drawer.Draw(sheet, view, sheetKey, viewKey, sheetName, viewName, plan, live, align: false);
+                if (!drawn.Changed)
+                    throw new InvalidOperationException(drawn.Message); // aborts the transaction, so nothing is left half done
+                message = drawn.Message;
+            }
+            else
+            {
+                message = removed.Count > 0 ? "There are no holes left to put in a table." : HoleTableMessages.Drawn(live, viewName);
+            }
+
+            if (removed.Count > 0)
+            {
+                string names = string.Join(" and ", removed);
+                message += $" Deleted the {names} {(removed.Count == 1 ? "table" : "tables")}, which had no holes left.";
+            }
+
+            // Tags and marks: only the holes that need it (new, a changed tag, a missing mark); the gone ones' marks go.
+            var marker = new HoleTableMarker(_drawing, _log);
+            var wanted = new List<HoleMarkWanted>();
+            foreach (HoleTableKind kind in live)
+            {
+                foreach (InventorAddin.Core.HoleTable.HoleTableRow row in GroupsOf(plan, kind).SelectMany(g => g.Rows))
+                    wanted.Add(new HoleMarkWanted(row.Hole.Id, row.Tag, HoleTableMarks.HasPrecisionMark(kind)));
+            }
+
+            var previousTags = previous.Tags.ByHole.ToDictionary(p => p.Key, p => p.Value.Text, StringComparer.Ordinal);
+            HoleMarkSyncPlan sync = HoleTableMarkSync.Decide(wanted, previousTags, marker.ReadMarks(sheet, viewKey));
+            marker.Remove(sheet, viewKey, sync.Remove.ToList());
+            string marks = sync.Place.Count > 0
+                ? MarkHoles(sheet, view, sheetKey, viewKey, plan, live, sync.Place.ToHashSet(StringComparer.Ordinal), sync.Remove.Count)
+                : HoleTableMarkSync.Summary(0, 0, sync.Remove.Count);
+
+            // Also when both tables are gone: the sheet's record keeps the view's tags, notes and edits.
+            store.Write(sheet, sheetKey, viewKey, state);
+            return HoleTableDrawResult.Done((message + " " + marks).Trim());
+        }
+
+        private static IReadOnlyList<HoleTableGroup> GroupsOf(HoleTablePlan plan, HoleTableKind kind) =>
+            kind == HoleTableKind.Precision ? plan.Precision : plan.Clearance;
 
         // One transaction around a table action. If none can be started the action does not run, because a failure
         // half way could not be undone. A failure aborts the transaction and is rethrown for the window's status line.
@@ -236,11 +347,19 @@ namespace InventorAddin.HoleTables
             try
             {
                 HoleTableDrawResult result = action();
-                if (result.Changed)
-                    transaction.End();
-                else
+                if (!result.Changed)
+                {
+                    // Nothing changed: abort, and throw so the window shows "Could not ..." and keeps its tags (task 166 review).
                     transaction.Abort();
+                    throw new HoleTableUnchangedException(result.Message);
+                }
+
+                transaction.End();
                 return result.Message;
+            }
+            catch (HoleTableUnchangedException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
