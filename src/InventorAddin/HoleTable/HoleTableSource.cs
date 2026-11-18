@@ -369,6 +369,109 @@ namespace InventorAddin.HoleTables
             }
         }
 
+        // Task 168. The view's ordinate origin, tried in order: (1) the origin indicator's point; (2) skipped, since
+        // RelativeX/RelativeY and the intent's geometry are not confirmed; (3a) an ordinate set's OriginMember on this
+        // view; (3b) a point where zero-valued single ordinates of two different DimensionTypes (X and Y) meet, because
+        // one zero ordinate alone can be a hole lined up with the origin on one axis. Nothing read, but an indicator
+        // or ordinates exist (or the indicator could not even be asked): unreadable, not "no origin".
+        private List<SheetPoint> ReadOrigins(Sheet sheet, DrawingView view, List<string> warnings, out bool unreadable)
+        {
+            var origins = new List<SheetPoint>();
+            string viewName = ComSafe.Get(() => view.Name) ?? "(view)";
+            bool? hasIndicator = ComSafe.Get(() => (bool?)view.HasOriginIndicator, warnings, "View origin");
+            if (hasIndicator == true)
+            {
+                Point2d? p = ComSafe.Get(() => view.OriginIndicator.Intent.PointOnSheet, warnings, "View origin point");
+                if (p != null)
+                {
+                    origins.Add(new SheetPoint(p.X, p.Y));
+                    _log.Info(LogPrefix + $"{viewName} origin from the origin indicator");
+                    unreadable = false;
+                    return origins;
+                }
+            }
+
+            bool sawOrdinates = false;
+            string why = hasIndicator == true ? " (indicator point unreadable)"
+                : hasIndicator == null ? " (origin indicator could not be asked)" : " (no origin indicator)";
+
+            ComSafe.Run(() =>
+            {
+                foreach (OrdinateDimensionSet set in sheet.DrawingDimensions.OrdinateDimensionSets)
+                {
+                    OrdinateDimension? member = ComSafe.Get(() => set.OriginMember, warnings, "Ordinate set origin member");
+                    if (member == null || OrdinateOnView(member, view, warnings) != true)
+                        continue;
+                    sawOrdinates = true;
+                    Point2d? p = ComSafe.Get(() => member.Intent.PointOnSheet, warnings, "Ordinate set origin point");
+                    if (p != null)
+                        origins.Add(new SheetPoint(p.X, p.Y));
+                }
+            }, warnings, "Ordinate dimension sets");
+
+            if (origins.Count > 0)
+            {
+                _log.Info(LogPrefix + $"{viewName} origin from an ordinate set's origin member{why}");
+            }
+            else
+            {
+                var zeros = new List<(SheetPoint Point, DimensionTypeEnum Type)>();
+                ComSafe.Run(() =>
+                {
+                    foreach (OrdinateDimension dim in sheet.DrawingDimensions.OrdinateDimensions)
+                    {
+                        if (OrdinateOnView(dim, view, warnings) != true)
+                            continue;
+                        sawOrdinates = true;
+                        double? value = ComSafe.Get(() => (double?)dim.ModelValue, warnings, "Ordinate value");
+                        if (value == null || Math.Abs(value.Value) > 1e-6)
+                            continue;
+                        Point2d? p = ComSafe.Get(() => dim.Intent.PointOnSheet, warnings, "Ordinate origin point");
+                        DimensionTypeEnum? type = ComSafe.Get(() => (DimensionTypeEnum?)dim.DimensionType, warnings, "Ordinate type");
+                        if (p != null && type != null)
+                            zeros.Add((new SheetPoint(p.X, p.Y), type.Value));
+                    }
+                }, warnings, "Ordinate dimensions");
+
+                foreach (var a in zeros)
+                {
+                    bool met = zeros.Any(b => b.Type != a.Type
+                        && Math.Abs(b.Point.XCm - a.Point.XCm) <= HoleTableOriginResult.SamePointToleranceCm
+                        && Math.Abs(b.Point.YCm - a.Point.YCm) <= HoleTableOriginResult.SamePointToleranceCm);
+                    if (met)
+                        origins.Add(a.Point);
+                }
+
+                if (origins.Count > 0)
+                    _log.Info(LogPrefix + $"{viewName} origin from zero-valued ordinate dimensions of two types{why}");
+            }
+
+            unreadable = origins.Count == 0 && (hasIndicator != false || sawOrdinates);
+            if (origins.Count == 0)
+                _log.Info(LogPrefix + $"{viewName} origin: none read from the indicator or ordinate dimensions" + (unreadable ? " (unreadable)" : " (none exist)"));
+            return origins;
+        }
+
+        // True when the ordinate belongs to this view (its geometry intent's curve, or a centre mark's attached curve,
+        // has this view as parent); null, with a warning, when that cannot be told.
+        private static bool? OrdinateOnView(OrdinateDimension dim, DrawingView view, List<string> warnings)
+        {
+            DrawingView? parent = ComSafe.Get(() =>
+            {
+                object? geometry = dim.Intent.Geometry;
+                if (geometry is Centermark centermark)
+                    geometry = centermark.AttachedEntity;
+                return (geometry as DrawingCurve)?.Parent;
+            }, warnings, "Ordinate's view");
+            if (parent == null)
+            {
+                warnings.Add("Ordinate dimension skipped: its view could not be determined.");
+                return null;
+            }
+
+            return parent == view;
+        }
+
         private HoleTableViewAnalysis AnalyzeCore(string sheetKey, string viewKey, List<string> warnings)
         {
             Sheet? sheet = FindSheet(sheetKey, warnings);
@@ -394,14 +497,7 @@ namespace InventorAddin.HoleTables
             if (dir == null)
                 return HoleTableViewAnalysis.Failed("The view's direction could not be read.");
 
-            var origins = new List<SheetPoint>();
-            bool hasOrigin = ComSafe.Get(() => view.HasOriginIndicator, warnings, "View origin");
-            if (hasOrigin)
-            {
-                Point2d? p = ComSafe.Get(() => view.OriginIndicator.Intent.PointOnSheet, warnings, "View origin point");
-                if (p != null)
-                    origins.Add(new SheetPoint(p.X, p.Y));
-            }
+            var origins = ReadOrigins(sheet, view, warnings, out bool originUnreadable);
 
             var holes = new List<HoleTableHole>();
             var refs = new Dictionary<string, HoleTableHoleRef>();
@@ -439,7 +535,7 @@ namespace InventorAddin.HoleTables
             }
 
             _holeRefs[sheetKey + "|" + viewKey] = refs;
-            return new HoleTableViewAnalysis(holes.AsReadOnly(), origins.AsReadOnly(), scale, drawingUnits, leftOut);
+            return new HoleTableViewAnalysis(holes.AsReadOnly(), origins.AsReadOnly(), scale, drawingUnits, leftOut, null, originUnreadable);
         }
 
         private void ReadHole(

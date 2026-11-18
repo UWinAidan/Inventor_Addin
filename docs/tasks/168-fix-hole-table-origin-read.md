@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 2 (fixes from Aidan's check, 2026-11-18)
 - **Feature spec:** `docs/features/04-hole-table-wizard.md` ("Decided behaviour": Origin)
-- **Status:** todo
+- **Status:** done
 - **Depends on:** 163
 - **Needs:** windows (add-in; Aidan checks in Inventor)
 - **Parallel-safe with:** 170
@@ -45,13 +45,17 @@ Out of scope: the WPF automation exception that is also logged under "View origi
 
 Filled in by the implementer.
 
-- **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):**
-- **Inventor API members not confirmed:**
+- **Ran:** `dotnet build InventorAddin.slnx -p:DeployToInventor=false`: 0 errors. `dotnet test tests/InventorAddin.Core.Tests`: see report (all pass).
+- **Fallback order used (Default):** 1 indicator `Intent.PointOnSheet`; 2 skipped (intent geometry / `RelativeX`/`RelativeY` not confirmed); 3a `OrdinateDimensionSets[].OriginMember.Intent.PointOnSheet` on this view; 3b single `OrdinateDimensions` on this view with `ModelValue` 0: a point counts as the origin only when zero-valued ordinates of two different `DimensionType`s sit there (one zero ordinate alone can be a hole lined up with the origin on one axis); 4 unreadable (an indicator, a failed indicator read, or ordinates on the view exist). An ordinate's view is its `Intent.Geometry` `DrawingCurve.Parent` (for a `Centermark`, its `AttachedEntity` as a `DrawingCurve`), compared as COM objects; if undeterminable a warning is logged. One Info line is logged on every path naming the step.
+- **Tests:** `dotnet test tests/InventorAddin.Core.Tests`: 4834 passed, 0 failed. Build: 0 errors.
+- **Not compiled (changed under `src/InventorAddin`):** none; `HoleTableSource.cs` was built on Windows (0 errors). Not run in Inventor.
+- **Inventor API members not confirmed:** `Centermark.AttachedEntity`, `OrdinateDimension.DimensionType` and `DrawingCurve.Parent` (a `DrawingView`) were confirmed by reflection on the interop DLL. The rest compile, but behaviour is unverified in Inventor: `OrdinateDimension.ModelValue` (assumed cm, 0 at origin), `OrdinateDimension.Intent.Geometry` being a `DrawingCurve` whose `.Parent` is the view (if the geometry is another type the ordinate is not matched to a view).
 - **Manual checklist for Inventor:**
   1. Aidan's rotated drawing: Hole Table on VIEW2 (the front view, with ordinates) analyses it, and the XDIM and YDIM measure from VIEW2's ordinate origin. The log says which way the origin was read.
   2. A view with no ordinate dimensions: the "no ordinate dimension origin" message, as before.
-  3. VIEW1 (now a side view) with its ordinate: Analyze finds the origin (or, if the view shows no holes end on, says holes were left out, not that there is no origin).
+  3. A view with an ordinate to a hole lined up with the origin on one axis still gives one origin, at the corner (not at the hole).
+  4. A view whose origin cannot be read: the wizard says "This view has an ordinate origin, but it could not be read...", not "no ordinate dimension origin".
+  5. VIEW1 (now a side view) with its ordinate: Analyze finds the origin (or, if the view shows no holes end on, says holes were left out, not that there is no origin).
 
 ## Follow-ups
 

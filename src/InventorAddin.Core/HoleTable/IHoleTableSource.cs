@@ -23,13 +23,15 @@ public sealed record HoleTableViewInfo(string Key, string Name);
 /// <param name="DrawingUnits">The drawing's units.</param>
 /// <param name="LeftOutCount">How many holes were left out because they are not seen end on (spec 04 question 16).</param>
 /// <param name="FailureMessage">Why the view could not be analysed; null when it could.</param>
+/// <param name="OriginUnreadable">True when the view has an origin indicator or ordinate dimensions but no origin point could be read from them.</param>
 public sealed record HoleTableViewAnalysis(
     IReadOnlyList<HoleTableHole> Holes,
     IReadOnlyList<SheetPoint> Origins,
     double ViewScale,
     HoleUnits DrawingUnits,
     int LeftOutCount,
-    string? FailureMessage = null)
+    string? FailureMessage = null,
+    bool OriginUnreadable = false)
 {
     public static HoleTableViewAnalysis Failed(string message) =>
         new([], [], 1, HoleUnits.Metric, 0, message);

@@ -2,26 +2,29 @@
 
 Where each big item stands. One line per item, kept current by the parent session. For the order of work and the task lists see `docs/PLAN.md`; for what needs doing next see `TODO.md`.
 
-Last updated: 2026-11-17
+Last updated: 2026-11-18
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-17. Branch `claude/m4-hole-table`: every M4 part 2 task is committed and pushed, and a PR to `main` is open (see `gh pr list`).
-- Goal: M4 part 2 run (`docs/WORKFLOW.md` run mode). It is finished; Aidan's check in Inventor is next.
-- Done this session (each passed the reviewer):
-  - 161, 162 (Core)
-  - 163, 167, 164, 165, 166 (add-in, compiled on Windows)
-  - Item set to Built; combined checklist in `docs/checklists/m4-hole-table-163-167.md`.
-- Current state: Core tests 4831 passing (1 to 4 `Numbering` timing flakes per loaded full run; they pass alone). The add-in builds with 0 errors; the 4 CS8600 warnings are old. Nothing has run in Inventor.
+- Updated: 2026-11-18 10:29. Branch `claude/m4-hole-table`, latest commit `720ea59` (plan for 168 to 173, not pushed). PR #32 to `main` is open.
+- Goal: run fix tasks 168 to 173 from Aidan's check of 163 to 167 (`docs/WORKFLOW.md` run mode). Aidan resumes his checklist (163 onward) after the origin fix (168).
+- Done this session:
+  - Planned 168 to 173: task files in `docs/tasks/168..173-*.md`, table in `docs/PLAN.md` (M4 part 2 fixes), 3 Aidan decisions in `DECISIONS.md`, spec 04 updated (Update/origin). Committed `720ea59`.
+  - Task 168 implemented (uncommitted diff): Core `HoleTableViewAnalysis.OriginUnreadable`, `HoleTableOriginResult.From(origins, unreadable)`, `HoleTableMessages.OrdinateOriginUnreadable`, view-model passes the flag; add-in `HoleTableSource.ReadOrigins`/`OrdinateOnView` (indicator point, then ordinate set OriginMember, then zero-value single ordinates). Build 0 errors, 4833 tests pass. Not run in Inventor.
+- Task 168 passed review (round 2) and is committed: origin fallback to ordinate dimensions (set origin member, or zero ordinates of two directions meeting), "could not be read" message. Build 0 errors, 4834 Core tests pass. Not run in Inventor.
+- Causes found (from `%APPDATA%\AwbAddin\awbaddin.log`):
+  - Origin: `view.OriginIndicator.Intent.PointOnSheet` throws `Unspecified error (0x80004005 (E_FAIL))` on VIEW2 after rotating views (task 168).
+  - `View origin point: Unable to cast ... ComboBoxAutomationPeer to ... IScrollProvider`: a WPF UI Automation exception raised during the COM call's message pump and caught by `ComSafe.Get` (hypothesis, task 169).
+  - `Hole tolerance: Object reference not set`: `hole.HoleDiameter` is null, likely on the tapped and taper tapped holes, in `HoleFeatureReader.ReadTolerance` (unverified, task 170).
 - Next:
-  1. Aidan builds without `-p:DeployToInventor=false` (Inventor closed) and works through the checklist.
-  2. Failures become fix tasks.
-  3. Open questions for Aidan: spec 04 question 20 (Renumber redraw); the Hole Table icon design.
+  1. Aidan rebuilds (Inventor closed) and resumes his checklist from 163, plus task 168's checklist.
+  2. Run 169, 170, 171, 172, 173 in that order (implementer, reviewer, commit each). Run sequentially: parallel builds share obj folders.
+  3. After 173: copy defaults to DECISIONS (173's units-switch default goes to spec 09 open questions), update STATUS/TODO, combined checklist in `docs/checklists/`, push, update PR #32.
 - Gotchas:
-  - With Inventor open, build with `-p:DeployToInventor=false`.
-  - `TODO.md`, `DECISIONS.md`, `PLAN.md` and the task files are CRLF; STATUS is LF.
-  - Subagents can hit usage limits or stall; resume them with SendMessage, or finish their work by hand.
-- Read first: the checklist above, TODO follow-ups for tasks 161 to 167, and the task files' "Inventor API members not confirmed".
+  - Build with `dotnet build InventorAddin.slnx -p:DeployToInventor=false` while Inventor is open.
+  - `TODO.md`, `DECISIONS.md`, `PLAN.md`, specs and task files are CRLF; STATUS is LF.
+  - Subagents can stall or hit limits; resume them with SendMessage, or finish their work by hand.
+- Read first: `docs/PLAN.md` (M4 fixes 168 to 173), the task files, `src/InventorAddin/HoleTable/HoleTableSource.cs` (AnalyzeCore).
 
 ## Big items
 

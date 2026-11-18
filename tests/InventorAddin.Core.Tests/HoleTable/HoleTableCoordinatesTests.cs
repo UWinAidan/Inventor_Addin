@@ -12,6 +12,22 @@ public class HoleTableCoordinatesTests
     private static readonly SheetPoint Origin = new(10, 20);
 
     [Fact]
+    public void Origin_NoneFoundButUnreadable_SaysItCouldNotBeRead()
+    {
+        var r = HoleTableOriginResult.From(Array.Empty<SheetPoint>(), originUnreadable: true);
+        Assert.True(r.IsStop);
+        Assert.Equal(HoleTableMessages.OrdinateOriginUnreadable, r.StopMessage);
+    }
+
+    [Fact]
+    public void Origin_FoundIgnoresUnreadableFlag()
+    {
+        var r = HoleTableOriginResult.From(new[] { new SheetPoint(1, 1) }, originUnreadable: true);
+        Assert.False(r.IsStop);
+        Assert.Equal(new SheetPoint(1, 1), r.Origin);
+    }
+
+    [Fact]
     public void No_origin_stops()
     {
         var r = HoleTableOriginResult.From(Array.Empty<SheetPoint>());

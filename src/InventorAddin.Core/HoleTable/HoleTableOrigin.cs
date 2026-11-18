@@ -25,13 +25,16 @@ public sealed record HoleTableOriginResult
     public bool IsStop => StopMessage is not null;
 
     /// <summary>Every ordinate origin the add-in found on the view, in sheet centimetres.</summary>
-    public static HoleTableOriginResult From(IReadOnlyList<SheetPoint> origins)
+    /// <param name="origins">Every origin point read.</param>
+    /// <param name="originUnreadable">An origin exists on the view but its point could not be read; only matters when <paramref name="origins"/> is empty.</param>
+    public static HoleTableOriginResult From(IReadOnlyList<SheetPoint> origins, bool originUnreadable = false)
     {
         ArgumentNullException.ThrowIfNull(origins);
 
         if (origins.Count == 0)
         {
-            return new HoleTableOriginResult(null, HoleTableMessages.NoOrdinateOrigin);
+            return new HoleTableOriginResult(
+                null, originUnreadable ? HoleTableMessages.OrdinateOriginUnreadable : HoleTableMessages.NoOrdinateOrigin);
         }
 
         var first = origins[0];

@@ -357,7 +357,7 @@ public sealed class HoleTableWizardViewModel : ObservableObject
             return false;
         }
 
-        var origin = HoleTableOriginResult.From(analysis.Origins);
+        var origin = HoleTableOriginResult.From(analysis.Origins, analysis.OriginUnreadable);
         if (origin.IsStop)
         {
             Status = origin.StopMessage!;

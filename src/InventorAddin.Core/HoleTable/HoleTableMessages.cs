@@ -7,6 +7,10 @@ public static class HoleTableMessages
     public const string NoOrdinateOrigin =
         "This view has no ordinate dimension origin. Add one to the view before the hole table wizard can measure the holes.";
 
+    /// <summary>Task 168: the view has an origin or ordinates, but no point could be read from them.</summary>
+    public const string OrdinateOriginUnreadable =
+        "This view has an ordinate origin, but it could not be read. Delete the view's ordinate dimensions and add them again, then run the wizard again.";
+
     /// <summary>Spec 04 question 17 (Default).</summary>
     public const string MoreThanOneOrdinateOrigin =
         "This view has more than one ordinate dimension origin. Remove the extra origins so the view has only one, then run the wizard again.";

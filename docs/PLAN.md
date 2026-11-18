@@ -476,7 +476,7 @@ Not in part 1: AWB Hole on the Flat Pattern tab (it keeps Inventor's Hole; the S
 | 172 | windows (add-in) | 171, 167 | 173 |
 | 173 | windows (Core and add-in) | none | 171 |
 
-- [ ] 168 Fix: read the view's origin when the origin indicator fails; "no origin" or "could not read it"
+- [x] 168 Fix: read the view's origin when the origin indicator fails; "no origin" or "could not read it"
 - [ ] 169 Fix: a WPF ComboBox automation exception caught by the origin read
 - [ ] 170 Fix: the hole tolerance read on tapped holes
 - [ ] 171 Core: check each stored view's tables on open and offer Update

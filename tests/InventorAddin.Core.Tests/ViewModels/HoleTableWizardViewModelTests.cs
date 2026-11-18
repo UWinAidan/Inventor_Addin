@@ -144,6 +144,18 @@ public class HoleTableWizardViewModelTests
     }
 
     [Fact]
+    public void Analyze_with_an_unreadable_origin_says_it_could_not_be_read()
+    {
+        var source = new FakeSource();
+        source.Analysis = source.Analysis with { Origins = [], OriginUnreadable = true };
+        var vm = new HoleTableWizardViewModel(source);
+        vm.AnalyzeCommand.Execute(null);
+
+        Assert.Equal(HoleTableMessages.OrdinateOriginUnreadable, vm.Status);
+        Assert.Empty(vm.PrecisionRows);
+    }
+
+    [Fact]
     public void Analyze_with_several_origins_stops()
     {
         var source = new FakeSource();
