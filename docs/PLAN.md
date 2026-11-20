@@ -483,6 +483,18 @@ Not in part 1: AWB Hole on the Flat Pattern tab (it keeps Inventor's Hole; the S
 - [x] 172 Add-in: the Hole Table window shows the out-of-date check
 - [x] 173 AWB Hole: a new hole starts on the last hole made with OK
 
+**Fix and request from Aidan's combined check of 163 to 166 and 168 to 173** (2026-11-20; every step passed). Fix: 174 (AWB Hole started with a sketch point selected, as from its mini toolbar, picks that point and the sketch's free hole centres, as task 154 does for a sketch). Request: 175 and 176 (when a drawing with stored hole tables becomes active or updates, the add-in checks them and offers Update now or Later; a Settings switch, on by default). **Order:** 174, 175, 176.
+
+| Task | Needs | Depends on | Parallel-safe with |
+|---|---|---|---|
+| 174 | windows (Core and add-in) | 154 | 175 |
+| 175 | Core | 171, 172 | 174 |
+| 176 | windows (add-in) | 175 | none |
+
+- [ ] 174 Fix: AWB Hole from a selected sketch point picks that point and the free hole centres
+- [ ] 175 Core: the automatic out-of-date check, its prompt and its setting
+- [ ] 176 Add-in: check a drawing's hole tables when it becomes active or updates
+
 ### M5: Drawing tools (spec 05)
 
 Blocked on question 1 of the spec, which decides which commands exist at all. Includes a custom drawing template whose title block reads every property from the model (Aidan, 2026-10-10): custom print templates with several sheet sizes, sheet colours, and a title block designed with Aidan (Aidan, 2026-10-11). Create Drawing moved to M2 as Create Print.
