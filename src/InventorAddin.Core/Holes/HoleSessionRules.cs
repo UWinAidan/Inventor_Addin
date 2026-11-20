@@ -123,7 +123,8 @@ public static class HoleSessionRules
     /// The hole centres a new hole starts with, as Inventor's Hole picks them (task 117; spec 09, "Hole centres";
     /// Aidan, 2026-10-24, question 11): the sketch the user selected, with its free hole centres (those no feature uses
     /// yet), or all of them when every one is used (task 154; Aidan, 2026-11-10, checklist 117-4; a selection wins,
-    /// task 094); else the sketch of the points the user selected, with all its hole centres, used or not; else, per
+    /// task 094); else the sketch of the points the user selected, with those points and its free hole centres, or all
+    /// of them when every one is used (task 174; Aidan, 2026-11-20); else, per
     /// point, the newest visible sketch that has hole-centre points no feature uses yet, with only those points. There
     /// a sketch whose centres are all used is skipped for the next newest. <see cref="DefaultCentresFrom.None"/> when
     /// there is none.
@@ -136,13 +137,17 @@ public static class HoleSessionRules
     /// <param name="holeCentres">A sketch's points marked as hole centres, in sketch order. Asked only for the
     /// chosen selection or for a visible sketch.</param>
     /// <param name="usedByFeature">Whether a feature already uses a hole-centre point. Asked for a selected sketch's
-    /// centres and when nothing is selected, never for the sketch of a selected point.</param>
+    /// centres, for the sketch of a selected point, and when nothing is selected.</param>
+    /// <param name="selectedPoint">Whether a hole-centre point of <paramref name="sketchOfSelectedPoint"/> is one of the
+    /// selected points (task 174). A selected point that is not a hole centre never reaches it, so it adds nothing.
+    /// Null when no point is selected.</param>
     public static DefaultCentres<TSketch, TPoint> DefaultCentres<TSketch, TPoint>(
         TSketch? selectedSketch,
         TSketch? sketchOfSelectedPoint,
         IEnumerable<(TSketch Sketch, Func<bool> Visible)> sketchesNewestFirst,
         Func<TSketch, IEnumerable<TPoint>> holeCentres,
-        Func<TPoint, bool> usedByFeature)
+        Func<TPoint, bool> usedByFeature,
+        Func<TPoint, bool>? selectedPoint = null)
         where TSketch : class
     {
         ArgumentNullException.ThrowIfNull(sketchesNewestFirst);
@@ -159,7 +164,23 @@ public static class HoleSessionRules
         if (sketchOfSelectedPoint is not null)
         {
             var all = holeCentres(sketchOfSelectedPoint).ToList();
-            return new(sketchOfSelectedPoint, all, DefaultCentresFrom.SketchOfSelectedPoints, all.Count);
+            var isSelected = selectedPoint ?? (_ => false);
+            var (free, allUsed) = FreeOrAll(all, usedByFeature);
+            if (allUsed)
+            {
+                // Every centre is used: all are picked, whatever is selected.
+                return new(sketchOfSelectedPoint, all, DefaultCentresFrom.SketchOfSelectedPoints, all.Count, true);
+            }
+
+            // The selected hole centres and the free ones, in sketch order (task 174).
+            var points = all.Where(point => isSelected(point) || !usedByFeature(point)).ToList();
+            return new(
+                sketchOfSelectedPoint,
+                points,
+                DefaultCentresFrom.SketchOfSelectedPoints,
+                all.Count,
+                false,
+                points.Count(isSelected));
         }
 
         foreach (var (sketch, visible) in sketchesNewestFirst)
@@ -310,7 +331,10 @@ public enum DefaultCentresFrom
     /// </summary>
     SelectedSketch,
 
-    /// <summary>The sketch of the points the user selected: all its hole centres.</summary>
+    /// <summary>
+    /// The sketch of the points the user selected: the selected hole centres and the free ones, or all of them when every
+    /// one is used (task 174).
+    /// </summary>
     SketchOfSelectedPoints,
 
     /// <summary>Nothing selected: the newest visible sketch with hole centres no feature uses, only those.</summary>
@@ -326,12 +350,15 @@ public enum DefaultCentresFrom
 /// <param name="HoleCentresInSketch">How many hole-centre points the sketch has, used or not.</param>
 /// <param name="AllUsed">A selected sketch whose hole centres are all used by a feature, so all are picked
 /// (task 154).</param>
+/// <param name="SelectedCount">For the sketch of selected points: how many picks are selected hole centres (task 174).
+/// The other picks are free centres that were not selected.</param>
 public sealed record DefaultCentres<TSketch, TPoint>(
     TSketch? Sketch,
     IReadOnlyList<TPoint> Points,
     DefaultCentresFrom From,
     int HoleCentresInSketch,
-    bool AllUsed = false)
+    bool AllUsed = false,
+    int SelectedCount = 0)
     where TSketch : class
 {
     /// <summary>
@@ -344,7 +371,11 @@ public sealed record DefaultCentres<TSketch, TPoint>(
         DefaultCentresFrom.SelectedSketch when AllUsed =>
             $"selected, all {HoleCentresInSketch} hole centres are used, so all are picked",
         DefaultCentresFrom.SelectedSketch => $"selected, {Points.Count} free of {HoleCentresInSketch} hole centres",
-        DefaultCentresFrom.SketchOfSelectedPoints => $"of the selected points, all {HoleCentresInSketch} hole centres",
+        DefaultCentresFrom.SketchOfSelectedPoints when HoleCentresInSketch == 0 => "selected point(s), no hole centres",
+        DefaultCentresFrom.SketchOfSelectedPoints when AllUsed =>
+            $"selected point(s), all {HoleCentresInSketch} hole centres are used, so all are picked",
+        DefaultCentresFrom.SketchOfSelectedPoints =>
+            $"selected point(s), {SelectedCount} selected and {Points.Count - SelectedCount} free of {HoleCentresInSketch} hole centres",
         DefaultCentresFrom.NewestWithFreeCentres =>
             $"newest visible with free centres, {Points.Count} of {HoleCentresInSketch} hole centres",
         _ => null,

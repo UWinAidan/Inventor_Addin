@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 1 (fix from Aidan's check of 168 to 173, 2026-11-20)
 - **Feature spec:** `docs/features/09-awb-hole.md`
-- **Status:** todo
+- **Status:** done
 - **Depends on:** 154
 - **Needs:** windows build
 - **Parallel-safe with:** 175 (disjoint files; run one after another anyway, they share the build)
@@ -36,14 +36,19 @@ Out of scope:
 
 ## Verification
 
-Filled in by the implementer.
-
-- **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):**
-- **Inventor API members not confirmed:**
+- **Ran:** `dotnet test tests/InventorAddin.Core.Tests`: 4891 passed, 0 failed (one earlier run showed 1 failure in `NewPartCreatorTests.Create_ReportsDuplicatesFoundBySync`, a folder check unrelated to this task; it passed on rerun, so it looks flaky). `dotnet build InventorAddin.slnx -p:DeployToInventor=false` on Windows: 0 errors, 8 warnings (none in the changed code). Inventor was not running. Not run inside Inventor.
+- **Not compiled (changed under `src/InventorAddin`):** none; `Holes/HoleSession.cs` built on Windows with 0 errors. It has not been run in Inventor.
+- **Inventor API members not confirmed:** none new (`SketchPoint`, `PlanarSketch`, `Parent` and `SamePoint`/`SameSketch` are existing usage in the file).
+- **Rule as built:** if every hole centre of the sketch is used, all are picked, whatever is selected (so selecting one used point in an all-used sketch picks all). Otherwise the picks are the selected hole centres plus the free ones, in sketch order. A selected point that is not a hole centre adds nothing. Selected points of another sketch than the first selected point's are ignored.
 - **Manual checklist for Inventor:**
-  1. …
+  1. Open a part with one sketch holding 5 hole-centre points; make an AWB Hole on 2 of them (the other 3 stay free).
+  2. Click a free point of that sketch, then its mini toolbar AWB Hole. The 3 free points are blue-picked; the 2 used ones are not.
+  3. Cancel. Select one of the used points and start AWB Hole: that point plus the 3 free ones are picked (4).
+  4. Cancel. Select one used and one free point (Ctrl-click): both plus the other free points are picked.
+  5. Cancel. Make a hole on the remaining 3 so every point is used; select one point and start AWB Hole: all 5 are picked.
+  6. Check `awbaddin.log` for the start line, for example `selected point(s), 1 selected and 3 free of 5 hole centres` and `selected point(s), all 5 hole centres are used, so all are picked`.
+  7. Select a sketch (not a point) and start AWB Hole: unchanged, free centres (or all if all used).
 
 ## Follow-ups
 
-Things noticed but not done.
+- None. (A selected point in an all-used sketch picks all of them, as Aidan's rule says: "if every point is used, pick them all".)

@@ -491,7 +491,7 @@ Not in part 1: AWB Hole on the Flat Pattern tab (it keeps Inventor's Hole; the S
 | 175 | Core | 171, 172 | 174 |
 | 176 | windows (add-in) | 175 | none |
 
-- [ ] 174 Fix: AWB Hole from a selected sketch point picks that point and the free hole centres
+- [x] 174 Fix: AWB Hole from a selected sketch point picks that point and the free hole centres
 - [ ] 175 Core: the automatic out-of-date check, its prompt and its setting
 - [ ] 176 Add-in: check a drawing's hole tables when it becomes active or updates
 

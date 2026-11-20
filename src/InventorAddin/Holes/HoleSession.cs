@@ -361,21 +361,29 @@ namespace InventorAddin.Holes
 
         /// <summary>
         /// A new hole's centres, as Inventor's Hole picks them (tasks 117 and 154): the selected sketch with its free
-        /// hole centres, or all of them when every one is used; else the sketch of the selected points with all its
-        /// hole centres; else, per point, the newest visible sketch with hole centres no hole feature uses yet, and
+        /// hole centres, or all of them when every one is used; else the sketch of the selected points, with those
+        /// points and its free hole centres (task 174), or all of them when every one is used; else, per point, the newest visible sketch with hole centres no hole feature uses yet, and
         /// only those.
         /// </summary>
         private void StartDefaultPicks()
         {
             PlanarSketch? selectedSketch = null;
             PlanarSketch? sketchOfPoint = null;
+            var selectedPoints = new List<SketchPoint>();
             foreach (object raw in SelectedItems())
             {
                 object? item = NativeOf(raw);
                 if (selectedSketch == null && item is PlanarSketch sketch)
                     selectedSketch = sketch;
-                else if (sketchOfPoint == null && item is SketchPoint point)
-                    sketchOfPoint = ComSafe.Get(() => point.Parent as PlanarSketch);
+                else if (item is SketchPoint point)
+                {
+                    PlanarSketch? parent = ComSafe.Get(() => point.Parent as PlanarSketch);
+                    if (sketchOfPoint == null)
+                        sketchOfPoint = parent;
+                    // Only the points of the first selected point's sketch count.
+                    if (parent != null && SameSketch(parent, sketchOfPoint))
+                        selectedPoints.Add(point);
+                }
             }
 
             List<UsedCentre>? used = null;
@@ -384,7 +392,8 @@ namespace InventorAddin.Holes
                 sketchOfPoint,
                 SketchesNewestFirst(),
                 HoleCentres,
-                point => IsUsed(point, used ??= CentresUsedByHoles()));
+                point => IsUsed(point, used ??= CentresUsedByHoles()),
+                centre => selectedPoints.Exists(selected => SamePoint(selected, centre)));
             _defaultSketchFrom = chosen.Describe();
             _picks.Start(chosen.Sketch, chosen.Points);
         }
