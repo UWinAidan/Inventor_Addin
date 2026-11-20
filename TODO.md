@@ -6,13 +6,13 @@ Last updated: 2026-11-20
 
 ## Next up
 
-1. M4 part 2 (hole table wizard, spec 04): every task is built and 163 to 173 passed Aidan's check (2026-11-20). His fix and request from that check are tasks 174 to 176, built and reviewed on Windows 2026-11-20; Aidan's check in Inventor is next (below), then PR #32 can merge. M4 part 1 is done (PR #29, 2026-11-10).
+1. M4 part 2 (hole table wizard, spec 04): every task is built and 163 to 173 passed Aidan's check (2026-11-20). His fix and request from that check are tasks 174 to 176; his check of them (2026-11-20) passed but for four failures, fixed as tasks 177 to 180 (built and reviewed on Windows 2026-11-20). Aidan's check in Inventor is next (below), then PR #32 can merge. M4 part 1 is done (PR #29, 2026-11-10).
 2. **Later, not this round** (Aidan, 2026-10-25): every AWB icon gets a more polished look, done together with the colour option.
 3. Aidan finishes the remaining Part Properties checks below.
 
 ## Waiting on Aidan: checks in Inventor
 
-**M4 fixes and requests (174 to 176)**, built and reviewed on Windows 2026-11-20, not yet run in Inventor: `docs/checklists/m4-fixes-174-176.md` (a selected sketch point picks itself and the free hole centres; the automatic hole table check with Update now or Later, and its Settings switch). Branch `claude/m4-hole-table`, PR #32.
+**M4 fixes 177 to 180**, built and reviewed on Windows 2026-11-20, not yet run in Inventor: `docs/checklists/m4-fixes-177-180.md` (Later keyed to the hole data; Update keeps the tables stacked; a tapped group's drill line; description decimals). Everything else in `docs/checklists/m4-fixes-174-176.md` passed 2026-11-20. Branch `claude/m4-hole-table`, PR #32.
 
 **M4 part 2 (163 to 167) and fixes 168 to 173** were checked on 2026-11-18 and 2026-11-20: every step passed.
 
@@ -111,6 +111,8 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Follow-ups from finished tasks
 
+- Task 178: the precision table's position is read with its height (`ReadPlacement(...)?.Position`), so if its height cannot be read a table the user moved is treated as new and restacked; if the clearance table's position cannot be read after the redraw, it is treated as deleted. Both unlikely (the height is a stored attribute).
+- Task 179: the cause of the lost drill line is not proven. The warning `... is tapped but its tap drill could not be read` is logged on every automatic check of the drawing; log it once per hole per session.
 - Task 176: unsaved drawings (no file name) are never checked automatically. The timer ticks every 500 ms while a check waits for a drawing that is not active. `WindowHost.IsAnyOpen` does not count a WinForms `MessageBox`. Whether `_ActiveCommand` and `ActiveEditObject` behave as assumed is shown by the log's "Hole table check: waiting" lines (checklist 176-1).
 - Task 175: `HoleTableStoredViewCheck` still lives in `HoleTableWizardViewModel.cs` (namespace `ViewModels`); move it into `HoleTable`. The wizard still writes the literal "Update failed. " rather than `HoleTableMessages.UpdateFailedPrefix`.
 - Task 172: opening Hole Table still writes view keys for the current sheet on first use (task 163), before the write-free check; a keyed-only listing on open would need a Core change. "Update these views" has no access key. Per-view Update results are logged as one joined line.

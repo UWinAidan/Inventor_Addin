@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 2 (fix from Aidan's check of 174 to 176, 2026-11-20)
 - **Feature spec:** `docs/features/04-hole-table-wizard.md` (open question 14)
-- **Status:** todo
+- **Status:** done
 - **Depends on:** 156
 - **Needs:** cloud (Core only; runs on Windows too)
 - **Parallel-safe with:** 177, 178
@@ -37,9 +37,14 @@ Out of scope: XDIM and YDIM; the tolerance deviations.
 
 Filled in by the implementer.
 
-- **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):**
-- **Inventor API members not confirmed:**
+- **Ran:** `dotnet test tests/InventorAddin.Core.Tests`: 4977 passed, 0 failed. `dotnet build InventorAddin.slnx -p:DeployToInventor=false`: 0 errors, 8 warnings (existing).
+  - Implementation: new `Length(value, min, max)` in `HoleTableDescription.cs`; `Len` uses it (max 3 mm / 4 in). It rounds through `decimal` so floating noise (2.2500000001) gives `2.25` and 0.18755 in gives `0.1876`. `Signed` and `Number` are unchanged.
+  - Changed expectation: `Inch_tapped` drill 0.159 in with 2 decimals was `0.16`, now `0.159`. No other existing expectation changed.
+  - New tests: clearance mm (2.25, 5.0, 6.6, 2.2501, noise), depth 6.5, precision (3.20, 3.205), inch (0.25, 0.1875, 0.1876).
+  - Spec 04 question 14 reworded; "Target output" had no wording that said otherwise.
+  - Expected side effect: a stored table drawn before this change has old description keys, so the next check reports "descriptions changed" until Update.
+- **Not compiled (changed under `src/InventorAddin`):** none changed; the solution built on Windows.
+- **Inventor API members not confirmed:** none (Core only).
 - **Manual checklist for Inventor:**
   1. Drawing with a 2.25 mm clearance hole. Update its tables (the check may first report "descriptions changed"; that is expected once): it reads `Ø2.25 THRU`. XDIM and YDIM still show 1 decimal.
 
