@@ -39,6 +39,10 @@ Out of scope: Core changes (task 175), unless a gap is found; then stop and say 
 
 - `OnDocumentChange`'s document parameter is `_Document`; cast as `CLAUDE.md` says. Its reasons are a `CommandTypesEnum` bit set.
 - The check runs on Inventor's UI thread from the timer; keep it out of the event handlers themselves (they only tell the policy).
+- Task 175's API: `HoleTableAutoCheck` (`DrawingActivated`, `DrawingUpdated`, `DrawingClosed`, `TakeDue(HoleTableAutoCheckContext, now)`, `ShouldPrompt`, `Later`, `UpdatedNow`, `WizardClosed`, `Enabled`), `HoleTableStoredCheck.Run`, `HoleTableOutOfDatePromptViewModel` with an `UpdateRunner`, and the `SettingsViewModel` label and note constants. Keep `Enabled` in step with the setting when Settings is saved.
+- Stopping the timer: you may add a one-line `bool AnyPending` to `HoleTableAutoCheck` (with a test) rather than inferring it; that small Core change is in scope.
+- When the prompt closes with `Later` after a partly failed Update now, call `Later` with the failed views' original out-of-date entries (their original reasons, not the "Update failed." text), so the same failures do not prompt again at once. With `Updated`, call `UpdatedNow`.
+- Build the check's log line with a `HoleTableMessages` helper in Core (with a test), so the wording is testable.
 - Inventor may be running: check `tasklist //FI "IMAGENAME eq Inventor.exe"` and build with `-p:DeployToInventor=false` while it runs.
 
 ## Verification
