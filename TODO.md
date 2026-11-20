@@ -2,19 +2,19 @@
 
 Everything that needs doing and is not already a task in `docs/PLAN.md`. Kept current by the parent session: items are added when they come up and removed when they are done or turned into a task. Where the project stands is in `STATUS.md`; why things are the way they are is in `DECISIONS.md`.
 
-Last updated: 2026-11-13
+Last updated: 2026-11-20
 
 ## Next up
 
-1. M4 part 2 (hole table wizard, spec 04): every task is built (Core 155 to 159, 161, 162; add-in 163 to 167, compiled on Windows 2026-11-17). Aidan's check found three failures and asked for two changes (2026-11-18), built as tasks 168 to 173 the same day. Aidan's check in Inventor is next (below). M4 part 1 is done (PR #29, 2026-11-10).
+1. M4 part 2 (hole table wizard, spec 04): every task is built and 163 to 173 passed Aidan's check (2026-11-20). His fix and request from that check are tasks 174 to 176, built and reviewed on Windows 2026-11-20; Aidan's check in Inventor is next (below), then PR #32 can merge. M4 part 1 is done (PR #29, 2026-11-10).
 2. **Later, not this round** (Aidan, 2026-10-25): every AWB icon gets a more polished look, done together with the colour option.
 3. Aidan finishes the remaining Part Properties checks below.
 
 ## Waiting on Aidan: checks in Inventor
 
-**M4 part 2, hole table wizard (163 to 167)**, built on Windows 2026-11-17: Aidan checked 167 on 2026-11-18 (passed); 163 to 166 still to check, after 168. Work through `docs/checklists/m4-hole-table-163-167.md`. Branch `claude/m4-hole-table`.
+**M4 fixes and requests (174 to 176)**, built and reviewed on Windows 2026-11-20, not yet run in Inventor: `docs/checklists/m4-fixes-174-176.md` (a selected sketch point picks itself and the free hole centres; the automatic hole table check with Update now or Later, and its Settings switch). Branch `claude/m4-hole-table`, PR #32.
 
-**M4 fixes and requests (168 to 173)**, built and reviewed on Windows 2026-11-18, not yet run in Inventor: `docs/checklists/m4-fixes-168-173.md` (origin fallback, dropdown automation fix, tolerance read on tapped holes, out-of-date check on open, AWB Hole starts on the last hole).
+**M4 part 2 (163 to 167) and fixes 168 to 173** were checked on 2026-11-18 and 2026-11-20: every step passed.
 
 **Spike 160, left open (not blocking):** which command made VIEW2's ordinates, "Ordinate Dimension Set" or single "Ordinate"? The API listed no set.
 
@@ -111,6 +111,8 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Follow-ups from finished tasks
 
+- Task 176: unsaved drawings (no file name) are never checked automatically. The timer ticks every 500 ms while a check waits for a drawing that is not active. `WindowHost.IsAnyOpen` does not count a WinForms `MessageBox`. Whether `_ActiveCommand` and `ActiveEditObject` behave as assumed is shown by the log's "Hole table check: waiting" lines (checklist 176-1).
+- Task 175: `HoleTableStoredViewCheck` still lives in `HoleTableWizardViewModel.cs` (namespace `ViewModels`); move it into `HoleTable`. The wizard still writes the literal "Update failed. " rather than `HoleTableMessages.UpdateFailedPrefix`.
 - Task 172: opening Hole Table still writes view keys for the current sheet on first use (task 163), before the write-free check; a keyed-only listing on open would need a Core change. "Update these views" has no access key. Per-view Update results are logged as one joined line.
 - Task 169: `SaveAsReplacerTests.Replace_TopLevel_CopiesAsSaveAsCopy_...` is flaky (temp `cad` folder missing in about 2 of 9 full runs).
 - Hole tags and marks (task 165): tags, precision marks and centre marks carry `<Brand>_HoleMark` (`HoleId`, `ViewKey`, `Role`), separate from 166's table-state set. Attribute sets on placed sketched symbols and on centre marks are proven by no spike (checklist step 6: marks not doubled on a second Create). After a swap, regenerating only Precision leaves the old precision mark on the swapped-out hole. A hole that fails halfway keeps its partial marks; a failed attribute stamp doubles the marks on the next redraw. Thread edges drawn as arcs are not read. The tag gap uses the tag text height, not the data text height the spike used. The tag text style comes from a second temporary hole table (the drawer's style set could carry it). A reused `<Brand>_HoleTag` definition keeps its old text style if the drawing's tag style changes. A circle that already has a centre mark gets a second one.
