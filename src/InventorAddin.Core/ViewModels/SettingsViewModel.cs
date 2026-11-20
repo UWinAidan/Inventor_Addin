@@ -79,6 +79,13 @@ public sealed class SettingsViewModel : ObservableObject
     public const string UseInventorHoleCommandNoteText =
         "On gives the H shortcut and the Hole button on the 3D Model and Sheet Metal tabs back to Inventor's Hole; off gives them to AWB Hole. Takes effect when you save.";
 
+    /// <summary>The label of the automatic hole table check switch (task 175). The access key T is free in the window.</summary>
+    public const string CheckHoleTablesLabel = "Check hole _tables when a drawing opens or updates";
+
+    /// <summary>The note shown under the automatic hole table check switch.</summary>
+    public const string CheckHoleTablesNoteText =
+        "When a drawing's hole tables no longer match the model, says which views and offers Update.";
+
     /// <summary>
     /// The line break the other CAD folders text is shown with: the one a WPF text box inserts. Any line break is
     /// accepted when reading it back.
@@ -338,6 +345,21 @@ public sealed class SettingsViewModel : ObservableObject
         }
     }
 
+    /// <summary>"Check hole tables when a drawing opens or updates" (task 175).</summary>
+    public bool CheckHoleTablesAutomatically
+    {
+        get => _edited.CheckHoleTablesAutomatically;
+        set
+        {
+            if (_edited.CheckHoleTablesAutomatically == value)
+                return;
+
+            _edited.CheckHoleTablesAutomatically = value;
+            OnPropertyChanged();
+            OnEditChanged();
+        }
+    }
+
     /// <summary>The units new files are created in.</summary>
     public UnitsSystem DefaultUnits
     {
@@ -384,7 +406,7 @@ public sealed class SettingsViewModel : ObservableObject
 
     public string MaterialFinishSummary => SettingsSummaries.MaterialFinish(_edited.MaterialLibraryPath, _edited.FinishListPath);
 
-    public string HolesSummary => SettingsSummaries.Holes(_edited.HoleWorkbookPath, _edited.UseInventorHoleCommand);
+    public string HolesSummary => SettingsSummaries.Holes(_edited.HoleWorkbookPath, _edited.UseInventorHoleCommand, _edited.CheckHoleTablesAutomatically);
 
     public string DeveloperSummary => SettingsSummaries.Developer(_edited.ShowDeveloperTools);
 
@@ -405,6 +427,8 @@ public sealed class SettingsViewModel : ObservableObject
     public string HoleWorkbookHelp => HoleWorkbookHelpText;
 
     public string UseInventorHoleCommandNote => UseInventorHoleCommandNoteText;
+
+    public string CheckHoleTablesNote => CheckHoleTablesNoteText;
 
     /// <summary>Where the settings are written, for display.</summary>
     public string SettingsFilePath => _store.FilePath;

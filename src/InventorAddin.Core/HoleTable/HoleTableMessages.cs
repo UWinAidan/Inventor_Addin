@@ -101,5 +101,24 @@ public static class HoleTableMessages
     /// <summary>A view's line in the list: <c>VIEW1 on Sheet:1: 2 holes moved.</c></summary>
     public static string ViewLine(string viewName, string sheetName, string reason) => $"{viewName} on {sheetName}: {reason}";
 
+    /// <summary>A view has no stored hole tables to update.</summary>
+    public const string NoStoredTables = "This view has no stored hole tables. Create them first.";
+
+    /// <summary>Heading of the automatic out-of-date prompt (task 175).</summary>
+    public static string OutOfDatePromptHeading(string drawingName) => $"Some hole tables in {drawingName} are out of date:";
+
+    /// <summary>Heading of the prompt after Update now left some views not updated.</summary>
+    public static string UpdateFailedHeading(string drawingName) => $"Some hole tables in {drawingName} could not be updated:";
+
+    public const string UpdateNowButton = "Update now";
+
+    public const string LaterButton = "Later";
+
+    /// <summary>The Later button once the prompt is only reporting failures.</summary>
+    public const string CloseButton = "Close";
+
+    /// <summary>The prefix a failed update's reason gets.</summary>
+    public const string UpdateFailedPrefix = "Update failed. ";
+
     private static string Count(int n, string noun) => n == 1 ? $"1 {noun}" : $"{n} {noun}s";
 }

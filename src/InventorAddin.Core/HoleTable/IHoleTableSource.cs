@@ -58,6 +58,13 @@ public interface IHoleTableSource
     /// </summary>
     IReadOnlyList<HoleTableViewInfo> GetKeyedViews(string sheetKey) => GetViews(sheetKey);
 
+    /// <summary>
+    /// The sheets the automatic check (task 175) should look at: those that already have a key, never writing one. The
+    /// default is <see cref="GetSheets"/>. An add-in whose <see cref="GetSheets"/> assigns keys (a write) overrides this, as
+    /// <see cref="GetKeyedViews"/> does for views.
+    /// </summary>
+    IReadOnlyList<HoleTableSheetInfo> GetKeyedSheets() => GetSheets();
+
     HoleTableViewAnalysis Analyze(string sheetKey, string viewKey);
 
     /// <summary>Draws one table. <paramref name="state"/> is what the add-in stores on the view (tags, edits, names).</summary>

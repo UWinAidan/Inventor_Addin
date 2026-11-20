@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 2 (request from Aidan, 2026-11-20)
 - **Feature spec:** `docs/features/04-hole-table-wizard.md` ("Decided behaviour": Update)
-- **Status:** todo
+- **Status:** done
 - **Depends on:** 171, 172
 - **Needs:** cloud (Core only; runs on Windows too)
 - **Parallel-safe with:** 174
@@ -53,11 +53,16 @@ Out of scope: anything under `src/InventorAddin` (task 176).
 
 Filled in by the implementer.
 
-- **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):**
-- **Inventor API members not confirmed:**
+- **Ran:** `dotnet build src/InventorAddin.Core`: 0 warnings, 0 errors. `dotnet test tests/InventorAddin.Core.Tests`: 4932 passed, 0 failed (one earlier run had `RenamePlanTests.ListFilesToSearch_AFolderThatDoesNotAnswer_IsSkippedAfterTheProbeTimeout` fail on a timing probe; it passed on the rerun and is unrelated). `dotnet build InventorAddin.slnx -p:DeployToInventor=false` (Inventor not running): 0 errors, 8 existing warnings. The wizard's existing tests pass unchanged.
+- **Not compiled (changed under `src/InventorAddin`):** none; nothing under `src/InventorAddin` was changed.
+- **Inventor API members not confirmed:** none; Core only.
 - **Manual checklist for Inventor:** none for this task alone; task 176 carries the checks.
+
+Public API for task 176: `HoleTableAutoCheck` (`Enabled`, `DrawingActivated/DrawingUpdated(string, DateTime)`, `DrawingClosed`, `TakeDue(HoleTableAutoCheckContext, DateTime)`, `ShouldPrompt`, `Later`, `UpdatedNow`, `WizardClosed`, `IsPending`), `HoleTableStoredCheck.Run`, `HoleTableStoredUpdate.Run`, `HoleTableOutOfDatePromptViewModel`, `IHoleTableSource.GetKeyedSheets()`, `AddinSettings.CheckHoleTablesAutomatically`.
 
 ## Follow-ups
 
-Things noticed but not done.
+- Task 176 must override `GetKeyedSheets()` in `HoleTableSource` (the default calls `GetSheets()`, which may assign keys) and add the Settings window's check box (`SettingsViewModel.CheckHoleTablesLabel`, `CheckHoleTablesNote`, access key T) bound to `CheckHoleTablesAutomatically`, in the Holes section of `SettingsWindow.xaml`. The XAML was out of scope here.
+- `HoleTableStoredViewCheck` still lives in `HoleTableWizardViewModel.cs` (namespace `ViewModels`); `HoleTable` classes import it. Moving it into `HoleTable` is a tidy-up for later.
+- `HoleTableOutOfDatePromptViewModel` takes an optional `UpdateRunner` delegate so task 176 can run each view's update inside its own transaction; without it the update runs directly.
+- After a partly failed Update now, the caller should call `HoleTableAutoCheck.Later` with the original out-of-date list when the prompt closes with `Later`, and `UpdatedNow` when it closes with `Updated`.

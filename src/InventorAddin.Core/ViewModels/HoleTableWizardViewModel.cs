@@ -524,48 +524,6 @@ public sealed class HoleTableWizardViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Update for a stored view that is not open in this window: the same <see cref="HoleTablePlan.Refresh"/> and the same
-    /// <see cref="IHoleTableSource.UpdateTables"/>, using the edits and tags stored on the view. It leaves the window's own lists alone.
-    /// </summary>
-    private bool UpdateStored(string sheet, string view, string sheetName, string viewName, out string text)
-    {
-        try
-        {
-            var state = _source.ReadState(sheet, view);
-            if (state is null)
-            {
-                text = NoStoredTablesText;
-                return false;
-            }
-
-            var analysis = _source.Analyze(sheet, view);
-            if (analysis.FailureMessage is not null)
-            {
-                text = analysis.FailureMessage;
-                return false;
-            }
-
-            var origin = HoleTableOriginResult.From(analysis.Origins, analysis.OriginUnreadable);
-            if (origin.IsStop)
-            {
-                text = origin.StopMessage!;
-                return false;
-            }
-
-            var refresh = HoleTablePlan.Refresh(analysis.Holes, state.Edits, state.Tags, origin.Origin!.Value, analysis.ViewScale, analysis.DrawingUnits);
-            var next = HoleTableState.From(sheetName, viewName, refresh.Edits, refresh.Plan);
-            var result = _source.UpdateTables(sheet, view, refresh.Plan, next);
-            text = $"{result} {refresh.Summary}";
-            return true;
-        }
-        catch (Exception ex)
-        {
-            text = FailureText("update the tables", ex);
-            return false;
-        }
-    }
-
-    /// <summary>
     /// The on-open check (task 171): for every sheet and every view with a stored state, reads the view again and compares it
     /// with what was drawn. Only <see cref="IHoleTableSource.GetKeyedViews"/>, <see cref="IHoleTableSource.ReadState"/> and
     /// <see cref="IHoleTableSource.Analyze"/> are called; no table or state is written (the default <c>GetKeyedViews</c> is
@@ -574,49 +532,17 @@ public sealed class HoleTableWizardViewModel : ObservableObject
     /// </summary>
     public void CheckStoredTables()
     {
+        var found = HoleTableStoredCheck.Run(_source, Sheets);
         OutOfDateViews.Clear();
         CouldNotCheckViews.Clear();
-        foreach (var sheet in Sheets)
+        foreach (var item in found.OutOfDate)
         {
-            IReadOnlyList<HoleTableViewInfo> views;
-            try
-            {
-                views = _source.GetKeyedViews(sheet.Key);
-            }
-            catch (Exception ex)
-            {
-                CouldNotCheckViews.Add(new(sheet.Key, sheet.Name, "", "All views", FailureText("list the views", ex)));
-                continue;
-            }
+            OutOfDateViews.Add(item);
+        }
 
-            foreach (var view in views)
-            {
-                HoleTableStaleness result;
-                try
-                {
-                    var state = _source.ReadState(sheet.Key, view.Key);
-                    if (state is null)
-                    {
-                        continue;
-                    }
-
-                    result = HoleTableStaleness.Check(state, _source.Analyze(sheet.Key, view.Key));
-                }
-                catch (Exception ex)
-                {
-                    result = HoleTableStaleness.CouldNot(FailureText("check the stored tables", ex));
-                }
-
-                var item = new HoleTableStoredViewCheck(sheet.Key, sheet.Name, view.Key, view.Name, result.Text);
-                if (result.Kind == HoleTableStalenessKind.OutOfDate)
-                {
-                    OutOfDateViews.Add(item);
-                }
-                else if (result.Kind == HoleTableStalenessKind.CouldNotCheck)
-                {
-                    CouldNotCheckViews.Add(item);
-                }
-            }
+        foreach (var item in found.CouldNotCheck)
+        {
+            CouldNotCheckViews.Add(item);
         }
 
         StoredCheckChanged();
@@ -638,7 +564,7 @@ public sealed class HoleTableWizardViewModel : ObservableObject
             }
             else
             {
-                ok = UpdateStored(item.SheetKey, item.ViewKey, item.SheetName, item.ViewName, out text);
+                ok = HoleTableStoredUpdate.Run(_source, item.SheetKey, item.ViewKey, item.SheetName, item.ViewName, out text);
             }
 
             results.Add(HoleTableMessages.ViewLine(item.ViewName, item.SheetName, ok ? text : "Update failed. " + text));
@@ -674,7 +600,7 @@ public sealed class HoleTableWizardViewModel : ObservableObject
         DismissStoredCheckCommand.RaiseCanExecuteChanged();
     }
 
-    public const string NoStoredTablesText = "This view has no stored hole tables. Create them first.";
+    public const string NoStoredTablesText = HoleTableMessages.NoStoredTables;
 
     private void Swap()
     {

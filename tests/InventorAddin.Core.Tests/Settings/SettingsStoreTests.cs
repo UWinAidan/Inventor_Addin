@@ -388,6 +388,7 @@ public sealed class SettingsStoreTests : IDisposable
             s => s with { LastHoleMm = new HoleLastChoices { Kind = "Tapped", Size = "M5" } },
             s => s with { LastHoleIn = new HoleLastChoices { Kind = "Dowel", Fit = "Press" } },
             s => s with { HoleDiagramExpanded = false },
+            s => s with { CheckHoleTablesAutomatically = false },
             s => s with { PreferredMaterials = new[] { "Test Steel" } },
         };
         var settableProperties = typeof(AddinSettings).GetProperties().Count(p => p.CanWrite);

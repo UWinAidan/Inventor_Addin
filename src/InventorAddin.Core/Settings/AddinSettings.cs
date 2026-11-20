@@ -295,6 +295,12 @@ public sealed record AddinSettings
     public bool HoleDiagramExpanded { get; set; } = true;
 
     /// <summary>
+    /// Whether the add-in checks a drawing's stored hole tables when the drawing becomes active or updates, and offers
+    /// Update when they are out of date (task 175; spec 04, "Update"). On by default; a settings file without it loads as on.
+    /// </summary>
+    public bool CheckHoleTablesAutomatically { get; set; } = true;
+
+    /// <summary>
     /// A copy of a dowel seat map as the settings keep it: keys trimmed and matched ignoring case (the first wins),
     /// blank keys and null entries dropped; empty for null.
     /// </summary>
@@ -363,6 +369,7 @@ public sealed record AddinSettings
         && LastHoleMm == other.LastHoleMm
         && LastHoleIn == other.LastHoleIn
         && HoleDiagramExpanded == other.HoleDiagramExpanded
+        && CheckHoleTablesAutomatically == other.CheckHoleTablesAutomatically
         && PreferredMaterials.SequenceEqual(other.PreferredMaterials, StringComparer.Ordinal);
 
     public override int GetHashCode()
@@ -396,6 +403,7 @@ public sealed record AddinSettings
         hash.Add(LastHoleMm);
         hash.Add(LastHoleIn);
         hash.Add(HoleDiagramExpanded);
+        hash.Add(CheckHoleTablesAutomatically);
         foreach (var material in PreferredMaterials)
             hash.Add(material, StringComparer.Ordinal);
         return hash.ToHashCode();
