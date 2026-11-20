@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 2 (fix from Aidan's check of 174 to 176, 2026-11-20)
 - **Feature spec:** `docs/features/04-hole-table-wizard.md` ("Decided behaviour": Update; open question 23)
-- **Status:** todo
+- **Status:** done
 - **Depends on:** 175, 176
 - **Needs:** cloud (Core only; runs on Windows too)
 - **Parallel-safe with:** 179, 180
@@ -41,9 +41,9 @@ Out of scope: anything under `src/InventorAddin`. The add-in already passes the 
 
 Filled in by the implementer.
 
-- **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):**
-- **Inventor API members not confirmed:**
+- **Ran:** `dotnet build src/InventorAddin.Core` (0 errors); `dotnet test tests/InventorAddin.Core.Tests`: first run 2 failed (RenamePlan timing, flaky), rerun 4944 passed, 0 failed. 7 new tests (5 staleness fingerprint, 2 auto-check).
+- **Not compiled (changed under `src/InventorAddin`):** none. `HoleTableAutoChecker.CheckAndPrompt` already passes `result.OutOfDate` items (filtered with `.Where`, which keeps the same objects) to `_policy.Later`, so the fingerprint travels with them; no add-in change needed.
+- **Inventor API members not confirmed:** none (Core only).
 - **Manual checklist for Inventor:**
   1. Drawing with stored hole tables. Move a hole in the part, save, go back to the drawing: the window comes up. Choose Later.
   2. Switch away and back with nothing changed: no window.

@@ -29,6 +29,35 @@ public sealed record HoleTableStaleness(
 {
     public bool IsOutOfDate => Kind == HoleTableStalenessKind.OutOfDate;
 
+    /// <summary>
+    /// A short stable hash of what Update would draw for the view: every plan row (table, tag, XDIM and YDIM text as drawn,
+    /// the group's description key) and the gone hole ids, in ordinal order. Empty when the view could not be checked.
+    /// The automatic check remembers Later against it, so any real change to the hole data asks again (task 177).
+    /// </summary>
+    public string Fingerprint { get; init; } = "";
+
+    private static string ComputeFingerprint(HoleTableRefresh refresh)
+    {
+        const char sep = '\u001f';
+        var lines = new List<string>();
+        foreach (var group in refresh.Plan.AllGroups)
+        {
+            foreach (var row in group.Rows)
+            {
+                lines.Add(string.Join(sep, "R", group.Table.ToString(), row.Tag, row.XText, row.YText, group.Description.Key));
+            }
+        }
+
+        foreach (var id in refresh.GoneIds)
+        {
+            lines.Add("G" + sep + id);
+        }
+
+        lines.Sort(StringComparer.Ordinal);
+        var bytes = System.Text.Encoding.UTF8.GetBytes(string.Join('\n', lines));
+        return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes));
+    }
+
     /// <summary>The reasons in words, for example <c>2 holes moved, 1 hole added.</c>; the failure reason for "could not be checked".</summary>
     public string Text => HoleTableMessages.StalenessText(this);
 
@@ -85,7 +114,10 @@ public sealed record HoleTableStaleness(
         var upToDate = moved == 0 && added.Count == 0 && refresh.GoneIds.Count == 0 && descriptions == 0;
         return new HoleTableStaleness(
             upToDate ? HoleTableStalenessKind.UpToDate : HoleTableStalenessKind.OutOfDate,
-            moved, added.Count, refresh.GoneIds.Count, descriptions, analysis.LeftOutCount, state.Drawn is null);
+            moved, added.Count, refresh.GoneIds.Count, descriptions, analysis.LeftOutCount, state.Drawn is null)
+        {
+            Fingerprint = ComputeFingerprint(refresh),
+        };
     }
 
     public static HoleTableStaleness CouldNot(string reason) =>

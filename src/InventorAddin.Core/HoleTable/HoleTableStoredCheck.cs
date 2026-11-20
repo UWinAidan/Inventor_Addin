@@ -53,7 +53,7 @@ public static class HoleTableStoredCheck
                     result = HoleTableStaleness.CouldNot(FailureText("check the stored tables", ex));
                 }
 
-                var item = new HoleTableStoredViewCheck(sheet.Key, sheet.Name, view.Key, view.Name, result.Text);
+                var item = new HoleTableStoredViewCheck(sheet.Key, sheet.Name, view.Key, view.Name, result.Text) { Fingerprint = result.Fingerprint };
                 if (result.Kind == HoleTableStalenessKind.OutOfDate)
                 {
                     outOfDate.Add(item);

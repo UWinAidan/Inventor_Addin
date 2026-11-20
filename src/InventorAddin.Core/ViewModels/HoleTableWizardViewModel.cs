@@ -92,6 +92,9 @@ public sealed class HoleTableWizardGroup : ObservableObject
 /// <param name="Reason">The reasons in words (<c>2 holes moved, 1 hole added.</c>), or why the check or the Update failed.</param>
 public sealed record HoleTableStoredViewCheck(string SheetKey, string SheetName, string ViewKey, string ViewName, string Reason)
 {
+    /// <summary>What Update would draw for the view (<see cref="HoleTable.HoleTableStaleness.Fingerprint"/>); empty when unknown. Later is keyed to it.</summary>
+    public string Fingerprint { get; init; } = "";
+
     /// <summary>For example <c>VIEW1 on Sheet:1: 2 holes moved.</c></summary>
     public string Text => HoleTableMessages.ViewLine(ViewName, SheetName, Reason);
 }

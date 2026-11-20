@@ -314,6 +314,25 @@ public class HoleTableAutoCheckTests
     }
 
     [Fact]
+    public void Later_ThenTheSameReasonWithOtherHoleData_Prompts()
+    {
+        var check = new HoleTableAutoCheck();
+        var before = View("v1", "20 holes moved.") with { Fingerprint = "AAAA" };
+        var after = View("v1", "20 holes moved.") with { Fingerprint = "BBBB" };
+        check.Later(A, [before]);
+        Assert.False(check.ShouldPrompt(A, Out(before)));
+        Assert.True(check.ShouldPrompt(A, Out(after)));
+    }
+
+    [Fact]
+    public void WizardClosed_ThenTheSameReasonWithOtherHoleData_Prompts()
+    {
+        var check = new HoleTableAutoCheck();
+        check.WizardClosed(A, Out(View("v1", "1 hole moved.") with { Fingerprint = "AAAA" }));
+        Assert.True(check.ShouldPrompt(A, Out(View("v1", "1 hole moved.") with { Fingerprint = "BBBB" })));
+    }
+
+    [Fact]
     public void Later_ThenADifferentReasonOrView_Prompts()
     {
         var check = new HoleTableAutoCheck();

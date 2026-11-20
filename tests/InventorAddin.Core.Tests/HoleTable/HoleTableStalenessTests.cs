@@ -85,6 +85,56 @@ public class HoleTableStalenessTests
         Assert.Contains("description", r.Text);
     }
 
+    private static HoleTableStaleness CheckMoved(double x)
+    {
+        var holes = Plate();
+        holes[0] = Plain("P#1", 0.6, x, 1, true);
+        return HoleTableStaleness.Check(Stored(Plate()), Analysis(holes));
+    }
+
+    [Fact]
+    public void The_fingerprint_is_the_same_for_the_same_holes_in_any_input_order()
+    {
+        var a = HoleTableStaleness.Check(Stored(Plate()), Analysis(Plate().Append(Plain("C#3", 0.5, 3, 2))));
+        var b = HoleTableStaleness.Check(Stored(Plate()), Analysis(Plate().Append(Plain("C#3", 0.5, 3, 2)).Reverse()));
+        Assert.NotEqual("", a.Fingerprint);
+        Assert.Equal(a.Fingerprint, b.Fingerprint);
+    }
+
+    [Fact]
+    public void A_hole_moved_again_by_another_amount_changes_the_fingerprint_though_the_text_is_the_same()
+    {
+        var first = CheckMoved(1.5);
+        var second = CheckMoved(1.7);
+        Assert.Equal(first.Text, second.Text);
+        Assert.NotEqual(first.Fingerprint, second.Fingerprint);
+    }
+
+    [Fact]
+    public void A_move_below_the_precision_keeps_the_fingerprint()
+    {
+        var a = HoleTableStaleness.Check(Stored(Plate()), Analysis(Plate()));
+        var nudged = Plate();
+        nudged[0] = Plain("P#1", 0.6, 1.0001, 1, true);
+        var b = HoleTableStaleness.Check(Stored(Plate()), Analysis(nudged));
+        Assert.Equal(a.Fingerprint, b.Fingerprint);
+    }
+
+    [Fact]
+    public void A_changed_description_with_the_same_counts_changes_the_fingerprint()
+    {
+        var a = HoleTableStaleness.Check(Stored(Plate()), Analysis(Plate()));
+        var wider = Plate().Select(h => h.Id.StartsWith('C') ? Plain(h.Id, 0.55, h.SheetXCm, h.SheetYCm) : h).ToList();
+        var b = HoleTableStaleness.Check(Stored(Plate()), Analysis(wider));
+        Assert.NotEqual(a.Fingerprint, b.Fingerprint);
+    }
+
+    [Fact]
+    public void A_view_that_could_not_be_checked_has_no_fingerprint()
+    {
+        Assert.Equal("", HoleTableStaleness.CouldNot("x").Fingerprint);
+    }
+
     [Fact]
     public void Several_reasons_are_listed_together()
     {

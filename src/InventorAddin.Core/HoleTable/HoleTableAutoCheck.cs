@@ -102,7 +102,8 @@ public sealed class HoleTableAutoCheck
 
     /// <summary>
     /// After a check: whether to show the prompt. True only when at least one view is out of date and the out-of-date
-    /// result differs from the one last answered with Later for this drawing. Views that could not be checked do not
+    /// result (the views and their hole data, not just the reason text) differs from the one last answered with Later for
+    /// this drawing. Views that could not be checked do not
     /// prompt (the add-in logs them). A check that finds nothing out of date forgets the remembered Later, so a view that
     /// goes out of date again asks again.
     /// </summary>
@@ -117,7 +118,7 @@ public sealed class HoleTableAutoCheck
         return !(_later.TryGetValue(drawing, out var answered) && answered.SetEquals(Signature(result.OutOfDate)));
     }
 
-    /// <summary>The user chose Later: this result is not asked about again for this drawing in this Inventor session.</summary>
+    /// <summary>The user chose Later: these views with this hole data are not asked about again for this drawing in this Inventor session; a change to the hole data asks again.</summary>
     public void Later(string drawing, IEnumerable<HoleTableStoredViewCheck> outOfDate) =>
         _later[drawing] = Signature(outOfDate);
 
@@ -140,9 +141,13 @@ public sealed class HoleTableAutoCheck
         }
     }
 
-    /// <summary>The result as a set of (sheet key, view key, reason text) so order does not matter.</summary>
+    /// <summary>
+    /// The result as a set of (sheet key, view key, fingerprint of the hole data) so order does not matter. A view with no
+    /// fingerprint falls back to its reason text.
+    /// </summary>
     private static HashSet<string> Signature(IEnumerable<HoleTableStoredViewCheck> views) =>
-        views.Select(v => string.Join("\u001f", v.SheetKey, v.ViewKey, v.Reason)).ToHashSet(StringComparer.Ordinal);
+        views.Select(v => string.Join("\u001f", v.SheetKey, v.ViewKey, v.Fingerprint.Length > 0 ? v.Fingerprint : v.Reason))
+            .ToHashSet(StringComparer.Ordinal);
 
     private void MakeDue(string drawing, DateTime now)
     {
