@@ -495,6 +495,20 @@ Not in part 1: AWB Hole on the Flat Pattern tab (it keeps Inventor's Hole; the S
 - [x] 175 Core: the automatic out-of-date check, its prompt and its setting
 - [x] 176 Add-in: check a drawing's hole tables when it becomes active or updates
 
+**Fixes from Aidan's check of 174 to 176** (2026-11-20; everything else passed). 177: Later is remembered by the hole data, so another real change asks again (176-4 failed). 178: Update keeps the precision table stacked on a clearance table that changed height. 179: a tapped group keeps its drill line after Update. 180: description lengths keep their extra decimals (Ø2.25 in the clearance table). **Order:** 177, 178, 179, 180, one at a time (one Windows build at a time).
+
+| Task | Needs | Depends on | Parallel-safe with |
+|---|---|---|---|
+| 177 | Core | 175, 176 | 179, 180 |
+| 178 | windows (Core and add-in) | 164, 166 | 177, 180 |
+| 179 | windows (Core and add-in) | 156, 163, 170 | 177, 178 |
+| 180 | Core | 156 | 177, 178 |
+
+- [ ] 177 Fix: Later is keyed to the hole data, not the message text
+- [ ] 178 Fix: Update keeps the precision table stacked on the clearance table
+- [ ] 179 Fix: a tapped group keeps its drill line after Update
+- [ ] 180 Fix: description lengths keep their extra decimals
+
 ### M5: Drawing tools (spec 05)
 
 Blocked on question 1 of the spec, which decides which commands exist at all. Includes a custom drawing template whose title block reads every property from the model (Aidan, 2026-10-10): custom print templates with several sheet sizes, sheet colours, and a title block designed with Aidan (Aidan, 2026-10-11). Create Drawing moved to M2 as Create Print.
