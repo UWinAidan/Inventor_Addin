@@ -274,4 +274,54 @@ public static class HoleTableAlign
         new(
             clearanceHeightCm is null ? null : new SheetPoint(titleBlockMaxXCm, titleBlockMaxYCm),
             precisionHeightCm is null ? null : new SheetPoint(titleBlockMaxXCm, titleBlockMaxYCm + (clearanceHeightCm ?? 0)));
+
+    /// <summary>How close (cm) the precision table must be to the stack point to count as stacked.</summary>
+    public const double StackToleranceCm = 0.01;
+
+    /// <summary>
+    /// Where the precision table goes after a redraw that did not align (Update, task 178). A table redrawn in place
+    /// grows upward from its bottom-right corner, so a precision table that sat on the clearance table moves with the
+    /// clearance table's top edge. A precision table the user moved is left alone (null), and so is one that need not move.
+    /// A precision table that did not exist (null before) goes on top of the clearance table where it now is, or on the
+    /// anchor when there is none.
+    /// </summary>
+    /// <param name="anchor">The lone-table spot (task 164).</param>
+    /// <param name="clearanceBefore">The clearance table before the redraw; null when it did not exist.</param>
+    /// <param name="precisionBefore">The precision table's position before; null when it did not exist.</param>
+    /// <param name="clearanceAfter">The clearance table after the redraw; null when it was deleted or does not exist.</param>
+    public static SheetPoint? PrecisionAfterRedraw(
+        SheetPoint anchor, HoleTablePlacement? clearanceBefore, SheetPoint? precisionBefore, HoleTablePlacement? clearanceAfter)
+    {
+        SheetPoint target;
+        if (clearanceAfter is { } after)
+        {
+            target = new SheetPoint(after.Position.XCm, after.Position.YCm + after.HeightCm);
+        }
+        else
+        {
+            // The clearance table is gone: a stacked precision table drops to where it was.
+            target = precisionBefore is not null && clearanceBefore is { } gone ? gone.Position : anchor;
+        }
+
+        if (precisionBefore is not { } old)
+        {
+            return target;
+        }
+
+        var stackPoint = clearanceBefore is { } before
+            ? new SheetPoint(before.Position.XCm, before.Position.YCm + before.HeightCm)
+            : anchor;
+        if (!Near(old, stackPoint))
+        {
+            return null;
+        }
+
+        return Near(old, target) ? null : target;
+    }
+
+    private static bool Near(SheetPoint a, SheetPoint b) =>
+        Math.Abs(a.XCm - b.XCm) <= StackToleranceCm && Math.Abs(a.YCm - b.YCm) <= StackToleranceCm;
 }
+
+/// <summary>A placed table: its bottom-right corner and its height, in cm.</summary>
+public readonly record struct HoleTablePlacement(SheetPoint Position, double HeightCm);

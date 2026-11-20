@@ -305,6 +305,9 @@ namespace InventorAddin.HoleTables
             string viewName = ComSafe.Get(() => view.Name) ?? "";
             var drawer = new HoleTableDrawer(_drawing, _log);
 
+            // The clearance table's place before it can be deleted below, so Draw can drop a stacked precision table onto it (task 178).
+            HoleTablePlacement? clearanceBefore = drawer.ReadPlacement(sheet, sheetKey, viewKey, HoleTableKind.Clearance);
+
             var live = new List<HoleTableKind>();
             var removed = new List<HoleTableKind>();
             foreach (HoleTableKind kind in new[] { HoleTableKind.Precision, HoleTableKind.Clearance })
@@ -318,7 +321,7 @@ namespace InventorAddin.HoleTables
             string message = "";
             if (live.Count > 0)
             {
-                HoleTableDrawResult drawn = drawer.Draw(sheet, view, sheetKey, viewKey, sheetName, viewName, plan, live, align: false);
+                HoleTableDrawResult drawn = drawer.Draw(sheet, view, sheetKey, viewKey, sheetName, viewName, plan, live, align: false, deletedClearance: clearanceBefore);
                 if (!drawn.Changed)
                     throw new InvalidOperationException(drawn.Message); // aborts the transaction, so nothing is left half done
                 message = drawn.Message;

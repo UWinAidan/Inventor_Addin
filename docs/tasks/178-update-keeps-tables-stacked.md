@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 2 (fix from Aidan's check of 174 to 176, 2026-11-20)
 - **Feature spec:** `docs/features/04-hole-table-wizard.md` ("Decided behaviour": Update, Align)
-- **Status:** todo
+- **Status:** done
 - **Depends on:** 164, 166
 - **Needs:** windows (Core and add-in)
 - **Parallel-safe with:** 177, 180
@@ -53,9 +53,11 @@ Out of scope: moving the clearance table when the precision table changes (it gr
 
 Filled in by the implementer.
 
-- **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):**
-- **Inventor API members not confirmed:**
+- **Ran:** `dotnet test tests/InventorAddin.Core.Tests`: 4955 passed, 0 failed (first run had 2 flaky failures in RegisterStoreTests, which passed on rerun). `dotnet build InventorAddin.slnx -p:DeployToInventor=false`: 0 errors, 8 warnings. 11 new tests for `HoleTableAlign.PrecisionAfterRedraw`.
+- **Design:** Core `PrecisionAfterRedraw(anchor, HoleTablePlacement? clearanceBefore, SheetPoint? precisionBefore, HoleTablePlacement? clearanceAfter)`; a new precision table (null before) returns the spot on top of the clearance table where it now is, or the anchor. `HoleTableDrawer.Draw` (align false) reads both tables' placement before redrawing, places a new clearance table on the anchor, then moves or places the precision table by the Core result. New `HoleTableDrawer.ReadPlacement`.
+- **Delete order:** `UpdateCore` deletes a table with no groups before `Draw`, so the clearance symbol is gone by then. `UpdateCore` reads the clearance placement before the delete loop and passes it to `Draw` as `deletedClearance`. Only the `Draw` call and that one read changed in `HoleTableSource.cs`.
+- **Not compiled (changed under `src/InventorAddin`):** none; both files built on Windows with 0 errors (not run in Inventor).
+- **Inventor API members not confirmed:** none new. `SketchedSymbol.Position` (read as `Point2d`, `.X`, `.Y`) was already set in `PlaceSymbol`; the read is not yet exercised in Inventor.
 - **Manual checklist for Inventor:**
   1. Drawing with a clearance and a precision table stacked on the title block. Add two clearance holes in the part, save, Update: the clearance table grows and the precision table moves up with it; no overlap.
   2. Remove clearance holes so the table shrinks, Update: the precision table moves down and still sits on it.

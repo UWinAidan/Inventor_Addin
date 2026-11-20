@@ -134,7 +134,7 @@ namespace InventorAddin.HoleTables
         /// </summary>
         public HoleTableDrawResult Draw(
             Sheet sheet, DrawingView view, string sheetKey, string viewKey, string sheetName, string viewName,
-            HoleTablePlan plan, IReadOnlyList<HoleTableKind> kinds, bool align)
+            HoleTablePlan plan, IReadOnlyList<HoleTableKind> kinds, bool align, HoleTablePlacement? deletedClearance = null)
         {
             SheetPoint? anchor = ReadAnchor(sheet);
             if (anchor == null)
@@ -152,6 +152,11 @@ namespace InventorAddin.HoleTables
             var heights = new Dictionary<HoleTableKind, double?>();
             foreach (HoleTableKind kind in Kinds)
                 heights[kind] = null;
+
+            // Where the tables were before this call redraws anything (task 178). A clearance table that Update deleted
+            // just before is passed in, since its symbol is gone.
+            HoleTablePlacement? clearanceBefore = ReadPlacement(sheet, sheetKey, viewKey, HoleTableKind.Clearance) ?? deletedClearance;
+            SheetPoint? precisionBefore = ReadPlacement(sheet, sheetKey, viewKey, HoleTableKind.Precision)?.Position;
 
             // Heights of tables already on the sheet that this call does not redraw.
             foreach (HoleTableKind kind in Kinds)
@@ -178,15 +183,45 @@ namespace InventorAddin.HoleTables
 
             HoleTableAlignment positions = HoleTableAlign.Positions(
                 anchor.Value.XCm, anchor.Value.YCm, heights[HoleTableKind.Clearance], heights[HoleTableKind.Precision]);
-            foreach (HoleTableKind kind in drawn)
-            {
-                SheetPoint? at = kind == HoleTableKind.Precision ? positions.Precision : positions.Clearance;
-                if (at != null)
-                    PlaceSymbol(sheet, HoleTableNames.Definition(sheetKey, viewKey, kind), at.Value, styles.Layer, moveExisting: align);
-            }
-
             if (align)
+            {
+                foreach (HoleTableKind kind in drawn)
+                {
+                    SheetPoint? at = kind == HoleTableKind.Precision ? positions.Precision : positions.Clearance;
+                    if (at != null)
+                        PlaceSymbol(sheet, HoleTableNames.Definition(sheetKey, viewKey, kind), at.Value, styles.Layer, moveExisting: true);
+                }
+
                 MoveExisting(sheet, sheetKey, viewKey, positions, drawn);
+            }
+            else
+            {
+                // A new clearance table goes on the anchor; one already placed stays where it is.
+                if (drawn.Contains(HoleTableKind.Clearance) && positions.Clearance is { } clearanceAt)
+                    PlaceSymbol(sheet, HoleTableNames.Definition(sheetKey, viewKey, HoleTableKind.Clearance), clearanceAt, styles.Layer, moveExisting: false);
+
+                // The precision table follows the clearance table's top edge if it sat on it; one the user moved stays.
+                HoleTablePlacement? clearanceAfter = null;
+                if (heights[HoleTableKind.Clearance] is { } clearanceHeight
+                    && ReadPlacement(sheet, sheetKey, viewKey, HoleTableKind.Clearance) is { } placed)
+                {
+                    clearanceAfter = new HoleTablePlacement(placed.Position, clearanceHeight);
+                }
+
+                string precisionName = HoleTableNames.Definition(sheetKey, viewKey, HoleTableKind.Precision);
+                bool precisionExists = drawn.Contains(HoleTableKind.Precision) || FindSymbol(sheet, precisionName) != null;
+                if (precisionExists)
+                {
+                    SheetPoint? to = HoleTableAlign.PrecisionAfterRedraw(anchor.Value, clearanceBefore, precisionBefore, clearanceAfter);
+                    if (to is { } target)
+                    {
+                        if (FindSymbol(sheet, precisionName) is { } existing)
+                            existing.Position = _geometry.CreatePoint2d(target.XCm, target.YCm);
+                        else
+                            PlaceSymbol(sheet, precisionName, target, styles.Layer, moveExisting: false);
+                    }
+                }
+            }
 
             return drawn.Count == 0 ? HoleTableDrawResult.Unchanged(HoleTableMessages.Drawn(drawn, viewName)) : HoleTableDrawResult.Done(HoleTableMessages.Drawn(drawn, viewName));
         }
@@ -432,6 +467,22 @@ namespace InventorAddin.HoleTables
             }
 
             return null;
+        }
+
+        /// <summary>A placed table's position and height; null when it is not on the sheet or either cannot be read. Public for Update, which reads a clearance table before deleting it.</summary>
+        public HoleTablePlacement? ReadPlacement(Sheet sheet, string sheetKey, string viewKey, HoleTableKind kind)
+        {
+            string name = HoleTableNames.Definition(sheetKey, viewKey, kind);
+            SketchedSymbol? symbol = FindSymbol(sheet, name);
+            if (symbol == null || FindDefinition(name) is not { } def)
+                return null;
+            double? height = ReadHeight(def);
+            SheetPoint? position = ComSafe.Get(() =>
+            {
+                Point2d p = symbol.Position;
+                return (SheetPoint?)new SheetPoint(p.X, p.Y);
+            });
+            return height is { } h && position is { } at ? new HoleTablePlacement(at, h) : null;
         }
 
         private void PlaceSymbol(Sheet sheet, string definitionName, SheetPoint at, Layer? layer, bool moveExisting)

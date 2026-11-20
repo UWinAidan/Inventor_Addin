@@ -406,4 +406,94 @@ public class HoleTableLayoutTests
         Assert.Null(a.Clearance);
         Assert.Equal(new SheetPoint(40, 5), a.Precision);
     }
+
+    // ---- precision after a redraw that did not align (task 178)
+
+    private static readonly SheetPoint Anchor = new(40, 5);
+
+    [Fact]
+    public void Redraw_clearance_grows_moves_stacked_precision_up()
+    {
+        var r = HoleTableAlign.PrecisionAfterRedraw(
+            Anchor, new HoleTablePlacement(Anchor, 6), new SheetPoint(40, 11), new HoleTablePlacement(Anchor, 8));
+        Assert.Equal(new SheetPoint(40, 13), r);
+    }
+
+    [Fact]
+    public void Redraw_clearance_shrinks_moves_stacked_precision_down()
+    {
+        var r = HoleTableAlign.PrecisionAfterRedraw(
+            Anchor, new HoleTablePlacement(Anchor, 6), new SheetPoint(40, 11), new HoleTablePlacement(Anchor, 4));
+        Assert.Equal(new SheetPoint(40, 9), r);
+    }
+
+    [Fact]
+    public void Redraw_follows_a_clearance_table_the_user_moved()
+    {
+        var moved = new SheetPoint(30, 20);
+        var r = HoleTableAlign.PrecisionAfterRedraw(
+            Anchor, new HoleTablePlacement(moved, 6), new SheetPoint(30, 26), new HoleTablePlacement(moved, 8));
+        Assert.Equal(new SheetPoint(30, 28), r);
+    }
+
+    [Fact]
+    public void Redraw_leaves_a_precision_table_the_user_moved()
+    {
+        var r = HoleTableAlign.PrecisionAfterRedraw(
+            Anchor, new HoleTablePlacement(Anchor, 6), new SheetPoint(40, 11.02), new HoleTablePlacement(Anchor, 8));
+        Assert.Null(r);
+    }
+
+    [Fact]
+    public void Redraw_treats_a_drift_within_the_tolerance_as_stacked()
+    {
+        var r = HoleTableAlign.PrecisionAfterRedraw(
+            Anchor, new HoleTablePlacement(Anchor, 6), new SheetPoint(40.005, 11.005), new HoleTablePlacement(Anchor, 8));
+        Assert.Equal(new SheetPoint(40, 13), r);
+    }
+
+    [Fact]
+    public void Redraw_deleted_clearance_drops_stacked_precision_to_its_old_spot()
+    {
+        var spot = new SheetPoint(30, 20);
+        var r = HoleTableAlign.PrecisionAfterRedraw(
+            Anchor, new HoleTablePlacement(spot, 6), new SheetPoint(30, 26), null);
+        Assert.Equal(spot, r);
+    }
+
+    [Fact]
+    public void Redraw_precision_on_the_anchor_goes_above_a_new_clearance_table()
+    {
+        var r = HoleTableAlign.PrecisionAfterRedraw(Anchor, null, Anchor, new HoleTablePlacement(Anchor, 6));
+        Assert.Equal(new SheetPoint(40, 11), r);
+    }
+
+    [Fact]
+    public void Redraw_precision_alone_on_the_anchor_stays()
+    {
+        Assert.Null(HoleTableAlign.PrecisionAfterRedraw(Anchor, null, Anchor, null));
+    }
+
+    [Fact]
+    public void Redraw_with_no_height_change_returns_null()
+    {
+        var r = HoleTableAlign.PrecisionAfterRedraw(
+            Anchor, new HoleTablePlacement(Anchor, 6), new SheetPoint(40, 11), new HoleTablePlacement(Anchor, 6));
+        Assert.Null(r);
+    }
+
+    [Fact]
+    public void Redraw_new_precision_goes_on_top_of_the_clearance_table_where_it_is()
+    {
+        var spot = new SheetPoint(30, 20);
+        var r = HoleTableAlign.PrecisionAfterRedraw(
+            Anchor, new HoleTablePlacement(spot, 6), null, new HoleTablePlacement(spot, 6));
+        Assert.Equal(new SheetPoint(30, 26), r);
+    }
+
+    [Fact]
+    public void Redraw_new_precision_with_no_clearance_goes_on_the_anchor()
+    {
+        Assert.Equal(Anchor, HoleTableAlign.PrecisionAfterRedraw(Anchor, null, null, null));
+    }
 }
