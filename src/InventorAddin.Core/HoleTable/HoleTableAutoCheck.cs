@@ -71,6 +71,9 @@ public sealed class HoleTableAutoCheck
         _later.Remove(drawing);
     }
 
+    /// <summary>Whether any drawing has a check waiting. The add-in's timer runs only while this is true.</summary>
+    public bool AnyPending => _due.Count > 0;
+
     /// <summary>Whether a check is waiting for this drawing (due now or after the quiet time).</summary>
     public bool IsPending(string drawing) => _due.ContainsKey(drawing);
 

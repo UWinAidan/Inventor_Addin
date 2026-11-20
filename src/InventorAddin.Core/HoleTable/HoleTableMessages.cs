@@ -1,3 +1,5 @@
+using InventorAddin.Core.ViewModels;
+
 namespace InventorAddin.Core.HoleTable;
 
 /// <summary>The hole table wizard's user-facing texts, in one place. Later tasks add to it.</summary>
@@ -119,6 +121,25 @@ public static class HoleTableMessages
 
     /// <summary>The prefix a failed update's reason gets.</summary>
     public const string UpdateFailedPrefix = "Update failed. ";
+
+    /// <summary>
+    /// The log line for one automatic check, for example
+    /// <c>Hole table check: Plate.idw, 1 view out of date (VIEW1 on Sheet:1: 2 holes moved.), 0.4 s</c>.
+    /// </summary>
+    public static string AutoCheckLogLine(string drawingName, HoleTableStoredCheckResult result, double seconds)
+    {
+        var text = new System.Text.StringBuilder($"Hole table check: {drawingName}, ");
+        text.Append(result.OutOfDate.Count == 0
+            ? "no views out of date"
+            : $"{Count(result.OutOfDate.Count, "view")} out of date ({string.Join("; ", result.OutOfDate.Select(v => v.Text))})");
+        if (result.CouldNotCheck.Count > 0)
+        {
+            text.Append($", {Count(result.CouldNotCheck.Count, "view")} could not be checked ({string.Join("; ", result.CouldNotCheck.Select(v => v.Text))})");
+        }
+
+        text.Append(string.Format(System.Globalization.CultureInfo.InvariantCulture, ", {0:0.0} s", seconds));
+        return text.ToString();
+    }
 
     private static string Count(int n, string noun) => n == 1 ? $"1 {noun}" : $"{n} {noun}s";
 }

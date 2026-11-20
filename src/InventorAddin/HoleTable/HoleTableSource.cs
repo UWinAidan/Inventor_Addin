@@ -58,7 +58,16 @@ namespace InventorAddin.HoleTables
 
         public string DrawingName => ComSafe.Get(() => _drawing.DisplayName) ?? "";
 
-        public IReadOnlyList<HoleTableSheetInfo> GetSheets()
+        public IReadOnlyList<HoleTableSheetInfo> GetSheets() => ListSheets(assignKeys: true);
+
+        /// <summary>
+        /// The sheets that already have a key (task 176), for the automatic check. Unlike <see cref="GetSheets"/> it never
+        /// calls <c>WriteKeys</c>, so it starts no transaction: no undo entry, and the drawing is not marked changed. A sheet
+        /// with no key cannot hold stored tables, so leaving it out loses nothing.
+        /// </summary>
+        public IReadOnlyList<HoleTableSheetInfo> GetKeyedSheets() => ListSheets(assignKeys: false);
+
+        private IReadOnlyList<HoleTableSheetInfo> ListSheets(bool assignKeys)
         {
             var warnings = new List<string>();
             var list = new List<HoleTableSheetInfo>();
@@ -69,7 +78,8 @@ namespace InventorAddin.HoleTables
 
             var sets = sheets.Select(s => (Func<AttributeSets>)(() => s.AttributeSets)).ToList();
             List<string?> keys = ReadKeys(sets, warnings, out List<int> needKey);
-            WriteKeys(sets, keys, needKey, warnings, "Sheet key");
+            if (assignKeys)
+                WriteKeys(sets, keys, needKey, warnings, "Sheet key");
             for (int i = 0; i < sheets.Count; i++)
             {
                 Sheet sheet = sheets[i];

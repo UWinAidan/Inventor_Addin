@@ -368,3 +368,68 @@ public class HoleTableAutoCheckTests
         Assert.True(check.ShouldPrompt(A, Out(View("v1", "x"))));
     }
 }
+
+public class HoleTableAutoCheckPendingTests
+{
+    private static readonly DateTime T0 = new(2026, 1, 1, 12, 0, 0);
+
+    [Fact]
+    public void AnyPending_follows_the_due_list()
+    {
+        var policy = new HoleTableAutoCheck();
+        Assert.False(policy.AnyPending);
+
+        policy.DrawingActivated("a.idw", T0);
+        Assert.True(policy.AnyPending);
+
+        var context = new HoleTableAutoCheckContext("a.idw", true, false, false);
+        Assert.Equal("a.idw", policy.TakeDue(context, T0 + HoleTableAutoCheck.QuietTime));
+        Assert.False(policy.AnyPending);
+    }
+
+    [Fact]
+    public void AnyPending_is_cleared_by_close_and_by_switching_the_setting_off()
+    {
+        var policy = new HoleTableAutoCheck();
+        policy.DrawingUpdated("a.idw", T0);
+        policy.DrawingUpdated("b.idw", T0);
+        policy.DrawingClosed("a.idw");
+        Assert.True(policy.AnyPending);
+
+        policy.Enabled = false;
+        Assert.False(policy.AnyPending);
+    }
+}
+
+public class HoleTableAutoCheckLogLineTests
+{
+    private static HoleTableStoredViewCheck View(string reason) => new("s", "Sheet:1", "v", "VIEW1", reason);
+
+    [Fact]
+    public void One_view_out_of_date_names_it_and_the_time()
+    {
+        var result = new HoleTableStoredCheckResult([View("2 holes moved.")], []);
+        Assert.Equal(
+            "Hole table check: Plate.idw, 1 view out of date (VIEW1 on Sheet:1: 2 holes moved.), 0.4 s",
+            HoleTableMessages.AutoCheckLogLine("Plate.idw", result, 0.4));
+    }
+
+    [Fact]
+    public void Nothing_out_of_date_says_so()
+    {
+        var result = new HoleTableStoredCheckResult([], []);
+        Assert.Equal("Hole table check: Plate.idw, no views out of date, 0.0 s", HoleTableMessages.AutoCheckLogLine("Plate.idw", result, 0.01));
+    }
+
+    [Fact]
+    public void Several_views_and_unreadable_views_are_listed()
+    {
+        var result = new HoleTableStoredCheckResult(
+            [View("1 hole added."), new("s", "Sheet:2", "w", "VIEW2", "1 hole removed.")],
+            [new("s", "Sheet:1", "x", "VIEW3", "Could not check the stored tables: x")]);
+        Assert.Equal(
+            "Hole table check: Plate.idw, 2 views out of date (VIEW1 on Sheet:1: 1 hole added.; VIEW2 on Sheet:2: 1 hole removed.), " +
+            "1 view could not be checked (VIEW3 on Sheet:1: Could not check the stored tables: x), 1.2 s",
+            HoleTableMessages.AutoCheckLogLine("Plate.idw", result, 1.23));
+    }
+}

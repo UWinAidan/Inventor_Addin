@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 2 (request from Aidan, 2026-11-20)
 - **Feature spec:** `docs/features/04-hole-table-wizard.md` ("Decided behaviour": Update)
-- **Status:** todo
+- **Status:** done
 - **Depends on:** 175
 - **Needs:** windows (add-in; Aidan checks in Inventor)
 - **Parallel-safe with:** none
@@ -29,11 +29,11 @@ Out of scope: Core changes (task 175), unless a gap is found; then stop and say 
 
 ## Acceptance criteria
 
-- [ ] `dotnet build InventorAddin.slnx -p:DeployToInventor=false` on Windows: 0 errors. `dotnet test tests/InventorAddin.Core.Tests` passes (includes the XAML style rules).
-- [ ] Every Inventor API member used is confirmed by reflection on `C:\Program Files\Autodesk\Inventor 2026\Bin\Autodesk.Inventor.Interop.dll` or by existing use; list them in Verification.
-- [ ] The automatic check adds no undo entry and does not mark the drawing changed (keyed-only listing of sheets and views).
-- [ ] Event handlers unsubscribe on `Deactivate`; the timer stops when nothing is due.
-- [ ] The manual checklist below is filled in.
+- [x] `dotnet build InventorAddin.slnx -p:DeployToInventor=false` on Windows: 0 errors. `dotnet test tests/InventorAddin.Core.Tests` passes (includes the XAML style rules).
+- [x] Every Inventor API member used is confirmed by reflection on `C:\Program Files\Autodesk\Inventor 2026\Bin\Autodesk.Inventor.Interop.dll` or by existing use; list them in Verification.
+- [x] The automatic check adds no undo entry and does not mark the drawing changed (keyed-only listing of sheets and views).
+- [x] Event handlers unsubscribe on `Deactivate`; the timer stops when nothing is due.
+- [x] The manual checklist below is filled in.
 
 ## Notes for the implementer
 
@@ -47,14 +47,26 @@ Out of scope: Core changes (task 175), unless a gap is found; then stop and say 
 
 ## Verification
 
-Filled in by the implementer.
-
-- **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):**
-- **Inventor API members not confirmed:**
-- **Manual checklist for Inventor:**
-  1. …
+- **Ran:** Inventor was not running. `dotnet build InventorAddin.slnx -p:DeployToInventor=false`: 0 errors (8 existing CS8600 warnings in other commands). `dotnet test tests/InventorAddin.Core.Tests`: 4937 passed, 0 failed (includes the XAML style rules; 5 new tests: `AnyPending` x2, `AutoCheckLogLine` x3). One earlier run showed 2 unrelated Numbering failures on a temp folder that did not exist; they passed on rerun. Nothing was run inside Inventor.
+- **Not compiled (changed under `src/InventorAddin`):** none; all of it built on Windows. It is built but not run in Inventor: `HoleTable/HoleTableAutoChecker.cs` (new), `HoleTable/HoleTableSource.cs`, `UI/HoleTableOutOfDateWindow.xaml(.cs)` (new), `UI/WindowHost.cs`, `UI/SettingsWindow.xaml`, `Commands/HoleTableCommand.cs`, `StandardAddInServer.cs`. Core: `HoleTableAutoCheck.AnyPending`, `HoleTableMessages.AutoCheckLogLine`.
+- **Inventor API members:** confirmed by reflection on `Autodesk.Inventor.Interop.dll` and by the build: `Application.ApplicationEvents`, `ApplicationEvents.OnActivateDocument` / `OnDocumentChange` / `OnCloseDocument` (handler parameters read by reflection: `_Document`, `EventTimingEnum`, `CommandTypesEnum ReasonsForChange` on change, `string FullDocumentName` on close, `NameValueMap`, `out HandlingCodeEnum`), `EventTimingEnum.kAfter`, `HandlingCodeEnum.kEventNotHandled`, `CommandTypesEnum.kUpdateWithReferencesCmdType`, `_Document.DocumentType`, `_Document.FullDocumentName`, `DocumentTypeEnum.kDrawingDocumentObject`, `Application.ActiveDocument`, `Application.ActiveEditObject`, `CommandManager._ActiveCommand` (returns `CommandIDEnum`), `CommandManager.ActiveCommand` (returns `string`), `CommandIDEnum.kDefaultCommand` and `Sheet.Parent` (returns `object`). Not confirmed at run time: that `_ActiveCommand` returns `kDefaultCommand` whenever no command is running (the first "waiting" line for a command logs both `_ActiveCommand` and `ActiveCommand`), and that `ActiveEditObject` in a plain drawing is the drawing or one of its sheets, not some third type. The log line `Hole table check: waiting, ...` (once per reason) shows what was returned. Item 1 below tests this.
+- **Manual checklist for Inventor:** use a drawing with at least one view that has hole tables made by the Hole Table wizard, and a second drawing with no hole tables. Setting "Check hole tables when a drawing opens or updates" is on (default). Log: `%APPDATA%\AwbAddin\awbaddin.log`.
+  1. Activation: close the drawing, open it (or switch to its tab from another document). With nothing changed, wait 3 seconds. Expect no window. If it does not behave so, read the `Hole table check: waiting` lines in the log: they give the command values (`_ActiveCommand` and `ActiveCommand`) or the edit object type that held it back. The log has one `Hole table check: NAME.idw, no views out of date, 0.x s` line. If it has only `Hole table check: waiting, ...` lines, tell me the reason text.
+  2. Update after a part edit: open the drawing, open its part, move a hole or add one, save, return to the drawing (or let it update). Expect a small "Hole Table" window after about 2 seconds, headed "Some hole tables in NAME.idw are out of date:", with a line such as `VIEW1 on Sheet:1: 1 hole moved.`, and buttons Update now (default, Enter) and Later (Esc). The log has an out-of-date line naming the view and the time taken.
+  3. Part active: with the part (not the drawing) active, make the drawing out of date. Expect no window while the part is active; the window appears about 2 seconds after switching to the drawing.
+  4. Later, then the same: click Later. Switch away from the drawing and back. Expect no window (same result as answered). The log has `answered Later`.
+  5. Later, then a different change: change the part again so the result differs (another hole moved or added). Return to the drawing. Expect the window again.
+  6. Update now with one Undo per view: with two or more out-of-date views, click Update now. Expect the window to close and the tables to redraw. Press Undo once: one view's tables go back. Undo again: the next view's. The log has `answered Update now` and the result text.
+  7. Update failure (optional, if you can make one): if a view cannot be updated, expect the window to stay with the heading "...could not be updated:", the reason lines starting "Update failed.", and the button reading Close. Closing it should not prompt again at once for the same failures.
+  8. Wizard open: open the Hole Table wizard on an out-of-date drawing. Expect the wizard's own message panel and no second window from the automatic check. Close the wizard with Cancel. Expect no prompt. The log shows one check line after it closes. Open a different out-of-date change afterwards and confirm the prompt returns.
+  9. Wizard closed: with nothing open, do step 2 again and confirm the prompt appears (the wizard's flag was cleared).
+  10. Setting off: in Settings, untick "Check hole tables when a drawing opens or updates", Save. Repeat steps 1 and 2. Expect no window and no `Hole table check` lines in the log for those events.
+  11. No undo entry or save prompt: set the setting on, open a drawing that has hole tables and is saved, wait for the check, with nothing out of date. Expect the Undo button to be greyed (or its last entry unchanged) and the drawing to show no unsaved-change mark; closing it must not ask to save. Repeat with a drawing that has views but no hole tables.
+  12. While a command runs: start a sketch or a dimension command in the drawing right after it updates. Expect the check to wait until the command ends, not to open a window over it.
 
 ## Follow-ups
 
-Things noticed but not done.
+- The wait conditions (idle command, drawing in edit) use `CommandManager._ActiveCommand` and `Application.ActiveEditObject` as the brief describes. If checklist item 1 shows only "Hole table check: waiting" lines, the logged `_ActiveCommand` and `ActiveCommand` values, or the edit object's type, show which idle test to change.
+- `WindowHost.IsAnyOpen` counts only windows shown through `WindowHost`; a WinForms `MessageBox` open at the time is not counted. A running command covers most such cases.
+- Unsaved drawings (empty `FullDocumentName`) are never checked.
+- The timer keeps ticking every 500 ms while a check is pending for a drawing that is not the active one.

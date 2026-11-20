@@ -54,7 +54,18 @@ namespace InventorAddin.Commands
 
             var source = new HoleTableSource((DrawingDocument)doc, AddinServices.Settings, AddinServices.Log);
             var viewModel = new HoleTableWizardViewModel(source);
-            WindowHost.ShowDialog(new HoleTableWindow(viewModel), IconNames.HoleTable, stateKey: "HoleTable");
+            var drawing = (DrawingDocument)doc;
+            HoleTableAutoChecker? checker = HoleTableAutoChecker.Current;
+            checker?.WizardOpened(drawing);
+            try
+            {
+                WindowHost.ShowDialog(new HoleTableWindow(viewModel), IconNames.HoleTable, stateKey: "HoleTable");
+            }
+            finally
+            {
+                // The wizard has asked about its stored tables; the automatic check runs once more, quietly (task 176).
+                checker?.WizardClosed(drawing);
+            }
         }
     }
 }
