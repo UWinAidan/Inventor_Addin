@@ -176,4 +176,38 @@ public class HoleTableTests
     {
         Assert.Equal(expected, HoleTableDecimals.For(precision, units));
     }
+
+    private static readonly TappedRow M6Row = new(3, HoleUnits.Metric, "M6", 6m, 1m, 5.0m, "6H", 9m, 12m, false);
+
+    private static InventorHoleFacts TappedFacts(double? diameter) => Facts(HoleSeat.None, tapped: true, diameter: diameter);
+
+    private static double? TappedDrill(double? facts, double? stored, TappedRow? row) =>
+        HoleTableHoles.From("H", TappedFacts(facts), null, HoleUnits.Metric, Centres, null, null, stored, row)[0].DrillDiameterCm;
+
+    [Fact]
+    public void Tapped_StoredDiameterWinsOverInventors() => Assert.Equal(0.5, TappedDrill(0.52, 0.5, M6Row));
+
+    [Fact]
+    public void Tapped_NoFactsDiameter_TakesTheStoredOne() => Assert.Equal(0.5, TappedDrill(null, 0.5, null));
+
+    [Fact]
+    public void Tapped_NoStoredData_TakesInventorsDiameter() => Assert.Equal(0.52, TappedDrill(0.52, null, M6Row));
+
+    [Fact]
+    public void Tapped_NeitherDiameter_TakesTheRowsTapDrill() => Assert.Equal(0.5, TappedDrill(null, null, M6Row)!.Value, 6);
+
+    [Fact]
+    public void Tapped_NoneOfTheThree_HasNoDrill() => Assert.Null(TappedDrill(null, null, null));
+
+    [Fact]
+    public void Tapped_StoredDrillGivesTheDescriptionsDrillLine()
+    {
+        var f = TappedFacts(null) with { ThreadDesignation = "M6x1", DepthCm = 1.2, Termination = HoleTermination.Distance };
+        var h = HoleTableHoles.From("H", f, null, HoleUnits.Metric, Centres, null, null, 0.5, null)[0];
+        Assert.StartsWith("⌀" + "5.0", HoleTableDescriptions.For(h).PlainLines[0]);
+    }
+
+    [Fact]
+    public void NotTapped_IgnoresStoredDiameterAndRow() =>
+        Assert.Equal(0.65, HoleTableHoles.From("H", Facts(), null, HoleUnits.Metric, Centres, null, null, 0.4, M6Row)[0].DrillDiameterCm);
 }

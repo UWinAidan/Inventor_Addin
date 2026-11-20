@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 2 (fix from Aidan's check of 174 to 176, 2026-11-20)
 - **Feature spec:** `docs/features/04-hole-table-wizard.md` ("Target output"; open questions 11 and 19)
-- **Status:** todo
+- **Status:** done
 - **Depends on:** 156, 163, 170
 - **Needs:** windows (Core and add-in)
 - **Parallel-safe with:** 177, 178
@@ -44,9 +44,11 @@ Out of scope: the description layout; taper tapped holes; the AWB Hole window.
 
 Filled in by the implementer.
 
-- **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):**
-- **Inventor API members not confirmed:**
+- **Ran:** `dotnet test tests/InventorAddin.Core.Tests`: 4965 passed, 0 failed (first run had 5 known flaky failures in RenamePlan and similar; passed on rerun). `dotnet build InventorAddin.slnx -p:DeployToInventor=false`: 0 errors, 8 warnings (existing).
+- **Not compiled (changed under `src/InventorAddin`):** none; `HoleTable/HoleTableSource.cs` was built on Windows (0 errors). Not run in Inventor.
+- **Inventor API members not confirmed:** none new. The stored diameter is `stored?.Data?.Applied.HoleDiameterCm` (`HoleStoredData.Applied`, `HoleAppliedState.HoleDiameterCm`, Core types; the same path `HoleReapply` uses).
+- **Why Update lost the drill line:** not proven without Inventor. Update and Create Tables both build a fresh `HoleTableSource` and read through the same `ReadHole`, so nothing on the Update path reads the hole differently. The cause is most likely `HoleFeature.HoleDiameter` not reading for the tapped hole (task 170), which the old code left as no drill line. The new log warning will name any hole where all three sources fail.
+- **Changes:** `HoleTableHoles.From` takes `storedHoleDiameterCm` and `tappedRow` (order: stored, Inventor, row; taper unchanged). `HoleReadBack.TappedRowFor` added; `TapDrillCm` now reuses it instead of its own copy of the match. Tests added in `HoleTableTests` (order, description line) and `HoleTableViewRulesTests` (row lookup).
 - **Manual checklist for Inventor:**
   1. Drawing whose tables have an M6 tapped group made with AWB Hole. Move a hole in the part, save, Update: the tapped group still shows `Ø5.0 ↧ 12.0` above `M6x1 - 6H ↧ 9.0`.
   2. The log has no `is tapped but its tap drill could not be read` line for that hole. If it does, send me the line.

@@ -36,7 +36,9 @@ public sealed record HoleTableCentre(string ReferenceKey, int Index, double Shee
 /// <param name="Units">The hole's own units: the AWB spec's, else the drawing's.</param>
 /// <param name="DrillDiameterCm">
 /// The diameter the hole sorts and is described by (spec 04 question 11): the through hole, or the tap drill. A taper
-/// tapped hole has none in Inventor, so it takes the AWB Taper Tapped row's tap drill, else null.
+/// tapped hole has none in Inventor, so it takes the AWB Taper Tapped row's tap drill, else null. A straight tapped
+/// hole takes, in order: the AWB stored data's applied hole diameter, Inventor's hole diameter, the AWB Tapped row's tap
+/// drill (task 179); the thread's own diameter parameter may be unreadable.
 /// </param>
 /// <param name="SeatDiameterCm">The counterbore, countersink or spotface diameter.</param>
 /// <param name="SeatDepthCm">The counterbore or spotface depth; null for a countersink.</param>
@@ -92,6 +94,14 @@ public static class HoleTableHoles
     /// centimetres here) is the drill diameter of a taper tapped hole, which has none in Inventor (spike 108).
     /// </param>
     /// <param name="tolerance">The diameter tolerance, when the hole has one.</param>
+    /// <param name="storedHoleDiameterCm">
+    /// The applied hole diameter in the AWB stored data (the tap drill AWB Hole modelled), when the hole has it; first
+    /// choice for a straight tapped hole (task 179).
+    /// </param>
+    /// <param name="tappedRow">
+    /// The AWB Tapped row of the hole's thread; its tap drill (converted to centimetres here) is the last choice for a
+    /// straight tapped hole, after the stored diameter and Inventor's (task 179).
+    /// </param>
     public static IReadOnlyList<HoleTableHole> From(
         string featureName,
         InventorHoleFacts facts,
@@ -99,7 +109,9 @@ public static class HoleTableHoles
         HoleUnits units,
         IReadOnlyList<HoleTableCentre> centres,
         TaperTappedRow? taperTappedRow = null,
-        HoleTolerance? tolerance = null)
+        HoleTolerance? tolerance = null,
+        double? storedHoleDiameterCm = null,
+        TappedRow? tappedRow = null)
     {
         ArgumentNullException.ThrowIfNull(featureName);
         ArgumentNullException.ThrowIfNull(facts);
@@ -114,6 +126,12 @@ public static class HoleTableHoles
             // Inventor gives a taper tapped hole no drill diameter, and its figure differs from AWB's for some sizes
             // (spike 160); AWB's row wins when given (spec 04 question 11).
             drill = HoleRules.ToCm(taperTappedRow.TapDrill, taperTappedRow.Units);
+        }
+        else if (type == HoleTableType.Tapped)
+        {
+            // The thread's diameter parameter may not read; the stored tap drill, Inventor's, then the row's (task 179).
+            drill = storedHoleDiameterCm ?? facts.HoleDiameterCm
+                ?? (tappedRow is null ? null : HoleRules.ToCm(tappedRow.TapDrill, tappedRow.Units));
         }
 
         double? seatDiameter = null, seatDepth = null, seatAngle = null;

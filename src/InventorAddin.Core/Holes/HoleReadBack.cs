@@ -240,6 +240,26 @@ public static class HoleReadBack
     }
 
     /// <summary>
+    /// The Tapped row of a straight thread's designation and thread type (case and edge spaces ignored); null for a
+    /// hole that is not a straight thread or a thread not in the workbook.
+    /// </summary>
+    public static TappedRow? TappedRowFor(InventorHoleFacts facts, HoleWorkbook workbook)
+    {
+        ArgumentNullException.ThrowIfNull(facts);
+        ArgumentNullException.ThrowIfNull(workbook);
+        if (!facts.Tapped || facts.TaperedThread)
+        {
+            return null;
+        }
+
+        var designation = facts.ThreadDesignation?.Trim() ?? "";
+        var threadType = facts.ThreadType?.Trim();
+        bool Same(string a, string? b) => string.Equals(a.Trim(), b, StringComparison.OrdinalIgnoreCase);
+        return workbook.Tapped.FirstOrDefault(r =>
+            Same(r.Designation, designation) && (threadType is null || Same(r.ThreadType, threadType)));
+    }
+
+    /// <summary>
     /// The tap drill a threaded hole of <paramref name="facts"/> is modelled at, in centimetres: the Tapped row of its
     /// designation and thread type, or the Taper Tapped row of its size and thread type (the row's tap drill, as the
     /// window takes it; spec 09 question 21). Null for a hole that is not threaded or a thread not in the workbook.
@@ -253,18 +273,13 @@ public static class HoleReadBack
             return null;
         }
 
-        var designation = facts.ThreadDesignation?.Trim() ?? "";
-        var threadType = facts.ThreadType?.Trim();
-        bool Same(string a, string? b) => string.Equals(a.Trim(), b, StringComparison.OrdinalIgnoreCase);
-
         if (facts.TaperedThread)
         {
             var taper = TaperTappedRowFor(facts, workbook);
             return taper is null ? null : HoleRules.ToCm(taper.TapDrill, taper.Units);
         }
 
-        var row = workbook.Tapped.FirstOrDefault(r =>
-            Same(r.Designation, designation) && (threadType is null || Same(r.ThreadType, threadType)));
+        var row = TappedRowFor(facts, workbook);
         return row is null ? null : HoleRules.ToCm(row.TapDrill, row.Units);
     }
 

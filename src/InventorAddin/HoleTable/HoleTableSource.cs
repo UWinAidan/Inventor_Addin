@@ -633,6 +633,9 @@ namespace InventorAddin.HoleTables
             }
 
             TaperTappedRow? taperRow = facts.TaperedThread ? FindTaperRow(facts) : null;
+            bool straightTapped = facts.Tapped && !facts.TaperedThread;
+            TappedRow? tappedRow = straightTapped ? FindTappedRow(facts) : null;
+            double? storedDiameterCm = straightTapped ? stored?.Data?.Applied.HoleDiameterCm : null;
 
             // The centres: sheet position, reference key and 1-based index.
             var centres = new List<HoleTableCentre>();
@@ -649,7 +652,9 @@ namespace InventorAddin.HoleTables
                 kept.Add(point);
             }
 
-            IReadOnlyList<HoleTableHole> built = HoleTableHoles.From(name, facts, awbSpec, units, centres, taperRow, tolerance);
+            IReadOnlyList<HoleTableHole> built = HoleTableHoles.From(name, facts, awbSpec, units, centres, taperRow, tolerance, storedDiameterCm, tappedRow);
+            if (straightTapped && built.Count > 0 && built[0].DrillDiameterCm == null)
+                _log.Warn(LogPrefix + $"{name} is tapped but its tap drill could not be read; its hole line is left out.");
             for (int i = 0; i < built.Count; i++)
             {
                 HoleTableHole item = built[i] with { ThreadClass = threadClass, TaperEngagementCm = engagementCm };
@@ -764,6 +769,12 @@ namespace InventorAddin.HoleTables
         {
             HoleWorkbook? workbook = LoadWorkbook();
             return workbook == null ? null : HoleReadBack.TaperTappedRowFor(facts, workbook);
+        }
+
+        private TappedRow? FindTappedRow(InventorHoleFacts facts)
+        {
+            HoleWorkbook? workbook = LoadWorkbook();
+            return workbook == null ? null : HoleReadBack.TappedRowFor(facts, workbook);
         }
 
         private HoleWorkbook? LoadWorkbook()

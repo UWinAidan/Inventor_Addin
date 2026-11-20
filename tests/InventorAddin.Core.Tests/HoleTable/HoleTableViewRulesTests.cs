@@ -60,6 +60,32 @@ public sealed class HoleTableViewRulesTests
         ],
     };
 
+    private static readonly HoleWorkbook TappedWorkbook = HoleWorkbook.Empty with
+    {
+        Tapped =
+        [
+            new TappedRow(2, HoleUnits.Metric, "M6", 6m, 1m, 5.0m, "6H", 9m, 12m, false),
+            new TappedRow(3, HoleUnits.Imperial, "1/4", 0.25m, 20m, 0.2m, "2B", 0.4m, 0.5m, false),
+        ],
+    };
+
+    [Fact]
+    public void TappedRowFor_MatchesDesignationAndType_IgnoringCaseAndSpaces() =>
+        Assert.Equal(2, HoleReadBack.TappedRowFor(Facts(true, false, " m6x1 ", " iso metric profile "), TappedWorkbook)?.Row);
+
+    [Fact]
+    public void TappedRowFor_NoThreadType_MatchesOnDesignationAlone() =>
+        Assert.Equal(2, HoleReadBack.TappedRowFor(Facts(true, false, "M6x1", null), TappedWorkbook)?.Row);
+
+    [Fact]
+    public void TappedRowFor_WrongTypeUnknownSizeOrNotStraight_IsNull()
+    {
+        Assert.Null(HoleReadBack.TappedRowFor(Facts(true, false, "M6x1", "ANSI Unified Screw Threads"), TappedWorkbook));
+        Assert.Null(HoleReadBack.TappedRowFor(Facts(true, false, "M99x1", null), TappedWorkbook));
+        Assert.Null(HoleReadBack.TappedRowFor(Facts(true, true, "M6x1", null), TappedWorkbook));
+        Assert.Null(HoleReadBack.TappedRowFor(Facts(false, false, "M6x1", null), TappedWorkbook));
+    }
+
     private static InventorHoleFacts Facts(bool tapped, bool tapered, string? designation, string? type) => new(
         HoleSeat.None, tapped, designation, type, null, 1, HoleTermination.ThroughAll, null,
         null, null, null, null, false, null, null, null, null, false)
