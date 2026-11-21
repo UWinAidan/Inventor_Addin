@@ -6,18 +6,21 @@ Last updated: 2026-11-20
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-20. PR #32 (M4 part 2, tasks 155 to 181) and PR #33 (task 182, checked in Inventor) merged into `main`.
-- Goal reached: M4 is done. Every check of 163 to 181 passed in Inventor.
-- Last round (all checked by Aidan in Inventor 2026-11-20):
-  - 177 Later remembered by a fingerprint of the hole data (`HoleTableStaleness`, `HoleTableAutoCheck`).
-  - 178 Update keeps a stacked precision table on the clearance table (`HoleTableAlign.PrecisionAfterRedraw`, `HoleTableDrawer`, `HoleTableSource.UpdateCore`).
-  - 179 tapped drill: AWB stored ?? Inventor ?? workbook Tapped row, warning when none (cause of the lost line not proven).
-  - 180 description extra decimals: reverted by 181 (descriptions use exactly the table's decimals; Ø2.25 prints Ø2.3 in mm clearance; Swap to Precision for x.xx).
+- Updated: 2026-11-20 21:49. Branch `claude/m5-drawing-tools` (pushed), latest commit `8c8d6b8`. PR #33 (task 182, checked in Inventor) merged into `main`; the branch was made from that `main`.
+- Goal: plan M5 (spec 05). Aidan answered the planning questions and the title block mockup questions A to G; the title block mockup is redrawn and waiting on his approval before any task is written.
+- Done this session:
+  - Aidan's answers logged as his in `DECISIONS.md` (2026-11-20 rows, "spec 05, M5 planning" and "spec 05, title block mockup") and written into spec 05's "Decided for M5" section.
+  - Mockup `docs/ui-mockups/title-block.html` and `.png` (180 by 50 mm block; metric and imperial versions; A3 and A4 sheets; field-to-property table). README entry added.
+  - Logo files committed in `libraries/Branding/` (the black mark is the one used).
+  - `TODO.md`: Next up, decisions waiting, and the long-term PDM idea (Vault is not installed on this PC; Aidan to check his entitlements at manage.autodesk.com).
+- Current state: docs only; no code changed, nothing built or tested this session.
+- Open: M5 planning questions 14 to 18 came from an earlier session and their wording is not in the repo; ask Aidan again when those commands come up.
 - Next:
-  1. Plan M5 (spec 05) per `docs/WORKFLOW.md` on `claude/m5-drawing-tools`: title block mockup first, then the tasks, print template first.
-  2. Open for Aidan: spec 09 question 29, spec 04 questions 20 to 25, the Hole Table icon.
-- Gotchas: build with `-p:DeployToInventor=false` while Inventor is open; one build at a time. Flaky Core tests: NewPartCreator, RenamePlan, Numbering, SaveAsReplacer, SaveAsCopyCreator, RegisterStore. Long Bash heredocs failed here; use Write or python io.
-- Read first: `TODO.md` Next up and the follow-ups for 179.
+  1. Aidan approves `docs/ui-mockups/title-block.png` (or asks for changes; edit the HTML and re-render).
+  2. Then write the M5 tasks per `docs/WORKFLOW.md`, print template first (starter template in the repo, Settings path to his copy, ISO A4 to A0 and ANSI A to E, metric and imperial, white sheets, third angle, revision table and parts list styles, finish notes block), then Create Print using it, Open Drawing, Place Initial Views (with its confirm window), Check Out of Bounds. Likely a `needs: windows` spike first: how a template's title block reads model properties, Design Status as text, drawing Author and Creation Date, sheet colour (unverified, not yet researched).
+  3. Open for Aidan: spec 09 question 29, spec 04 questions 20 to 25, the Hole Table icon.
+- Gotchas: long Bash heredocs fail here (`unexpected EOF`); write scripts with Write and run them. Render mockups with headless Edge (command at the top of the HTML), then trim the bottom with Pillow. SVG text collapses repeated spaces; place columns as separate text. Build with `-p:DeployToInventor=false` while Inventor is open. Flaky Core tests: NewPartCreator, RenamePlan, Numbering, SaveAsReplacer, SaveAsCopyCreator, RegisterStore.
+- Read first: spec 05, `docs/ui-mockups/title-block.png`, the 2026-11-20 rows at the end of `DECISIONS.md`, `TODO.md` Next up.
 
 ## Big items
 

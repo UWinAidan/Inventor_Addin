@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>AWB title block mockup</title>
 <!--
-  Source of title-block.png (M5, before any task; revised after Aidan's answers A to G, 2026-11-20).
+  Source of title-block.png (M5, before any task; revised after Aidan's answers A to G and his changes to B, 2026-11-20).
   A mockup only: nothing here is used by the add-in.
   Drawn by us in millimetres. The only picture used is Aidan's own mark, libraries/Branding/aidanwbrown-mark-black-1024.png,
   loaded by relative path. Every value shown is made up.
@@ -37,8 +37,9 @@
   <h1>AWB title block: revised for approval</h1>
   <p class="lead">One title block, 180 by 50 mm, the same on every sheet size (ISO A4 to A0, ANSI A to E). White sheet, third angle projection.
     Every value is read from the model or the drawing, so the print changes when they do. All values below are made up.
-    Revised after Aidan's answers A to G (2026-11-20): the logo panel a third narrower (30 to 20 mm), the tolerance box 45 to 30 mm wide,
-    the description and the rows under it 25 mm wider, part number and revision 7 mm.</p>
+    Revised after Aidan's answers A to G and his changes (2026-11-20): the logo panel a third narrower (30 to 20 mm) and its space to the description;
+    the tolerance box back to its first size (45 by 22 mm) and listing the rules instead of ISO 2768-m; part number and revision 7 mm;
+    Designer and Detailer shown exactly as stored.</p>
 
   <div class="card">
     <svg id="tb" width="1280" viewBox="-6 -8 192 64" style="display:block"></svg>
@@ -49,7 +50,7 @@
   <h2>Imperial sheet</h2>
   <div class="card">
     <svg id="tbin" width="1280" viewBox="-6 -8 192 64" style="display:block"></svg>
-    <div class="cap">Only the tolerance box (2), the units, the weight's unit and the size differ. The imperial wording wraps onto three lines to fit the 30 mm box.</div>
+    <div class="cap">Only the tolerance box (2), the units, the weight's unit and the size differ.</div>
   </div>
 
   <h2>Where each field comes from</h2>
@@ -57,7 +58,8 @@
     <table>
       <tr><th></th><th>Field</th><th>Reads</th><th>Note</th></tr>
       <tr><td class="n"><span class="num">1</span></td><td>Logo and URL</td><td>Fixed in the template: <code>libraries/Branding/aidanwbrown-mark-black-1024.png</code> and the text "aidanwbrown.com"</td><td>The black mark (answer A)</td></tr>
-      <tr><td class="n"><span class="num">2</span></td><td>General tolerances</td><td>Fixed text in the template. Metric: "UNLESS OTHERWISE STATED: ISO 2768-m". Imperial: ".X ±.03 &nbsp;.XX ±.01 &nbsp;.XXX ±.005 &nbsp;ANGLES ±0.5°"</td><td>Answer B</td></tr>
+      <tr><td class="n"><span class="num">2</span></td><td>General tolerances</td><td>Fixed text in the template. Metric: "UNLESS OTHERWISE SPECIFIED: DIMENSIONS IN MM. TOLERANCES: X ±0.5, X.X ±0.2, X.XX ±0.05, ANGLES ±0.5°. REMOVE BURRS, BREAK SHARP EDGES."
+      Imperial: "DIMENSIONS IN INCHES. TOLERANCES: .X ±.03, .XX ±.01, .XXX ±.005, ANGLES ±0.5°. REMOVE BURRS, BREAK SHARP EDGES."</td><td>Answer B, revised: heading on top, the linear tolerances stacked in a column, angles beside them, the note under them</td></tr>
       <tr><td class="n"><span class="num">3</span></td><td>Projection</td><td>Fixed: third angle symbol</td><td></td></tr>
       <tr><td class="n"><span class="num">4</span></td><td>Description</td><td>Model: Design Tracking, Description</td><td></td></tr>
       <tr><td class="n"><span class="num">5</span></td><td>Part number</td><td>Model: Design Tracking, Part Number</td><td></td></tr>
@@ -65,8 +67,8 @@
       <tr><td class="n"><span class="num">7</span></td><td>Status</td><td>Model: Inventor's built-in Design Status (Work In Progress, Pending, Released)</td><td>Answer C: Vault and a later PDM read it</td></tr>
       <tr><td class="n"><span class="num">8</span></td><td>Material</td><td>Model: Material</td><td></td></tr>
       <tr><td class="n"><span class="num">9</span></td><td>Finish</td><td>Model: custom Finish (the name; the full Finish Note goes in the notes block on the sheet)</td><td></td></tr>
-      <tr><td class="n"><span class="num">10</span></td><td>Designer</td><td>Model: Design Tracking, Designer</td><td></td></tr>
-      <tr><td class="n"><span class="num">11</span></td><td>Detailer</td><td>Drawing: Author</td><td>Answer D</td></tr>
+      <tr><td class="n"><span class="num">10</span></td><td>Designer</td><td>Model: Design Tracking, Designer</td><td>Exactly as stored, no reformatting</td></tr>
+      <tr><td class="n"><span class="num">11</span></td><td>Detailer</td><td>Drawing: Author</td><td>Answer D. Exactly as stored, no reformatting</td></tr>
       <tr><td class="n"><span class="num">12</span></td><td>Date</td><td>Drawing: its Creation Date</td><td>Answer E</td></tr>
       <tr><td class="n"><span class="num">13</span></td><td>Weight</td><td>Model: Mass, in the sheet's units, 2 decimals</td><td></td></tr>
       <tr><td class="n"><span class="num">14</span></td><td>Scale</td><td>The sheet's first view</td><td></td></tr>
@@ -97,20 +99,20 @@ function el(parent, name, attrs, text) {
 }
 // Cells: x, y, w, h (mm), label, value (and its imperial value), value size, callout number, options
 const cells = [
-  { x: 50,    y: 0,  w: 130,  h: 12, label: "DESCRIPTION", value: "MOUNTING BRACKET, LEFT", size: 4, n: 4 },
-  { x: 50,    y: 12, w: 86,   h: 14, label: "PART NUMBER", value: "AWB-10001", size: 7, bold: true, n: 5 },
-  { x: 136,   y: 12, w: 16,   h: 14, label: "REV", value: "B", size: 7, bold: true, n: 6, centre: true },
-  { x: 152,   y: 12, w: 28,   h: 14, label: "STATUS", value: "WORK IN PROGRESS", size: 2.5, n: 7 },
-  { x: 50,    y: 26, w: 65,   h: 8,  label: "MATERIAL", value: "ALUMINIUM 6061-T6", size: 2.8, n: 8 },
-  { x: 115,   y: 26, w: 65,   h: 8,  label: "FINISH", value: "CLEAR ANODISE", size: 2.8, n: 9 },
-  { x: 50,    y: 34, w: 32.5, h: 8,  label: "DESIGNER", value: "A. BROWN", size: 2.8, n: 10 },
-  { x: 82.5,  y: 34, w: 32.5, h: 8,  label: "DETAILER", value: "A. BROWN", size: 2.8, n: 11 },
-  { x: 115,   y: 34, w: 32.5, h: 8,  label: "DATE", value: "2026-11-20", size: 2.8, n: 12 },
-  { x: 147.5, y: 34, w: 32.5, h: 8,  label: "WEIGHT", value: "0.42 kg", imperial: "0.93 lb", size: 2.8, n: 13 },
-  { x: 50,    y: 42, w: 32.5, h: 8,  label: "SCALE", value: "1:2", size: 2.8, n: 14 },
-  { x: 82.5,  y: 42, w: 32.5, h: 8,  label: "SHEET", value: "1 OF 2", size: 2.8, n: 15 },
-  { x: 115,   y: 42, w: 32.5, h: 8,  label: "UNITS", value: "MM", imperial: "IN", size: 2.8, n: 16 },
-  { x: 147.5, y: 42, w: 32.5, h: 8,  label: "SIZE", value: "A3", imperial: "B", size: 2.8, n: 17 },
+  { x: 65,     y: 0,  w: 115,   h: 12, label: "DESCRIPTION", value: "MOUNTING BRACKET, LEFT", size: 4, n: 4 },
+  { x: 65,     y: 12, w: 71,    h: 14, label: "PART NUMBER", value: "AWB-10001", size: 7, bold: true, n: 5 },
+  { x: 136,    y: 12, w: 16,    h: 14, label: "REV", value: "B", size: 7, bold: true, n: 6, centre: true },
+  { x: 152,    y: 12, w: 28,    h: 14, label: "STATUS", value: "WORK IN PROGRESS", size: 2.5, n: 7 },
+  { x: 65,     y: 26, w: 57.5,  h: 8,  label: "MATERIAL", value: "ALUMINIUM 6061-T6", size: 2.8, n: 8 },
+  { x: 122.5,  y: 26, w: 57.5,  h: 8,  label: "FINISH", value: "CLEAR ANODISE", size: 2.8, n: 9 },
+  { x: 65,     y: 34, w: 28.75, h: 8,  label: "DESIGNER", value: "AidanwBrown", size: 2.8, n: 10 },
+  { x: 93.75,  y: 34, w: 28.75, h: 8,  label: "DETAILER", value: "AidanwBrown", size: 2.8, n: 11 },
+  { x: 122.5,  y: 34, w: 28.75, h: 8,  label: "DATE", value: "2026-11-20", size: 2.8, n: 12 },
+  { x: 151.25, y: 34, w: 28.75, h: 8,  label: "WEIGHT", value: "0.42 kg", imperial: "0.93 lb", size: 2.8, n: 13 },
+  { x: 65,     y: 42, w: 28.75, h: 8,  label: "SCALE", value: "1:2", size: 2.8, n: 14 },
+  { x: 93.75,  y: 42, w: 28.75, h: 8,  label: "SHEET", value: "1 OF 2", size: 2.8, n: 15 },
+  { x: 122.5,  y: 42, w: 28.75, h: 8,  label: "UNITS", value: "MM", imperial: "IN", size: 2.8, n: 16 },
+  { x: 151.25, y: 42, w: 28.75, h: 8,  label: "SIZE", value: "A3", imperial: "B", size: 2.8, n: 17 },
 ];
 
 function titleBlock(svg, ox, oy, callouts, imperial) {
@@ -118,8 +120,8 @@ function titleBlock(svg, ox, oy, callouts, imperial) {
   const line = { stroke: "#000", "stroke-width": 0.35, fill: "none" };
   el(g, "rect", { x: 0, y: 0, width: 180, height: 50, stroke: "#000", "stroke-width": 0.7, fill: "#fff" });
   el(g, "line", { x1: 20, y1: 0, x2: 20, y2: 50, ...line });
-  el(g, "line", { x1: 50, y1: 0, x2: 50, y2: 50, ...line });
-  el(g, "line", { x1: 20, y1: 22, x2: 50, y2: 22, ...line });
+  el(g, "line", { x1: 65, y1: 0, x2: 65, y2: 50, ...line });
+  el(g, "line", { x1: 20, y1: 22, x2: 65, y2: 22, ...line });
   for (const c of cells) {
     el(g, "rect", { x: c.x, y: c.y, width: c.w, height: c.h, ...line });
     el(g, "text", { x: c.x + 1, y: c.y + 2.4, "font-size": 1.8, fill: "#333" }, c.label);
@@ -130,19 +132,21 @@ function titleBlock(svg, ox, oy, callouts, imperial) {
   // 1: logo panel, 20 wide
   el(g, "image", { href: "../../libraries/Branding/aidanwbrown-mark-black-1024.png", x: 3, y: 10, width: 14, height: 14 });
   el(g, "text", { x: 10, y: 34, "font-size": 2, "text-anchor": "middle" }, "aidanwbrown.com");
-  // 2: general tolerances, 30 by 22
-  el(g, "text", { x: 21, y: 2.4, "font-size": 1.8, fill: "#333" }, "UNLESS OTHERWISE STATED");
-  if (imperial) {
-    el(g, "text", { x: 21.5, y: 8.6, "font-size": 2.5 }, ".X ±.03");
-    el(g, "text", { x: 35, y: 8.6, "font-size": 2.5 }, ".XX ±.01");
-    el(g, "text", { x: 21.5, y: 13.6, "font-size": 2.5 }, ".XXX ±.005");
-    el(g, "text", { x: 21.5, y: 18.6, "font-size": 2.5 }, "ANGLES ±0.5°");
-  } else {
-    el(g, "text", { x: 35, y: 14, "font-size": 4, "font-weight": 700, "text-anchor": "middle" }, "ISO 2768-m");
-  }
+  // 2: general tolerances, 45 by 22: heading, units, linear tolerances stacked with angles beside them, then the edge note
+  const t = (x, y, size, text, extra) => el(g, "text", { x, y, "font-size": size, ...(extra || {}) }, text);
+  const lab = { fill: "#333" };
+  t(21, 2.4, 1.8, "UNLESS OTHERWISE SPECIFIED:", lab);
+  t(21, 5.9, 2.5, imperial ? "DIMENSIONS IN INCHES" : "DIMENSIONS IN MM", { "font-weight": 700 });
+  t(21, 8.7, 1.8, "TOLERANCES:", lab);
+  const rows = imperial ? [[".X", "±.03"], [".XX", "±.01"], [".XXX", "±.005"]] : [["X", "±0.5"], ["X.X", "±0.2"], ["X.XX", "±0.05"]];
+  rows.forEach((rw, i) => { t(22, 11.8 + i * 2.9, 2.4, rw[0]); t(29, 11.8 + i * 2.9, 2.4, rw[1]); });
+  el(g, "line", { x1: 43, y1: 9.8, x2: 43, y2: 18.6, ...line });
+  t(45, 11.8, 2.4, "ANGLES");
+  t(45, 14.7, 2.4, "±0.5°");
+  t(21, 21.1, 1.8, "REMOVE BURRS, BREAK SHARP EDGES.");
   // 3: third angle symbol: frustum on the left, small end towards the circles on the right
   el(g, "text", { x: 21, y: 24.4, "font-size": 1.8, fill: "#333" }, "THIRD ANGLE PROJECTION");
-  const sx = 28.5, sy = 37.5;
+  const sx = 37.25, sy = 37.5;
   const cl = { stroke: "#000", "stroke-width": 0.18, "stroke-dasharray": "3 0.8 0.6 0.8" };
   el(g, "path", { d: `M${sx - 4.5},${sy - 3.5} L${sx + 3.5},${sy - 2.1} L${sx + 3.5},${sy + 2.1} L${sx - 4.5},${sy + 3.5} Z`, ...line });
   el(g, "line", { x1: sx - 6, y1: sy, x2: sx + 5, y2: sy, ...cl });

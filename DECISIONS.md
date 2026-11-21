@@ -473,3 +473,7 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-20 | Title block Date is the drawing's date | Aidan | spec 05, title block mockup |
 | 2026-11-20 | Title block keeps the Size field | Aidan | spec 05, title block mockup |
 | 2026-11-20 | Title block layout: logo panel a third narrower (20 mm), its space to the description; tolerance box shrunk to fit the ISO 2768-m wording (30 mm); part number and revision text 7 mm. Everything else as in the first mockup | Aidan | spec 05, title block mockup |
+| 2026-11-20 | Title block general tolerances list the rules instead of ISO 2768-m. Metric: "UNLESS OTHERWISE SPECIFIED: DIMENSIONS IN MM. TOLERANCES: X ±0.5, X.X ±0.2, X.XX ±0.05, ANGLES ±0.5°. REMOVE BURRS, BREAK SHARP EDGES." Imperial: "DIMENSIONS IN INCHES. TOLERANCES: .X ±.03, .XX ±.01, .XXX ±.005, ANGLES ±0.5°. REMOVE BURRS, BREAK SHARP EDGES." Laid out like the reference pictures (layout only; no values or text copied). Replaces answer B | Aidan | spec 05, title block mockup |
+| 2026-11-20 | Title block tolerance box keeps its first size (45 by 22 mm); "shrink the tolerance box" in answer G is withdrawn. The logo panel stays 20 mm | Aidan | spec 05, title block mockup |
+| 2026-11-20 | Title block Designer and Detailer show the property values exactly as stored (for example AidanwBrown), no reformatting | Aidan | spec 05, title block mockup |
+| 2026-11-20 | The imperial tolerance box also carries the "UNLESS OTHERWISE SPECIFIED:" heading, as the metric one does | Default | spec 05, title block mockup |
