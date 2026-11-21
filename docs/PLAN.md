@@ -513,6 +513,10 @@ Not in part 1: AWB Hole on the Flat Pattern tab (it keeps Inventor's Hole; the S
 
 - [x] 181 Revert 180: descriptions use exactly their table's decimals
 
+**Fix soon, after PR #32** (task 179's review). 182: a tapped hole changed in Inventor's own Hole dialog shows its actual drill, not AWB's stored one. Folds in two 179 follow-ups: the drill line's depth test and the warning logged once per hole. Branch `claude/182-tapped-actual-drill` off `main`.
+
+- [x] 182 Fix: a tapped hole changed in Inventor shows its actual drill
+
 ### M5: Drawing tools (spec 05)
 
 Blocked on question 1 of the spec, which decides which commands exist at all. Includes a custom drawing template whose title block reads every property from the model (Aidan, 2026-10-10): custom print templates with several sheet sizes, sheet colours, and a title block designed with Aidan (Aidan, 2026-10-11). Create Drawing moved to M2 as Create Print.

@@ -177,6 +177,7 @@ public class HoleTableTests
         Assert.Equal(expected, HoleTableDecimals.For(precision, units));
     }
 
+    private static readonly TappedRow M8Row = new(4, HoleUnits.Metric, "M8", 8m, 1.25m, 6.8m, "6H", 12m, 16m, false);
     private static readonly TappedRow M6Row = new(3, HoleUnits.Metric, "M6", 6m, 1m, 5.0m, "6H", 9m, 12m, false);
 
     private static InventorHoleFacts TappedFacts(double? diameter) => Facts(HoleSeat.None, tapped: true, diameter: diameter);
@@ -184,8 +185,20 @@ public class HoleTableTests
     private static double? TappedDrill(double? facts, double? stored, TappedRow? row) =>
         HoleTableHoles.From("H", TappedFacts(facts), null, HoleUnits.Metric, Centres, null, null, stored, row)[0].DrillDiameterCm;
 
+    // Task 182 replaces task 179's "AWB value wins when both differ" (Tapped_StoredDiameterWinsOverInventors): Inventor's wins.
     [Fact]
-    public void Tapped_StoredDiameterWinsOverInventors() => Assert.Equal(0.5, TappedDrill(0.52, 0.5, M6Row));
+    public void Tapped_InventorsDiameterDiffersFromStored_InventorsWins() => Assert.Equal(0.68, TappedDrill(0.68, 0.5, M6Row));
+
+    [Fact]
+    public void Tapped_InventorsDiameterAgreesWithStoredWithinNoise_IsExactlyTheStoredValue() =>
+        Assert.Equal(0.5, TappedDrill(0.5 + 1e-7, 0.5, M6Row));
+
+    [Fact]
+    public void Tapped_NoInventorsDiameter_StoredFitsTheThread_TakesTheStoredOne() => Assert.Equal(0.5, TappedDrill(null, 0.5, M6Row));
+
+    [Fact]
+    public void Tapped_NoInventorsDiameter_StoredDoesNotFitTheThread_TakesTheRowsTapDrill() =>
+        Assert.Equal(0.68, TappedDrill(null, 0.5, M8Row)!.Value, 6); // stored M6 drill, hole changed to M8
 
     [Fact]
     public void Tapped_NoFactsDiameter_TakesTheStoredOne() => Assert.Equal(0.5, TappedDrill(null, 0.5, null));
@@ -205,6 +218,14 @@ public class HoleTableTests
         var f = TappedFacts(null) with { ThreadDesignation = "M6x1", DepthCm = 1.2, Termination = HoleTermination.Distance };
         var h = HoleTableHoles.From("H", f, null, HoleUnits.Metric, Centres, null, null, 0.5, null)[0];
         Assert.StartsWith("⌀" + "5.0", HoleTableDescriptions.For(h).PlainLines[0]);
+    }
+
+    [Fact]
+    public void Tapped_WholeDrillLine_HasTheDiameterAndTheDepth()
+    {
+        var f = TappedFacts(0.5) with { ThreadDesignation = "M6x1", DepthCm = 1.2, Termination = HoleTermination.Distance };
+        var h = HoleTableHoles.From("H", f, null, HoleUnits.Metric, Centres, null, null, 0.5, M6Row)[0];
+        Assert.Equal("⌀5.0 ↧12.0", HoleTableDescriptions.For(h).PlainLines[0]);
     }
 
     [Fact]
