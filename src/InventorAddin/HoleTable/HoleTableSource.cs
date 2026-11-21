@@ -46,6 +46,9 @@ namespace InventorAddin.HoleTables
         private readonly DrawingDocument _drawing;
         private readonly AddinSettings _settings;
         private readonly ILog _log;
+
+        // Holes whose "tap drill could not be read" warning is already logged this session (task 182).
+        private static readonly HashSet<string> TapDrillWarned = new();
         private readonly Dictionary<string, IReadOnlyDictionary<string, HoleTableHoleRef>> _holeRefs = new();
         private HoleWorkbook? _workbook;
 
@@ -653,7 +656,8 @@ namespace InventorAddin.HoleTables
             }
 
             IReadOnlyList<HoleTableHole> built = HoleTableHoles.From(name, facts, awbSpec, units, centres, taperRow, tolerance, storedDiameterCm, tappedRow);
-            if (straightTapped && built.Count > 0 && built[0].DrillDiameterCm == null)
+            if (straightTapped && built.Count > 0 && built[0].DrillDiameterCm == null
+                && TapDrillWarned.Add((ComSafe.Get(() => part.FullFileName) ?? string.Empty) + "|" + name))
                 _log.Warn(LogPrefix + $"{name} is tapped but its tap drill could not be read; its hole line is left out.");
             for (int i = 0; i < built.Count; i++)
             {

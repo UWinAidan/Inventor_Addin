@@ -6,7 +6,7 @@ Last updated: 2026-11-20
 
 ## Next up
 
-1. **Fix soon:** a tapped hole changed in Inventor's own Hole dialog keeps AWB's stored drill in the hole table (task 179 follow-up below). Plan it as task 182 on a new branch off `main`.
+1. Aidan checks task 182 in Inventor (PR on `claude/182-tapped-actual-drill`).
 2. M5, drawing tools (spec 05): plan it. M4 is done: part 1 PR #29 (2026-11-10), part 2 PR #32 (2026-11-20).
 3. **Later, not this round** (Aidan, 2026-10-25): every AWB icon gets a more polished look, done together with the colour option.
 4. Aidan finishes the remaining Part Properties checks below.
@@ -111,10 +111,9 @@ Each spec lists its own open questions in full. These are the ones that block pl
 ## Follow-ups from finished tasks
 
 - Task 178: the precision table's position is read with its height (`ReadPlacement(...)?.Position`), so if its height cannot be read a table the user moved is treated as new and restacked; if the clearance table's position cannot be read after the redraw, it is treated as deleted. Both unlikely (the height is a stored attribute).
-- Task 179, **fix soon** (reviewer): an AWB-made M6 tapped hole changed to M8 in Inventor's own Hole dialog keeps its stored 5.0 drill in the table, which can put a wrong number on a print. Prefer the hole's actual drill when it differs from the stored one.
+- Task 182: a hole whose workbook Tapped row's tap drill is edited after the hole was made (thread unchanged), with Inventor's diameter unreadable, now prints the row's tap drill rather than the stored one. The once-per-hole warning set is static and never cleared (fine for one session).
 - Task 179 (reviewer): the workbook Tapped row is looked up for every tapped hole even when AWB's stored drill exists; if the workbook fails to load, every tapped hole logs a warning, and the warning's wording no longer fits every case.
-- Task 179 (reviewer): test gap: a test checks only the Ø5.0 part of the drill line, not the `↧ 12.0` depth.
-- Task 179: the cause of the lost drill line is not proven. The warning `... is tapped but its tap drill could not be read` is logged on every automatic check of the drawing; log it once per hole per session.
+- Task 179: the cause of the lost drill line is not proven. The warning `... is tapped but its tap drill could not be read` is now logged once per hole per session (task 182).
 - Task 176: unsaved drawings (no file name) are never checked automatically. The timer ticks every 500 ms while a check waits for a drawing that is not active. `WindowHost.IsAnyOpen` does not count a WinForms `MessageBox`. Whether `_ActiveCommand` and `ActiveEditObject` behave as assumed is shown by the log's "Hole table check: waiting" lines (checklist 176-1).
 - Task 175: `HoleTableStoredViewCheck` still lives in `HoleTableWizardViewModel.cs` (namespace `ViewModels`); move it into `HoleTable`. The wizard still writes the literal "Update failed. " rather than `HoleTableMessages.UpdateFailedPrefix`.
 - Task 172: opening Hole Table still writes view keys for the current sheet on first use (task 163), before the write-free check; a keyed-only listing on open would need a Core change. "Update these views" has no access key. Per-view Update results are logged as one joined line.

@@ -14,7 +14,7 @@ Last updated: 2026-11-20
   - 179 tapped drill: AWB stored ?? Inventor ?? workbook Tapped row, warning when none (cause of the lost line not proven).
   - 180 description extra decimals: reverted by 181 (descriptions use exactly the table's decimals; Ø2.25 prints Ø2.3 in mm clearance; Swap to Precision for x.xx).
 - Next:
-  1. Task 182 (fix soon), on a new branch off `main`: prefer a tapped hole's actual drill when it differs from AWB's stored one (M6 changed to M8 in Inventor's Hole dialog). Other 179 follow-ups are in `TODO.md`.
+  1. Task 182 built and reviewed on `claude/182-tapped-actual-drill` (compiled on Windows, own PR): a tapped hole's drill is Inventor's when it reads, so M6 changed to M8 in Inventor's Hole dialog shows M8's drill. Waiting on Aidan's check in Inventor.
   2. Plan M5 (spec 05) per `docs/WORKFLOW.md`.
   3. Open for Aidan: spec 09 question 29, spec 04 questions 20 to 25, the Hole Table icon.
 - Gotchas: build with `-p:DeployToInventor=false` while Inventor is open; one build at a time. Flaky Core tests: NewPartCreator, RenamePlan, Numbering, SaveAsReplacer, SaveAsCopyCreator, RegisterStore. Long Bash heredocs failed here; use Write or python io.
