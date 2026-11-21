@@ -229,35 +229,8 @@ public class HoleTableDescriptionTests
             ThreadClass = "2B",
             ThreadDepthCm = 0.5 * 2.54,
         };
-        Assert.Equal([$"{D}0.159 THRU", $"10-32 UNF - 2B {Dp}0.50"], HoleTableDescriptions.For(h).PlainLines);
+        Assert.Equal([$"{D}0.16 THRU", $"10-32 UNF - 2B {Dp}0.50"], HoleTableDescriptions.For(h).PlainLines);
     }
-
-    [Theory]
-    [InlineData(0.225, "2.25")]
-    [InlineData(0.5, "5.0")]
-    [InlineData(0.66, "6.6")]
-    [InlineData(0.22501, "2.25")]
-    [InlineData(0.225000000001, "2.25")]
-    [InlineData(0.2250001, "2.25")]
-    public void Clearance_mm_keeps_extra_decimals(double drillCm, string expected) =>
-        Assert.Equal($"{D}{expected} THRU", Text(Hole(drillCm: drillCm)));
-
-    [Fact]
-    public void Mm_depth_of_6_5_shows_6_5() =>
-        Assert.Equal($"{D}6.6 {Dp}6.5", Text(Hole(termination: HoleTermination.Distance, depthCm: 0.65)));
-
-    [Theory]
-    [InlineData(0.32, "3.20")]
-    [InlineData(0.3205, "3.205")]
-    public void Precision_mm_keeps_its_two_decimals_and_a_third(double drillCm, string expected) =>
-        Assert.Equal($"{D}{expected} THRU", HoleTableDescriptions.For(Hole(drillCm: drillCm), 2).PlainText);
-
-    [Theory]
-    [InlineData(0.25, "0.25")]
-    [InlineData(0.1875, "0.1875")]
-    [InlineData(0.18755, "0.1876")]
-    public void Inch_clearance_keeps_up_to_four_decimals(double inches, string expected) =>
-        Assert.Equal($"{D}{expected} THRU", Text(Hole(units: HoleUnits.Imperial, drillCm: inches * 2.54)));
 
     [Fact]
     public void Explicit_decimals_are_used()

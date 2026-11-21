@@ -507,7 +507,11 @@ Not in part 1: AWB Hole on the Flat Pattern tab (it keeps Inventor's Hole; the S
 - [x] 177 Fix: Later is keyed to the hole data, not the message text
 - [x] 178 Fix: Update keeps the precision table stacked on the clearance table
 - [x] 179 Fix: a tapped group keeps its drill line after Update
-- [x] 180 Fix: description lengths keep their extra decimals
+- [x] 180 Fix: description lengths keep their extra decimals (reverted by 181)
+
+**From Aidan's check of 177 to 180** (2026-11-20; everything passed but 180, which he reversed). 181: descriptions use exactly their table's decimals again.
+
+- [x] 181 Revert 180: descriptions use exactly their table's decimals
 
 ### M5: Drawing tools (spec 05)
 

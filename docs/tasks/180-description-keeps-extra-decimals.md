@@ -2,7 +2,7 @@
 
 - **Milestone:** M4 part 2 (fix from Aidan's check of 174 to 176, 2026-11-20)
 - **Feature spec:** `docs/features/04-hole-table-wizard.md` (open question 14)
-- **Status:** done
+- **Status:** reverted by 181 (Aidan, 2026-11-20: the rule was not his decision)
 - **Depends on:** 156
 - **Needs:** cloud (Core only; runs on Windows too)
 - **Parallel-safe with:** 177, 178

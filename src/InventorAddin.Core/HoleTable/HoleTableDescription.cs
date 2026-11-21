@@ -118,10 +118,8 @@ public static class HoleTableDescriptions
         For(hole, HoleTableDecimals.For(hole.IsPrecision, hole.Units));
 
     /// <summary>
-    /// The description. Lengths convert from centimetres to the hole's units and show at least
-    /// <paramref name="decimals"/> decimals (the table's minimum) and at most 3 in millimetres or 4 in inches
-    /// (invariant culture); extra decimals show only when the value needs them. The countersink angle is a whole
-    /// number of degrees.
+    /// The description. Lengths convert from centimetres to the hole's units and show <paramref name="decimals"/>
+    /// decimals (invariant culture, trailing zeros kept); the countersink angle is a whole number of degrees.
     /// </summary>
     public static HoleTableDescription For(HoleTableHole hole, int decimals)
     {
@@ -129,7 +127,7 @@ public static class HoleTableDescriptions
 
         var lines = new List<IReadOnlyList<HoleDescriptionPart>>();
         var metric = hole.Units == HoleUnits.Metric;
-        string Len(double cm) => Length(metric ? cm * 10 : cm / 2.54, decimals, metric ? 3 : 4);
+        string Len(double cm) => Number(metric ? cm * 10 : cm / 2.54, decimals);
 
         // Hole line.
         var first = new List<HoleDescriptionPart>();
@@ -289,35 +287,6 @@ public static class HoleTableDescriptions
     private static string Number(double value, int decimals)
     {
         var text = Math.Round(value, decimals, MidpointRounding.AwayFromZero).ToString("F" + decimals, CultureInfo.InvariantCulture);
-        return text.StartsWith('-') && text.Trim('-', '0', '.').Length == 0 ? text[1..] : text;
-    }
-
-    /// <summary>
-    /// A length: rounded to <paramref name="maxDecimals"/>, then trailing zeros dropped down to
-    /// <paramref name="minDecimals"/>. Rounds through decimal so floating-point noise does not change the text.
-    /// </summary>
-    private static string Length(double value, int minDecimals, int maxDecimals)
-    {
-        var max = Math.Max(minDecimals, maxDecimals);
-        var rounded = Math.Round((decimal)value, max, MidpointRounding.AwayFromZero);
-        var text = rounded.ToString("F" + max, CultureInfo.InvariantCulture);
-        var dot = text.IndexOf('.');
-        if (dot >= 0)
-        {
-            var minLength = dot + 1 + minDecimals;
-            var end = text.Length;
-            while (end > minLength && text[end - 1] == '0')
-            {
-                end--;
-            }
-
-            text = text[..end];
-            if (text.EndsWith('.'))
-            {
-                text = text[..^1];
-            }
-        }
-
         return text.StartsWith('-') && text.Trim('-', '0', '.').Length == 0 ? text[1..] : text;
     }
 
