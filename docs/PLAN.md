@@ -431,7 +431,87 @@ Spike 103 (2026-10-25) added task 133 (the mini toolbar's Hole button, `PartDMHo
 
 Not in part 1: AWB Hole on the Flat Pattern tab (it keeps Inventor's Hole; the Sheet Metal tab is taken over, Aidan 2026-10-25, task 128), holes placed without a sketch, and Standard and Fastener type beyond spec 09's defaults (questions 2 and 3). Simple and Taper Tapped holes and spotfaces were added to part 1 on 2026-10-24 (Aidan).
 
-**Part 2: the hole table wizard** (spec 04), planned after part 1. Its Core half (classification, grouping, tagging, descriptions, table model) can be planned once spec 04's questions 6 and 7 are answered (question 1 was answered on 2026-10-24: a toleranced hole is precision); the add-in half waits on the Windows spike described in the spec.
+**Part 2: the hole table wizard** (spec 04). Planned 2026-11-12, after Aidan answered spec 04 questions 2 to 8. The Core half runs first; the add-in half waits on spike 160 with Aidan (Inventor's own hole table or a custom table, reading a view's holes and its ordinate origin, where the wizard's edits are kept). The table model, Align, Update, the Edit Table tab's re-opening and every add-in task are written from the spike's results.
+
+| Task | Needs | Depends on | Parallel-safe with |
+|---|---|---|---|
+| 155 | Core | none | 160 |
+| 156 | Core | 155 | 157, 160 |
+| 157 | Core | 155 | 156, 160 |
+| 158 | Core | 155, 156, 157 | 160 |
+| 159 | Core | 158 | 160 |
+| 160 | **windows** (spike, local session with Aidan) | none | 155 to 159 |
+| 161 | Core | 156, 158 | 159 |
+| 162 | Core | 158, 159 | 161 |
+| 163 | windows (add-in) | 155, 157, 159 | 161, 162 |
+| 164 | windows (add-in) | 161, 163 | 165 |
+| 165 | windows (add-in) | 163 | 164 |
+| 166 | windows (add-in) | 162, 164, 165 | none |
+| 167 | windows (add-in) | 159, 163 | 164, 165 |
+
+- [x] 155 Core: hole table holes, precision or clearance, and the group order key
+- [x] 156 Core: hole table descriptions for every hole type
+- [x] 157 Core: XDIM and YDIM from the view's ordinate origin
+- [x] 158 Core: groups, tags, Split, swap, delete and Renumber
+- [x] 159 Core: the Hole Table Wizard view-model (Create Tables tab and row edits)
+- [x] 160 Spike: Inventor's hole table or a custom table; reading a view's holes and its ordinate origin
+- [x] 161 Core: hole table layout as a drawing (lines and text), formatted text, and Align
+- [x] 162 Core: the stored state, Update that keeps tags, and re-opening a table
+- [x] 163 Add-in: read a drawing view's holes and origin (`IHoleTableSource`)
+- [x] 164 Add-in: draw the hole tables as sketched symbols, and Align
+- [x] 165 Add-in: hole tags, precision marks and the AWB Centre Mark
+- [x] 166 Add-in: store the state, Update, and the Edit Table tab
+- [x] 167 Add-in: the Hole Table Wizard window and its ribbon button
+
+**Spike 160 is done** (2026-11-17, Aidan). Tables are drawn as sketched symbols, and every hole gets the one `AWB Centre Mark` style. Tasks 161 to 167 were written from the spike's "Recommendations", and tasks 155, 156 and 159 were updated for it (hole id by reference key, drawing symbols). **Order:** the Core tasks first: 155, then 156 and 157 alongside, then 158, 159, 161 and 162. Then the add-in tasks on Windows: 163, 167, 164, 165 and 166, each built here. Aidan checks them together in Inventor. Spike 160 ran with Aidan whenever he is at his PC, before or alongside the Core tasks; it touches only its own spike branch. On a new branch off `main` (`claude/m4-hole-table`).
+
+**Fixes and requests from Aidan's check of 163 to 167** (2026-11-18). 167 passed; Aidan goes on with 163 onward after the origin fix. Fixes: 168 (the view's origin when the origin indicator cannot be read), 169 (a WPF dropdown automation exception caught by the origin read), 170 (the tolerance read on tapped holes). Requests: 171 and 172 (on open, the wizard checks the stored tables and offers Update for out-of-date views; Update stays manual), 173 (a new AWB Hole starts on the last hole made with OK; M4 part 1). **Order:** 168 first, then 169, 170, 171, 172, 173.
+
+| Task | Needs | Depends on | Parallel-safe with |
+|---|---|---|---|
+| 168 | windows (add-in) | 163 | 170 |
+| 169 | windows (add-in) | 168 | 170 |
+| 170 | windows (add-in) | none | 168, 169 |
+| 171 | Core | 162, 168 | 169, 170, 173 |
+| 172 | windows (add-in) | 171, 167 | 173 |
+| 173 | windows (Core and add-in) | none | 171 |
+
+- [x] 168 Fix: read the view's origin when the origin indicator fails; "no origin" or "could not read it"
+- [x] 169 Fix: a WPF ComboBox automation exception caught by the origin read
+- [x] 170 Fix: the hole tolerance read on tapped holes
+- [x] 171 Core: check each stored view's tables on open and offer Update
+- [x] 172 Add-in: the Hole Table window shows the out-of-date check
+- [x] 173 AWB Hole: a new hole starts on the last hole made with OK
+
+**Fix and request from Aidan's combined check of 163 to 166 and 168 to 173** (2026-11-20; every step passed). Fix: 174 (AWB Hole started with a sketch point selected, as from its mini toolbar, picks that point and the sketch's free hole centres, as task 154 does for a sketch). Request: 175 and 176 (when a drawing with stored hole tables becomes active or updates, the add-in checks them and offers Update now or Later; a Settings switch, on by default). **Order:** 174, 175, 176.
+
+| Task | Needs | Depends on | Parallel-safe with |
+|---|---|---|---|
+| 174 | windows (Core and add-in) | 154 | 175 |
+| 175 | Core | 171, 172 | 174 |
+| 176 | windows (add-in) | 175 | none |
+
+- [x] 174 Fix: AWB Hole from a selected sketch point picks that point and the free hole centres
+- [x] 175 Core: the automatic out-of-date check, its prompt and its setting
+- [x] 176 Add-in: check a drawing's hole tables when it becomes active or updates
+
+**Fixes from Aidan's check of 174 to 176** (2026-11-20; everything else passed). 177: Later is remembered by the hole data, so another real change asks again (176-4 failed). 178: Update keeps the precision table stacked on a clearance table that changed height. 179: a tapped group keeps its drill line after Update. 180: description lengths keep their extra decimals (Ø2.25 in the clearance table). **Order:** 177, 178, 179, 180, one at a time (one Windows build at a time).
+
+| Task | Needs | Depends on | Parallel-safe with |
+|---|---|---|---|
+| 177 | Core | 175, 176 | 179, 180 |
+| 178 | windows (Core and add-in) | 164, 166 | 177, 180 |
+| 179 | windows (Core and add-in) | 156, 163, 170 | 177, 178 |
+| 180 | Core | 156 | 177, 178 |
+
+- [x] 177 Fix: Later is keyed to the hole data, not the message text
+- [x] 178 Fix: Update keeps the precision table stacked on the clearance table
+- [x] 179 Fix: a tapped group keeps its drill line after Update
+- [x] 180 Fix: description lengths keep their extra decimals (reverted by 181)
+
+**From Aidan's check of 177 to 180** (2026-11-20; everything passed but 180, which he reversed). 181: descriptions use exactly their table's decimals again.
+
+- [x] 181 Revert 180: descriptions use exactly their table's decimals
 
 ### M5: Drawing tools (spec 05)
 

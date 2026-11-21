@@ -227,11 +227,12 @@ namespace InventorAddin.Commands
             AwbHoleViewModel viewModel;
             HoleLastDepths lastDepths = HoleLastDepths.From(AddinServices.Settings);
             HoleLastDowelSeats lastDowelSeats = HoleLastDowelSeats.From(AddinServices.Settings);
+            HoleLastHole lastHole = HoleLastHole.From(AddinServices.Settings);
             var expressionChecker = new HoleExpressionChecker(doc);
             if (hole == null)
             {
                 viewModel = new AwbHoleViewModel(
-                    read.Workbook, partName, read.Problems, lastDepths, expressionChecker, lastDowelSeats);
+                    read.Workbook, partName, read.Problems, lastDepths, expressionChecker, lastDowelSeats, lastHole);
             }
             else
             {

@@ -571,6 +571,9 @@
         </Style.Triggers>
     </Style>
 
+    <!-- Task 169: implicit styles match the exact type, so the AwbComboBox subclass needs its own entry. -->
+    <Style TargetType="{x:Type controls:AwbComboBox}" BasedOn="{StaticResource {x:Type ComboBox}}" />
+
     <!--
         The text box inside an editable dropdown: no border or fill of its own (the dropdown draws them), the shared
         caret and focus outline. Its right padding leaves room for the dropdown's arrow.
@@ -894,6 +897,17 @@
     <!-- One entry in a list: 9 below it, as between form rows. -->
     <Style x:Key="ListItem" TargetType="{x:Type FrameworkElement}">
         <Setter Property="Margin" Value="0,0,0,9" />
+    </Style>
+
+    <!-- A notice at the top of a window body (the Hole Table's on-open check, task 172): a bordered panel in the input colours. -->
+    <Style x:Key="NoticePanel" TargetType="{x:Type Border}">
+        <Setter Property="Margin" Value="0,0,0,9" />
+        <Setter Property="Padding" Value="12,10" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
+        <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
     </Style>
 
     <!-- A checkbox in a line of checkboxes: 12 after it, the gap between a label and its value. -->
@@ -1812,6 +1826,136 @@
                             </Setter>
                         </Trigger>
                     </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ===== Hole Table Wizard (task 167) ===== -->
+
+    <!--
+        A tab on a window's page of tabs: the header in muted text with a 2 px underline that is Accent when selected,
+        the selected header strong and semibold. The tab strip sits over one Divider line.
+    -->
+    <Style x:Key="PageTab" TargetType="{x:Type TabItem}">
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusOutline}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+        <Setter Property="Padding" Value="14,6,14,6" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type TabItem}">
+                    <Border x:Name="Underline"
+                            Background="Transparent"
+                            BorderBrush="Transparent"
+                            BorderThickness="0,0,0,2"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                          ContentSource="Header"
+                                          RecognizesAccessKey="True"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Underline" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource TextStrongBrush}" />
+                            <Setter Property="FontWeight" Value="SemiBold" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- A page of tabs: the strip above a Divider line, then the selected page with 12 above it. -->
+    <Style x:Key="PageTabs" TargetType="{x:Type TabControl}">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Margin" Value="0,0,0,9" />
+        <Setter Property="ItemContainerStyle" Value="{StaticResource PageTab}" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type TabControl}">
+                    <DockPanel>
+                        <Border DockPanel.Dock="Top"
+                                BorderBrush="{DynamicResource DividerBrush}"
+                                BorderThickness="0,0,0,1"
+                                Margin="0,0,0,12">
+                            <TabPanel IsItemsHost="True" />
+                        </Border>
+                        <ContentPresenter ContentSource="SelectedContent" />
+                    </DockPanel>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        A list of rows that fills its column (the Hole Table Wizard's two hole lists and its stored views): the pick
+        list's look, 200 tall, with the column's width instead of 260.
+    -->
+    <Style x:Key="WideList" TargetType="{x:Type ListBox}" BasedOn="{StaticResource PickList}">
+        <Setter Property="Width" Value="NaN" />
+        <Setter Property="Height" Value="200" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+
+    <!-- A description between a tag and a checkbox in a list row: 12 either side, cut short rather than wrapped. -->
+    <Style x:Key="RowDescriptionText" TargetType="{x:Type TextBlock}" BasedOn="{StaticResource ValueText}">
+        <Setter Property="Margin" Value="12,0,12,0" />
+        <Setter Property="TextWrapping" Value="NoWrap" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+
+    <!-- Swap and Delete between the two lists: stacked, 9 apart, as wide as their text needs. -->
+    <Style x:Key="BetweenListsButton" TargetType="{x:Type Button}" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Margin" Value="0,0,0,9" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+
+    <!--
+        A thin bar under the body that shows while a table command runs. The marquee slides over the track. The window
+        shows it for the length of a command; nothing here reports a percentage.
+    -->
+    <Style x:Key="BusyBar" TargetType="{x:Type ProgressBar}">
+        <Setter Property="Height" Value="4" />
+        <Setter Property="IsIndeterminate" Value="True" />
+        <Setter Property="Margin" Value="0,0,0,9" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ProgressBar}">
+                    <Border Background="{DynamicResource DividerBrush}" CornerRadius="2" ClipToBounds="True">
+                        <Border x:Name="Marquee"
+                                Background="{DynamicResource AccentBrush}"
+                                CornerRadius="2"
+                                Width="120"
+                                HorizontalAlignment="Left">
+                            <Border.RenderTransform>
+                                <TranslateTransform x:Name="Slide" X="0" />
+                            </Border.RenderTransform>
+                            <Border.Triggers>
+                                <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                                    <BeginStoryboard>
+                                        <Storyboard RepeatBehavior="Forever">
+                                            <DoubleAnimation Storyboard.TargetName="Slide"
+                                                             Storyboard.TargetProperty="X"
+                                                             From="-120"
+                                                             To="900"
+                                                             Duration="0:0:1.4" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger>
+                            </Border.Triggers>
+                        </Border>
+                    </Border>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>

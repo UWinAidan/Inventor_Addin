@@ -2,16 +2,23 @@
 
 Where each big item stands. One line per item, kept current by the parent session. For the order of work and the task lists see `docs/PLAN.md`; for what needs doing next see `TODO.md`.
 
-Last updated: 2026-11-12
+Last updated: 2026-11-20
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-12. On `main` after PR #31 merged. No task in progress and no open PR.
-- Done this session: the old branch's "No `UseLayoutRounding`" rule added to `CLAUDE.md` and `DECISIONS.md`, branch `claude/tasks-026-to-031-e9rrxe` deleted (Aidan approved). Task 151 (icon redesign) built, reviewed, 16 px AWB Hole redrawn without inner edge lines at Aidan's request, checked by Aidan in Inventor (all 10 steps passed) and merged in PR #31.
-- Remote branch `claude/m1b-icon-redesign` is merged and can be deleted; ask Aidan first.
-- Next: M4 part 2 (hole table wizard, spec 04). Its Core half waits on Aidan's answers to spec 04 questions 6 and 7 (see `TODO.md`, "Hole table (spec 04)"); the add-in half needs a Windows spike. Plan it with `docs/WORKFLOW.md` once those are answered.
-- Gotchas: check `tasklist //FI "IMAGENAME eq Inventor.exe"` before building; `-p:DeployToInventor=false` while it runs. Tracking files are CRLF: edit with Python `newline=''`, replace `\n` with the file's line ending, assert per replace. Numbering timing tests can fail under parallel load. Icon palette changes are by hand in the SVGs and `tools/icons/render.py` (see `tools/icons/README.md`).
-- Read first: `TODO.md` (Next up, and the spec 04 questions), `docs/features/04-hole-table-wizard.md`, `docs/PLAN.md` M4 part 2.
+- Updated: 2026-11-20. PR #32 (M4 part 2, tasks 155 to 181) merged into `main`; branch `claude/m4-hole-table` is finished.
+- Goal reached: M4 is done. Every check of 163 to 181 passed in Inventor.
+- Last round (all checked by Aidan in Inventor 2026-11-20):
+  - 177 Later remembered by a fingerprint of the hole data (`HoleTableStaleness`, `HoleTableAutoCheck`).
+  - 178 Update keeps a stacked precision table on the clearance table (`HoleTableAlign.PrecisionAfterRedraw`, `HoleTableDrawer`, `HoleTableSource.UpdateCore`).
+  - 179 tapped drill: AWB stored ?? Inventor ?? workbook Tapped row, warning when none (cause of the lost line not proven).
+  - 180 description extra decimals: reverted by 181 (descriptions use exactly the table's decimals; Ø2.25 prints Ø2.3 in mm clearance; Swap to Precision for x.xx).
+- Next:
+  1. Task 182 (fix soon), on a new branch off `main`: prefer a tapped hole's actual drill when it differs from AWB's stored one (M6 changed to M8 in Inventor's Hole dialog). Other 179 follow-ups are in `TODO.md`.
+  2. Plan M5 (spec 05) per `docs/WORKFLOW.md`.
+  3. Open for Aidan: spec 09 question 29, spec 04 questions 20 to 25, the Hole Table icon.
+- Gotchas: build with `-p:DeployToInventor=false` while Inventor is open; one build at a time. Flaky Core tests: NewPartCreator, RenamePlan, Numbering, SaveAsReplacer, SaveAsCopyCreator, RegisterStore. Long Bash heredocs failed here; use Write or python io.
+- Read first: `TODO.md` Next up and the follow-ups for 179.
 
 ## Big items
 
@@ -23,7 +30,7 @@ Last updated: 2026-11-12
 | Part creation and numbering (M2) | 02 | **Done, tested in Inventor** | Every check passed; the last run 1 checks were reported on 2026-10-17. Run 2 checked on Windows 2026-10-11; fix run 053 to 061 and fix run 2 (spike 062, tasks 063 to 066) checked 2026-10-12 and passed. Merged into main from `claude/m2-fix-run` |
 | Material and finish (M3) | 03 | **Done, tested in Inventor** | Tasks 067 to 080, merged into main from `claude/m3-material-finish` on 2026-10-17: starter library and finish list, Material and Finish window and button, Part Properties Change button and warning, Settings and About on every ribbon, windows that fit the screen, Settings as one resizable page of collapsible sections, dialogs with only a close button, and a themed scroll bar. Every check passed |
 | AWB Hole (M4 part 1) | 09 | **Done, tested in Inventor** | Decided by Aidan 2026-10-17; spike 081 done with Aidan. Tasks 082 to 090 checked by Aidan 2026-10-18 (making, picking, previewing, tapped and dowel holes, OK, Cancel and Undo work). Then built on branch `claude/m4-hole-generator`, compiled on Windows, not yet run in Inventor: fixes and requests 093 to 101, mockup 102 (approved with changes 2026-10-23), dowel seats 106, window redesign 104, takeover of Hole and H 091, Edit Feature and double-click 092. Aidan's first look on 2026-10-24 gave six changes, planned as tasks 103 (in place for every command, top priority), 105 and 107 to 119: client graphics preview, Simple and Taper Tapped types, Spotface, toleranced clearance holes, depths below the seat, centres per point, a window that fits at 150 percent. Aidan checked 091 to 106 on 2026-10-25: six failures and seven requests, planned as tasks 120 to 132 in the same round. That round (105 to 138) was built on Windows (2026-11-07) and checked by Aidan from 2026-11-07 to 2026-11-09, with a temporary self-test (spike 139, local only) for the measurable steps: everything passed except hand colours on a remade hole (122-6, 122-8), the sketch point mini toolbar (133-1, 133-2, 133-5) and the highlight in place (105-1). Those fixes, the marking menu's Hole, and Aidan's requests and his first-look answers became tasks 140 to 150, built on Windows on 2026-11-09 (not yet run in Inventor; checklist `docs/checklists/m4-fixes-140-150.md`). Aidan checked them on 2026-11-10: all passed but 140-2, fixed with two decisions as tasks 152 to 154, which passed the same day. PR #29 merged into main on 2026-11-10 |
-| Hole table wizard (M4 part 2) | 04 | Not started | Planned after AWB Hole. Core half needs three answers; add-in half needs a Windows spike |
+| Hole table wizard (M4 part 2) | 04 | **Done, tested in Inventor** | Spike 160 done with Aidan 2026-11-17: tables drawn as sketched symbols, one `AWB Centre Mark` style on every hole. Core tasks 155 to 159, 161 and 162 and add-in tasks 163 to 167 built and reviewed on branch `claude/m4-hole-table` (add-in compiled on Windows 2026-11-17). Aidan's check: `docs/checklists/m4-hole-table-163-167.md` (167 passed 2026-11-18). Fixes and requests 168 to 173, built 2026-11-18; 163 to 173 passed Aidan's check 2026-11-20. His fix and request from it, 174 to 176 (selected point picks free centres; automatic out-of-date check with Update now or Later), built and reviewed on Windows 2026-11-20; Aidan's check of them passed but for four failures, fixed as 177 to 180; 177 to 179 passed Aidan's check 2026-11-20, 180 reversed by him and reverted as 181, which passed the same day. PR #32 merged into main on 2026-11-20 |
 | Drawing tools (M5) | 05 | Not started | Waiting on which commands Aidan wants. Will include a custom drawing template |
 | iLogic injection (M6) | 06 | Not started | Waiting on which rules |
 | Distribution (installer, download page) | none yet | Parked | Was to be decided when M2 was planned; still waiting on Aidan |

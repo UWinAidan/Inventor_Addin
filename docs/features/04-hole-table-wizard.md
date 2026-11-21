@@ -25,7 +25,7 @@ Seen in the reference:
   - Two lists, **Precision Holes** on the left and **Clearance Holes** on the right. Each row has a Description and a *Split* checkbox.
   - Between the lists: a swap button, which moves the selected row to the other list, and a delete button.
   - Under the lists: *Generate Precision Table* and *Generate Clearance Table*.
-- **Bottom row:** *Align*, *Renumber*, *Update Reams*, *Cancel*, and a progress bar.
+- **Bottom row:** *Align*, *Renumber*, *Update* (the reference calls it *Update Reams*; Aidan, 2026-11-12), *Cancel*, and a progress bar.
 
 After *Analyze View* on a plate with thirteen holes, the lists held one row per hole instance: two toleranced holes on the precision side; six plain through holes of one diameter, one of another, and four tapped holes on the clearance side.
 
@@ -52,6 +52,25 @@ Rules read off the reference result:
 - **NOTES** defaults to `-`.
 - **On the view**, each hole gets its tag beside it. Precision holes appear to be drawn with a distinct centre marker (filled quadrants) so they stand out from clearance holes.
 
+## Decided behaviour (Aidan, 2026-11-12)
+
+- **Holes in scope:** every AWB Hole type and seat in the first version: Simple, Clearance, dowel, counterbored, countersunk, spotfaced, Tapped and Taper Tapped (question 8).
+- **Origin:** the wizard uses the view's existing ordinate-dimension origin. Aidan almost always dimensions with ordinates. If the view has no origin, the wizard stops and says to add one; it never invents one (question 7). When the view has an origin that cannot be read, the wizard reads it from the view's ordinate dimensions instead, and if that fails too it says the origin could not be read, not that there is none (Aidan, 2026-11-18; task 168).
+- **Group order in the precision table:** by diameter, ascending.
+- **Group order in the clearance table:** by type first, then by diameter ascending within a type (question 6). The type order:
+  1. plain: Simple and Clearance
+  2. seated: counterbore, countersink, spotface
+  3. tapped
+  4. taper tapped
+- **Order within a group:** Y ascending, then X ascending, as the reference shows.
+- **Never by quantity.** Letters must stay stable when instances are added or removed, so a group's place never depends on how many holes it has.
+- **Split:** ticking *Split* on a row gives that hole instance its own group and letter (question 2).
+- **Update:** refreshes descriptions and positions in both tables after the model changes (question 3). Update stays manual, but when the wizard opens it checks each stored view's tables against the model and, if any are out of date (holes moved, added, removed, or no longer seen end on), says so and offers Update for those views (Aidan, 2026-11-18; tasks 171, 172). The same check also runs on its own when a drawing with stored tables becomes the active document or updates: if any view is out of date, a small window names the views with **Update now** and **Later**; it never appears while the user is editing the part, and a Settings switch turns it off (on by default) (Aidan, 2026-11-20; tasks 175, 176). Tables that were stacked before Update stay stacked after it; a table the user moved stays where it is (Aidan, 2026-11-20; task 178).
+- **Align:** stacks the two tables and snaps them to the corner above the title block (question 4).
+- **Edit Table tab:** edit the NOTES column, and re-open an existing table to swap, delete, split and renumber its rows (question 5).
+
+Defaults chosen while planning (2026-11-12) are in "Open questions" 9 to 17. Each is built as stated until Aidan says otherwise.
+
 ## Core logic (testable without Inventor)
 
 This feature has the most logic that can be built and tested in the cloud.
@@ -73,17 +92,37 @@ This feature has the most logic that can be built and tested in the cloud.
 - Place tags on the view, and the origin indicator.
 - The WPF window, bound to the Core view-model.
 
-## Design decision to settle with a spike on Windows
+## Design decision, settled by spike 160
 
-Inventor's own hole table can be created from a view and stays associative, but it may not support two tables with one shared tag sequence, merged description cells and custom titles. The alternative is a custom table plus our own tags, which gives full control and loses associativity. This needs a short experiment in Inventor before the add-in side is planned.
+Settled 2026-11-17 (Aidan): each table is drawn as one sketched symbol, one definition per table. Update redraws it, and edits go through the wizard. Inventor's hole table could not merge cells, and a custom table cannot show symbols or stacked text. Every hole gets the same centre mark, in one `AWB Centre Mark` style kept in the drawing: continuous through the hole, ending 2 mm on paper past the outermost visible circle. How each part is done is in `docs/tasks/160-spike-hole-table-in-inventor.md`, "Recommendations".
 
 ## Open questions
 
 1. ~~**What makes a hole "precision"?**~~ Answered 2026-10-24 (Aidan, spec 09): a toleranced hole is precision: an AWB dowel, and an AWB Clearance or Simple hole with Toleranced ticked. Default: a hole with an Inventor tolerance on its diameter and no AWB data is precision too.
-2. **What does the *Split* checkbox do?** One guess: it gives that instance its own group and tag.
-3. **What does *Update Reams* do?** One guess: it refreshes precision hole descriptions after the model changes.
-4. **What does *Align* do?** One guess: it stacks the tables and snaps them to the corner above the title block.
-5. **What does the *Edit Table* tab contain?**
-6. **How are groups ordered** within the clearance table: by diameter, by type with plain before tapped, or in feature order?
-7. **Where is the origin?** Picked by the user, taken from an existing origin indicator, or a fixed corner of the view.
-8. Are counterbored and countersunk holes in scope for the first version?
+2. ~~**What does the *Split* checkbox do?**~~ Answered 2026-11-12 (Aidan): it gives that hole instance its own group and letter.
+3. ~~**What does *Update Reams* do?**~~ Answered 2026-11-12 (Aidan): it is renamed *Update*, and refreshes descriptions and positions in both tables after the model changes.
+4. ~~**What does *Align* do?**~~ Answered 2026-11-12 (Aidan): it stacks the tables and snaps them to the corner above the title block.
+5. ~~**What does the *Edit Table* tab contain?**~~ Answered 2026-11-12 (Aidan): editing the NOTES column, and re-opening an existing table to swap, delete, split and renumber rows.
+6. ~~**How are groups ordered?**~~ Answered 2026-11-12 (Aidan): see "Decided behaviour".
+7. ~~**Where is the origin?**~~ Answered 2026-11-12 (Aidan): the view's existing ordinate-dimension origin; with none, the wizard stops and says to add one.
+8. ~~Are counterbored and countersunk holes in scope for the first version?~~ Answered 2026-11-12 (Aidan): yes, with spotfaced, Simple and Taper Tapped holes.
+
+Defaults chosen while planning M4 part 2 (2026-11-12). Each is built as written until Aidan says otherwise.
+
+9. **Seated sub-order.** Within the seated type: counterbore, then countersink, then spotface, in the order Aidan listed them; diameter ascending inside each. (Or one seated type ordered by diameter alone?)
+10. **A threaded hole with a seat** sorts as tapped (or taper tapped), not seated. The thread decides the type.
+11. **The diameter a group sorts by** is the drilled diameter: the through hole for plain and seated holes, the tap drill for tapped and taper tapped holes. Groups of one type and diameter that differ (a depth, a seat size) sort by their description text.
+12. **Where a split instance goes:** its new group sits straight after the group it came from, and takes the next letter.
+13. **Letters:** A to Z, then AA, AB and so on. No letters are skipped (some shops skip I, O and Q).
+14. **Decimals in inch drawings:** precision table 3, clearance table 2. Millimetre drawings use the reference's 2 and 1. Every number in DESCRIPTION uses exactly its table's decimals, like XDIM and YDIM: in a millimetre clearance table Ø2.25 prints as Ø2.3; the precision table keeps 2. A hole that needs more decimals belongs in the precision table; the wizard's Swap moves it there (Aidan, 2026-11-20; replaces task 180's extra decimals).
+15. ~~**Description wording.**~~ Answered 2026-11-17 (Aidan, spike 160 rounds 3 to 7): Inventor's own drawing symbols (diameter, counterbore, countersink, depth, spotface), the deviations stacked, the seat line after the hole line, the thread line last. Examples: `Ø6.6 THRU`, `Ø6.6 ↧12.0`, `⌴Ø11.0 ↧6.4`, `⌵Ø12.4 X 90°`, `SF Ø14.0 ↧1.0`, `M6x1 - 6H ↧10.0`.
+16. **Holes the table leaves out:** a hole whose axis is not along the view direction (seen from the side) is not listed. The wizard says how many were left out.
+17. **More than one ordinate origin on a view:** the wizard stops and says the view has several origins, rather than picking one.
+18. ~~**Update and tags.**~~ Answered 2026-11-17 (Aidan): Update keeps each remaining hole's tag. A new hole takes the next number in its group, and a new group takes the next unused letter. Only Renumber closes gaps and reorders.
+19. **A blind tapped hole threaded to full depth.** Its thread line is the designation alone (`M6x1 - 6H`), with no depth, since the hole line above already gives the drill depth. A taper tapped hole whose tap drill is unknown has no hole line, only the thread line. (Or should the thread line repeat the depth?)
+20. **Renumber on an opened table.** In the window, Renumber closes the gaps and resets the tags in the lists, but the drawing keeps its old tags until the user clicks Update (the state is stored only on Create, Generate and Update). (Or should Renumber redraw the tables at once?)
+21. **Quiet time of the automatic check (Default, tasks 175, 176).** The check waits 1.5 seconds after a drawing is activated or updates (each new event restarts the wait) before it runs, so a burst of updates causes one check. (Or a different delay?)
+22. **Views that could not be checked do not prompt (Default).** The automatic check opens its window only for out-of-date views; views it could not read are written to the log. The Hole Table window still lists them. (Or should they prompt too?)
+23. **Later lasts for the Inventor session (Default).** After Later, the same result for that drawing is not asked about again until Inventor restarts, the drawing closes, a check finds nothing out of date, or the result changes. The remembered result is the views and their hole data (positions, sizes and descriptions as Update would draw them), so any change to them asks again, even when the reason text reads the same (Aidan, 2026-11-20). (Or should Later be remembered in the file?)
+24. **Closing the Hole Table window counts as Later (Default).** The window has already offered Update, so when it closes the add-in checks once more without asking and treats that result as answered with Later. (Or should it ask again?)
+25. **What counts as stacked (Default, task 178).** After Update, the precision table was stacked if it sat within 0.01 cm of the point straight above the clearance table (or on the title block corner when there was no clearance table). A stacked precision table follows the clearance table's top edge; when the clearance table is deleted it drops to where that table was. (Or a different tolerance, or should it always snap to the stack?)

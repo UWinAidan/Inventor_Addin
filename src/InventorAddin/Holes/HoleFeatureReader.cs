@@ -173,7 +173,18 @@ namespace InventorAddin.Holes
 
         private static (string? IsoCode, double? Upper, double? Lower) ReadTolerance(HoleFeature hole, List<string>? warnings)
         {
-            Tolerance? tolerance = ComSafe.Get(() => hole.HoleDiameter.Tolerance, warnings, "Hole tolerance");
+            string name = ComSafe.Get(() => hole.Name) ?? "Hole";
+            // A tapped or taper tapped hole has no diameter parameter (the thread gives the size), so nothing to read.
+            Parameter? diameter = ComSafe.Get(() => hole.HoleDiameter);
+            if (diameter == null)
+            {
+                // Any other hole should have one: say so rather than drop its tolerance silently.
+                if (!ComSafe.Get(() => hole.Tapped))
+                    warnings?.Add($"{name} tolerance: the hole's diameter could not be read");
+                return (null, null, null);
+            }
+
+            Tolerance? tolerance = ComSafe.Get(() => diameter.Tolerance, warnings, name + " tolerance");
             if (tolerance == null)
                 return (null, null, null);
 

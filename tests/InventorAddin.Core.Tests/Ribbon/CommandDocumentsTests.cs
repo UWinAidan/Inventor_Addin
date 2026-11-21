@@ -13,6 +13,7 @@ public sealed class CommandDocumentsTests
     [InlineData(CommandNames.ExportModelData, CommandDocument.Edited)]
     [InlineData(CommandNames.AwbHole, CommandDocument.Edited)]
     [InlineData(CommandNames.AwbHoleEdit, CommandDocument.Edited)]
+    [InlineData(CommandNames.HoleTable, CommandDocument.Edited)]
     [InlineData(CommandNames.SaveAsReplace, CommandDocument.TopLevel)]
     [InlineData(CommandNames.NewPart, CommandDocument.TopLevel)]
     [InlineData(CommandNames.Settings, CommandDocument.None)]

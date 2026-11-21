@@ -279,11 +279,26 @@ public sealed record AddinSettings
     private decimal? _lastSimpleDiameterIn;
 
     /// <summary>
+    /// The last hole kept with OK in Metric (task 173; spec 09, "A new hole starts on the last hole"): a new AWB Hole
+    /// that starts in Metric starts on it. Null until one is kept. Changed through <see cref="HoleLastHole.Remember"/>.
+    /// </summary>
+    public HoleLastChoices? LastHoleMm { get; set; }
+
+    /// <summary>As <see cref="LastHoleMm"/>, for Imperial.</summary>
+    public HoleLastChoices? LastHoleIn { get; set; }
+
+    /// <summary>
     /// Whether the AWB Hole window's diagram is open (task 104; mockup choice 12): true, the default, shows it; false
     /// shows only its header line with a summary. Remembered across windows and restarts. Not shown in the Settings
     /// window. Changed through <see cref="HoleDiagramState.Remember"/>.
     /// </summary>
     public bool HoleDiagramExpanded { get; set; } = true;
+
+    /// <summary>
+    /// Whether the add-in checks a drawing's stored hole tables when the drawing becomes active or updates, and offers
+    /// Update when they are out of date (task 175; spec 04, "Update"). On by default; a settings file without it loads as on.
+    /// </summary>
+    public bool CheckHoleTablesAutomatically { get; set; } = true;
 
     /// <summary>
     /// A copy of a dowel seat map as the settings keep it: keys trimmed and matched ignoring case (the first wins),
@@ -351,7 +366,10 @@ public sealed record AddinSettings
         && LastSimpleSeatIn == other.LastSimpleSeatIn
         && LastSimpleDiameterMm == other.LastSimpleDiameterMm
         && LastSimpleDiameterIn == other.LastSimpleDiameterIn
+        && LastHoleMm == other.LastHoleMm
+        && LastHoleIn == other.LastHoleIn
         && HoleDiagramExpanded == other.HoleDiagramExpanded
+        && CheckHoleTablesAutomatically == other.CheckHoleTablesAutomatically
         && PreferredMaterials.SequenceEqual(other.PreferredMaterials, StringComparer.Ordinal);
 
     public override int GetHashCode()
@@ -382,7 +400,10 @@ public sealed record AddinSettings
         hash.Add(LastSimpleSeatIn);
         hash.Add(LastSimpleDiameterMm);
         hash.Add(LastSimpleDiameterIn);
+        hash.Add(LastHoleMm);
+        hash.Add(LastHoleIn);
         hash.Add(HoleDiagramExpanded);
+        hash.Add(CheckHoleTablesAutomatically);
         foreach (var material in PreferredMaterials)
             hash.Add(material, StringComparer.Ordinal);
         return hash.ToHashCode();

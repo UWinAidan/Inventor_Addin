@@ -33,6 +33,11 @@ namespace InventorAddin.UI
         private const int WsMinimizeBox = 0x00020000;
         private const int WsMaximizeBox = 0x00010000;
 
+        private static int _openCount;
+
+        /// <summary>True while any window shown through this class is open (task 176: the automatic hole table check waits).</summary>
+        public static bool IsAnyOpen => _openCount > 0;
+
         private static bool _darkTitleBarFailureLogged;
         private static bool _screenFailureLogged;
         private static bool _stateFailureLogged;
@@ -56,8 +61,16 @@ namespace InventorAddin.UI
             if (window == null)
                 throw new ArgumentNullException(nameof(window));
 
-            Prepare(window, headerIconName, owner, stateKey);
-            return window.ShowDialog();
+            _openCount++;
+            try
+            {
+                Prepare(window, headerIconName, owner, stateKey);
+                return window.ShowDialog();
+            }
+            finally
+            {
+                _openCount--;
+            }
         }
 
         /// <summary>
@@ -73,9 +86,20 @@ namespace InventorAddin.UI
             if (window == null)
                 throw new ArgumentNullException(nameof(window));
 
-            Prepare(window, headerIconName, null, stateKey);
-            System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(window);
-            window.Show();
+            _openCount++;
+            try
+            {
+                Prepare(window, headerIconName, null, stateKey);
+                System.Windows.Forms.Integration.ElementHost.EnableModelessKeyboardInterop(window);
+                window.Show();
+            }
+            catch
+            {
+                _openCount--;
+                throw;
+            }
+
+            window.Closed += (_, _) => _openCount--;
         }
 
         /// <summary>Owner, theme, header icon, screen fit and remembered state, for a dialog or a modeless window.</summary>

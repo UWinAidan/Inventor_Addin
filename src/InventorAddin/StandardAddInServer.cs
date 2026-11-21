@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using Inventor;
 using InventorAddin.Commands;
 using InventorAddin.Core;
+using InventorAddin.HoleTables;
 using InventorAddin.UI;
 
 namespace InventorAddin
@@ -18,6 +19,7 @@ namespace InventorAddin
 
         private RibbonSetup? _ribbon;
         private StartupTab? _startupTab;
+        private HoleTableAutoChecker? _holeTableChecker;
 
         public void Activate(ApplicationAddInSite addInSiteObject, bool firstTime)
         {
@@ -39,12 +41,18 @@ namespace InventorAddin
 
             _startupTab = new StartupTab(InventorHost.App, AddinServices.Log);
             _startupTab.Start();
+
+            _holeTableChecker = new HoleTableAutoChecker(InventorHost.App, AddinServices.Log);
+            _holeTableChecker.Start();
         }
 
         public void Deactivate()
         {
             // An open AWB Hole session is cancelled, so the part is left as it was (task 089).
             AwbHoleWindowLauncher.Shutdown();
+
+            _holeTableChecker?.Dispose();
+            _holeTableChecker = null;
 
             _startupTab?.Dispose();
             _startupTab = null;

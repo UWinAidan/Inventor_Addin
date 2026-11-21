@@ -35,7 +35,7 @@
             <StackPanel Style="{DynamicResource DialogBodyContent}">
                 <controls:FormSection Heading="File">
                     <controls:FieldRow Label="_File type" Target="{Binding ElementName=KindBox}">
-                        <ComboBox x:Name="KindBox"
+                        <controls:AwbComboBox x:Name="KindBox"
                                   IsEditable="False"
                                   ItemsSource="{Binding KindOptions, Mode=OneTime}"
                                   DisplayMemberPath="DisplayText"
@@ -43,7 +43,7 @@
                                   SelectedValue="{Binding Kind, Mode=TwoWay}" />
                     </controls:FieldRow>
                     <controls:FieldRow Label="_Units" Target="{Binding ElementName=UnitsBox}">
-                        <ComboBox x:Name="UnitsBox"
+                        <controls:AwbComboBox x:Name="UnitsBox"
                                   IsEditable="False"
                                   ItemsSource="{Binding UnitsOptions, Mode=OneTime}"
                                   DisplayMemberPath="DisplayText"
@@ -65,13 +65,13 @@
                                 shows "code: full name". The template tells the two apart by whether it sits inside a
                                 ComboBoxItem (only dropdown entries do). The full name of the chosen code is shown beside it.
                             -->
-                            <ComboBox x:Name="PartTypeBox"
+                            <controls:AwbComboBox x:Name="PartTypeBox"
                                       Style="{DynamicResource CodeComboBox}"
                                       IsEditable="False"
                                       ItemsSource="{Binding PartTypeOptions, Mode=OneTime}"
                                       SelectedValuePath="Code"
                                       SelectedValue="{Binding PartType, Mode=TwoWay}">
-                                <ComboBox.ItemTemplate>
+                                <controls:AwbComboBox.ItemTemplate>
                                     <DataTemplate>
                                         <TextBlock x:Name="OptionText" Text="{Binding DisplayText, Mode=OneWay}" />
                                         <DataTemplate.Triggers>
@@ -80,8 +80,8 @@
                                             </DataTrigger>
                                         </DataTemplate.Triggers>
                                     </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
+                                </controls:AwbComboBox.ItemTemplate>
+                            </controls:AwbComboBox>
                             <TextBlock Style="{DynamicResource SideNoteText}" Text="{Binding PartTypeFullName, Mode=OneWay}" />
                         </StackPanel>
                     </controls:FieldRow>

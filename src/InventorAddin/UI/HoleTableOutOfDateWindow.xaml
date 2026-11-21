@@ -1,0 +1,52 @@
+<Window x:Class="InventorAddin.UI.HoleTableOutOfDateWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:InventorAddin.UI.Controls"
+        SizeToContent="WidthAndHeight"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False">
+    <!--
+        DataContext is a HoleTableOutOfDatePromptViewModel (InventorAddin.Core.ViewModels), set in the constructor.
+        Task 176: shown by the automatic hole table check. The heading names the drawing, the list names each view that is
+        out of date and why, Update now is the default button and Later (Close once Update now has left failures) the cancel
+        button. After a partly failed Update now the same window lists only the views that failed.
+        Layout and bindings only: the look comes from UI/Theme, applied by WindowHost after the window is built,
+        so shared styles are referred to with DynamicResource.
+    -->
+    <Grid Style="{DynamicResource DialogContent}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- The header icon is put in the window's resources by WindowHost (HeaderIcon), in the window's theme. -->
+        <controls:DialogHeader Grid.Row="0"
+                               Icon="{DynamicResource HeaderIcon}"
+                               Title="Hole Table"
+                               Subline="Out-of-date check" />
+
+        <ScrollViewer Grid.Row="1" Style="{DynamicResource DialogBody}">
+            <StackPanel Style="{DynamicResource DialogBodyContent}">
+                <TextBlock Style="{DynamicResource ValueText}" TextWrapping="Wrap"
+                           Text="{Binding Heading, Mode=OneWay}" />
+                <ItemsControl Focusable="False" ItemsSource="{Binding ViewLines, Mode=OneWay}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Style="{DynamicResource ListItem}">
+                                <TextBlock Style="{DynamicResource ValueText}" TextWrapping="Wrap" Text="{Binding Mode=OneWay}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+
+        <controls:DialogFooter Grid.Row="2">
+            <Button Style="{DynamicResource PrimaryButton}" Content="{Binding UpdateNowText, Mode=OneTime}"
+                    IsDefault="True" Command="{Binding UpdateNowCommand}" />
+            <!-- IsCancel (Esc) runs Later, so the answer is remembered and the window closes. -->
+            <Button Content="{Binding LaterText, Mode=OneWay}" IsCancel="True" Command="{Binding LaterCommand}" />
+        </controls:DialogFooter>
+    </Grid>
+</Window>
