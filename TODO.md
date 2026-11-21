@@ -6,15 +6,14 @@ Last updated: 2026-11-20
 
 ## Next up
 
-1. M4 part 2 (hole table wizard, spec 04): every task is built and 163 to 173 passed Aidan's check (2026-11-20). His fix and request from that check are tasks 174 to 176; his check of them (2026-11-20) passed but for four failures, fixed as tasks 177 to 180; his check of those (2026-11-20) passed except 180, which he reversed (task 181). His one-step check of 181 is next (below), then PR #32 can merge. M4 part 1 is done (PR #29, 2026-11-10).
-2. **Later, not this round** (Aidan, 2026-10-25): every AWB icon gets a more polished look, done together with the colour option.
-3. Aidan finishes the remaining Part Properties checks below.
+1. **Fix soon:** a tapped hole changed in Inventor's own Hole dialog keeps AWB's stored drill in the hole table (task 179 follow-up below). Plan it as task 182 on a new branch off `main`.
+2. M5, drawing tools (spec 05): plan it. M4 is done: part 1 PR #29 (2026-11-10), part 2 PR #32 (2026-11-20).
+3. **Later, not this round** (Aidan, 2026-10-25): every AWB icon gets a more polished look, done together with the colour option.
+4. Aidan finishes the remaining Part Properties checks below.
 
 ## Waiting on Aidan: checks in Inventor
 
-**Task 181 (revert of 180)**: after Update, D1 reads `Ø2.3 THRU`; a hole swapped to Precision shows 2 decimals. 177 to 179 passed Aidan's check 2026-11-20. Branch `claude/m4-hole-table`, PR #32.
-
-**M4 part 2 (163 to 167) and fixes 168 to 173** were checked on 2026-11-18 and 2026-11-20: every step passed.
+**M4 part 2** (163 to 181) was checked from 2026-11-18 to 2026-11-20: every step passed (180 reversed by Aidan and reverted as 181, which passed). Merged in PR #32 on 2026-11-20.
 
 **Spike 160, left open (not blocking):** which command made VIEW2's ordinates, "Ordinate Dimension Set" or single "Ordinate"? The API listed no set.
 
