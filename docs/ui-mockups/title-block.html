@@ -4,13 +4,14 @@
 <meta charset="utf-8">
 <title>AWB title block mockup</title>
 <!--
-  Source of title-block.png (M5, before any task). A mockup only: nothing here is used by the add-in.
+  Source of title-block.png (M5, before any task; revised after Aidan's answers A to G, 2026-11-20).
+  A mockup only: nothing here is used by the add-in.
   Drawn by us in millimetres. The only picture used is Aidan's own mark, libraries/Branding/aidanwbrown-mark-black-1024.png,
   loaded by relative path. Every value shown is made up.
 
   Render (from the repository root; the page is 1400 wide):
     "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --headless --disable-gpu
-      --hide-scrollbars --force-device-scale-factor=1 --window-size=1400,2600
+      --hide-scrollbars --force-device-scale-factor=1 --window-size=1400,3000
       --screenshot="<repo>\docs\ui-mockups\title-block.png" "file:///<repo>/docs/ui-mockups/title-block.html"
   then trim the empty rows at the bottom (the page background, #E9EBEF) with Pillow.
 -->
@@ -28,65 +29,59 @@
   td.n { width: 22px; }
   .num { display: inline-block; min-width: 18px; height: 18px; border-radius: 9px; background: #e0a100; color: #000;
          font-size: 11px; font-weight: 700; text-align: center; line-height: 18px; }
-  .q { background: #fff8e1; }
-  ol li { margin-bottom: 6px; }
   .cap { font-size: 12px; color: #4a5263; margin-top: 6px; }
 </style>
 </head>
 <body>
 <div class="page">
-  <h1>AWB title block: mockup for comment</h1>
+  <h1>AWB title block: revised for approval</h1>
   <p class="lead">One title block, 180 by 50 mm, the same on every sheet size (ISO A4 to A0, ANSI A to E). White sheet, third angle projection.
-    Every value is read from the model's properties, so the print changes when the model does. All values below are made up.</p>
+    Every value is read from the model or the drawing, so the print changes when they do. All values below are made up.
+    Revised after Aidan's answers A to G (2026-11-20): the logo panel a third narrower (30 to 20 mm), the tolerance box 45 to 30 mm wide,
+    the description and the rows under it 25 mm wider, part number and revision 7 mm.</p>
 
   <div class="card">
     <svg id="tb" width="1280" viewBox="-6 -8 192 64" style="display:block"></svg>
-    <div class="cap">Drawn at about 7 times full size. Yellow numbers match the table below. Labels 1.8 mm, values 3.5 mm, part number and revision 5 mm, text in Tahoma (Inventor's drawing font).</div>
+    <div class="cap">Metric sheet, drawn at about 7 times full size. Yellow numbers match the table below. Labels 1.8 mm, values 2.8 mm, description 4 mm,
+      part number and revision 7 mm bold, status 2.5 mm so "WORK IN PROGRESS" fits. Text in Tahoma (Inventor's drawing font).</div>
+  </div>
+
+  <h2>Imperial sheet</h2>
+  <div class="card">
+    <svg id="tbin" width="1280" viewBox="-6 -8 192 64" style="display:block"></svg>
+    <div class="cap">Only the tolerance box (2), the units, the weight's unit and the size differ. The imperial wording wraps onto three lines to fit the 30 mm box.</div>
   </div>
 
   <h2>Where each field comes from</h2>
   <div class="card">
     <table>
       <tr><th></th><th>Field</th><th>Reads</th><th>Note</th></tr>
-      <tr><td class="n"><span class="num">1</span></td><td>Logo and URL</td><td>Your mark (<code>libraries/Branding/aidanwbrown-mark-black-1024.png</code>), fixed in the template; "aidanwbrown.com" as fixed text</td><td>The black mark, so it prints in one colour. The round sage logo is the alternative (question A).</td></tr>
-      <tr><td class="n"><span class="num">2</span></td><td>General tolerances</td><td>Fixed text in the template, one wording for mm and one for inches</td><td>Values shown are placeholders (question B).</td></tr>
+      <tr><td class="n"><span class="num">1</span></td><td>Logo and URL</td><td>Fixed in the template: <code>libraries/Branding/aidanwbrown-mark-black-1024.png</code> and the text "aidanwbrown.com"</td><td>The black mark (answer A)</td></tr>
+      <tr><td class="n"><span class="num">2</span></td><td>General tolerances</td><td>Fixed text in the template. Metric: "UNLESS OTHERWISE STATED: ISO 2768-m". Imperial: ".X ±.03 &nbsp;.XX ±.01 &nbsp;.XXX ±.005 &nbsp;ANGLES ±0.5°"</td><td>Answer B</td></tr>
       <tr><td class="n"><span class="num">3</span></td><td>Projection</td><td>Fixed: third angle symbol</td><td></td></tr>
       <tr><td class="n"><span class="num">4</span></td><td>Description</td><td>Model: Design Tracking, Description</td><td></td></tr>
       <tr><td class="n"><span class="num">5</span></td><td>Part number</td><td>Model: Design Tracking, Part Number</td><td></td></tr>
-      <tr><td class="n"><span class="num">6</span></td><td>Revision</td><td>Model: Inventor's standard Revision Number</td><td>Set by hand in Part Properties for now.</td></tr>
-      <tr><td class="n"><span class="num">7</span></td><td>Status</td><td>Model: a Status property</td><td>Custom property, or Inventor's built-in Design Status (question C).</td></tr>
+      <tr><td class="n"><span class="num">6</span></td><td>Revision</td><td>Model: Inventor's standard Revision Number</td><td>Set by hand in Part Properties for now</td></tr>
+      <tr><td class="n"><span class="num">7</span></td><td>Status</td><td>Model: Inventor's built-in Design Status (Work In Progress, Pending, Released)</td><td>Answer C: Vault and a later PDM read it</td></tr>
       <tr><td class="n"><span class="num">8</span></td><td>Material</td><td>Model: Material</td><td></td></tr>
       <tr><td class="n"><span class="num">9</span></td><td>Finish</td><td>Model: custom Finish (the name; the full Finish Note goes in the notes block on the sheet)</td><td></td></tr>
       <tr><td class="n"><span class="num">10</span></td><td>Designer</td><td>Model: Design Tracking, Designer</td><td></td></tr>
-      <tr><td class="n"><span class="num">11</span></td><td>Detailer</td><td>Model: custom Detailer (what New Part already writes)</td><td>Or the drawing's own Author, since the detailer makes the print (question D).</td></tr>
-      <tr><td class="n"><span class="num">12</span></td><td>Date</td><td>To decide</td><td>Question E.</td></tr>
-      <tr><td class="n"><span class="num">13</span></td><td>Weight</td><td>Model: Mass, in the model's units, 2 decimals</td><td></td></tr>
+      <tr><td class="n"><span class="num">11</span></td><td>Detailer</td><td>Drawing: Author</td><td>Answer D</td></tr>
+      <tr><td class="n"><span class="num">12</span></td><td>Date</td><td>Drawing: its Creation Date</td><td>Answer E</td></tr>
+      <tr><td class="n"><span class="num">13</span></td><td>Weight</td><td>Model: Mass, in the sheet's units, 2 decimals</td><td></td></tr>
       <tr><td class="n"><span class="num">14</span></td><td>Scale</td><td>The sheet's first view</td><td></td></tr>
       <tr><td class="n"><span class="num">15</span></td><td>Sheet x of y</td><td>Sheet number and sheet count</td><td></td></tr>
       <tr><td class="n"><span class="num">16</span></td><td>Units</td><td>MM or IN, from the template the print was made from</td><td></td></tr>
-      <tr class="q"><td class="n"><span class="num">17</span></td><td>Size</td><td>The sheet size</td><td><b>Not on your list.</b> Proposed because the sheet size is usual in a title block; drop it and Units takes the space.</td></tr>
+      <tr><td class="n"><span class="num">17</span></td><td>Size</td><td>The sheet size</td><td>Kept (answer F)</td></tr>
     </table>
   </div>
 
   <h2>On the sheet</h2>
   <div class="card">
     <div class="row">
-      <div><svg id="a3" width="760" viewBox="-4 -4 428 305"></svg><div class="cap">A3 landscape. Border 20 mm on the left (filing edge), 10 mm elsewhere. The finish notes block (answer 11) sits on the title block; the views are placeholders.</div></div>
+      <div><svg id="a3" width="760" viewBox="-4 -4 428 305"></svg><div class="cap">A3 landscape. Border 20 mm on the left (filing edge), 10 mm elsewhere. The finish notes block sits on the title block; the views are placeholders.</div></div>
       <div><svg id="a4" width="360" viewBox="-4 -4 218 305"></svg><div class="cap">A4 portrait: the 180 mm block fills the width inside the border exactly. ANSI A portrait has 190 mm inside its 0.5 in border, so it fits there too.</div></div>
     </div>
-  </div>
-
-  <h2>Questions for you</h2>
-  <div class="card">
-    <ol type="A">
-      <li><b>Logo:</b> the black mark (shown), or the round sage logo? The sage one prints grey on a black and white printer.</li>
-      <li><b>General tolerances:</b> what wording? Shown: mm <i>X ±0.5, X.X ±0.2, X.XX ±0.05, angles ±0.5°</i>; inches <i>.X ±.030, .XX ±.010, .XXX ±.005, angles ±0.5°</i>. Or a standard reference such as ISO 2768-m.</li>
-      <li><b>Status:</b> a custom "Status" property, or Inventor's built-in Design Status (Work in progress, Pending, Released)? The built-in one is what Vault uses, which may matter for the PDM later.</li>
-      <li><b>Detailer:</b> the model's custom Detailer (written by New Part today), or the drawing's own Author?</li>
-      <li><b>Date:</b> the model's creation date, the drawing's creation date, or a date property you set by hand (for example on release)?</li>
-      <li><b>Size:</b> keep the Size field (17), or drop it?</li>
-      <li><b>Layout:</b> anything to move, resize or regroup?</li>
-    </ol>
   </div>
 </div>
 
@@ -100,79 +95,73 @@ function el(parent, name, attrs, text) {
   parent.appendChild(e);
   return e;
 }
-// Cells: x, y, w, h (mm), label, value, value size, callout number, options
+// Cells: x, y, w, h (mm), label, value (and its imperial value), value size, callout number, options
 const cells = [
-  { x: 75,  y: 0,  w: 105, h: 14, label: "DESCRIPTION", value: "MOUNTING BRACKET, LEFT", size: 4, n: 4 },
-  { x: 75,  y: 14, w: 60,  h: 12, label: "PART NUMBER", value: "AWB-10001", size: 5, bold: true, n: 5 },
-  { x: 135, y: 14, w: 15,  h: 12, label: "REV", value: "B", size: 5, bold: true, n: 6, centre: true },
-  { x: 150, y: 14, w: 30,  h: 12, label: "STATUS", value: "RELEASED", size: 3.5, n: 7 },
-  { x: 75,  y: 26, w: 52,  h: 8,  label: "MATERIAL", value: "ALUMINIUM 6061-T6", size: 2.8, n: 8 },
-  { x: 127, y: 26, w: 53,  h: 8,  label: "FINISH", value: "CLEAR ANODISE", size: 2.8, n: 9 },
-  { x: 75,  y: 34, w: 26,  h: 8,  label: "DESIGNER", value: "A. BROWN", size: 2.8, n: 10 },
-  { x: 101, y: 34, w: 26,  h: 8,  label: "DETAILER", value: "A. BROWN", size: 2.8, n: 11 },
-  { x: 127, y: 34, w: 26,  h: 8,  label: "DATE", value: "2026-11-20", size: 2.8, n: 12 },
-  { x: 153, y: 34, w: 27,  h: 8,  label: "WEIGHT", value: "0.42 kg", size: 2.8, n: 13 },
-  { x: 75,  y: 42, w: 26,  h: 8,  label: "SCALE", value: "1:2", size: 2.8, n: 14 },
-  { x: 101, y: 42, w: 26,  h: 8,  label: "SHEET", value: "1 OF 2", size: 2.8, n: 15 },
-  { x: 127, y: 42, w: 26,  h: 8,  label: "UNITS", value: "MM", size: 2.8, n: 16 },
-  { x: 153, y: 42, w: 27,  h: 8,  label: "SIZE", value: "A3", size: 2.8, n: 17 },
+  { x: 50,    y: 0,  w: 130,  h: 12, label: "DESCRIPTION", value: "MOUNTING BRACKET, LEFT", size: 4, n: 4 },
+  { x: 50,    y: 12, w: 86,   h: 14, label: "PART NUMBER", value: "AWB-10001", size: 7, bold: true, n: 5 },
+  { x: 136,   y: 12, w: 16,   h: 14, label: "REV", value: "B", size: 7, bold: true, n: 6, centre: true },
+  { x: 152,   y: 12, w: 28,   h: 14, label: "STATUS", value: "WORK IN PROGRESS", size: 2.5, n: 7 },
+  { x: 50,    y: 26, w: 65,   h: 8,  label: "MATERIAL", value: "ALUMINIUM 6061-T6", size: 2.8, n: 8 },
+  { x: 115,   y: 26, w: 65,   h: 8,  label: "FINISH", value: "CLEAR ANODISE", size: 2.8, n: 9 },
+  { x: 50,    y: 34, w: 32.5, h: 8,  label: "DESIGNER", value: "A. BROWN", size: 2.8, n: 10 },
+  { x: 82.5,  y: 34, w: 32.5, h: 8,  label: "DETAILER", value: "A. BROWN", size: 2.8, n: 11 },
+  { x: 115,   y: 34, w: 32.5, h: 8,  label: "DATE", value: "2026-11-20", size: 2.8, n: 12 },
+  { x: 147.5, y: 34, w: 32.5, h: 8,  label: "WEIGHT", value: "0.42 kg", imperial: "0.93 lb", size: 2.8, n: 13 },
+  { x: 50,    y: 42, w: 32.5, h: 8,  label: "SCALE", value: "1:2", size: 2.8, n: 14 },
+  { x: 82.5,  y: 42, w: 32.5, h: 8,  label: "SHEET", value: "1 OF 2", size: 2.8, n: 15 },
+  { x: 115,   y: 42, w: 32.5, h: 8,  label: "UNITS", value: "MM", imperial: "IN", size: 2.8, n: 16 },
+  { x: 147.5, y: 42, w: 32.5, h: 8,  label: "SIZE", value: "A3", imperial: "B", size: 2.8, n: 17 },
 ];
 
-function titleBlock(svg, ox, oy, callouts) {
+function titleBlock(svg, ox, oy, callouts, imperial) {
   const g = el(svg, "g", { transform: `translate(${ox},${oy})`, "font-family": FONT, fill: "#000" });
   const line = { stroke: "#000", "stroke-width": 0.35, fill: "none" };
   el(g, "rect", { x: 0, y: 0, width: 180, height: 50, stroke: "#000", "stroke-width": 0.7, fill: "#fff" });
-  el(g, "line", { x1: 30, y1: 0, x2: 30, y2: 50, ...line });
-  el(g, "line", { x1: 75, y1: 0, x2: 75, y2: 50, ...line });
-  el(g, "line", { x1: 30, y1: 34, x2: 75, y2: 34, ...line });
+  el(g, "line", { x1: 20, y1: 0, x2: 20, y2: 50, ...line });
+  el(g, "line", { x1: 50, y1: 0, x2: 50, y2: 50, ...line });
+  el(g, "line", { x1: 20, y1: 22, x2: 50, y2: 22, ...line });
   for (const c of cells) {
     el(g, "rect", { x: c.x, y: c.y, width: c.w, height: c.h, ...line });
     el(g, "text", { x: c.x + 1, y: c.y + 2.4, "font-size": 1.8, fill: "#333" }, c.label);
     const vy = c.y + c.h - (c.h - 2.6 - c.size) / 2 - 0.6;
     el(g, "text", { x: c.centre ? c.x + c.w / 2 : c.x + 1.5, y: vy, "font-size": c.size,
-      "text-anchor": c.centre ? "middle" : "start", "font-weight": c.bold ? 700 : 400 }, c.value);
+      "text-anchor": c.centre ? "middle" : "start", "font-weight": c.bold ? 700 : 400 }, imperial && c.imperial ? c.imperial : c.value);
   }
-  // 1: logo column
-  el(g, "image", { href: "../../libraries/Branding/aidanwbrown-mark-black-1024.png", x: 4, y: 7, width: 22, height: 22 });
-  el(g, "text", { x: 15, y: 40, "font-size": 2.5, "text-anchor": "middle" }, "aidanwbrown.com");
-  // 2: general tolerances
-  const t = [
-    ["UNLESS OTHERWISE SPECIFIED", 1.8, "#333"],
-    ["DIMENSIONS IN MM", 2.5],
-    ["TOLERANCES:", 2.5],
-    ["X ±0.5|X.X ±0.2", 2.5],
-    ["X.XX ±0.05", 2.5],
-    ["ANGLES ±0.5°", 2.5],
-    ["REMOVE BURRS, BREAK SHARP EDGES", 1.8],
-  ];
-  let ty = 2.4;
-  for (const [s, size, fill] of t) {
-    s.split("|").forEach((part, i) => el(g, "text", { x: 31 + i * 20, y: ty, "font-size": size, fill: fill || "#000" }, part));
-    ty += size === 1.8 && ty < 3 ? 4.2 : 4.3;
+  // 1: logo panel, 20 wide
+  el(g, "image", { href: "../../libraries/Branding/aidanwbrown-mark-black-1024.png", x: 3, y: 10, width: 14, height: 14 });
+  el(g, "text", { x: 10, y: 34, "font-size": 2, "text-anchor": "middle" }, "aidanwbrown.com");
+  // 2: general tolerances, 30 by 22
+  el(g, "text", { x: 21, y: 2.4, "font-size": 1.8, fill: "#333" }, "UNLESS OTHERWISE STATED");
+  if (imperial) {
+    el(g, "text", { x: 21.5, y: 8.6, "font-size": 2.5 }, ".X ±.03");
+    el(g, "text", { x: 35, y: 8.6, "font-size": 2.5 }, ".XX ±.01");
+    el(g, "text", { x: 21.5, y: 13.6, "font-size": 2.5 }, ".XXX ±.005");
+    el(g, "text", { x: 21.5, y: 18.6, "font-size": 2.5 }, "ANGLES ±0.5°");
+  } else {
+    el(g, "text", { x: 35, y: 14, "font-size": 4, "font-weight": 700, "text-anchor": "middle" }, "ISO 2768-m");
   }
   // 3: third angle symbol: frustum on the left, small end towards the circles on the right
-  el(g, "text", { x: 31, y: 36.4, "font-size": 1.8, fill: "#333" }, "THIRD ANGLE PROJECTION");
-  const sx = 40, sy = 43.5;
-  el(g, "path", { d: `M${sx - 6},${sy - 4} L${sx + 4},${sy - 2.4} L${sx + 4},${sy + 2.4} L${sx - 6},${sy + 4} Z`, ...line, "stroke-width": 0.35 });
-  el(g, "line", { x1: sx - 8, y1: sy, x2: sx + 6, y2: sy, stroke: "#000", "stroke-width": 0.18, "stroke-dasharray": "3 0.8 0.6 0.8" });
-  el(g, "circle", { cx: sx + 15, cy: sy, r: 4, ...line });
-  el(g, "circle", { cx: sx + 15, cy: sy, r: 2.4, ...line });
-  el(g, "line", { x1: sx + 9.5, y1: sy, x2: sx + 20.5, y2: sy, stroke: "#000", "stroke-width": 0.18, "stroke-dasharray": "3 0.8 0.6 0.8" });
-  el(g, "line", { x1: sx + 15, y1: sy - 5.5, x2: sx + 15, y2: sy + 5.5, stroke: "#000", "stroke-width": 0.18, "stroke-dasharray": "3 0.8 0.6 0.8" });
+  el(g, "text", { x: 21, y: 24.4, "font-size": 1.8, fill: "#333" }, "THIRD ANGLE PROJECTION");
+  const sx = 28.5, sy = 37.5;
+  const cl = { stroke: "#000", "stroke-width": 0.18, "stroke-dasharray": "3 0.8 0.6 0.8" };
+  el(g, "path", { d: `M${sx - 4.5},${sy - 3.5} L${sx + 3.5},${sy - 2.1} L${sx + 3.5},${sy + 2.1} L${sx - 4.5},${sy + 3.5} Z`, ...line });
+  el(g, "line", { x1: sx - 6, y1: sy, x2: sx + 5, y2: sy, ...cl });
+  el(g, "circle", { cx: sx + 12, cy: sy, r: 3.5, ...line });
+  el(g, "circle", { cx: sx + 12, cy: sy, r: 2.1, ...line });
+  el(g, "line", { x1: sx + 7.5, y1: sy, x2: sx + 16.5, y2: sy, ...cl });
+  el(g, "line", { x1: sx + 12, y1: sy - 4.8, x2: sx + 12, y2: sy + 4.8, ...cl });
 
   if (!callouts) return;
   const bubble = (x, y, n) => {
     el(g, "circle", { cx: x, cy: y, r: 2, fill: "#e0a100" });
     el(g, "text", { x, y: y + 0.75, "font-size": 2.1, "font-weight": 700, "text-anchor": "middle", "font-family": "Segoe UI" }, n);
   };
-  bubble(2.5, -3, 1); bubble(32.5, -3, 2); bubble(32.5, 52.5, 3);
-  for (const c of cells) {
-    if (c.y === 0 || c.y === 14 || c.y === 26) bubble(c.x + c.w - 2.5, c.y === 0 ? -3 : c.y + 2.5, c.n);
-    else bubble(c.x + c.w - 2.5, c.y === 42 ? 52.5 : c.y + 2.5, c.n);
-  }
+  bubble(2.5, -3, 1); bubble(22.5, -3, 2); bubble(22.5, 52.5, 3);
+  for (const c of cells) bubble(c.x + c.w - 2.5, c.y === 0 ? -3 : c.y === 42 ? 52.5 : c.y + 2.5, c.n);
 }
 
-titleBlock(document.getElementById("tb"), 0, 0, true);
+titleBlock(document.getElementById("tb"), 0, 0, true, false);
+titleBlock(document.getElementById("tbin"), 0, 0, true, true);
 
 function sheet(svg, w, h, views) {
   const g = el(svg, "g", {});
@@ -187,7 +176,7 @@ function sheet(svg, w, h, views) {
   el(g, "rect", { x: nx, y: ny, width: 180, height: 14, fill: "#fff", stroke: "#b8c0cc", "stroke-width": 0.4, "stroke-dasharray": "2 1.5" });
   el(g, "text", { x: nx + 1.5, y: ny + 4.5, "font-size": 2.8, "font-family": FONT }, "NOTES:");
   el(g, "text", { x: nx + 1.5, y: ny + 9, "font-size": 2.8, "font-family": FONT }, "1. FINISH: CLEAR ANODISE, 10-15 µm (finish note, read from the model)");
-  titleBlock(g, w - 10 - 180, h - 10 - 50, false);
+  titleBlock(g, w - 10 - 180, h - 10 - 50, false, false);
 }
 sheet(document.getElementById("a3"), 420, 297, [[40, 30, 110, 75, "TOP"], [40, 120, 110, 75, "FRONT"], [170, 120, 60, 75, "RIGHT"], [290, 30, 100, 80, "ISO"]]);
 sheet(document.getElementById("a4"), 210, 297, [[30, 25, 100, 60, "TOP"], [30, 100, 100, 60, "FRONT"], [140, 100, 55, 60, "RIGHT"], [140, 25, 55, 60, "ISO"]]);

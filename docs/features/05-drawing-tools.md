@@ -39,7 +39,7 @@ Decided by Aidan on 2026-10-10: a custom drawing template is a separate item for
 
 - **Order:** the print template first. Then Open Drawing, Place Initial Views and Check Out of Bounds. The notes and symbols commands come later.
 - **Template:** ISO A4 to A0 and ANSI A to E, metric and imperial; white sheets, not Inventor's cream; third angle projection. Revision table and parts list styles are in the template, but nothing places them automatically. A starter template ships in the repo, with a Settings path to Aidan's own copy. Create Print uses it.
-- **Title block:** part number, description, material, finish, designer, detailer, status, weight, revision, date, scale, sheet x of y, units, general tolerances, the projection symbol, Aidan's logo (the files in `libraries/Branding/`, not a drawn logo) and aidanwbrown.com. Revision is Inventor's standard Revision Number and Status a Status property, both read from the model and set by hand in Part Properties for now. Mockup: `docs/ui-mockups/title-block.png`, waiting on Aidan's comments (questions 5 to 11 below).
+- **Title block:** part number, description, material, finish, designer, detailer, status, weight, revision, date, scale, sheet x of y, units, general tolerances, the projection symbol, Aidan's logo (the files in `libraries/Branding/`, not a drawn logo) and aidanwbrown.com. Revision is Inventor's standard Revision Number and Status Inventor's built-in Design Status, both read from the model and set by hand in Part Properties for now. The Detailer is the drawing's Author and the Date the drawing's date. The black mark is the logo. General tolerances: metric "UNLESS OTHERWISE STATED: ISO 2768-m"; imperial ".X ±.03  .XX ±.01  .XXX ±.005  ANGLES ±0.5°". A Size field shows the sheet size. Layout: `docs/ui-mockups/title-block.png` (180 by 50 mm on every sheet size; logo panel 20 mm, tolerance and projection column 30 mm; part number and revision 7 mm).
 - **Finish notes:** a notes block on the sheet reads the finish note from the model and updates with it.
 - **Open Drawing:** opens the model's print from `Prints\`; when there is none, it offers Create Print.
 - **Place Initial Views:** part: front, top, right and iso. Sheet metal: folded front and the flat pattern. Assembly: front and iso. Scale by Create Print's rule. A window shown before the print is created lets the user confirm or change the views.
@@ -63,10 +63,4 @@ Each command is a thin read, call Core, apply. Creating drawings and placing vie
 2. ~~Which views count as initial views?~~ Answered 2026-11-20, see above.
 3. Which title blocks are there to switch between, and when is each used? Deferred with Change Title Block.
 4. ~~Which commands matter most?~~ Answered 2026-11-20, see above.
-5. Title block logo: the black mark or the round sage logo? (mockup question A)
-6. General tolerance wording in mm and inches, or a standard such as ISO 2768-m? (B)
-7. Status: a custom Status property, or Inventor's built-in Design Status? (C)
-8. Detailer: the model's custom Detailer, or the drawing's own Author? (D)
-9. Date: the model's creation date, the drawing's, or a date set by hand? (E)
-10. Keep the proposed Size field? (F)
-11. Any layout changes to the title block? (G)
+5. to 11. Title block questions A to G: answered by Aidan on 2026-11-20, see Decided above.

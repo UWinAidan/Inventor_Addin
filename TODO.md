@@ -6,7 +6,7 @@ Last updated: 2026-11-20
 
 ## Next up
 
-1. M5, drawing tools (spec 05): Aidan comments on the title block mockup (`docs/ui-mockups/title-block.png`, questions A to G on it); then write the tasks, print template first. M4 is done: part 1 PR #29 (2026-11-10), part 2 PR #32 (2026-11-20).
+1. M5, drawing tools (spec 05): Aidan approves the revised title block mockup (`docs/ui-mockups/title-block.png`); then write the tasks, print template first. M4 is done: part 1 PR #29 (2026-11-10), part 2 PR #32 (2026-11-20).
 2. **Later, not this round** (Aidan, 2026-10-25): every AWB icon gets a more polished look, done together with the colour option.
 3. Aidan finishes the remaining Part Properties checks below.
 
@@ -82,7 +82,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Question 20 in spec 04: Renumber on a re-opened table waits for Update to redraw (Default); or should it redraw at once?
 
 **Drawing tools (spec 05), blocks M5 tasks**
-- Title block mockup (`docs/ui-mockups/title-block.png`): questions A to G on it (logo version, general tolerance wording, custom Status or Inventor's Design Status, Detailer source, which date, the proposed Size field, layout)
+- Approve the revised title block mockup (`docs/ui-mockups/title-block.png`); questions A to G were answered on 2026-11-20
 - M5 planning questions 14 to 18 (from an earlier session; their wording is not in the repo): ask again when those commands come up (Aidan, 2026-11-20)
 
 **iLogic (spec 06), blocks M6**

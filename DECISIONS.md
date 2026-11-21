@@ -466,3 +466,10 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-20 | Place Initial Views: part front, top, right and iso; sheet metal folded front plus flat pattern; assembly front and iso; Create Print's scale rule. A window before the print is created lets the user confirm or change the views | Aidan | spec 05, M5 planning |
 | 2026-11-20 | M5 planning questions 14 to 18 (asked in an earlier session; the list is not in the repo) stay open; ask again when those commands come up | Aidan | spec 05, M5 planning |
 | 2026-11-20 | Task 182 passed its check in Inventor; PR #33 merged into `main`. M5 is planned on `claude/m5-drawing-tools` | Aidan | task 182 |
+| 2026-11-20 | Title block logo: the black mark (`libraries/Branding/aidanwbrown-mark-black-1024.png`); prints are usually black and white | Aidan | spec 05, title block mockup |
+| 2026-11-20 | Title block general tolerances: metric sheets "UNLESS OTHERWISE STATED: ISO 2768-m"; imperial sheets ".X ±.03  .XX ±.01  .XXX ±.005  ANGLES ±0.5°" | Aidan | spec 05, title block mockup |
+| 2026-11-20 | Title block Status reads Inventor's built-in Design Status (Vault and a future PDM read it). Replaces "a Status property" | Aidan | spec 05, title block mockup |
+| 2026-11-20 | Title block Detailer reads the drawing's own Author | Aidan | spec 05, title block mockup |
+| 2026-11-20 | Title block Date is the drawing's date | Aidan | spec 05, title block mockup |
+| 2026-11-20 | Title block keeps the Size field | Aidan | spec 05, title block mockup |
+| 2026-11-20 | Title block layout: logo panel a third narrower (20 mm), its space to the description; tolerance box shrunk to fit the ISO 2768-m wording (30 mm); part number and revision text 7 mm. Everything else as in the first mockup | Aidan | spec 05, title block mockup |
