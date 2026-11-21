@@ -452,3 +452,17 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-20 | Hole table descriptions use exactly their table's decimals, like XDIM and YDIM: mm clearance 1 (Ø2.25 prints Ø2.3), mm precision 2. A hole needing more decimals goes in the precision table via the wizard's Swap. Replaces task 180's two entries (extra decimals; at most 3 mm / 4 in) | Aidan | spec 04 question 14, task 181 |
 | 2026-11-20 | M4 part 2 closes: 177 to 179 and 181 passed, PR #32 merges to main; the task 179 reviewer follow-ups (the stale stored drill, fix soon) are done afterwards on a new branch, not before the merge | Aidan | 2026-11-20 |
 | 2026-11-20 | Hole table: a straight tapped hole's drill is Inventor's hole diameter when it reads (AWB's stored value when the two agree), else AWB's stored tap drill unless the actual thread's Tapped row disagrees with it, else that row's tap drill. Replaces task 179's order, so a hole changed in Inventor's own Hole dialog shows its actual drill | Default | task 182 |
+| 2026-11-20 | M5 order: the print template first; then Open Drawing, Place Initial Views and Check Out of Bounds; the notes and symbols commands later | Aidan | spec 05, M5 planning |
+| 2026-11-20 | Print template sheet sizes: ISO A4 to A0 and ANSI A to E, in metric and imperial | Aidan | spec 05, M5 planning |
+| 2026-11-20 | Print template sheets are white, not Inventor's cream background | Aidan | spec 05, M5 planning |
+| 2026-11-20 | Title block fields: part number, description, material, finish, designer, detailer, status, weight, revision, date, scale, sheet x of y, units, general tolerances, projection symbol, Aidan's logo (his files in `libraries/Branding/`, not a drawn logo) and the URL aidanwbrown.com. A mockup in `docs/ui-mockups/` is agreed before any task is written | Aidan | spec 05, M5 planning |
+| 2026-11-20 | Prints use third angle projection | Aidan | spec 05, M5 planning |
+| 2026-11-20 | Title block shows Revision (Inventor's standard Revision Number) and Status (a Status property), both read from the model and set by hand in Part Properties for now; no dropdown or release logic this milestone | Aidan | spec 05, M5 planning |
+| 2026-11-20 | Revision table and parts list styles are in the template; nothing places them automatically | Aidan | spec 05, M5 planning |
+| 2026-11-20 | A starter print template ships in the repo, plus a Settings path to Aidan's own copy | Aidan | spec 05, M5 planning |
+| 2026-11-20 | Create Print uses the AWB print template | Aidan | spec 05, M5 planning |
+| 2026-11-20 | Finish notes: a notes block on the sheet reads the finish note from the model and updates with it | Aidan | spec 05, M5 planning |
+| 2026-11-20 | Open Drawing opens the model's print from `Prints\`; when there is none it offers Create Print | Aidan | spec 05, M5 planning |
+| 2026-11-20 | Place Initial Views: part front, top, right and iso; sheet metal folded front plus flat pattern; assembly front and iso; Create Print's scale rule. A window before the print is created lets the user confirm or change the views | Aidan | spec 05, M5 planning |
+| 2026-11-20 | M5 planning questions 14 to 18 (asked in an earlier session; the list is not in the repo) stay open; ask again when those commands come up | Aidan | spec 05, M5 planning |
+| 2026-11-20 | Task 182 passed its check in Inventor; PR #33 merged into `main`. M5 is planned on `claude/m5-drawing-tools` | Aidan | task 182 |

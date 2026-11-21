@@ -35,6 +35,16 @@ Other details seen on the reference sheets, as hints for templates and defaults:
 
 Decided by Aidan on 2026-10-10: a custom drawing template is a separate item for this milestone (M5), not for numbering (M2). Its title block must read every property from the model (part number, description, designer and the rest), not copy them into the drawing, so a change in the model shows on the print without any update step.
 
+## Decided for M5 (Aidan, 2026-11-20)
+
+- **Order:** the print template first. Then Open Drawing, Place Initial Views and Check Out of Bounds. The notes and symbols commands come later.
+- **Template:** ISO A4 to A0 and ANSI A to E, metric and imperial; white sheets, not Inventor's cream; third angle projection. Revision table and parts list styles are in the template, but nothing places them automatically. A starter template ships in the repo, with a Settings path to Aidan's own copy. Create Print uses it.
+- **Title block:** part number, description, material, finish, designer, detailer, status, weight, revision, date, scale, sheet x of y, units, general tolerances, the projection symbol, Aidan's logo (the files in `libraries/Branding/`, not a drawn logo) and aidanwbrown.com. Revision is Inventor's standard Revision Number and Status a Status property, both read from the model and set by hand in Part Properties for now. Mockup: `docs/ui-mockups/title-block.png`, waiting on Aidan's comments (questions 5 to 11 below).
+- **Finish notes:** a notes block on the sheet reads the finish note from the model and updates with it.
+- **Open Drawing:** opens the model's print from `Prints\`; when there is none, it offers Create Print.
+- **Place Initial Views:** part: front, top, right and iso. Sheet metal: folded front and the flat pattern. Assembly: front and iso. Scale by Create Print's rule. A window shown before the print is created lets the user confirm or change the views.
+- **Not this milestone:** release logic for revision and status. Aidan's long-term idea, a lightweight PDM on his home server, is in `TODO.md`.
+
 ## Core logic (testable without Inventor)
 
 - Balloon check: given the parts list items and the balloons on a sheet, which items are missing and which are duplicated. `DrawingData` already carries the parts list rows.
@@ -49,7 +59,14 @@ Each command is a thin read, call Core, apply. Creating drawings and placing vie
 
 ## Open questions
 
-1. For each row marked guess or unknown, what should the command actually do? Rows Aidan does not want can be dropped.
-2. Which views count as "initial views" for a part, a sheet metal part and an assembly?
-3. Which title blocks are there to switch between, and when is each used?
-4. Which commands matter most? This list is long, and the order decides what the first drawing milestone contains.
+1. For each row marked guess or unknown, what should the command actually do? Rows Aidan does not want can be dropped. Deferred until those commands come up (Aidan, 2026-11-20).
+2. ~~Which views count as initial views?~~ Answered 2026-11-20, see above.
+3. Which title blocks are there to switch between, and when is each used? Deferred with Change Title Block.
+4. ~~Which commands matter most?~~ Answered 2026-11-20, see above.
+5. Title block logo: the black mark or the round sage logo? (mockup question A)
+6. General tolerance wording in mm and inches, or a standard such as ISO 2768-m? (B)
+7. Status: a custom Status property, or Inventor's built-in Design Status? (C)
+8. Detailer: the model's custom Detailer, or the drawing's own Author? (D)
+9. Date: the model's creation date, the drawing's, or a date set by hand? (E)
+10. Keep the proposed Size field? (F)
+11. Any layout changes to the title block? (G)

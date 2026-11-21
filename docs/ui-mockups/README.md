@@ -96,3 +96,9 @@ The built window no longer matches the mockup in these ways, so the common holes
 ## AWB icons redesign (task 148)
 
 `awb-icons-redesign.png`, rendered from `awb-icons-redesign.html` with headless Edge (command at the top of the HTML): every AWB Hole window icon today and redrawn (full colour, solid hatched material, dark blue in light mode) in both themes at 100 and 150 percent, the chosen-button states (Outline or Solid), colours with contrast ratios, and the ribbon icons in the same style in colour options A to C.
+
+## Title block (M5, before the tasks)
+
+![Title block mockup](title-block.png)
+
+`title-block.png`, rendered from `title-block.html` with headless Edge (command at the top of the HTML). One 180 by 50 mm title block for every sheet size, drawn in millimetres, with the field-to-property table, the block on an A3 and an A4 sheet, and questions A to G for Aidan (also spec 05 questions 5 to 11). The only picture is Aidan's mark from `libraries/Branding/`. Waiting on Aidan's comments.

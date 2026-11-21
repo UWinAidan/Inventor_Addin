@@ -6,10 +6,9 @@ Last updated: 2026-11-20
 
 ## Next up
 
-1. Aidan checks task 182 in Inventor (PR on `claude/182-tapped-actual-drill`).
-2. M5, drawing tools (spec 05): plan it. M4 is done: part 1 PR #29 (2026-11-10), part 2 PR #32 (2026-11-20).
-3. **Later, not this round** (Aidan, 2026-10-25): every AWB icon gets a more polished look, done together with the colour option.
-4. Aidan finishes the remaining Part Properties checks below.
+1. M5, drawing tools (spec 05): Aidan comments on the title block mockup (`docs/ui-mockups/title-block.png`, questions A to G on it); then write the tasks, print template first. M4 is done: part 1 PR #29 (2026-11-10), part 2 PR #32 (2026-11-20).
+2. **Later, not this round** (Aidan, 2026-10-25): every AWB icon gets a more polished look, done together with the colour option.
+3. Aidan finishes the remaining Part Properties checks below.
 
 ## Waiting on Aidan: checks in Inventor
 
@@ -82,9 +81,9 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Questions 9 to 17 and 19 in spec 04: seated sub-order, a seated threaded hole, the sort diameter, where a split goes, letters, inch decimals, description wording, holes not seen end on, several origins. Each has a default the Core tasks build
 - Question 20 in spec 04: Renumber on a re-opened table waits for Update to redraw (Default); or should it redraw at once?
 
-**Drawing tools (spec 05), blocks M5**
-- Which of the listed commands are wanted, and what the unclear ones should do
-- The custom print templates: sheet sizes, sheet colours, and the title block, designed with Aidan (noted 2026-10-11)
+**Drawing tools (spec 05), blocks M5 tasks**
+- Title block mockup (`docs/ui-mockups/title-block.png`): questions A to G on it (logo version, general tolerance wording, custom Status or Inventor's Design Status, Detailer source, which date, the proposed Size field, layout)
+- M5 planning questions 14 to 18 (from an earlier session; their wording is not in the repo): ask again when those commands come up (Aidan, 2026-11-20)
 
 **iLogic (spec 06), blocks M6**
 - Which rules, and whether they are internal or external
@@ -104,6 +103,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Proposed work, not yet agreed
 
+- **Lightweight PDM on the home server** (Aidan, 2026-11-20; long term, not M5), building on the numbering register on the NAS: revision and status set by a release action in the add-in, check-out and check-in locking, release history, released PDFs stored on the NAS. First check whether Aidan's Inventor licence includes Autodesk Vault Basic: Vault is not installed on this PC (only Inventor Professional 2024 and 2026); check the entitlements at manage.autodesk.com.
 - **Editing AWB Hole's dimensions on the preview in the model** (drag handles and typed value boxes, as Inventor's own Hole does). Parked by Aidan on 2026-11-09 as a later idea, not this round.
 - **Reviewer styling checklist and a Windows build script.** Both are written into spec 08 as proposed additions to M1b. Aidan has not said yes or no.
 - **Part name editable in the properties window.** Aidan asked on 2026-10-06 whether the name can be edited. It stays display-only, linked to the file name; the Rename button beside it is now planned (task 047). Waiting on Aidan only if he wants the name to differ from the file name.
