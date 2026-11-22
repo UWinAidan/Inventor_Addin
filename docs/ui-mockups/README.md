@@ -101,4 +101,4 @@ The built window no longer matches the mockup in these ways, so the common holes
 
 ![Title block mockup](title-block.png)
 
-`title-block.png`, rendered from `title-block.html` with headless Edge (command at the top of the HTML). One 180 by 50 mm title block for every sheet size, drawn in millimetres, with the field-to-property table, the block on an A3 and an A4 sheet, and an imperial version of the block. Revised after Aidan's answers A to G and his changes to B (2026-11-20). The only picture is Aidan's mark from `libraries/Branding/`.
+`title-block.png`, rendered from `title-block.html` with headless Edge (command at the top of the HTML). One 180 by 50 mm title block for every sheet size, drawn in millimetres, with the field-to-property table, the block on an A3 and an A4 sheet, and an imperial version of the block. Revised after Aidan's answers A to G and his changes to B (2026-11-20); approved 2026-11-21 with template additions drawn in (blue numbers 18 to 25). The only picture is Aidan's mark from `libraries/Branding/`.

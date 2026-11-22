@@ -519,7 +519,82 @@ Not in part 1: AWB Hole on the Flat Pattern tab (it keeps Inventor's Hole; the S
 
 ### M5: Drawing tools (spec 05)
 
-Blocked on question 1 of the spec, which decides which commands exist at all. Includes a custom drawing template whose title block reads every property from the model (Aidan, 2026-10-10): custom print templates with several sheet sizes, sheet colours, and a title block designed with Aidan (Aidan, 2026-10-11). Create Drawing moved to M2 as Create Print.
+Aidan answered the planning questions and the title block questions on 2026-11-20, approved the title block mockup on 2026-11-21 with template additions (zone grid, triad, FINISH line, project and file name, the part number on the right edge, Material Size), and added six tools (automatic notes, part marking, Batch Print, overall REF dimensions, Stock Size, parts list Make/Buy). Planned 2026-11-21 in a local session on Aidan's PC. Defaults are logged in `DECISIONS.md` (2026-11-21) and asked in spec 05 questions 12 to 22.
+
+**Before building:** Aidan takes a last look at the updated `docs/ui-mockups/title-block.png` (blue numbers 18 to 25).
+
+**Spikes first.** 183 (template and views) and 184 (calls for the tools) run in one local session with Aidan in Inventor; their results fill in the API members the add-in tasks use. The Core tasks do not depend on them and can run before or alongside, in the cloud or locally.
+
+**One combined check.** Each task's Inventor steps go into `docs/checklists/m5.md` (task 209), checked once at the end (Aidan, 2026-11-21).
+
+| Task | Needs | Depends on | Parallel-safe with |
+|---|---|---|---|
+| 183 | **windows** (spike, with Aidan) | none | 184 |
+| 184 | **windows** (spike, with Aidan) | none | 183 |
+| 185 | Core | none | 186 |
+| 186 | Core, add-in XAML | none | 185 |
+| 187 | **windows** (drives Inventor) | 183, 185, 186 | none |
+| 188 | windows build | 186, 187 | none |
+| 189 | Core | none | 185, 186 |
+| 190 | Core | 189 | 191 |
+| 191 | **Python with Pillow** | none | 189, 190 |
+| 192 | windows build | 183, 188, 189, 190, 191 | none |
+| 193 | windows build | 188, 191 | none |
+| 194 | Core | none | any Core task |
+| 195 | windows build | 184, 191, 194 | none |
+| 196 | Core | none | 194 |
+| 197 | windows build | 184, 188, 191, 196 | none |
+| 198 | Core | none | 196 |
+| 199 | windows build | 184, 191, 198 | none |
+| 200 | windows build | 184, 199 | none |
+| 201 | Core | none | 198 |
+| 202 | windows build | 184, 191, 201 | none |
+| 203 | Core | none | 201 |
+| 204 | windows build | 184, 191, 203 | none |
+| 205 | Core | none | 203 |
+| 206 | windows build | 184, 187, 191, 205 | none |
+| 207 | Core | none | 205 |
+| 208 | windows build | 184, 187, 191, 207 | none |
+| 209 | **windows** (Aidan) | 183 to 208 | none |
+
+The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their own files; 186, 196 and 205 all touch `AddinSettings`, `LibraryPaths` and the Settings window, so run those three one after another.
+
+**Template**
+- [ ] 183 Spike: building the print template and placing views (Windows)
+- [ ] 185 Print template layout (Core)
+- [ ] 186 Print template paths in Settings
+- [ ] 187 Build Print Template command and the starter templates (Windows)
+- [ ] 188 Create Print uses the AWB template
+
+**Views and drawings**
+- [ ] 189 Initial views: which views and where (Core)
+- [ ] 190 Initial Views window view-model (Core)
+- [ ] 191 Ribbon icons for the M5 commands
+- [ ] 192 Place Initial Views window and command; Create Print shows it
+- [ ] 193 Open Drawing
+- [ ] 194 Out-of-bounds check (Core)
+- [ ] 195 Check Out of Bounds command
+
+**Tools**
+- [ ] 184 Spike: Inventor calls for the M5 drawing tools (Windows)
+- [ ] 196 Automatic notes: workbook and rules (Core)
+- [ ] 197 Update Notes command; Create Print runs it
+- [ ] 198 Part marking: options, note text and window model (Core)
+- [ ] 199 Part Marking window and marking on the drawing
+- [ ] 200 Engraved part number feature in the model
+- [ ] 201 Batch Print plan (Core)
+- [ ] 202 Batch Print command
+- [ ] 203 Overall REF dimensions plan (Core)
+- [ ] 204 Overall REF Dimensions command
+- [ ] 205 Stock size: workbook, calculation and window model (Core)
+- [ ] 206 Stock Size command
+- [ ] 207 Parts list Make/Buy rule (Core)
+- [ ] 208 Update Parts List command
+
+**Check**
+- [ ] 209 M5 combined Inventor check
+
+Not in M5: Change Title Block, Check Balloon Usage, Reference Axis Symbol, Reference Part Note, Place Mirror Note and Add Parts List Column (spec 05 question 1, deferred); release logic for revision and status. M5 planning questions 14 to 17 from an earlier session are still to be asked again when their commands come up (18 is answered by the Make/Buy column).
 
 ### M6: iLogic injection (spec 06)
 

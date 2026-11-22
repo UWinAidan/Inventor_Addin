@@ -6,7 +6,7 @@ Last updated: 2026-11-20
 
 ## Next up
 
-1. M5, drawing tools (spec 05): Aidan approves the revised title block mockup (`docs/ui-mockups/title-block.png`); then write the tasks, print template first. M4 is done: part 1 PR #29 (2026-11-10), part 2 PR #32 (2026-11-20).
+1. M5, drawing tools (spec 05): planned 2026-11-21 as tasks 183 to 209 (`docs/PLAN.md`). Aidan takes a last look at `docs/ui-mockups/title-block.png` (blue numbers 18 to 25); then spikes 183 and 184 in a local session with him, while the Core tasks can run. M4 is done: part 1 PR #29 (2026-11-10), part 2 PR #32 (2026-11-20).
 2. **Later, not this round** (Aidan, 2026-10-25): every AWB icon gets a more polished look, done together with the colour option.
 3. Aidan finishes the remaining Part Properties checks below.
 
@@ -82,8 +82,9 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Question 20 in spec 04: Renumber on a re-opened table waits for Update to redraw (Default); or should it redraw at once?
 
 **Drawing tools (spec 05), blocks M5 tasks**
-- Approve the revised title block mockup (`docs/ui-mockups/title-block.png`); questions A to G were answered on 2026-11-20
-- M5 planning questions 14 to 18 (from an earlier session; their wording is not in the repo): ask again when those commands come up (Aidan, 2026-11-20)
+- Last look at the title block mockup with the 2026-11-21 additions (`docs/ui-mockups/title-block.png`, blue numbers 18 to 25) before task 185 is built
+- Spec 05 questions 12 to 22: the M5 defaults (FINISH line replaces the finish notes block, zones, Project property, notes rules, marking sizes and colour, Batch Print, REF dimensions, stock shapes, Make/Buy blanks and manufacturer properties, Create Print's sheet, template built from code). Each has a default the tasks build
+- M5 planning questions 14 to 17 (from an earlier session; their wording is not in the repo): ask again when those commands come up (Aidan, 2026-11-20). Question 18 is answered by the Make/Buy column (2026-11-21)
 
 **iLogic (spec 06), blocks M6**
 - Which rules, and whether they are internal or external

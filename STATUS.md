@@ -2,25 +2,24 @@
 
 Where each big item stands. One line per item, kept current by the parent session. For the order of work and the task lists see `docs/PLAN.md`; for what needs doing next see `TODO.md`.
 
-Last updated: 2026-11-20
+Last updated: 2026-11-21
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-20 21:49. Branch `claude/m5-drawing-tools` (pushed), latest commit `8c8d6b8`. PR #33 (task 182, checked in Inventor) merged into `main`; the branch was made from that `main`.
-- Goal: plan M5 (spec 05). Aidan answered the planning questions and the title block mockup questions A to G; the title block mockup is redrawn and waiting on his approval before any task is written.
+- Updated: 2026-11-21. Branch `claude/m5-drawing-tools` (pushed).
+- Goal: plan M5 (spec 05). Done: the plan is written.
 - Done this session:
-  - Aidan's answers logged as his in `DECISIONS.md` (2026-11-20 rows, "spec 05, M5 planning" and "spec 05, title block mockup") and written into spec 05's "Decided for M5" section.
-  - Mockup `docs/ui-mockups/title-block.html` and `.png` (180 by 50 mm block; metric and imperial versions; A3 and A4 sheets; field-to-property table). README entry added.
-  - Logo files committed in `libraries/Branding/` (the black mark is the one used).
-  - `TODO.md`: Next up, decisions waiting, and the long-term PDM idea (Vault is not installed on this PC; Aidan to check his entitlements at manage.autodesk.com).
-- Current state: docs only; no code changed, nothing built or tested this session.
-- Open: M5 planning questions 14 to 18 came from an earlier session and their wording is not in the repo; ask Aidan again when those commands come up.
+  - Title block mockup: tolerance box lists the rules (metric and imperial, both with the heading), back to 45 by 22 mm; Designer and Detailer as stored. Aidan approved it on 2026-11-21 with template additions, now drawn in (blue numbers 18 to 25): zone grid and centring arrows, X/Y triad, FINISH line, project and file name, Material Size, the part number on the right edge. The block is 180 by 62 mm.
+  - Aidan's additions logged as his, and six new tools (automatic notes, part marking, Batch Print, REF dimensions, Stock Size, Make/Buy) in spec 05 "Added for M5"; defaults logged as Default with questions 12 to 22.
+  - Tasks 183 to 209 written; `docs/PLAN.md` M5 section has the order and dependencies.
+- Current state: docs only; no code changed, nothing built.
 - Next:
-  1. Aidan approves `docs/ui-mockups/title-block.png` (or asks for changes; edit the HTML and re-render).
-  2. Then write the M5 tasks per `docs/WORKFLOW.md`, print template first (starter template in the repo, Settings path to his copy, ISO A4 to A0 and ANSI A to E, metric and imperial, white sheets, third angle, revision table and parts list styles, finish notes block), then Create Print using it, Open Drawing, Place Initial Views (with its confirm window), Check Out of Bounds. Likely a `needs: windows` spike first: how a template's title block reads model properties, Design Status as text, drawing Author and Creation Date, sheet colour (unverified, not yet researched).
-  3. Open for Aidan: spec 09 question 29, spec 04 questions 20 to 25, the Hole Table icon.
-- Gotchas: long Bash heredocs fail here (`unexpected EOF`); write scripts with Write and run them. Render mockups with headless Edge (command at the top of the HTML), then trim the bottom with Pillow. SVG text collapses repeated spaces; place columns as separate text. Build with `-p:DeployToInventor=false` while Inventor is open. Flaky Core tests: NewPartCreator, RenamePlan, Numbering, SaveAsReplacer, SaveAsCopyCreator, RegisterStore.
-- Read first: spec 05, `docs/ui-mockups/title-block.png`, the 2026-11-20 rows at the end of `DECISIONS.md`, `TODO.md` Next up.
+  1. Aidan takes a last look at `docs/ui-mockups/title-block.png` (only the additions are new).
+  2. Run M5 per `docs/WORKFLOW.md`: spikes 183 and 184 with Aidan in Inventor (local session); the Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) can run meanwhile. Update the add-in tasks with the spikes' confirmed members before they run.
+  3. Every task's Inventor steps go into `docs/checklists/m5.md` for one check at the end (task 209).
+  4. Open for Aidan: spec 05 questions 12 to 22 (defaults built), spec 09 question 29, spec 04 questions 20 to 25, the Hole Table icon.
+- Gotchas: long Bash heredocs fail here (`unexpected EOF`); write scripts with Write and run them. Render mockups with headless Edge (command at the top of the HTML; window height 3600 now), then trim the bottom with Pillow. Nothing from prints seen at work goes in the repo. Build with `-p:DeployToInventor=false` while Inventor is open. Flaky Core tests: NewPartCreator, RenamePlan, Numbering, SaveAsReplacer, SaveAsCopyCreator, RegisterStore.
+- Read first: spec 05 "Added for M5", `docs/PLAN.md` M5, the 2026-11-21 rows of `DECISIONS.md`.
 
 ## Big items
 
@@ -33,7 +32,7 @@ Last updated: 2026-11-20
 | Material and finish (M3) | 03 | **Done, tested in Inventor** | Tasks 067 to 080, merged into main from `claude/m3-material-finish` on 2026-10-17: starter library and finish list, Material and Finish window and button, Part Properties Change button and warning, Settings and About on every ribbon, windows that fit the screen, Settings as one resizable page of collapsible sections, dialogs with only a close button, and a themed scroll bar. Every check passed |
 | AWB Hole (M4 part 1) | 09 | **Done, tested in Inventor** | Decided by Aidan 2026-10-17; spike 081 done with Aidan. Tasks 082 to 090 checked by Aidan 2026-10-18 (making, picking, previewing, tapped and dowel holes, OK, Cancel and Undo work). Then built on branch `claude/m4-hole-generator`, compiled on Windows, not yet run in Inventor: fixes and requests 093 to 101, mockup 102 (approved with changes 2026-10-23), dowel seats 106, window redesign 104, takeover of Hole and H 091, Edit Feature and double-click 092. Aidan's first look on 2026-10-24 gave six changes, planned as tasks 103 (in place for every command, top priority), 105 and 107 to 119: client graphics preview, Simple and Taper Tapped types, Spotface, toleranced clearance holes, depths below the seat, centres per point, a window that fits at 150 percent. Aidan checked 091 to 106 on 2026-10-25: six failures and seven requests, planned as tasks 120 to 132 in the same round. That round (105 to 138) was built on Windows (2026-11-07) and checked by Aidan from 2026-11-07 to 2026-11-09, with a temporary self-test (spike 139, local only) for the measurable steps: everything passed except hand colours on a remade hole (122-6, 122-8), the sketch point mini toolbar (133-1, 133-2, 133-5) and the highlight in place (105-1). Those fixes, the marking menu's Hole, and Aidan's requests and his first-look answers became tasks 140 to 150, built on Windows on 2026-11-09 (not yet run in Inventor; checklist `docs/checklists/m4-fixes-140-150.md`). Aidan checked them on 2026-11-10: all passed but 140-2, fixed with two decisions as tasks 152 to 154, which passed the same day. PR #29 merged into main on 2026-11-10 |
 | Hole table wizard (M4 part 2) | 04 | **Done, tested in Inventor** | Spike 160 done with Aidan 2026-11-17: tables drawn as sketched symbols, one `AWB Centre Mark` style on every hole. Core tasks 155 to 159, 161 and 162 and add-in tasks 163 to 167 built and reviewed on branch `claude/m4-hole-table` (add-in compiled on Windows 2026-11-17). Aidan's check: `docs/checklists/m4-hole-table-163-167.md` (167 passed 2026-11-18). Fixes and requests 168 to 173, built 2026-11-18; 163 to 173 passed Aidan's check 2026-11-20. His fix and request from it, 174 to 176 (selected point picks free centres; automatic out-of-date check with Update now or Later), built and reviewed on Windows 2026-11-20; Aidan's check of them passed but for four failures, fixed as 177 to 180; 177 to 179 passed Aidan's check 2026-11-20, 180 reversed by him and reverted as 181, which passed the same day. PR #32 merged into main on 2026-11-20 |
-| Drawing tools (M5) | 05 | Not started | Aidan answered the planning questions (2026-11-20); title block mockup waiting on his comments, then the tasks. Print template first |
+| Drawing tools (M5) | 05 | Planned | Tasks 183 to 209 (2026-11-21): print template first, then views, Open Drawing, Check Out of Bounds, and six tools (notes, part marking, Batch Print, REF dimensions, Stock Size, Make/Buy). Spikes 183 and 184 need Aidan in Inventor |
 | iLogic injection (M6) | 06 | Not started | Waiting on which rules |
 | Distribution (installer, download page) | none yet | Parked | Was to be decided when M2 was planned; still waiting on Aidan |
 
