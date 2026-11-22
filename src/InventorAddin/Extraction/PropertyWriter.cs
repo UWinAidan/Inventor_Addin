@@ -82,6 +82,8 @@ namespace InventorAddin.Extraction
                 ?? throw new ArgumentException($"No text value for '{write.Location.PropertyName}'.", nameof(write))),
             PropertyValueKind.Currency => (object)(write.CurrencyValue
                 ?? throw new ArgumentException($"No currency value for '{write.Location.PropertyName}'.", nameof(write))),
+            PropertyValueKind.Integer => (object)(write.IntegerValue
+                ?? throw new ArgumentException($"No integer value for '{write.Location.PropertyName}'.", nameof(write))),
             _ => throw new ArgumentOutOfRangeException(nameof(write), write.Location.Kind, "Unknown property value kind."),
         };
 

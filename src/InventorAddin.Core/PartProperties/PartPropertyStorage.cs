@@ -7,6 +7,9 @@ public enum PropertyValueKind
 
     /// <summary>A COM currency value, carried as a <see cref="decimal"/>.</summary>
     Currency,
+
+    /// <summary>A whole number, carried as an <see cref="int"/> (Design Status).</summary>
+    Integer,
 }
 
 /// <summary>Where one field is stored: a property set (internal name), a property name and a value type.</summary>
@@ -76,4 +79,19 @@ public static class PartPropertyStorage
     /// </summary>
     public static readonly PropertyLocation FinishSpec =
         new(PropertySetNames.UserDefined, "Finish Spec", PropertyValueKind.Text);
+
+    /// <summary>Summary Information "Revision Number" (PropertyID 9), the print's REV field (task 219).</summary>
+    public static readonly PropertyLocation RevisionNumber =
+        new(PropertySetNames.Summary, "Revision Number", PropertyValueKind.Text);
+
+    /// <summary>
+    /// Design Tracking "Design Status" (PropertyID 40): a whole number, see <see cref="PartStatus"/>. The name is the
+    /// one the API reference gives for id 40; not yet confirmed by a write in Inventor.
+    /// </summary>
+    public static readonly PropertyLocation DesignStatus =
+        new(PropertySetNames.DesignTracking, "Design Status", PropertyValueKind.Integer);
+
+    /// <summary>Design Tracking "User Status" (PropertyID 17), the iProperties Status tab's Status text (task 219).</summary>
+    public static readonly PropertyLocation UserStatus =
+        new(PropertySetNames.DesignTracking, "User Status", PropertyValueKind.Text);
 }

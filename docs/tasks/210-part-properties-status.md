@@ -19,6 +19,7 @@ Part Properties shows the part's status as a dropdown (WORK IN PROGRESS, PENDING
   - the view-model gains a Status dropdown and a Revise command (a pending change until Apply);
   - tests.
 - Add-in: read Design Status and User Status in `Extraction/`; add the dropdown and the Revise button to `PartPropertiesWindow.xaml`; Apply writes everything in one transaction.
+- **Backfill rule change (from task 219's review):** in `PrintPropertyBackfill`, Design Status 0 with User Status already set to one of the three words sets Design Status to match that word, not Work In Progress. Any other text still gives Work In Progress. Update the tests.
 - On open, a User Status that does not match Design Status is a pre-filled pending change (the earlier Default, spec 07 question 7).
 
 ## Acceptance criteria

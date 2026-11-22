@@ -111,6 +111,11 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Follow-ups from finished tasks
 
+- Task 219, check first when Inventor is open:
+  - The Design Tracking property names "Design Status" (id 40) and "User Status" (id 17), and Summary "Revision Number" (id 9).
+  - That Design Status takes a .NET int.
+  - If any is wrong, New Part and Save As Copy lose all their properties (one transaction). Fix `PartPropertyStorage`.
+
 - Task 217 (reviewer):
   - Mass Update logs "Finish Spec filled in" before the write, so it is logged even when the transaction aborts. A failed backfill write there also aborts the file's real Mass Update changes.
   - In Material and Finish, one part that cannot be written aborts the whole backfill transaction for the other parts.

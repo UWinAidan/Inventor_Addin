@@ -13,6 +13,7 @@ public static class CreationProperties
     /// <see cref="PartFileName.NormaliseName"/>, with spaces); Designer, Author and Detailer, all
     /// <paramref name="defaultDesigner"/> trimmed, all left out when it is blank; Part Type, left out when blank.
     /// A part type in <see cref="PartTypes.All"/> is written in the list's spelling; any other code is written trimmed.
+    /// Last: Revision Number "A", Design Status Work In Progress and User Status "WORK IN PROGRESS" (task 219).
     /// Each goes to its <see cref="PartPropertyStorage"/> location.
     /// </summary>
     /// <exception cref="ArgumentException"><paramref name="partName"/> fails <see cref="PartFileName.ValidateName"/>.</exception>
@@ -48,6 +49,10 @@ public static class CreationProperties
         {
             writes.Add(PropertyWrite.SetText(PartPropertyStorage.PartType, type));
         }
+
+        // A new part, and a copy, start at revision A and Work In Progress (task 219).
+        writes.Add(PropertyWrite.SetText(PartPropertyStorage.RevisionNumber, PartStatuses.FirstRevision));
+        writes.AddRange(PartStatuses.WritesFor(PartStatuses.Initial));
 
         return writes.AsReadOnly();
     }

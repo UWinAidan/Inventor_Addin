@@ -94,10 +94,10 @@ namespace InventorAddin.Extraction
             }
 
             // Writes go through PropertyWriter inside one transaction, as for New Part and Save As Copy.
-            // A part with Finish but no Finish Spec gets one in the same transaction (task 217); the finish list is read
-            // once, the first time a file is opened to change it.
+            // A part missing its Finish Spec, Revision or Status gets them in the same transaction (tasks 217 and 219); the
+            // finish list is read once, the first time a file is opened to change it.
             return new InventorNewDocument(doc, _commandName,
-                d => FinishSpecBackfiller.WriteFor(d, _finishList ??= FinishSpecBackfiller.LoadFinishList()));
+                d => FinishSpecBackfiller.WritesFor(d, _finishList ??= FinishSpecBackfiller.LoadFinishList()));
         }
 
         private static string CouldNotOpenText(Exception ex) => $"The file could not be opened: {ex.Message}";

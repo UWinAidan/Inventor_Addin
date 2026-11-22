@@ -611,7 +611,7 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [ ] 216 Print template builder fixes and rebuild (Windows, Aidan runs it)
 - [x] 217 Finish print name and Finish Spec backfill
 - [ ] 218 Spike: fitting long title block values (Windows)
-- [ ] 219 Revision and Status filled in automatically
+- [x] 219 Revision and Status filled in automatically
 - [ ] 220 Hole tables stay on the sheet
 - [x] 221 Settings template labels
 

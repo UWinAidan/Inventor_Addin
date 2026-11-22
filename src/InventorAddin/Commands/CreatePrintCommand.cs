@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Inventor;
 using InventorAddin.Core.Drawing;
 using InventorAddin.Core.Models;
@@ -90,7 +92,7 @@ namespace InventorAddin.Commands
             string drawingPath = PrintPlan.DrawingFileName(modelPath, PrintPlan.NewPrintExtension);
             string? partNumber = ModelPartNumber(model);
 
-            BackfillFinishSpec(model);
+            BackfillPrintProperties(model);
 
             Forms.Cursor previousCursor = Forms.Cursor.Current;
             Forms.Cursor.Current = Forms.Cursors.WaitCursor;
@@ -174,24 +176,27 @@ namespace InventorAddin.Commands
         }
 
         /// <summary>
-        /// Fills in a missing Finish Spec on the model before the drawing is made, so the title block prints it (task 217).
-        /// One transaction on the model, nothing saved. A model that cannot be changed (read-only, say) is logged and
-        /// does not stop the print.
+        /// Fills in a missing Finish Spec, Revision and Status on the model before the drawing is made, so the title block
+        /// prints them (tasks 217 and 219). One transaction on the model, nothing saved. A model that cannot be changed
+        /// (read-only, say) is logged and does not stop the print.
         /// </summary>
-        private void BackfillFinishSpec(Document model)
+        private void BackfillPrintProperties(Document model)
         {
             try
             {
-                PropertyWrite? write = FinishSpecBackfiller.WriteFor(model, FinishSpecBackfiller.LoadFinishList());
-                if (write == null)
+                IReadOnlyList<PropertyWrite> writes = FinishSpecBackfiller.WritesFor(model, FinishSpecBackfiller.LoadFinishList());
+                if (writes.Count == 0)
                     return;
 
-                RunInTransaction(model, () => PropertyWriter.Apply(model, new[] { write }));
-                AddinServices.Log.Info($"Create Print: Finish Spec \"{write.TextValue}\" filled in on '{ComSafe.Get(() => model.DisplayName)}'.");
+                RunInTransaction(model, () => PropertyWriter.Apply(model, writes));
+
+                // Names only: a value is not logged.
+                string names = string.Join(", ", writes.Select(w => w.Location.PropertyName));
+                AddinServices.Log.Info($"Create Print: filled in {names} on '{ComSafe.Get(() => model.DisplayName)}'.");
             }
             catch (Exception ex)
             {
-                AddinServices.Log.Warn($"Create Print: Finish Spec could not be filled in on the model. {ex.Message}");
+                AddinServices.Log.Warn($"Create Print: Finish Spec, Revision and Status could not be filled in on the model. {ex.Message}");
             }
         }
 

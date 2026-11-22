@@ -25,9 +25,23 @@ public sealed class CreationPropertiesTests
                 (PartPropertyStorage.Author, "Test Designer"),
                 (PartPropertyStorage.Detailer, "Test Designer"),
                 (PartPropertyStorage.PartType, "M"),
+                (PartPropertyStorage.RevisionNumber, "A"),
+                (PartPropertyStorage.DesignStatus, null),
+                (PartPropertyStorage.UserStatus, "WORK IN PROGRESS"),
             },
             Summary(writes));
         Assert.All(writes, w => Assert.Equal(PropertyWriteAction.Set, w.Action));
+        Assert.Equal(1, writes.Single(w => w.Location == PartPropertyStorage.DesignStatus).IntegerValue);
+    }
+
+    [Fact]
+    public void Build_AlwaysWritesRevisionAAndWorkInProgress()
+    {
+        var writes = CreationProperties.Build(Number, "plate", null, null);
+
+        Assert.Equal("A", writes.Single(w => w.Location == PartPropertyStorage.RevisionNumber).TextValue);
+        Assert.Equal(1, writes.Single(w => w.Location == PartPropertyStorage.DesignStatus).IntegerValue);
+        Assert.Equal("WORK IN PROGRESS", writes.Single(w => w.Location == PartPropertyStorage.UserStatus).TextValue);
     }
 
     [Fact]
@@ -50,7 +64,11 @@ public sealed class CreationPropertiesTests
         var writes = CreationProperties.Build(Number, "plate", "M", designer);
 
         Assert.Equal(
-            new[] { PartPropertyStorage.PartNumber, PartPropertyStorage.Description, PartPropertyStorage.PartType },
+            new[]
+            {
+                PartPropertyStorage.PartNumber, PartPropertyStorage.Description, PartPropertyStorage.PartType,
+                PartPropertyStorage.RevisionNumber, PartPropertyStorage.DesignStatus, PartPropertyStorage.UserStatus,
+            },
             writes.Select(w => w.Location).ToArray());
     }
 
@@ -63,7 +81,7 @@ public sealed class CreationPropertiesTests
         var writes = CreationProperties.Build(Number, "plate", partType, "Test Designer");
 
         Assert.DoesNotContain(writes, w => w.Location == PartPropertyStorage.PartType);
-        Assert.Equal(5, writes.Count);
+        Assert.Equal(8, writes.Count);
     }
 
     [Theory]

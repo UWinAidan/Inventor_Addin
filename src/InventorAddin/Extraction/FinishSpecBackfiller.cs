@@ -10,9 +10,9 @@ using SysFile = System.IO.File;
 namespace InventorAddin.Extraction
 {
     /// <summary>
-    /// Reads a part's Finish, Finish Thickness and Finish Spec and asks Core (<see cref="FinishSpecBackfill"/>) for the
-    /// Finish Spec write a part finished before task 211 needs (task 217). It only reads; the caller writes the result
-    /// inside its own transaction.
+    /// Reads a part's Finish, Finish Spec, Revision Number, Design Status and User Status and asks Core
+    /// (<see cref="PrintPropertyBackfill"/>) for the writes an older part needs (tasks 217 and 219). It only reads; the
+    /// caller writes the result inside its own transaction.
     /// </summary>
     internal static class FinishSpecBackfiller
     {
@@ -36,21 +36,43 @@ namespace InventorAddin.Extraction
         }
 
         /// <summary>
-        /// The Finish Spec write for <paramref name="doc"/>, or null when it is not a part, has no Finish or already has a
-        /// Finish Spec. Never throws for a property that cannot be read.
+        /// Every missing print property of <paramref name="doc"/> as writes (Finish Spec, Revision Number, Design Status,
+        /// User Status; task 219): empty when it is not a part or nothing is missing. Never throws for a property that
+        /// cannot be read.
         /// </summary>
-        public static PropertyWrite? WriteFor(Document doc, IReadOnlyList<Finish> finishList)
+        public static IReadOnlyList<PropertyWrite> WritesFor(Document doc, IReadOnlyList<Finish> finishList)
         {
             DocumentKind kind = ComSafe.Get(() => DocumentKinds.Of(doc));
             if (!kind.IsPart())
-                return null;
+                return Array.Empty<PropertyWrite>();
 
-            return FinishSpecBackfill.For(
+            return PrintPropertyBackfill.For(
                 Read(doc, PartPropertyStorage.Finish),
                 Read(doc, PartPropertyStorage.FinishThickness),
                 Read(doc, PartPropertyStorage.FinishSpec),
+                Read(doc, PartPropertyStorage.RevisionNumber),
+                ReadDesignStatus(doc),
+                Read(doc, PartPropertyStorage.UserStatus),
                 finishList,
                 MaterialFinishTargets.UnitsOf(doc));
+        }
+
+        /// <summary>Design Status as a number, or null when it cannot be read.</summary>
+        private static int? ReadDesignStatus(Document doc)
+        {
+            object? value = PropertyReader.Get(
+                doc, PartPropertyStorage.DesignStatus.SetName, PartPropertyStorage.DesignStatus.PropertyName);
+            if (value == null)
+                return null;
+
+            try
+            {
+                return Convert.ToInt32(value, System.Globalization.CultureInfo.InvariantCulture);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         private static string? Read(Document doc, PropertyLocation location) =>

@@ -17,19 +17,19 @@ namespace InventorAddin.Commands
     {
         private readonly Document _doc;
         private readonly string _commandName;
-        private readonly Func<Document, PropertyWrite?>? _extraWrite;
+        private readonly Func<Document, IReadOnlyList<PropertyWrite>>? _extraWrites;
 
         /// <param name="doc">The new or copied document.</param>
         /// <param name="commandName">The command's display name: the transaction's name in Undo, and the log prefix.</param>
-        /// <param name="extraWrite">
-        /// A write to add, in the same transaction, to whatever <see cref="WriteProperties"/> is given, decided from the
-        /// open document (Mass Update's Finish Spec backfill, task 217); null for none.
+        /// <param name="extraWrites">
+        /// Writes to add, in the same transaction, to whatever <see cref="WriteProperties"/> is given, decided from the
+        /// open document (Mass Update's Finish Spec, Revision and Status backfill, tasks 217 and 219); null for none.
         /// </param>
-        public InventorNewDocument(Document doc, string commandName, Func<Document, PropertyWrite?>? extraWrite = null)
+        public InventorNewDocument(Document doc, string commandName, Func<Document, IReadOnlyList<PropertyWrite>>? extraWrites = null)
         {
             _doc = doc;
             _commandName = commandName;
-            _extraWrite = extraWrite;
+            _extraWrites = extraWrites;
         }
 
         /// <summary>
@@ -41,12 +41,15 @@ namespace InventorAddin.Commands
             Transaction transaction = InventorHost.App.TransactionManager.StartTransaction((_Document)_doc, _commandName);
             try
             {
-                PropertyWrite? extra = _extraWrite?.Invoke(_doc);
-                if (extra != null)
+                IReadOnlyList<PropertyWrite>? extra = _extraWrites?.Invoke(_doc);
+                if (extra != null && extra.Count > 0)
                 {
-                    var all = new List<PropertyWrite>(writes) { extra };
+                    // A write already in the list (Mass Update sets Part Number and so on) is never one the backfill adds.
+                    var all = new List<PropertyWrite>(writes);
+                    all.AddRange(extra);
                     writes = all;
-                    AddinServices.Log.Info($"{_commandName}: Finish Spec filled in on '{ComSafe.Get(() => _doc.DisplayName)}'.");
+                    AddinServices.Log.Info(
+                        $"{_commandName}: filled in {string.Join(", ", System.Linq.Enumerable.Select(extra, w => w.Location.PropertyName))} on '{ComSafe.Get(() => _doc.DisplayName)}'.");
                 }
 
                 PropertyWriter.Apply(_doc, writes);

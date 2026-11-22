@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Inventor;
 using InventorAddin.Core.Logging;
 using InventorAddin.Core.Materials;
@@ -223,12 +224,12 @@ namespace InventorAddin.Commands
         {
             try
             {
-                var pending = new List<(MaterialFinishCandidate<Document> Part, PropertyWrite Write)>();
+                var pending = new List<(MaterialFinishCandidate<Document> Part, IReadOnlyList<PropertyWrite> Writes)>();
                 foreach (MaterialFinishCandidate<Document> part in plan.Parts)
                 {
-                    PropertyWrite? write = FinishSpecBackfiller.WriteFor(part.Item, finishes);
-                    if (write != null)
-                        pending.Add((part, write));
+                    IReadOnlyList<PropertyWrite> writes = FinishSpecBackfiller.WritesFor(part.Item, finishes);
+                    if (writes.Count > 0)
+                        pending.Add((part, writes));
                 }
 
                 if (pending.Count == 0)
@@ -236,16 +237,17 @@ namespace InventorAddin.Commands
 
                 runInTransaction(() =>
                 {
-                    foreach (var (part, write) in pending)
-                        PropertyWriter.Apply(part.Item, new[] { write });
+                    foreach (var (part, writes) in pending)
+                        PropertyWriter.Apply(part.Item, writes);
                 });
 
-                foreach (var (part, write) in pending)
-                    log.Info($"{MaterialFinishTargeting.LogPrefix}Finish Spec \"{write.TextValue}\" filled in on {part.Name}.");
+                // Names only: a value is not logged.
+                foreach (var (part, writes) in pending)
+                    log.Info($"{MaterialFinishTargeting.LogPrefix}Filled in {string.Join(", ", writes.Select(w => w.Location.PropertyName))} on {part.Name}.");
             }
             catch (Exception ex)
             {
-                log.Warn($"{MaterialFinishTargeting.LogPrefix}Finish Spec could not be filled in. {ex.Message}");
+                log.Warn($"{MaterialFinishTargeting.LogPrefix}Finish Spec, Revision and Status could not be filled in. {ex.Message}");
             }
         }
 

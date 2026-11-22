@@ -17,13 +17,17 @@ public enum PropertyWriteAction
 /// </summary>
 public sealed record PropertyWrite
 {
-    private PropertyWrite(PropertyWriteAction action, PropertyLocation location, string? textValue, decimal? currencyValue)
+    private PropertyWrite(PropertyWriteAction action, PropertyLocation location, string? textValue, decimal? currencyValue, int? integerValue = null)
     {
         Action = action;
         Location = location;
         TextValue = textValue;
         CurrencyValue = currencyValue;
+        IntegerValue = integerValue;
     }
+
+    /// <summary>The value to write, for a Set of an Integer property; null otherwise.</summary>
+    public int? IntegerValue { get; }
 
     public PropertyWriteAction Action { get; }
 
@@ -60,6 +64,18 @@ public sealed record PropertyWrite
         return new PropertyWrite(PropertyWriteAction.Set, location, null, value);
     }
 
+    /// <summary>Sets an Integer property to <paramref name="value"/>.</summary>
+    public static PropertyWrite SetInteger(PropertyLocation location, int value)
+    {
+        ArgumentNullException.ThrowIfNull(location);
+        if (location.Kind != PropertyValueKind.Integer)
+        {
+            throw new ArgumentException($"'{location.PropertyName}' is not an integer property.", nameof(location));
+        }
+
+        return new PropertyWrite(PropertyWriteAction.Set, location, null, null, value);
+    }
+
     /// <summary>Removes a custom property. Standard properties cannot be removed.</summary>
     public static PropertyWrite Remove(PropertyLocation location)
     {
@@ -80,6 +96,8 @@ public sealed record PropertyWrite
         return Action switch
         {
             PropertyWriteAction.Remove => $"Remove {target}",
+            _ when Location.Kind == PropertyValueKind.Integer =>
+                $"Set {target} = {IntegerValue?.ToString(System.Globalization.CultureInfo.InvariantCulture)}",
             _ when Location.Kind == PropertyValueKind.Currency =>
                 $"Set {target} = {CurrencyValue?.ToString(System.Globalization.CultureInfo.InvariantCulture)}",
             _ => $"Set {target} = \"{TextValue}\"",

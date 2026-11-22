@@ -161,7 +161,7 @@ public sealed class SaveAsCopyCreatorTests : IDisposable
 
         var writes = Assert.Single(_source.Opened).Writes!;
         Assert.Equal(CreationProperties.Build(new PartNumber(10001), "TEST BRACKET COPY", "", null), writes);
-        Assert.Equal(2, writes.Count);
+        Assert.Equal(5, writes.Count);
     }
 
     [Fact]
