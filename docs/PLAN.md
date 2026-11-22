@@ -614,6 +614,7 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [x] 219 Revision and Status filled in automatically
 - [x] 220 Hole tables stay on the sheet
 - [x] 221 Settings template labels
+- [ ] 222 Imperial parts weigh in lb (Aidan, 2026-11-22; spec 05 question 28)
 
 **Check**
 - [ ] 209 M5 combined Inventor check

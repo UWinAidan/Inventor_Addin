@@ -189,3 +189,19 @@ and lb).
   whose drawing has lb as its mass unit from the start. If that fails, an lb template needs another way (a question for
   Aidan, not a choice for the implementer).
 
+**Round 4 (2026-11-22): mass in lb, spec 05 question 28 option (a)** (`spike-q28-lb.ps1`, then a corrected rerun; on a
+copy of a personal test part, with `AWB Imperial.idw` as the template)
+
+- **Option (a) works.** With the part's own `UnitsOfMeasure.MassUnits` set to `kLbMassMassUnits`, a fresh drawing from
+  `AWB Imperial.idw` prints the WEIGHT field as "9.55 lbmass"; the same part at kg prints "4.33 kg". It holds after the
+  part is saved, closed and reopened. The field follows the part's mass unit, not the drawing's (the imperial template's
+  drawing is already lb).
+- **Changing the unit does not mark the part modified:** `Dirty` stays false, so `Save()` writes nothing. Set
+  `Dirty = true` before saving. The first run of the script missed this (and its late-bound set did not apply), which is
+  why it still printed kg.
+- **The unit text is Inventor's "lbmass"**, not "lb". Whether that is acceptable is spec 05 question 29.
+- Not tried: whether an Undo reverts a mass unit change made inside a transaction; whether a drawing that already shows
+  the part changes after the part's unit changes.
+- The property names New Part writes were checked on the same part: Design Tracking "Design Status" (PropId 40, read as
+  Int32, Inventor shows it as "Design State"), "User Status" (PropId 17, shown as "Status") and Summary Information
+  "Revision Number" (PropId 9). Each reads and writes by name.

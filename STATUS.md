@@ -6,29 +6,28 @@ Last updated: 2026-11-22
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-22 18:24. Branch `claude/m5-drawing-tools`, latest commit `0c4bad5` (pushed).
+- Updated: 2026-11-22 18:45. Branch `claude/m5-drawing-tools`, latest commit `6ab6d66` (pushed). Working tree clean except the untracked `libraries/Templates/` (do not commit until Aidan passes them).
 - Goal: M5 tasks in chunks: implementer, then reviewer, one commit per task, push. Stop after each chunk with a summary, Defaults and a checklist. Nothing from work prints goes in the repo (Aidan's screenshots are in ADDIN_PICS, gitignored).
 - Done this session:
-  - Spikes 183 and 184; chunk 1 (211, 185, 186, 189, 190); 214 and 213; 187 code.
-  - From Aidan's first template check: 215, 216, 221, 217 (`828e67a`), 219 (`35425a4`) and 210 (`0c4bad5`) done.
-  - Spec 05 question 28 answered: try (a), the part's mass unit set to lb; else (b), a Mass property refreshed on save.
-  - All Defaults are logged in DECISIONS.md (2026-11-22). Core tests 5244 passed; the solution builds with 0 errors.
-- In progress: the 220 implementer (hole tables stay inside the border) is running; its result is not seen yet (unverified).
+  - Spikes 183 and 184.
+  - Done tasks: 211, 185, 186, 189, 190, 214, 213, 215, 216 (code), 221, 217, 219, 210, 220 (passed in round 3 with Aidan's OK; merged `6ab6d66`), 191 (`2565f09`).
+  - 187 code is done; it waits on the template files.
+  - Spec 05 questions 23 to 28 are answered (DECISIONS.md, 2026-11-22). All Defaults are logged.
+  - Core tests were 5280 passed at the last main-folder run; the solution builds with 0 errors.
 - Waiting on Aidan:
-  1. His check of the rebuilt templates (task 216's checklist), including the log's "width ratio" mean. If they pass, commit `libraries/Templates/*.idw` (untracked now) and mark 187 and 216 done.
+  1. His check of the rebuilt templates (task 216's checklist), including the log's "width ratio" mean. If they pass, commit `libraries/Templates/*.idw` and mark 187 and 216 done (task files and PLAN).
   2. Inventor open, so that:
-     - (a) the parent verifies the property names New Part now writes: Design Tracking "Design Status" (id 40, int), "User Status" (17), Summary "Revision Number" (9). If one is wrong, New Part and Save As Copy lose all their properties; fix `PartPropertyStorage`. See TODO.
-     - (b) the parent runs `spike-local/183/spike-q28-lb.ps1` (works on a copy in `C:\AwbSpike\q28\`; `AWB Imperial.idw` must be closed). If lb prints, write a task for New Part and Mass Update to set the mass unit; if not, write a task for option (b).
-- Next:
-  1. Review 220, then commit and push it.
-  2. Spike 218 (shrinking long values) with Aidan's OK.
-  3. Chunk 2: 188, 191, 192 and 193. Then the chunk 2 summary with the Defaults and an Inventor checklist.
+     - (a) the parent verifies the names New Part now writes: Design Tracking "Design Status" (id 40, int), "User Status" (17), Summary "Revision Number" (9). A wrong name makes New Part and Save As Copy lose all their properties; fix `PartPropertyStorage`.
+     - (b) the parent runs `spike-local/183/spike-q28-lb.ps1` (`AWB Imperial.idw` closed). If lb prints, write a task for New Part and Mass Update to set the mass unit to lb; if not, write a task for option (b), a Mass property refreshed on part save, with the template field switched to it.
+  3. "Go on" to start 188: Aidan's last message seemed cut off, so the parent paused.
+- Next: 188, 192, 193, then the chunk 2 summary. Spike 218 with Aidan's OK. Later: 194 to 208, 212.
 - Gotchas:
   - Numbering and RegisterStore tests are flaky; rerun.
   - Agents can hit the session limit; resume them with SendMessage.
-  - Python: '\a' in paths becomes a control character; write .py files in the job tmp folder rather than using bash heredocs.
+  - Python: '\a' in paths becomes a control character; write .py files in the job tmp folder, not bash heredocs.
   - Don't build while Aidan deploys.
-- Read first: `docs/WORKFLOW.md`, `docs/PLAN.md` M5, tasks 216 to 221, DECISIONS.md rows dated 2026-11-22, TODO.md follow-ups.
+  - Use a git worktree (job tmp folder) to work on a second branch while an agent uses the main folder.
+- Read first: `docs/WORKFLOW.md`, `docs/PLAN.md` M5, tasks 187, 188 and 216, DECISIONS.md rows dated 2026-11-22, TODO.md follow-ups.
 
 ## Big items
 

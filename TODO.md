@@ -85,6 +85,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Last look at the title block mockup with the 2026-11-21 additions (`docs/ui-mockups/title-block.png`, blue numbers 18 to 25; the FINISH line is gone and 18 is now the finish notes on the sheet) before task 185 is built
 - Spec 05 questions 13 to 23: the M5 defaults (zones, Project property, notes rules, marking sizes and colour, Batch Print, REF dimensions, stock shapes, Make/Buy blanks and manufacturer properties, Create Print's sheet, template built from code, the Finish field's text and the finish notes' order). Each has a default the tasks build
 - M5 planning questions 14 to 17 (from an earlier session; their wording is not in the repo): ask again when those commands come up (Aidan, 2026-11-20). Question 18 is answered by the Make/Buy column (2026-11-21)
+- Spec 05 question 29: the imperial WEIGHT prints "lbmass" (Inventor's unit text); is that acceptable, or should it read "LB"? Default: "lbmass" stays (task 222)
 
 **iLogic (spec 06), blocks M6**
 - Which rules, and whether they are internal or external
@@ -120,11 +121,6 @@ Each spec lists its own open questions in full. These are the ones that block pl
   - At 150%, the Status box shows "WORK IN PROGRESS" in full; it sizes to its text, so it may change width (remove `HorizontalAlignment="Left"` to stretch it).
   - Material and Finish's backfill can write Revision and Status while Part Properties is open, without the window re-reading them (a harmless rewrite on Apply).
   - Typing a revision directly is not offered.
-
-- Task 219, check first when Inventor is open:
-  - The Design Tracking property names "Design Status" (id 40) and "User Status" (id 17), and Summary "Revision Number" (id 9).
-  - That Design Status takes a .NET int.
-  - If any is wrong, New Part and Save As Copy lose all their properties (one transaction). Fix `PartPropertyStorage`.
 
 - Task 217 (reviewer):
   - Mass Update logs "Finish Spec filled in" before the write, so it is logged even when the transaction aborts. A failed backfill write there also aborts the file's real Mass Update changes.
