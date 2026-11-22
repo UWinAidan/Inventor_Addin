@@ -93,19 +93,43 @@ public sealed class PrintTemplateLayoutTests
     }
 
     [Fact]
-    public void TriadSitsInsideTheBottomLeftCorner()
+    public void TriadLabels()
     {
-        var t = PrintTemplateLayout.Triad;
-        Assert.Equal("X", t.XLabel);
-        Assert.Equal("Y", t.YLabel);
-        Assert.True(t.OriginXMm > 0 && t.OriginYMm > 0);
-        foreach (var s in Every())
-        {
-            // The arrow tips stay inside the border. (On A4 and ANSI A portrait the block fills the width, so the triad
-            // lies over the block's bottom-left; see the task's follow-ups.)
-            Assert.True(t.OriginYMm + t.ArrowLengthMm < s.BorderHeightMm);
-            Assert.True(t.OriginXMm + t.ArrowLengthMm < s.BorderWidthMm);
-        }
+        Assert.Equal("X", PrintTemplateLayout.Triad.XLabel);
+        Assert.Equal("Y", PrintTemplateLayout.Triad.YLabel);
+    }
+
+    [Theory]
+    [MemberData(nameof(AllSheets))]
+    public void TriadLiesInsideTheBorderAndClearOfTheTitleBlock(string name, PrintUnits units)
+    {
+        var s = Find(name, units);
+        var o = s.TriadOriginMm;
+        double ext = PrintTemplateLayout.TriadExtentMm;
+        Assert.True(o.X > 0 && o.Y > 0);
+        Assert.True(o.X + ext <= s.BorderWidthMm + Eps);
+        Assert.True(o.Y + ext <= s.BorderHeightMm + Eps);
+        // Block in border coordinates.
+        double bl = s.TitleBlockOriginMm.X - s.BorderLeftMm, bt = PrintTemplateLayout.TitleBlockHeightMm;
+        bool overlap = o.X < bl + PrintTemplateLayout.TitleBlockWidthMm && o.X + ext > bl && o.Y < bt && o.Y + ext > 0;
+        Assert.False(overlap);
+    }
+
+    [Theory]
+    [InlineData("A4", PrintUnits.Metric)]
+    [InlineData("A", PrintUnits.Imperial)]
+    public void PortraitTriadSitsAboveTheBlocksLeftEnd(string name, PrintUnits units)
+    {
+        var s = Find(name, units);
+        Assert.Equal(PrintTemplateLayout.Triad.OriginXMm, s.TriadOriginMm.X, 6);
+        Assert.Equal(PrintTemplateLayout.TitleBlockHeightMm + PrintTemplateLayout.Triad.OriginYMm, s.TriadOriginMm.Y, 6);
+    }
+
+    [Fact]
+    public void A3TriadIsInTheCorner()
+    {
+        var o = Find("A3", PrintUnits.Metric).TriadOriginMm;
+        Assert.Equal((5.0, 5.0), (o.X, o.Y));
     }
 
     [Theory]

@@ -109,6 +109,25 @@ public sealed record SheetSizeSpec(
         };
     }
 
+    /// <summary>
+    /// Where the X/Y triad's origin goes, in border coordinates (from the border's bottom-left corner). Normally the triad's own
+    /// inset in from the corner. When the title block reaches far enough left to lie under the triad (A4 and ANSI A portrait, where
+    /// the block fills the border's width) the origin is the same inset in from the left edge and that inset above the block's top
+    /// edge. Decided by geometry, not by sheet name.
+    /// </summary>
+    public (double X, double Y) TriadOriginMm
+    {
+        get
+        {
+            var t = PrintTemplateLayout.Triad;
+            double blockLeft = TitleBlockOriginMm.X - BorderLeftMm;
+            bool blockUnderTriad = blockLeft <= t.OriginXMm + PrintTemplateLayout.TriadExtentMm;
+            return blockUnderTriad
+                ? (t.OriginXMm, PrintTemplateLayout.TitleBlockHeightMm + t.OriginYMm)
+                : (t.OriginXMm, t.OriginYMm);
+        }
+    }
+
     /// <summary>The small part number's start point in sheet coordinates: in the right margin, level with the border's bottom.</summary>
     public (double X, double Y) SmallPartNumberMm =>
         (WidthMm - PrintTemplateLayout.SmallPartNumberEdgeInsetMm, BorderBottomMm);
@@ -187,7 +206,7 @@ public sealed record ProjectionSymbol(
     double OuterRadiusMm,
     double InnerRadiusMm);
 
-/// <summary>The X/Y triad, in border coordinates: origin measured from the border's bottom-left corner.</summary>
+/// <summary>The X/Y triad. <see cref="OriginXMm"/> and <see cref="OriginYMm"/> are its inset from the border's bottom-left corner (or from the title block's top-left, see <see cref="SheetSizeSpec.TriadOriginMm"/>, which gives the origin per sheet in border coordinates).</summary>
 /// <remarks>The axis lines are drawn at 0.4 mm; the X and Y labels sit 14.5 mm out along their axes.</remarks>
 public sealed record TriadSpec(double OriginXMm, double OriginYMm, double AxisLengthMm, double ArrowLengthMm, double ArrowHalfWidthMm,
     double LabelSizeMm)
@@ -275,6 +294,9 @@ public sealed class PrintTemplateLayout
 
     /// <summary>A baseline measured down from the block's top, as a y up from its bottom.</summary>
     private static double Baseline(double yDown) => TitleBlockHeightMm - yDown;
+
+    /// <summary>How far the triad's labels reach from its origin: 14.5 mm out plus the 3 mm label height.</summary>
+    public const double TriadExtentMm = 17.5;
 
     public static TriadSpec Triad { get; } = new(5, 5, 11, 13, 1, 3);
 
