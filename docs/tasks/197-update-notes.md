@@ -26,6 +26,13 @@ A drawing button writes or refreshes AWB's notes on the first sheet from the mod
 
 ## Notes for the implementer
 
+- Confirmed calls (spike 184, round 1):
+  - Adding the note: `Sheet.DrawingNotes.GeneralNotes.AddFitted(topLeft, formattedText, Missing)`, then set `Width`; the note rewraps.
+  - Formatted text keeps `<StyleOverride Bold='True'>` and `<Br/>`. There is no list tag (a `<List>` printed literally), so numbering is plain "1. " text.
+  - Tagging: `note.AttributeSets.Add('AwbNotes', Missing)`, then `AttributeSet.Add(name, kStringType, value)`.
+  - Finding the note after save and reopen: `DrawingDocument.AttributeManager.FindObjects(setName, name, value)`.
+  - `GeneralNote.Text` drops line breaks; compare `FormattedText` instead.
+
 - Read spec 05's "Added for M5" section and the 2026-11-21 rows of `DECISIONS.md` first. Defaults are marked there; do not change them.
 
 ## Verification

@@ -24,6 +24,13 @@ A drawing button that fills the Make/Buy cells of every parts list on the sheet;
 
 ## Notes for the implementer
 
+- Confirmed calls (spike 184, round 1):
+  - Cells: `PartsListRow.Item(columnIndex)` is the cell. Setting `Value` makes it `Static` (an override), which survives `Update()` and save and reopen. `SaveItemOverridesToBOM()` failed; do not use it.
+  - Row documents: `PartsListRow.ReferencedFiles.Item(1)` gives `FullFileName` and `ReferencedDocument`.
+  - Content Center: `ComponentDefinition.IsContentMember` is true for Content Center parts.
+  - Library parts: `DesignProjectManager.ActiveDesignProject.LibraryPaths` lists them (empty in Aidan's Default project).
+  - Columns: the template's parts list style already has MAKE/BUY (custom, `CustomPropertyName` "Make/Buy"), MANUFACTURER and MFR PART NO. (spike 183).
+
 - Read spec 05's "Added for M5" section and the 2026-11-21 rows of `DECISIONS.md` first. Defaults are marked there; do not change them.
 
 ## Verification

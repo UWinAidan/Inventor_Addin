@@ -23,6 +23,8 @@ A part button that reads the part's box, shows the Stock Size window and writes 
 
 ## Notes for the implementer
 
+- Confirmed calls (spike 184, round 1): use `PartComponentDefinition.OrientedMinimumRangeBox`, the lengths of `DirectionOne`, `DirectionTwo` and `DirectionThree` in cm. On a bar rotated 30° in its sketch it gave the true 10 x 2 x 1 cm, where `RangeBox` gave 9.66 x 6.73 x 1. On an axis-aligned part the two agree.
+
 - Read spec 05's "Added for M5" section and the 2026-11-21 rows of `DECISIONS.md` first. Defaults are marked there; do not change them.
 
 ## Verification

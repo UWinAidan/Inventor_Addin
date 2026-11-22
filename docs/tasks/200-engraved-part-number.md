@@ -24,6 +24,13 @@ With the option ticked, Part Marking also adds an engraved text feature on a pic
 
 ## Notes for the implementer
 
+- Confirmed calls (spike 184, round 2):
+  - Face: the largest planar face (`SurfaceType = kPlaneSurface`, `Evaluator.Area`). Sketch: `Sketches.Add(face, false)`, and `ModelToSketchSpace(face.PointOnFace)` for the text point.
+  - Text: `TextBoxes.AddFitted(point, "<StyleOverride FontSize='0.3'><Property Document='model' PropertySet='Design Tracking Properties' Property='Part Number' FormatID='{32853F0F-3444-11D1-9E93-0060B03C1CA6}' PropertyID='5'>PART NUMBER</Property></StyleOverride>", Missing)`. FontSize is the height in cm.
+  - Engrave: `Profiles.AddForSolid(false, ObjectCollection{textBox}, Missing)`, then `Features.EmbossFeatures.AddEngraveFromFace(profile, depthCm, kNegativeExtentDirection, Missing, Missing)`.
+  - A new Part Number plus `PartDocument.Update()` updates the text, and the feature stays healthy.
+  - Check that `MassProperties.Volume` drops; if not, delete the feature and use `kPositiveExtentDirection`.
+
 - Read spec 05's "Added for M5" section and the 2026-11-21 rows of `DECISIONS.md` first. Defaults are marked there; do not change them.
 
 ## Verification

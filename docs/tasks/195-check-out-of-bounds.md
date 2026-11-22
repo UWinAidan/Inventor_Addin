@@ -25,6 +25,15 @@ A drawing button that checks every sheet and lists what falls outside, selecting
 
 ## Notes for the implementer
 
+- Confirmed calls (spike 184, rounds 1 and 2):
+  - Inner rectangle: `Border.RangeBox`. Title block: `TitleBlock.RangeBox`.
+  - Boxes from `RangeBox`: `GeneralNote`, `LeaderNote`, `PartsList`, `RevisionTable`, `HoleTable`, `CustomTable`.
+  - Views have no `RangeBox`; use `Left`, `Top` (top edge), `Width` and `Height`.
+  - Dimensions have no `RangeBox`; use `Text.RangeBox`.
+  - Balloons: `Position` plus each `Leader.AllNodes` node's `Position`.
+  - Sketched symbols: `Position` (the symbol's centre) only; `Definition.Sketch.RangeBox` is null.
+  - A note past the border reports a range past it, so overlap is detectable.
+
 - Read spec 05's "Added for M5" section and the 2026-11-21 rows of `DECISIONS.md` first. Defaults are marked there; do not change them.
 
 ## Verification

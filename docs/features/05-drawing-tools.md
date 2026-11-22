@@ -95,8 +95,8 @@ Each command is a thin read, call Core, apply. Creating drawings and placing vie
 13. Default: zone counts and labelling as listed under "Template additions" (about 50 mm per zone, numbers left to right, letters from the top on every size, ANSI included). Change any?
 14. Default: the Project field reads Inventor's standard Project property. Or a custom property, or the top assembly's part number?
 15. Default: automatic notes match names by wildcard, all matching rows apply in workbook order, and placement is the NOTES list or a bold bottom line. Other placements or rule columns wanted?
-16. Default: part marking marks the part number, 3 mm characters, engraved 0.2 mm deep, zone 40 by 15 mm, highlight blue #0070C0. Change any? Should the revision be marked too?
-17. Default: Batch Print skips Content Center and library parts, lists models with no drawing in a report, names the PDF `<assembly name>.pdf`, and prints in colour as drawn. Black and white instead?
+16. Default: part marking marks the part number, 3 mm characters, engraved 0.2 mm deep, zone 40 by 15 mm measured on the part, so it scales with the view (spike 184), highlight blue #0070C0. Change any? Should the revision be marked too?
+17. Default: Batch Print skips Content Center and library parts, lists models with no drawing in a report, names the PDF `<assembly name>.pdf`, and prints in colour as drawn. The drawings' PDFs are merged with PDFsharp (MIT), since Inventor cannot append (spike 184). Black and white instead?
 18. Default: overall REF dimensions go on the chosen view (or the sheet's first base view), 10 mm outside it.
 19. Default: stock is plate unless round bar is chosen; thickness rounds to the workbook's list, width and length to its step, allowance per side from the workbook. Other stock shapes (flat bar, square bar, tube)?
 20. Default: Make/Buy leaves a part that is neither AWB-numbered nor a library or Content Center part blank; manufacturer columns read Vendor and Stock Number. Custom properties instead?
