@@ -6,42 +6,25 @@ Last updated: 2026-11-22
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-22 11:18. Branch `claude/m5-drawing-tools`, latest commit `14b9a9a` (task 211, pushed).
-- Goal: M5 tasks in PLAN order, in chunks of 4 to 5. For each task: implementer, then reviewer, one commit, push. Stop after each chunk with a summary, the Defaults logged and an Inventor checklist; Aidan says "next chunk". Nothing from work prints goes in the repo.
-- Done this session (pushed):
-  - Spike 183 (`4e1a24a`) and spike 184 (`b2b09c2`) recorded; the dependent tasks have the confirmed calls.
-  - Aidan's decisions and task 210 (`53579d2`).
-  - Tasks 211 and 212 written (`7d8ad8e`).
-  - Task 211, Finish Spec property, is done (`14b9a9a`; 4972/4972 Core tests in the reviewer's run).
-- In the working tree, uncommitted:
-  - Task 185 (print template layout):
-    - New files `src/InventorAddin.Core/Drawing/PrintTemplateLayout.cs` and `tests/.../Drawing/PrintTemplateLayoutTests.cs`; `Branding.cs` gains `WebsiteUrl` and `PrintLogoFileName`.
-    - The first review returned CHANGES REQUIRED; both items are fixed. The small part number now sits at sheet width − 3 mm, and a glyph-band test uses 1.8 mm. `FixedText` is documented as never drawn.
-    - Re-review is running (result unverified). The implementer reports 5018/5018 tests.
-  - Parent edits that go in task 185's commit:
-    - spec 05 open questions 24 to 26 (the triad over the block on portrait sheets, the ANSI margins, the ANSI zone counts)
-    - two Default rows in DECISIONS.md
-    - task 187 notes (triad left off portrait sheets; draw `Texts`, `Logo` and `Symbol`, not `FixedText`)
-  - This STATUS.md handoff.
+- Updated: 2026-11-22 13:00. Branch `claude/m5-drawing-tools`, latest commit `bfee63a` (pushed).
+- Goal: M5 tasks in PLAN order, in chunks of 4 to 5. For each task: implementer, then reviewer, one commit, push. Stop after each chunk with a summary, Defaults and a checklist; Aidan says "next chunk". Nothing from work prints goes in the repo.
+- Done this session:
+  - Spikes 183 and 184 recorded, and the dependent tasks updated.
+  - Tasks 210 to 212 written.
+  - Chunk 1 done and pushed: 211 `14b9a9a`, 185 `a7eb4bf`, 186 `9551141`, 189 `c4200e4`, 190 `bfee63a`. Each passed review; 185 and 189 needed one fix round.
+  - Core tests: 5097 total in the last run; `RenamePlanTests` and `SaveAsReplacerTests` (Numbering) are flaky on timing (TODO.md).
+  - Solution builds with 0 errors as of task 186.
+- Waiting on Aidan: "next chunk". New spec 05 questions 24 to 27 (the triad on portrait sheets, ANSI margins, ANSI zone counts, unticking Front).
+- Next, chunk 2:
+  1. 187, the Build Print Template command. It drives Inventor, so run it live with Aidan: the implementer writes it and Aidan runs it to make `libraries/Templates/*.idw`.
+  2. Then 188, 191 (icons, Python with Pillow), 192 and 193.
+  3. Later chunks: 194 to 208, plus 210 and 212.
 - Open:
-  - Mass in lb is not settled (task 187 tries an imperial template).
-  - Spec 05 question 23: mm or µm for Finish Thickness.
-  - Numbering tests sometimes fail, a different one each run (`RenamePlanTests` timeout, `SaveAsReplacerTests`); listed in TODO.md.
-- Next:
-  1. On 185's re-review PASS: set the task to done, tick it in PLAN, copy its follow-ups to TODO.md, commit `task 185: Print template layout (Core)` together with the spec, DECISIONS and 187 edits, then push. On CHANGES REQUIRED: one more fix round, then mark it blocked.
-  2. Tasks 186, 189 and 190, one at a time (parallel builds collide on `obj/`).
-  3. Chunk 1 summary for Aidan: 211, 185, 186, 189, 190; Defaults; questions 24 to 26; any checklist.
-  4. Chunk 2: 187 (drives Inventor with Aidan), 188, 191, 192, 193. 210 and 212 fit in later.
-- Gotchas:
-  - PowerShell COM spikes:
-    - Variable names ignore case, and `$pid` is read-only.
-    - Log with `[Console]::WriteLine`.
-    - Don't nest double-quoted strings inside `$()`.
-    - Walk COM enumerators with `Count` and `Item(i)`.
-  - The mass field shows N/A until `MassProperties.Mass` is read and the drawing updated.
-  - A view sketch is in model units.
-  - Spike files are in `spike-local/18x/` (gitignored) and `C:\AwbSpike\`. The logs hold the material name from Aidan's library; keep it out of the repo.
-- Read first: `docs/WORKFLOW.md` (run mode), `docs/PLAN.md` M5, task files 185 to 190, DECISIONS.md rows dated 2026-11-22.
+  - Mass in lb (task 187 tries an imperial template with lb from the start).
+  - Question 23: mm or µm.
+  - The small part number's 0.2 mm clearance on ISO sheets, to check in task 187.
+- Gotchas: spike notes are in tasks 183 and 184 (Results). An agent can hit the account session limit and stop mid-task; resume it with SendMessage after the reset.
+- Read first: `docs/WORKFLOW.md` (run mode), `docs/PLAN.md` M5, task 187, DECISIONS.md rows dated 2026-11-22.
 
 ## Big items
 
