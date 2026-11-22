@@ -149,7 +149,7 @@
                     <controls:FieldRow>
                         <TextBlock Style="{DynamicResource MutedText}" Text="{Binding FinishListHelp, Mode=OneTime}" />
                     </controls:FieldRow>
-                    <controls:FieldRow Label="Metric _print template" Target="{Binding ElementName=PrintTemplateMetricBox}">
+                    <controls:FieldRow Label="Metric tem_plate" Target="{Binding ElementName=PrintTemplateMetricBox}">
                         <DockPanel>
                             <!-- Opens a file picker for an .idw and puts the chosen file in the box beside it (code-behind). -->
                             <Button DockPanel.Dock="Right"
@@ -163,7 +163,7 @@
                     <controls:FieldRow>
                         <TextBlock Style="{DynamicResource MutedText}" Text="{Binding PrintTemplateMetricHelp, Mode=OneTime}" />
                     </controls:FieldRow>
-                    <controls:FieldRow Label="_Imperial print template" Target="{Binding ElementName=PrintTemplateImperialBox}">
+                    <controls:FieldRow Label="Imperia_l template" Target="{Binding ElementName=PrintTemplateImperialBox}">
                         <DockPanel>
                             <Button DockPanel.Dock="Right"
                                     Style="{DynamicResource SideButton}"

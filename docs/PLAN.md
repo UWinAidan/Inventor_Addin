@@ -613,7 +613,7 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [ ] 218 Spike: fitting long title block values (Windows)
 - [ ] 219 Revision and Status filled in automatically
 - [ ] 220 Hole tables stay on the sheet
-- [ ] 221 Settings template labels
+- [x] 221 Settings template labels
 
 **Check**
 - [ ] 209 M5 combined Inventor check

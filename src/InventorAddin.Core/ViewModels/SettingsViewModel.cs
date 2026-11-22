@@ -76,10 +76,10 @@ public sealed class SettingsViewModel : ObservableObject
     public const string HoleWorkbookHelpText = "The hole workbook (.xlsx). Blank uses the starter workbook shipped with the add-in.";
 
     /// <summary>The metric print template row's label, and the name its messages use.</summary>
-    public const string PrintTemplateMetricFieldName = "Metric print template";
+    public const string PrintTemplateMetricFieldName = "Metric template";
 
     /// <summary>The imperial print template row's label, and the name its messages use.</summary>
-    public const string PrintTemplateImperialFieldName = "Imperial print template";
+    public const string PrintTemplateImperialFieldName = "Imperial template";
 
     /// <summary>The one-line explanation shown under the metric print template box.</summary>
     public const string PrintTemplateMetricHelpText = "The metric print template (.idw). Blank uses the starter template shipped with the add-in.";

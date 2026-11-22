@@ -1993,10 +1993,10 @@ public sealed class SettingsViewModelTests : IDisposable
     public void ValidatePrintTemplatePaths_NotFullPath_NameTheSetting()
     {
         Assert.Equal(
-            @"Metric print template: enter a full path to the file, such as D:\Templates\Metric.idw.",
+            @"Metric template: enter a full path to the file, such as D:\Templates\Metric.idw.",
             SettingsViewModel.ValidatePrintTemplateMetricPath("Metric.idw"));
         Assert.Equal(
-            @"Imperial print template: enter a full path to the file, such as D:\Templates\Imperial.idw.",
+            @"Imperial template: enter a full path to the file, such as D:\Templates\Imperial.idw.",
             SettingsViewModel.ValidatePrintTemplateImperialPath("Imperial.idw"));
     }
 
@@ -2006,15 +2006,15 @@ public sealed class SettingsViewModelTests : IDisposable
     [InlineData(@"D:\T.idwx")]
     public void ValidatePrintTemplatePaths_WrongExtension_NameTheSetting(string path)
     {
-        Assert.Equal("Metric print template must be a file ending in .idw.", SettingsViewModel.ValidatePrintTemplateMetricPath(path));
-        Assert.Equal("Imperial print template must be a file ending in .idw.", SettingsViewModel.ValidatePrintTemplateImperialPath(path));
+        Assert.Equal("Metric template must be a file ending in .idw.", SettingsViewModel.ValidatePrintTemplateMetricPath(path));
+        Assert.Equal("Imperial template must be a file ending in .idw.", SettingsViewModel.ValidatePrintTemplateImperialPath(path));
     }
 
     [Fact]
     public void ValidatePrintTemplatePaths_InvalidCharacter_NameTheSetting()
     {
         Assert.Equal(
-            "Metric print template contains a character Windows does not allow.",
+            "Metric template contains a character Windows does not allow.",
             SettingsViewModel.ValidatePrintTemplateMetricPath(@"D:\T<.idw"));
     }
 
@@ -2029,9 +2029,9 @@ public sealed class SettingsViewModelTests : IDisposable
 
         Assert.StartsWith("Finish list:", vm.ErrorText);
         vm.FinishListPath = "";
-        Assert.StartsWith("Metric print template:", vm.ErrorText);
+        Assert.StartsWith("Metric template:", vm.ErrorText);
         vm.PrintTemplateMetricPath = "";
-        Assert.StartsWith("Imperial print template:", vm.ErrorText);
+        Assert.StartsWith("Imperial template:", vm.ErrorText);
         vm.PrintTemplateImperialPath = "";
         Assert.StartsWith("Hole data:", vm.ErrorText);
     }
@@ -2047,7 +2047,7 @@ public sealed class SettingsViewModelTests : IDisposable
 
         vm.SaveCommand.Execute(null);
 
-        Assert.Equal(SettingsViewModel.LibraryFileNotFoundError("Metric print template", MetricTemplate), vm.ErrorText);
+        Assert.Equal(SettingsViewModel.LibraryFileNotFoundError("Metric template", MetricTemplate), vm.ErrorText);
         Assert.Equal(new[] { MetricTemplate }, asked);
         Assert.False(saved);
         Assert.False(File.Exists(SettingsPath));
