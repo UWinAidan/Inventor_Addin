@@ -68,6 +68,9 @@ public static class InitialViewsPlan
     public const string DoesNotFitMessage =
         "The views do not fit the usable area at the smallest standard scale.";
 
+    public const string DoesNotFitAtScaleMessage =
+        "The views do not fit the usable area at this scale. Choose a smaller scale or fewer views.";
+
     /// <summary>The views a model kind offers, in placing order. The flat pattern is only offered for sheet metal.</summary>
     public static IReadOnlyList<InitialViewKind> DefaultViews(InitialViewModelKind model) => model switch
     {
@@ -113,13 +116,18 @@ public static class InitialViewsPlan
     /// The views the user kept ticked, or null for all of the model kind's. Views the model kind does not offer are ignored. The
     /// rest are laid out again, with no gap left where a view was dropped.
     /// </param>
+    /// <param name="fixedScale">
+    /// A scale the user chose, or null to pick the largest standard scale that fits. A fixed scale is used as given; when the views
+    /// do not fit at it the result has <c>Fits</c> false and <see cref="DoesNotFitAtScaleMessage"/>.
+    /// </param>
     /// <exception cref="ArgumentOutOfRangeException">A size is zero, negative or not a finite number.</exception>
     public static InitialViewsResult Plan(
         InitialViewModelKind model,
         InitialViewsBoxCm box,
         FlatPatternSizeCm? flatPattern,
         SheetAreaCm area,
-        IEnumerable<InitialViewKind>? requested = null)
+        IEnumerable<InitialViewKind>? requested = null,
+        double? fixedScale = null)
     {
         ArgumentNullException.ThrowIfNull(box);
         ArgumentNullException.ThrowIfNull(area);
@@ -133,6 +141,9 @@ public static class InitialViewsPlan
             RequirePositive(flatPattern.LengthCm, nameof(flatPattern));
             RequirePositive(flatPattern.WidthCm, nameof(flatPattern));
         }
+
+        if (fixedScale is double fs)
+            RequirePositive(fs, nameof(fixedScale));
 
         var messages = new List<string>();
         HashSet<InitialViewKind>? wanted = requested is null ? null : new HashSet<InitialViewKind>(requested);
@@ -173,6 +184,15 @@ public static class InitialViewsPlan
         // Create Print's scale rule (Aidan, 2026-11-20): the arranged views fit within PrintPlan.SheetFillFraction of the area.
         double maxWidth = area.WidthCm * PrintPlan.SheetFillFraction;
         double maxHeight = area.HeightCm * PrintPlan.SheetFillFraction;
+
+        if (fixedScale is double chosen)
+        {
+            Layout fixedLayout = Arrange(model, kinds, sizes, chosen);
+            bool fixedFits = fixedLayout.WidthCm <= maxWidth + 1e-9 && fixedLayout.HeightCm <= maxHeight + 1e-9;
+            if (!fixedFits)
+                messages.Add(DoesNotFitAtScaleMessage);
+            return Result(fixedLayout, area, chosen, fixedFits, messages);
+        }
 
         foreach (double scale in PrintPlan.StandardScales)
         {

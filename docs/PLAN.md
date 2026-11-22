@@ -571,7 +571,7 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 
 **Views and drawings**
 - [x] 189 Initial views: which views and where (Core)
-- [ ] 190 Initial Views window view-model (Core)
+- [x] 190 Initial Views window view-model (Core)
 - [ ] 191 Ribbon icons for the M5 commands
 - [ ] 192 Place Initial Views window and command; Create Print shows it
 - [ ] 193 Open Drawing

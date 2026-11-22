@@ -111,6 +111,8 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Follow-ups from finished tasks
 
+- Task 190: `InitialViewsResult.Fits`' doc still says only "the smallest standard scale" (also false when a chosen scale is too big). With no views ticked and a fixed scale, `ScaleText` shows 1:1 (OK is disabled). For task 192: bind the scale ComboBox with `DisplayMemberPath="Label"` (the suggested label changes at run time). `RenamePlanTests.ListFilesToSearch_AFolderThatDoesNotAnswer_IsSkippedAfterTheProbeTimeout` failed again in the reviewer's run.
+
 - Task 189, for tasks 190 and 192: Top and Right are projected from Front, so ticking either forces Front on. Task 192 maps the range box to `InitialViewsBoxCm`, supplies the flat pattern size (or null), and checks that the flat pattern view is Length wide by Width high. The usable area ignores the triad, parts list and NOTES list.
 
 - Task 186: the print template rows sit in Settings' "Material and finish" section, whose heading no longer covers them (rename?). The collapsed summary shows a set template as a bare file name, and nothing when blank. "_Imperial print template" shares Alt+I with "Use _Inventor's Hole command". The starter template files only exist after task 187.
