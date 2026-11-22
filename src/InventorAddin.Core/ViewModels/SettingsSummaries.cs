@@ -52,10 +52,26 @@ public static class SettingsSummaries
 
     /// <summary>
     /// Material and finish: each file's name, or "starter library" and "starter finish list" when blank. For example
-    /// "starter library, starter finish list" or "Materials.adsklib, finishes.csv".
+    /// "starter library, starter finish list" or "Materials.adsklib, finishes.csv". A print template chosen in Settings
+    /// adds its file name after them; a blank one adds nothing.
     /// </summary>
-    public static string MaterialFinish(string? materialLibraryPath, string? finishListPath) =>
-        string.Join(Separator, FileNameOr(materialLibraryPath, StarterLibrary), FileNameOr(finishListPath, StarterFinishList));
+    public static string MaterialFinish(
+        string? materialLibraryPath, string? finishListPath, string? printTemplateMetricPath = null, string? printTemplateImperialPath = null)
+    {
+        var parts = new List<string>
+        {
+            FileNameOr(materialLibraryPath, StarterLibrary),
+            FileNameOr(finishListPath, StarterFinishList),
+        };
+
+        // A print template is named only when the user has chosen their own; blank is the starter and adds nothing.
+        if (PropertyValues.NormaliseText(printTemplateMetricPath).Length > 0)
+            parts.Add(FileNameOr(printTemplateMetricPath, string.Empty));
+        if (PropertyValues.NormaliseText(printTemplateImperialPath).Length > 0)
+            parts.Add(FileNameOr(printTemplateImperialPath, string.Empty));
+
+        return string.Join(Separator, parts);
+    }
 
     /// <summary>
     /// Holes: the hole workbook's file name, or "starter hole data" when blank, then which Hole command is in use, then "hole table check off" when the automatic hole table check is off. For

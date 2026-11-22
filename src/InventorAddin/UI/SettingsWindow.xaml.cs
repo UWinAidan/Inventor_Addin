@@ -113,6 +113,30 @@ namespace InventorAddin.UI
                 _viewModel.FinishListPath = chosen;
         }
 
+        /// <summary>Browse beside the metric print template: as <see cref="OnBrowseMaterialLibrary"/>, for an .idw file.</summary>
+        private void OnBrowsePrintTemplateMetric(object sender, RoutedEventArgs e)
+        {
+            var chosen = PickFile(
+                "Choose the metric print template",
+                "Inventor drawings (*.idw)|*.idw",
+                _viewModel.PrintTemplateMetricPath,
+                SettingsViewModel.ValidatePrintTemplateMetricPath);
+            if (chosen is not null)
+                _viewModel.PrintTemplateMetricPath = chosen;
+        }
+
+        /// <summary>Browse beside the imperial print template: as <see cref="OnBrowsePrintTemplateMetric"/>.</summary>
+        private void OnBrowsePrintTemplateImperial(object sender, RoutedEventArgs e)
+        {
+            var chosen = PickFile(
+                "Choose the imperial print template",
+                "Inventor drawings (*.idw)|*.idw",
+                _viewModel.PrintTemplateImperialPath,
+                SettingsViewModel.ValidatePrintTemplateImperialPath);
+            if (chosen is not null)
+                _viewModel.PrintTemplateImperialPath = chosen;
+        }
+
         /// <summary>Browse beside the hole data: as <see cref="OnBrowseMaterialLibrary"/>, for an .xlsx file.</summary>
         private void OnBrowseHoleWorkbook(object sender, RoutedEventArgs e)
         {

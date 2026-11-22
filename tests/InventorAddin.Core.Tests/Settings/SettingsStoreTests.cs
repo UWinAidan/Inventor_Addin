@@ -372,6 +372,8 @@ public sealed class SettingsStoreTests : IDisposable
             s => s with { MaterialLibraryPath = @"D:\Lib.adsklib" },
             s => s with { FinishListPath = @"D:\finishes.csv" },
             s => s with { HoleWorkbookPath = @"D:\AWB_Holes.xlsx" },
+            s => s with { PrintTemplateMetricPath = @"D:\Metric.idw" },
+            s => s with { PrintTemplateImperialPath = @"D:\Imperial.idw" },
             s => s with { UseInventorHoleCommand = true },
             s => s with { LastBlindDepthMm = 12m },
             s => s with { LastBlindDepthIn = 0.5m },
@@ -572,6 +574,66 @@ public sealed class SettingsStoreTests : IDisposable
         var result = store.Load();
         Assert.Empty(result.Warnings);
         Assert.Equal(original, result.Settings);
+    }
+
+    // ---- Print template paths (task 186) ----
+
+    [Fact]
+    public void PrintTemplatePaths_DefaultBlank_AndNullIsStoredAsBlank()
+    {
+        var settings = new AddinSettings { PrintTemplateMetricPath = null!, PrintTemplateImperialPath = null! };
+
+        Assert.Equal("", new AddinSettings().PrintTemplateMetricPath);
+        Assert.Equal("", new AddinSettings().PrintTemplateImperialPath);
+        Assert.Equal("", settings.PrintTemplateMetricPath);
+        Assert.Equal("", settings.PrintTemplateImperialPath);
+    }
+
+    [Fact]
+    public void Load_FileWrittenBeforePrintTemplatePaths_LoadsBlanks()
+    {
+        WriteSettingsFile("""{ "schemaVersion": 1, "holeWorkbookPath": "D:\\Holes.xlsx" }""");
+
+        var result = new SettingsStore(_folder).Load();
+
+        Assert.Empty(result.Warnings);
+        Assert.Equal("", result.Settings.PrintTemplateMetricPath);
+        Assert.Equal("", result.Settings.PrintTemplateImperialPath);
+    }
+
+    [Fact]
+    public void Load_NullPrintTemplatePaths_LoadAsBlank()
+    {
+        WriteSettingsFile("""{ "printTemplateMetricPath": null, "printTemplateImperialPath": null }""");
+
+        var result = new SettingsStore(_folder).Load();
+
+        Assert.Empty(result.Warnings);
+        Assert.Equal(new AddinSettings(), result.Settings);
+    }
+
+    [Fact]
+    public void Save_WritesPrintTemplatePathsInCamelCase_ThenRoundTrips()
+    {
+        var store = new SettingsStore(_folder);
+        var original = new AddinSettings { PrintTemplateMetricPath = @"D:\T\Metric.idw", PrintTemplateImperialPath = @"\\server\share\Imperial.idw" };
+
+        store.Save(original);
+
+        var json = JsonNode.Parse(File.ReadAllText(SettingsPath))!.AsObject();
+        Assert.Equal(@"D:\T\Metric.idw", json["printTemplateMetricPath"]!.GetValue<string>());
+        Assert.Equal(@"\\server\share\Imperial.idw", json["printTemplateImperialPath"]!.GetValue<string>());
+
+        var result = store.Load();
+        Assert.Empty(result.Warnings);
+        Assert.Equal(original, result.Settings);
+    }
+
+    [Fact]
+    public void PrintTemplatePaths_TakePartInEquality()
+    {
+        Assert.NotEqual(new AddinSettings(), new AddinSettings { PrintTemplateMetricPath = "x.idw" });
+        Assert.NotEqual(new AddinSettings(), new AddinSettings { PrintTemplateImperialPath = "x.idw" });
     }
 
     // ---- Last blind hole depths (task 097) ----

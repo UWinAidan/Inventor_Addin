@@ -82,6 +82,8 @@
   <ItemGroup>
     <None Include="..\..\libraries\finishes.csv" Link="libraries\finishes.csv" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\libraries\AWB_Holes.xlsx" Link="libraries\AWB_Holes.xlsx" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The starter print templates (task 187). A wildcard, so the build does not fail before the files exist. -->
+    <None Include="..\..\libraries\Templates\*.idw" Link="libraries\Templates\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\libraries\StarterMaterials.adsklib" Link="libraries\StarterMaterials.adsklib" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\..\libraries\StarterMaterials.adsklib')" />
   </ItemGroup>
 

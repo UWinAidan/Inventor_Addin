@@ -146,6 +146,28 @@ public sealed record AddinSettings
     private string _holeWorkbookPath = string.Empty;
 
     /// <summary>
+    /// The metric print template (<c>.idw</c>) Create Print copies (spec 05, "Decided for M5"). <c>""</c> by default,
+    /// which means the starter template shipped with the add-in (<see cref="Materials.LibraryPaths.PrintTemplate"/>).
+    /// A null is stored as <c>""</c>.
+    /// </summary>
+    public string PrintTemplateMetricPath
+    {
+        get => _printTemplateMetricPath;
+        set => _printTemplateMetricPath = value ?? string.Empty;
+    }
+
+    private string _printTemplateMetricPath = string.Empty;
+
+    /// <summary>As <see cref="PrintTemplateMetricPath"/>, for the imperial print template.</summary>
+    public string PrintTemplateImperialPath
+    {
+        get => _printTemplateImperialPath;
+        set => _printTemplateImperialPath = value ?? string.Empty;
+    }
+
+    private string _printTemplateImperialPath = string.Empty;
+
+    /// <summary>
     /// "Use Inventor's Hole command" (spec 09, "Settings"): on gives Inventor's Hole button and H shortcut back; off,
     /// the default, gives them to AWB Hole. <see cref="Holes.HoleTakeoverRules"/> decides what that sets (task 091).
     /// </summary>
@@ -353,6 +375,8 @@ public sealed record AddinSettings
         && MaterialLibraryPath == other.MaterialLibraryPath
         && FinishListPath == other.FinishListPath
         && HoleWorkbookPath == other.HoleWorkbookPath
+        && PrintTemplateMetricPath == other.PrintTemplateMetricPath
+        && PrintTemplateImperialPath == other.PrintTemplateImperialPath
         && UseInventorHoleCommand == other.UseInventorHoleCommand
         && LastBlindDepthMm == other.LastBlindDepthMm
         && LastBlindDepthIn == other.LastBlindDepthIn
@@ -387,6 +411,8 @@ public sealed record AddinSettings
         hash.Add(MaterialLibraryPath, StringComparer.Ordinal);
         hash.Add(FinishListPath, StringComparer.Ordinal);
         hash.Add(HoleWorkbookPath, StringComparer.Ordinal);
+        hash.Add(PrintTemplateMetricPath, StringComparer.Ordinal);
+        hash.Add(PrintTemplateImperialPath, StringComparer.Ordinal);
         hash.Add(UseInventorHoleCommand);
         hash.Add(LastBlindDepthMm);
         hash.Add(LastBlindDepthIn);

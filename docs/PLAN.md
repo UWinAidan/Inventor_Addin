@@ -565,7 +565,7 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 **Template**
 - [x] 183 Spike: building the print template and placing views (Windows)
 - [x] 185 Print template layout (Core)
-- [ ] 186 Print template paths in Settings
+- [x] 186 Print template paths in Settings
 - [ ] 187 Build Print Template command and the starter templates (Windows)
 - [ ] 188 Create Print uses the AWB template
 

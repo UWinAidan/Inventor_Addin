@@ -1,3 +1,4 @@
+using InventorAddin.Core.Drawing;
 using InventorAddin.Core.Settings;
 
 namespace InventorAddin.Core.Materials;
@@ -27,6 +28,15 @@ public static class LibraryPaths
     /// <summary>The starter hole workbook's file name (spec 09, "The workbook").</summary>
     public const string StarterHoleWorkbookFileName = "AWB_Holes.xlsx";
 
+    /// <summary>The folder inside <see cref="StarterFolderName"/> that holds the starter print templates.</summary>
+    public const string PrintTemplateFolderName = "Templates";
+
+    /// <summary>The starter metric print template's file name.</summary>
+    public const string StarterPrintTemplateMetricFileName = "AWB Metric.idw";
+
+    /// <summary>The starter imperial print template's file name.</summary>
+    public const string StarterPrintTemplateImperialFileName = "AWB Imperial.idw";
+
     /// <summary>The material library's file extension, compared ignoring case.</summary>
     public const string MaterialLibraryExtension = ".adsklib";
 
@@ -35,6 +45,9 @@ public static class LibraryPaths
 
     /// <summary>The hole workbook's file extension, compared ignoring case.</summary>
     public const string HoleWorkbookExtension = ".xlsx";
+
+    /// <summary>The print templates' file extension, compared ignoring case.</summary>
+    public const string PrintTemplateExtension = ".idw";
 
     /// <summary>
     /// The material library to read: <see cref="AddinSettings.MaterialLibraryPath"/> trimmed when it is not blank,
@@ -59,6 +72,27 @@ public static class LibraryPaths
     /// <param name="addinFolder">The folder <c>InventorAddin.dll</c> runs from.</param>
     public static LibraryPath HoleWorkbook(AddinSettings settings, string addinFolder) =>
         Resolve((settings ?? throw new ArgumentNullException(nameof(settings))).HoleWorkbookPath, addinFolder, StarterHoleWorkbookFileName);
+
+    /// <summary>
+    /// The print template to copy for <paramref name="units"/>: <see cref="AddinSettings.PrintTemplateMetricPath"/> or
+    /// <see cref="AddinSettings.PrintTemplateImperialPath"/> trimmed when it is not blank, otherwise the starter
+    /// template in the <see cref="PrintTemplateFolderName"/> folder of the starter folder beside the add-in. Whether the
+    /// file exists is not checked.
+    /// </summary>
+    /// <param name="addinFolder">The folder <c>InventorAddin.dll</c> runs from.</param>
+    public static LibraryPath PrintTemplate(AddinSettings settings, PrintUnits units, string addinFolder)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+
+        var (setting, starter) = units switch
+        {
+            PrintUnits.Metric => (settings.PrintTemplateMetricPath, StarterPrintTemplateMetricFileName),
+            PrintUnits.Imperial => (settings.PrintTemplateImperialPath, StarterPrintTemplateImperialFileName),
+            _ => throw new ArgumentOutOfRangeException(nameof(units), units, "Unknown print units."),
+        };
+
+        return Resolve(setting, addinFolder, System.IO.Path.Combine(PrintTemplateFolderName, starter));
+    }
 
     /// <summary>Whether <paramref name="name"/> is in the preferred materials, ignoring case and surrounding spaces.</summary>
     public static bool IsPreferred(AddinSettings settings, string? name)

@@ -1926,6 +1926,195 @@ public sealed class SettingsViewModelTests : IDisposable
         Assert.Contains(nameof(SettingsViewModel.HolesSummary), changed);
     }
 
+    // ---- Print templates (task 186) ----
+
+    private const string MetricTemplate = @"B:\Data\My Metric.idw";
+    private const string ImperialTemplate = @"B:\Data\My Imperial.idw";
+
+    [Fact]
+    public void PrintTemplates_StartWithGivenValues_NotDirty_AndDefaultBlank()
+    {
+        var vm = Create(new AddinSettings { PrintTemplateMetricPath = MetricTemplate, PrintTemplateImperialPath = ImperialTemplate });
+
+        Assert.Equal(MetricTemplate, vm.PrintTemplateMetricPath);
+        Assert.Equal(ImperialTemplate, vm.PrintTemplateImperialPath);
+        Assert.False(vm.IsDirty);
+        Assert.Null(vm.ErrorText);
+
+        var blank = Create();
+        Assert.Equal("", blank.PrintTemplateMetricPath);
+        Assert.Equal("", blank.PrintTemplateImperialPath);
+    }
+
+    [Fact]
+    public void PrintTemplatePaths_Changing_MakeDirty_AndRaiseValueAndIsDirty()
+    {
+        var vm = Create();
+        var changed = RecordPropertyChanges(vm);
+
+        vm.PrintTemplateMetricPath = MetricTemplate;
+        vm.PrintTemplateImperialPath = ImperialTemplate;
+
+        Assert.True(vm.IsDirty);
+        Assert.True(vm.SaveCommand.CanExecute(null));
+        Assert.Equal(
+            new[]
+            {
+                nameof(SettingsViewModel.PrintTemplateMetricPath), nameof(SettingsViewModel.IsDirty),
+                nameof(SettingsViewModel.PrintTemplateImperialPath),
+            },
+            changed.Distinct().Take(3).ToArray());
+    }
+
+    [Fact]
+    public void PrintTemplatePaths_OnlySpaces_AreNotAChange()
+    {
+        var vm = Create();
+
+        vm.PrintTemplateMetricPath = "  ";
+        vm.PrintTemplateImperialPath = " ";
+
+        Assert.False(vm.IsDirty);
+        Assert.Null(vm.ErrorText);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(@"B:\Data\My Metric.idw")]
+    [InlineData(@"  \\server\share\Print.IDW ")]
+    public void ValidatePrintTemplatePaths_BlankOrFullIdwPath_AreValid(string? path)
+    {
+        Assert.Null(SettingsViewModel.ValidatePrintTemplateMetricPath(path));
+        Assert.Null(SettingsViewModel.ValidatePrintTemplateImperialPath(path));
+    }
+
+    [Fact]
+    public void ValidatePrintTemplatePaths_NotFullPath_NameTheSetting()
+    {
+        Assert.Equal(
+            @"Metric print template: enter a full path to the file, such as D:\Templates\Metric.idw.",
+            SettingsViewModel.ValidatePrintTemplateMetricPath("Metric.idw"));
+        Assert.Equal(
+            @"Imperial print template: enter a full path to the file, such as D:\Templates\Imperial.idw.",
+            SettingsViewModel.ValidatePrintTemplateImperialPath("Imperial.idw"));
+    }
+
+    [Theory]
+    [InlineData(@"D:\T.ipt")]
+    [InlineData(@"D:\T.dwg")]
+    [InlineData(@"D:\T.idwx")]
+    public void ValidatePrintTemplatePaths_WrongExtension_NameTheSetting(string path)
+    {
+        Assert.Equal("Metric print template must be a file ending in .idw.", SettingsViewModel.ValidatePrintTemplateMetricPath(path));
+        Assert.Equal("Imperial print template must be a file ending in .idw.", SettingsViewModel.ValidatePrintTemplateImperialPath(path));
+    }
+
+    [Fact]
+    public void ValidatePrintTemplatePaths_InvalidCharacter_NameTheSetting()
+    {
+        Assert.Equal(
+            "Metric print template contains a character Windows does not allow.",
+            SettingsViewModel.ValidatePrintTemplateMetricPath(@"D:\T<.idw"));
+    }
+
+    [Fact]
+    public void Validation_PrintTemplatesComeAfterTheFinishList_BeforeHoleData()
+    {
+        var vm = Create();
+        vm.HoleWorkbookPath = "Relative.xlsx";
+        vm.PrintTemplateImperialPath = "Relative.idw";
+        vm.PrintTemplateMetricPath = "Relative.idw";
+        vm.FinishListPath = "Relative.csv";
+
+        Assert.StartsWith("Finish list:", vm.ErrorText);
+        vm.FinishListPath = "";
+        Assert.StartsWith("Metric print template:", vm.ErrorText);
+        vm.PrintTemplateMetricPath = "";
+        Assert.StartsWith("Imperial print template:", vm.ErrorText);
+        vm.PrintTemplateImperialPath = "";
+        Assert.StartsWith("Hole data:", vm.ErrorText);
+    }
+
+    [Fact]
+    public void Save_MissingPrintTemplate_IsRefused_WithTheLibraryWording()
+    {
+        var asked = new List<string>();
+        var vm = CreateWithFiles(null, asked);
+        vm.PrintTemplateMetricPath = $" {MetricTemplate} ";
+        var saved = false;
+        vm.Saved += (_, _) => saved = true;
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.Equal(SettingsViewModel.LibraryFileNotFoundError("Metric print template", MetricTemplate), vm.ErrorText);
+        Assert.Equal(new[] { MetricTemplate }, asked);
+        Assert.False(saved);
+        Assert.False(File.Exists(SettingsPath));
+    }
+
+    [Fact]
+    public void Save_ExistingPrintTemplates_AreSavedTrimmed_AndRoundTrip()
+    {
+        var vm = CreateWithFiles(null, new List<string>(), MetricTemplate, ImperialTemplate);
+        vm.PrintTemplateMetricPath = $"\t{MetricTemplate} ";
+        vm.PrintTemplateImperialPath = $" {ImperialTemplate}";
+        var changed = RecordPropertyChanges(vm);
+
+        vm.SaveCommand.Execute(null);
+
+        var expected = new AddinSettings { PrintTemplateMetricPath = MetricTemplate, PrintTemplateImperialPath = ImperialTemplate };
+        Assert.Null(vm.ErrorText);
+        Assert.Equal(expected, new SettingsStore(_folder).Load().Settings);
+        Assert.Equal(expected, vm.SavedSettings);
+        Assert.Equal(MetricTemplate, vm.PrintTemplateMetricPath);
+        Assert.Equal(ImperialTemplate, vm.PrintTemplateImperialPath);
+        Assert.Contains(nameof(SettingsViewModel.PrintTemplateMetricPath), changed);
+        Assert.Contains(nameof(SettingsViewModel.PrintTemplateImperialPath), changed);
+    }
+
+    [Fact]
+    public void Save_BlankOrUnchangedPrintTemplate_IsNotCheckedOnDisk()
+    {
+        var asked = new List<string>();
+        var vm = CreateWithFiles(new AddinSettings { PrintTemplateMetricPath = MetricTemplate }, asked);
+        vm.PrintTemplateImperialPath = "";
+        vm.UseInventorHoleCommand = true;
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.Null(vm.ErrorText);
+        Assert.NotNull(vm.SavedSettings);
+        Assert.Empty(asked);
+
+        var blank = CreateWithFiles(new AddinSettings { PrintTemplateMetricPath = MetricTemplate }, asked);
+        blank.PrintTemplateMetricPath = "";
+
+        blank.SaveCommand.Execute(null);
+
+        Assert.Null(blank.ErrorText);
+        Assert.Equal("", blank.SavedSettings!.PrintTemplateMetricPath);
+        Assert.Empty(asked);
+    }
+
+    [Fact]
+    public void PrintTemplateHelp_AndMaterialFinishSummary_FollowEdits()
+    {
+        var vm = Create();
+        var changed = new List<string>();
+        vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName!);
+
+        Assert.Equal("The metric print template (.idw). Blank uses the starter template shipped with the add-in.", vm.PrintTemplateMetricHelp);
+        Assert.Equal("The imperial print template (.idw). Blank uses the starter template shipped with the add-in.", vm.PrintTemplateImperialHelp);
+        Assert.Equal("starter library, starter finish list", vm.MaterialFinishSummary);
+
+        vm.PrintTemplateMetricPath = MetricTemplate;
+        vm.PrintTemplateImperialPath = ImperialTemplate;
+
+        Assert.Equal("starter library, starter finish list, My Metric.idw, My Imperial.idw", vm.MaterialFinishSummary);
+        Assert.Contains(nameof(SettingsViewModel.MaterialFinishSummary), changed);
+    }
+
     // ---- Section summaries (task 079) ----
 
     [Fact]

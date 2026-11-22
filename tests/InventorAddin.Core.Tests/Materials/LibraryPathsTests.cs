@@ -1,3 +1,4 @@
+using InventorAddin.Core.Drawing;
 using InventorAddin.Core.Materials;
 using InventorAddin.Core.Settings;
 
@@ -106,6 +107,52 @@ public sealed class LibraryPathsTests
     {
         Assert.Throws<ArgumentNullException>(() => LibraryPaths.HoleWorkbook(null!, AddinFolder));
         Assert.Throws<ArgumentException>(() => LibraryPaths.HoleWorkbook(new AddinSettings(), " "));
+    }
+
+    // ---- Print templates (task 186) ----
+
+    [Fact]
+    public void PrintTemplate_StarterFileNames_FolderAndExtension()
+    {
+        Assert.Equal("Templates", LibraryPaths.PrintTemplateFolderName);
+        Assert.Equal("AWB Metric.idw", LibraryPaths.StarterPrintTemplateMetricFileName);
+        Assert.Equal("AWB Imperial.idw", LibraryPaths.StarterPrintTemplateImperialFileName);
+        Assert.Equal(".idw", LibraryPaths.PrintTemplateExtension);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("  ")]
+    [InlineData("\t")]
+    public void PrintTemplate_BlankSetting_IsTheStarterForTheUnits(string setting)
+    {
+        var settings = new AddinSettings { PrintTemplateMetricPath = setting, PrintTemplateImperialPath = setting };
+
+        Assert.Equal(
+            new LibraryPath(Path.Combine(AddinFolder, "libraries", "Templates", "AWB Metric.idw"), IsStarter: true),
+            LibraryPaths.PrintTemplate(settings, PrintUnits.Metric, AddinFolder));
+        Assert.Equal(
+            new LibraryPath(Path.Combine(AddinFolder, "libraries", "Templates", "AWB Imperial.idw"), IsStarter: true),
+            LibraryPaths.PrintTemplate(settings, PrintUnits.Imperial, AddinFolder));
+    }
+
+    [Fact]
+    public void PrintTemplate_Setting_IsUsedTrimmed_AndOnlyForItsUnits()
+    {
+        var settings = new AddinSettings { PrintTemplateMetricPath = " D:\\T\\My Metric.idw\t" };
+
+        Assert.Equal(
+            new LibraryPath(@"D:\T\My Metric.idw", IsStarter: false),
+            LibraryPaths.PrintTemplate(settings, PrintUnits.Metric, AddinFolder));
+        Assert.True(LibraryPaths.PrintTemplate(settings, PrintUnits.Imperial, AddinFolder).IsStarter);
+    }
+
+    [Fact]
+    public void PrintTemplate_NeedsSettingsAnAddinFolderAndKnownUnits()
+    {
+        Assert.Throws<ArgumentNullException>(() => LibraryPaths.PrintTemplate(null!, PrintUnits.Metric, AddinFolder));
+        Assert.Throws<ArgumentException>(() => LibraryPaths.PrintTemplate(new AddinSettings(), PrintUnits.Metric, " "));
+        Assert.Throws<ArgumentOutOfRangeException>(() => LibraryPaths.PrintTemplate(new AddinSettings(), (PrintUnits)99, AddinFolder));
     }
 
     [Fact]

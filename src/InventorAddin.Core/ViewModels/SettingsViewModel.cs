@@ -75,6 +75,18 @@ public sealed class SettingsViewModel : ObservableObject
     /// <summary>The one-line explanation shown under the hole data box.</summary>
     public const string HoleWorkbookHelpText = "The hole workbook (.xlsx). Blank uses the starter workbook shipped with the add-in.";
 
+    /// <summary>The metric print template row's label, and the name its messages use.</summary>
+    public const string PrintTemplateMetricFieldName = "Metric print template";
+
+    /// <summary>The imperial print template row's label, and the name its messages use.</summary>
+    public const string PrintTemplateImperialFieldName = "Imperial print template";
+
+    /// <summary>The one-line explanation shown under the metric print template box.</summary>
+    public const string PrintTemplateMetricHelpText = "The metric print template (.idw). Blank uses the starter template shipped with the add-in.";
+
+    /// <summary>The one-line explanation shown under the imperial print template box.</summary>
+    public const string PrintTemplateImperialHelpText = "The imperial print template (.idw). Blank uses the starter template shipped with the add-in.";
+
     /// <summary>The note shown under the "Use Inventor's Hole command" checkbox.</summary>
     public const string UseInventorHoleCommandNoteText =
         "On gives the H shortcut and the Hole button on the 3D Model and Sheet Metal tabs back to Inventor's Hole; off gives them to AWB Hole. Takes effect when you save.";
@@ -118,6 +130,8 @@ public sealed class SettingsViewModel : ObservableObject
     private string _materialLibraryText;
     private string _finishListText;
     private string _holeWorkbookText;
+    private string _printTemplateMetricText;
+    private string _printTemplateImperialText;
 
     private readonly Func<string, bool> _fileExists;
 
@@ -139,6 +153,8 @@ public sealed class SettingsViewModel : ObservableObject
         _materialLibraryText = settings.MaterialLibraryPath;
         _finishListText = settings.FinishListPath;
         _holeWorkbookText = settings.HoleWorkbookPath;
+        _printTemplateMetricText = settings.PrintTemplateMetricPath;
+        _printTemplateImperialText = settings.PrintTemplateImperialPath;
         _saved = Normalise(settings);
         _edited = Normalise(settings);
         _defaultDesignerText = settings.DefaultDesigner;
@@ -330,6 +346,42 @@ public sealed class SettingsViewModel : ObservableObject
         }
     }
 
+    /// <summary>The metric print template path as typed. As <see cref="MaterialLibraryPath"/>, for an <c>.idw</c> file.</summary>
+    public string PrintTemplateMetricPath
+    {
+        get => _printTemplateMetricText;
+        set
+        {
+            value ??= string.Empty;
+            if (_printTemplateMetricText == value)
+                return;
+
+            _printTemplateMetricText = value;
+            _edited.PrintTemplateMetricPath = PropertyValues.NormaliseText(value);
+            OnPropertyChanged();
+            SetValidationError(Validate());
+            OnEditChanged();
+        }
+    }
+
+    /// <summary>The imperial print template path as typed. As <see cref="PrintTemplateMetricPath"/>.</summary>
+    public string PrintTemplateImperialPath
+    {
+        get => _printTemplateImperialText;
+        set
+        {
+            value ??= string.Empty;
+            if (_printTemplateImperialText == value)
+                return;
+
+            _printTemplateImperialText = value;
+            _edited.PrintTemplateImperialPath = PropertyValues.NormaliseText(value);
+            OnPropertyChanged();
+            SetValidationError(Validate());
+            OnEditChanged();
+        }
+    }
+
     /// <summary>"Use Inventor's Hole command". Only stored; task 091 applies it when Settings is saved.</summary>
     public bool UseInventorHoleCommand
     {
@@ -404,7 +456,8 @@ public sealed class SettingsViewModel : ObservableObject
 
     public string FoldersSummary => SettingsSummaries.Folders(_edited.WorkFolder, _edited.OtherCadFolders);
 
-    public string MaterialFinishSummary => SettingsSummaries.MaterialFinish(_edited.MaterialLibraryPath, _edited.FinishListPath);
+    public string MaterialFinishSummary => SettingsSummaries.MaterialFinish(
+        _edited.MaterialLibraryPath, _edited.FinishListPath, _edited.PrintTemplateMetricPath, _edited.PrintTemplateImperialPath);
 
     public string HolesSummary => SettingsSummaries.Holes(_edited.HoleWorkbookPath, _edited.UseInventorHoleCommand, _edited.CheckHoleTablesAutomatically);
 
@@ -425,6 +478,10 @@ public sealed class SettingsViewModel : ObservableObject
     public string FinishListHelp => FinishListHelpText;
 
     public string HoleWorkbookHelp => HoleWorkbookHelpText;
+
+    public string PrintTemplateMetricHelp => PrintTemplateMetricHelpText;
+
+    public string PrintTemplateImperialHelp => PrintTemplateImperialHelpText;
 
     public string UseInventorHoleCommandNote => UseInventorHoleCommandNoteText;
 
@@ -501,6 +558,14 @@ public sealed class SettingsViewModel : ObservableObject
     public static string? ValidateHoleWorkbookPath(string? path) =>
         ValidateLibraryFile(path, HoleWorkbookFieldName, LibraryPaths.HoleWorkbookExtension, @"D:\Libraries\AWB_Holes.xlsx");
 
+    /// <summary>As <see cref="ValidateMaterialLibraryPath"/>, for the metric print template, which must end in <c>.idw</c>.</summary>
+    public static string? ValidatePrintTemplateMetricPath(string? path) =>
+        ValidateLibraryFile(path, PrintTemplateMetricFieldName, LibraryPaths.PrintTemplateExtension, @"D:\Templates\Metric.idw");
+
+    /// <summary>As <see cref="ValidatePrintTemplateMetricPath"/>, for the imperial print template.</summary>
+    public static string? ValidatePrintTemplateImperialPath(string? path) =>
+        ValidateLibraryFile(path, PrintTemplateImperialFieldName, LibraryPaths.PrintTemplateExtension, @"D:\Templates\Imperial.idw");
+
     /// <summary>The message <see cref="SaveCommand"/> shows when a changed library path names no file.</summary>
     public static string LibraryFileNotFoundError(string fieldName, string path) =>
         $"{fieldName}: '{path}' was not found. Choose an existing file, or leave it blank to use the starter file.";
@@ -564,6 +629,8 @@ public sealed class SettingsViewModel : ObservableObject
             MaterialLibraryPath = PropertyValues.NormaliseText(settings.MaterialLibraryPath),
             FinishListPath = PropertyValues.NormaliseText(settings.FinishListPath),
             HoleWorkbookPath = PropertyValues.NormaliseText(settings.HoleWorkbookPath),
+            PrintTemplateMetricPath = PropertyValues.NormaliseText(settings.PrintTemplateMetricPath),
+            PrintTemplateImperialPath = PropertyValues.NormaliseText(settings.PrintTemplateImperialPath),
         };
 
     // The first problem in window order: General (default designer, other names), then Part numbers (register
@@ -577,6 +644,8 @@ public sealed class SettingsViewModel : ObservableObject
         ?? ValidateOtherCadFolders(_otherCadFoldersText)
         ?? ValidateMaterialLibraryPath(_materialLibraryText)
         ?? ValidateFinishListPath(_finishListText)
+        ?? ValidatePrintTemplateMetricPath(_printTemplateMetricText)
+        ?? ValidatePrintTemplateImperialPath(_printTemplateImperialText)
         ?? ValidateHoleWorkbookPath(_holeWorkbookText);
 
     // Whether the library files exist is checked only on save, and only for a path that changed: a check per
@@ -585,6 +654,8 @@ public sealed class SettingsViewModel : ObservableObject
     private string? CheckLibraryFilesExist() =>
         CheckFileExists(MaterialLibraryFieldName, _edited.MaterialLibraryPath, _saved.MaterialLibraryPath)
         ?? CheckFileExists(FinishListFieldName, _edited.FinishListPath, _saved.FinishListPath)
+        ?? CheckFileExists(PrintTemplateMetricFieldName, _edited.PrintTemplateMetricPath, _saved.PrintTemplateMetricPath)
+        ?? CheckFileExists(PrintTemplateImperialFieldName, _edited.PrintTemplateImperialPath, _saved.PrintTemplateImperialPath)
         ?? CheckFileExists(HoleWorkbookFieldName, _edited.HoleWorkbookPath, _saved.HoleWorkbookPath);
 
     private string? CheckFileExists(string fieldName, string path, string savedPath)
@@ -677,6 +748,18 @@ public sealed class SettingsViewModel : ObservableObject
         {
             _finishListText = toWrite.FinishListPath;
             OnPropertyChanged(nameof(FinishListPath));
+        }
+
+        if (_printTemplateMetricText != toWrite.PrintTemplateMetricPath)
+        {
+            _printTemplateMetricText = toWrite.PrintTemplateMetricPath;
+            OnPropertyChanged(nameof(PrintTemplateMetricPath));
+        }
+
+        if (_printTemplateImperialText != toWrite.PrintTemplateImperialPath)
+        {
+            _printTemplateImperialText = toWrite.PrintTemplateImperialPath;
+            OnPropertyChanged(nameof(PrintTemplateImperialPath));
         }
 
         if (_holeWorkbookText != toWrite.HoleWorkbookPath)

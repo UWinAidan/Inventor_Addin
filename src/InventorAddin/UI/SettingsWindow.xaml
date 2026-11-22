@@ -149,6 +149,33 @@
                     <controls:FieldRow>
                         <TextBlock Style="{DynamicResource MutedText}" Text="{Binding FinishListHelp, Mode=OneTime}" />
                     </controls:FieldRow>
+                    <controls:FieldRow Label="Metric _print template" Target="{Binding ElementName=PrintTemplateMetricBox}">
+                        <DockPanel>
+                            <!-- Opens a file picker for an .idw and puts the chosen file in the box beside it (code-behind). -->
+                            <Button DockPanel.Dock="Right"
+                                    Style="{DynamicResource SideButton}"
+                                    Content="Browse..."
+                                    Click="OnBrowsePrintTemplateMetric" />
+                            <TextBox x:Name="PrintTemplateMetricBox"
+                                     Text="{Binding PrintTemplateMetricPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </DockPanel>
+                    </controls:FieldRow>
+                    <controls:FieldRow>
+                        <TextBlock Style="{DynamicResource MutedText}" Text="{Binding PrintTemplateMetricHelp, Mode=OneTime}" />
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="_Imperial print template" Target="{Binding ElementName=PrintTemplateImperialBox}">
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right"
+                                    Style="{DynamicResource SideButton}"
+                                    Content="Browse..."
+                                    Click="OnBrowsePrintTemplateImperial" />
+                            <TextBox x:Name="PrintTemplateImperialBox"
+                                     Text="{Binding PrintTemplateImperialPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </DockPanel>
+                    </controls:FieldRow>
+                    <controls:FieldRow>
+                        <TextBlock Style="{DynamicResource MutedText}" Text="{Binding PrintTemplateImperialHelp, Mode=OneTime}" />
+                    </controls:FieldRow>
                 </controls:CollapsibleSection>
                 <controls:CollapsibleSection x:Name="HolesSection"
                                              Heading="Holes"
