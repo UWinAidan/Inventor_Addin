@@ -17,13 +17,19 @@ namespace InventorAddin.Commands
     {
         private readonly Document _doc;
         private readonly string _commandName;
+        private readonly Func<Document, PropertyWrite?>? _extraWrite;
 
         /// <param name="doc">The new or copied document.</param>
         /// <param name="commandName">The command's display name: the transaction's name in Undo, and the log prefix.</param>
-        public InventorNewDocument(Document doc, string commandName)
+        /// <param name="extraWrite">
+        /// A write to add, in the same transaction, to whatever <see cref="WriteProperties"/> is given, decided from the
+        /// open document (Mass Update's Finish Spec backfill, task 217); null for none.
+        /// </param>
+        public InventorNewDocument(Document doc, string commandName, Func<Document, PropertyWrite?>? extraWrite = null)
         {
             _doc = doc;
             _commandName = commandName;
+            _extraWrite = extraWrite;
         }
 
         /// <summary>
@@ -35,6 +41,14 @@ namespace InventorAddin.Commands
             Transaction transaction = InventorHost.App.TransactionManager.StartTransaction((_Document)_doc, _commandName);
             try
             {
+                PropertyWrite? extra = _extraWrite?.Invoke(_doc);
+                if (extra != null)
+                {
+                    var all = new List<PropertyWrite>(writes) { extra };
+                    writes = all;
+                    AddinServices.Log.Info($"{_commandName}: Finish Spec filled in on '{ComSafe.Get(() => _doc.DisplayName)}'.");
+                }
+
                 PropertyWriter.Apply(_doc, writes);
                 transaction.End();
             }

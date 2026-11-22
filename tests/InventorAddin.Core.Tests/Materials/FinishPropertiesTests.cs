@@ -155,4 +155,23 @@ public sealed class FinishPropertiesTests
             ],
             writes);
     }
+
+    [Fact]
+    public void For_PrintName_GoesInFinishSpecOnly()
+    {
+        var finish = Finish(name: "Test plating, long wording") with { PrintName = "TEST, MID PHOS" };
+
+        var writes = FinishProperties.For(finish, PrintUnits.Metric);
+
+        Assert.Equal(PropertyWrite.SetText(PartPropertyStorage.Finish, "Test plating, long wording"), writes[0]);
+        Assert.Equal(PropertyWrite.SetText(PartPropertyStorage.FinishSpec, "TEST, MID PHOS, 13-25 µm"), writes[4]);
+    }
+
+    [Fact]
+    public void SpecText_BlankPrintName_UsesName()
+    {
+        var finish = Finish() with { PrintName = "  " };
+
+        Assert.Equal("Test finish, 13-25 µm", FinishProperties.SpecText(finish, PrintUnits.Metric));
+    }
 }

@@ -90,6 +90,8 @@ namespace InventorAddin.Commands
             string drawingPath = PrintPlan.DrawingFileName(modelPath, PrintPlan.NewPrintExtension);
             string? partNumber = ModelPartNumber(model);
 
+            BackfillFinishSpec(model);
+
             Forms.Cursor previousCursor = Forms.Cursor.Current;
             Forms.Cursor.Current = Forms.Cursors.WaitCursor;
             try
@@ -168,6 +170,28 @@ namespace InventorAddin.Commands
                 }
 
                 Show(PrintPlan.FailedMessage(step, ex.Message, cleanup), Forms.MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// Fills in a missing Finish Spec on the model before the drawing is made, so the title block prints it (task 217).
+        /// One transaction on the model, nothing saved. A model that cannot be changed (read-only, say) is logged and
+        /// does not stop the print.
+        /// </summary>
+        private void BackfillFinishSpec(Document model)
+        {
+            try
+            {
+                PropertyWrite? write = FinishSpecBackfiller.WriteFor(model, FinishSpecBackfiller.LoadFinishList());
+                if (write == null)
+                    return;
+
+                RunInTransaction(model, () => PropertyWriter.Apply(model, new[] { write }));
+                AddinServices.Log.Info($"Create Print: Finish Spec \"{write.TextValue}\" filled in on '{ComSafe.Get(() => model.DisplayName)}'.");
+            }
+            catch (Exception ex)
+            {
+                AddinServices.Log.Warn($"Create Print: Finish Spec could not be filled in on the model. {ex.Message}");
             }
         }
 

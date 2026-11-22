@@ -64,6 +64,7 @@ Aidan, 2026-10-12 (answers questions 1 to 8 of the earlier list):
 | ThicknessMin_mm, ThicknessMax_mm | the finish thickness range in mm; both 0 when it has none |
 | DimensionsAfterFinish | Yes or No: whether drawing dimensions apply after finishing |
 | PrintNote | the note for the drawing |
+| PrintName | optional. A short name for the title block, for example "ENP, MID PHOS", used in Finish Spec; the Finish property keeps the full Name. Blank or no column means Name is used (Aidan, 2026-11-22, task 217) |
 
 Aidan's first list has 14 finishes. Spike 067 checked its appearance names: only `Zinc` existed as written. On 2026-10-12 the list was changed to the spike's suggested real names, and Aidan will edit the file later if he wants others (question 9).
 

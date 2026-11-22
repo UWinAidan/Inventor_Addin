@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Inventor;
 using InventorAddin.Commands;
+using InventorAddin.Core.Materials;
 using InventorAddin.Core.Models;
 using InventorAddin.Core.Numbering.MassUpdate;
 using InventorAddin.Core.PartProperties;
@@ -29,6 +30,7 @@ namespace InventorAddin.Extraction
 
         private readonly Application _app;
         private readonly string _commandName;
+        private IReadOnlyList<Finish>? _finishList;
         private readonly Dictionary<string, Document> _openAtStart = new(StringComparer.OrdinalIgnoreCase);
 
         /// <param name="app">The running Inventor.</param>
@@ -92,7 +94,10 @@ namespace InventorAddin.Extraction
             }
 
             // Writes go through PropertyWriter inside one transaction, as for New Part and Save As Copy.
-            return new InventorNewDocument(doc, _commandName);
+            // A part with Finish but no Finish Spec gets one in the same transaction (task 217); the finish list is read
+            // once, the first time a file is opened to change it.
+            return new InventorNewDocument(doc, _commandName,
+                d => FinishSpecBackfiller.WriteFor(d, _finishList ??= FinishSpecBackfiller.LoadFinishList()));
         }
 
         private static string CouldNotOpenText(Exception ex) => $"The file could not be opened: {ex.Message}";

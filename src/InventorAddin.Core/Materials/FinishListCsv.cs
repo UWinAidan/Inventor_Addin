@@ -34,6 +34,11 @@ public static class FinishListCsv
     public const string DimensionsAfterFinishColumn = "DimensionsAfterFinish";
     public const string PrintNoteColumn = "PrintNote";
 
+    /// <summary>The optional short name column (task 217). "Print name" with a space is read too.</summary>
+    public const string PrintNameColumn = "PrintName";
+
+    private const string PrintNameColumnSpaced = "Print name";
+
     /// <summary>The Appearance cell that keeps the material's appearance (compared ignoring case).</summary>
     public const string NoChangeAppearance = "(no change)";
 
@@ -49,7 +54,7 @@ public static class FinishListCsv
 
     /// <summary>
     /// Reads finish list CSV text (see <see cref="CsvTable.Parse"/> for the CSV rules). Every column in
-    /// <see cref="Columns"/> is required; a missing one makes the whole file invalid with one problem naming the
+    /// <see cref="Columns"/> is required (the <see cref="PrintNameColumn"/> column is optional); a missing one makes the whole file invalid with one problem naming the
     /// missing columns and no finishes. Rows whose cells are all blank are skipped. A row is left out, with a problem
     /// naming its line for each thing wrong, when: Code or Name is blank; Code was used on an earlier row (ignoring
     /// case); Kind is not a <see cref="FinishKind"/> (ignoring case and spaces); a thickness is not a non-negative
@@ -127,6 +132,11 @@ public static class FinishListCsv
 
         string Cell(string column) => row[columns[column]].Trim();
 
+        // Optional: a file without the column, or a blank cell, means the finish's own name is used.
+        var printNameColumn = columns.TryGetValue(PrintNameColumn, out var printNameIndex)
+            || columns.TryGetValue(PrintNameColumnSpaced, out printNameIndex);
+        var printName = printNameColumn ? row[printNameIndex].Trim() : "";
+
         var code = Cell(CodeColumn);
         if (code.Length == 0)
         {
@@ -203,7 +213,8 @@ public static class FinishListCsv
             minText,
             maxText,
             dimensionsAfterFinish,
-            Cell(PrintNoteColumn));
+            Cell(PrintNoteColumn),
+            printName.Length == 0 ? null : printName);
     }
 
     /// <summary>

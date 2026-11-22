@@ -196,7 +196,7 @@ namespace InventorAddin.Commands
         /// The part's units for Finish Spec (Default, Aidan to confirm): inch or foot length units are imperial, anything
         /// else metric. Reads <c>UnitsOfMeasure.LengthUnits</c>, as <c>HoleTableSource</c> does.
         /// </summary>
-        private static PrintUnits UnitsOf(Document doc)
+        internal static PrintUnits UnitsOf(Document doc)
         {
             UnitsTypeEnum? units = ComSafe.Get(() => (UnitsTypeEnum?)doc.UnitsOfMeasure.LengthUnits);
             return units == UnitsTypeEnum.kInchLengthUnits || units == UnitsTypeEnum.kFootLengthUnits

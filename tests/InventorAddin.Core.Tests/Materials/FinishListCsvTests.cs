@@ -419,4 +419,53 @@ public sealed class FinishListCsvTests
         var problem = Assert.Single(result.Problems);
         Assert.Equal(4, problem.Line);
     }
+
+    // ---- Print name (task 217) ----
+
+    [Fact]
+    public void PrintNameColumn_Read_AndBlankMeansNone()
+    {
+        var text =
+            Header + ",PrintName\r\n" +
+            Row(code: "TF1") + ",\"TEST, MID\"\r\n" +
+            Row(code: "TF2") + ",\r\n";
+
+        var result = FinishListCsv.Parse(text);
+
+        Assert.Empty(result.Problems);
+        Assert.Equal("TEST, MID", result.Finishes[0].PrintName);
+        Assert.Equal("TEST, MID", result.Finishes[0].SpecName);
+        Assert.Null(result.Finishes[1].PrintName);
+        Assert.Equal("Test finish", result.Finishes[1].SpecName);
+    }
+
+    [Fact]
+    public void PrintNameColumn_WithSpaceInHeader_Read()
+    {
+        var result = FinishListCsv.Parse(Header + ",Print name\r\n" + Row() + ",SHORT\r\n");
+
+        Assert.Empty(result.Problems);
+        Assert.Equal("SHORT", Assert.Single(result.Finishes).PrintName);
+    }
+
+    [Fact]
+    public void NoPrintNameColumn_StillLoads_WithNoPrintName()
+    {
+        var finish = Assert.Single(ParseRows(Row()).Finishes);
+
+        Assert.Null(finish.PrintName);
+        Assert.Equal(finish.Name, finish.SpecName);
+    }
+
+    [Fact]
+    public void RepoFinishList_EveryFinishHasAShortPrintName()
+    {
+        var result = FinishListCsv.Parse(ReadRepoFinishList());
+
+        Assert.All(result.Finishes, f =>
+        {
+            Assert.False(string.IsNullOrWhiteSpace(f.PrintName), f.Code);
+            Assert.True(f.PrintName!.Length <= 24, f.Code);
+        });
+    }
 }

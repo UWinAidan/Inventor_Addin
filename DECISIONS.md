@@ -529,3 +529,4 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-22 | Settings labels "Metric template" and "Imperial template" | Aidan | task 221 |
 | 2026-11-22 | Revise skips I and O (A to H, J to N, P to Z, then AA) | Default | task 210 |
 | 2026-11-22 | Mass in lb on the imperial template: first try (a), an imperial part's own mass unit set to lb (short spike round); if a fresh drawing still prints kg, fall back to (b), a Mass text property in the part's units that the template prints, refreshed automatically whenever the part is saved (not only on Create Print or Mass Update) | Aidan | spec 05 question 28 |
+| 2026-11-22 | Finish Spec backfill: the finishes.csv column is "PrintName"; a failed backfill is logged and never blocks the window or the print; Mass Update fills only files it opens to change; assemblies are skipped | Default | task 217 |

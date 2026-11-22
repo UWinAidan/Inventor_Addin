@@ -111,6 +111,12 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Follow-ups from finished tasks
 
+- Task 217 (reviewer):
+  - Mass Update logs "Finish Spec filled in" before the write, so it is logged even when the transaction aborts. A failed backfill write there also aborts the file's real Mass Update changes.
+  - In Material and Finish, one part that cannot be written aborts the whole backfill transaction for the other parts.
+  - Create Print skips the backfill when it opens an existing print.
+  - `RunInTransaction`'s doc comment still says "on the new drawing".
+
 - Task 215: the mockup caption (`docs/ui-mockups/title-block.html`) and task 185's notes still say "20 mm filing edge" (now centred). In the 7 mm part number row, the Status value keeps the mockup's lower baseline.
 
 - Long term (Aidan, 2026-11-22): a PDM's release action takes over Revision and Status from the add-in.

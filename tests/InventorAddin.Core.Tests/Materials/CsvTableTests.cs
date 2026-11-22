@@ -150,9 +150,9 @@ public sealed class CsvTableTests
     {
         var table = CsvTable.Parse(FinishListCsvTests.ReadRepoFinishList());
 
-        Assert.Equal(9, table.Header!.Fields.Count);
+        Assert.Equal(10, table.Header!.Fields.Count);
         Assert.Equal(14, table.Rows.Count);
-        Assert.All(table.Rows, r => Assert.Equal(9, r.Fields.Count));
+        Assert.All(table.Rows, r => Assert.Equal(10, r.Fields.Count));
 
         var zinc = table.Rows.Single(r => r[0] == "ZN");
         Assert.Equal("Zinc plate, clear trivalent", zinc[1]);

@@ -6,36 +6,30 @@ Last updated: 2026-11-22
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-22 15:04. Branch `claude/m5-drawing-tools`, latest commit `700fc55` (pushed).
+- Updated: 2026-11-22 18:06. Branch `claude/m5-drawing-tools`, latest commit `348dbe2` (pushed).
 - Goal: M5 tasks in chunks: implementer, then reviewer, one commit per task, push. Stop after each chunk with a summary, Defaults and a checklist. Nothing from work prints goes in the repo (Aidan's screenshots are in ADDIN_PICS, gitignored).
 - Done this session:
-  - Spikes 183 and 184; chunk 1 (211, 185, 186, 189, 190).
-  - Spec 05 questions 23 to 27 answered. 214 and 213 done.
-  - 187 code committed (`58323b0`; status "code done, waiting for the templates").
-  - Aidan ran 187: both templates built with 0 warnings, and the logo is embedded. He found 11 problems; each is now a task (`700fc55`):
-    - 215: Core layout. Text sizes to the mockup, tolerance columns, the edge note wrapping, value baselines, a centred border (10 mm ISO, 12.7 mm ANSI), and a no-overflow test.
-    - 216: builder. Decimal point in every metric style, STATUS reads User Status (Design Tracking id 17), each text measured against its cell. Then Aidan rebuilds.
-    - 217: finishes.csv print name column, and Finish Spec backfill (opening Material and Finish, Create Print, Mass Update).
-    - 218: spike on shrinking or wrapping long title block values (the parent drives Inventor over COM; ask Aidan first).
-    - 219: Revision "A" and Status written automatically, and filled in on older parts.
-    - 210 reworked: the Status dropdown and a Revise button (Default: I and O are skipped).
-    - 220: hole tables stay inside the border.
-    - 221: Settings labels "Metric template" and "Imperial template".
-  - Spec 05 question 28 (mass in lb; options a, b, c) waits on Aidan.
-  - `libraries/Templates/*.idw` from the first build are untracked. Do not commit them; they will be rebuilt.
-- In progress: the task 215 implementer was launched (result not yet seen; unverified).
+  - Spikes 183 and 184; chunk 1 (211, 185, 186, 189, 190); 214 and 213.
+  - 187 code (`58323b0`). Aidan's first template check gave 11 items, now tasks 215 to 221 and 210 reworked (`700fc55`).
+  - Done since: 215 `677df08` (layout: mockup sizes, tolerance columns, baselines, centred border, `PrintTextFit` width estimate), 216 `e462f3b`/`dc52b8c` (decimal marker on dimension and FCF styles, STATUS reads User Status id 17, FontSize = size × 0.727 cap height, RangeBox overflow warnings), 221 `7d2339b` (Settings labels).
+  - Q28 answered (`348dbe2`): try (a) the part's mass unit set to lb (spike); if a fresh drawing still prints kg, use (b), a Mass text property refreshed whenever the part is saved.
+  - Core tests 5161 passed at the last run; the solution builds with 0 errors.
+- In progress:
+  - The 217 implementer is running (finish print name and Finish Spec backfill); its result is not seen yet (unverified).
+  - Aidan deployed the 216 build and is to rebuild both templates with Build Print Template and check them against task 216's checklist. He also reports the log's "width ratio" mean (about 1.0 confirms FontSize is the cap height).
+  - The Q28 spike `spike-local/183/spike-q28-lb.ps1` is ready. It failed only because Inventor was closed (`GetActiveObject` MK_E_UNAVAILABLE). Rerun it when Aidan has Inventor open with `AWB Imperial.idw` closed. It works on a copy in `C:\AwbSpike\q28\`.
 - Next:
-  1. Review 215, then commit and push it.
-  2. Then 216 (Aidan deploys and runs Build Print Template again), then 221.
-  3. Tell Aidan to look at the rebuilt templates. When he passes them, commit the `.idw` files and mark 187 and 216 done.
-  4. Then 217, 219, 210 and 220; run 218 with Aidan's OK.
-  5. Then chunk 2's 188, 191, 192 and 193, and the chunk 2 summary.
+  1. Run the Q28 spike. If lb prints, write a task: New Part and Mass Update set an imperial part's mass unit to lb. If not, write a task for (b): a Mass property written on part save (an on-save event handler) and the template field switched to it. Record the result in spec 05 question 28.
+  2. When Aidan passes the rebuilt templates, commit `libraries/Templates/AWB Metric.idw` and `AWB Imperial.idw`, and mark 187 and 216 done in their task files and in PLAN. If he reports problems, write fix tasks.
+  3. Review 217, then commit it. Then 219, 210 and 220. Run spike 218 (shrinking long title block values) with Aidan's OK.
+  4. Then chunk 2's 188, 191, 192 and 193, and the chunk 2 summary.
 - Gotchas:
-  - Numbering and RegisterStore tests fail intermittently on timing; rerun.
-  - Agents can hit the account session limit; resume them with SendMessage after the reset.
+  - Numbering and RegisterStore tests are flaky on timing; rerun.
+  - Agents can hit the session limit; resume them with SendMessage.
+  - In Python, '\a' and '\1' inside path strings become control characters. Use raw strings or chr(92).
   - Bash heredocs holding Python with quotes break; write a .py file in the job tmp folder.
-  - Design Status values: 1 Work In Progress, 2 Pending, 3 Released. User Status is id 17.
-- Read first: `docs/WORKFLOW.md`, `docs/PLAN.md` M5, tasks 187 and 215 to 221, DECISIONS.md rows dated 2026-11-22.
+  - Don't build while Aidan deploys (both use `obj/`).
+- Read first: `docs/WORKFLOW.md`, `docs/PLAN.md` M5, tasks 216 and 217 to 221, DECISIONS.md rows dated 2026-11-22.
 
 ## Big items
 

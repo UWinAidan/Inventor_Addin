@@ -17,6 +17,10 @@ namespace InventorAddin.Core.Materials;
 /// <param name="ThicknessMaxMm">The largest thickness in mm, as written in the file.</param>
 /// <param name="DimensionsAfterFinish">Whether drawing dimensions apply after finishing.</param>
 /// <param name="PrintNote">The note for the drawing.</param>
+/// <param name="PrintName">
+/// The short name Finish Spec prints in the title block (for example "TEST, MID PHOS"), or null or blank to print
+/// <see cref="Name"/> (Aidan, 2026-11-22, task 217). The Finish property keeps the full <see cref="Name"/>.
+/// </param>
 public sealed record Finish(
     string Code,
     string Name,
@@ -26,8 +30,12 @@ public sealed record Finish(
     string ThicknessMinMm,
     string ThicknessMaxMm,
     bool DimensionsAfterFinish,
-    string PrintNote)
+    string PrintNote,
+    string? PrintName = null)
 {
+    /// <summary>The name Finish Spec uses: <see cref="PrintName"/> when it is not blank, otherwise <see cref="Name"/>.</summary>
+    public string SpecName => string.IsNullOrWhiteSpace(PrintName) ? Name : PrintName;
+
     /// <summary>True when <see cref="AppliesTo"/> is empty, so the finish suits every material.</summary>
     public bool AppliesToAll => AppliesTo.Count == 0;
 }

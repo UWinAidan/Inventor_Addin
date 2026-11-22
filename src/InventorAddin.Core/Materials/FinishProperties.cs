@@ -55,7 +55,7 @@ public static class FinishProperties
     }
 
     /// <summary>
-    /// The Finish Spec text (Aidan, 2026-11-22, spec 05 question 23): the finish name, then <c>, </c> and the thickness in
+    /// The Finish Spec text (Aidan, 2026-11-22, spec 05 question 23): the finish's print name (its name when it has none), then <c>, </c> and the thickness in
     /// the part's units when there is one. Metric is micrometres, <c>Test Coat, 10-15 µm</c>; imperial is inches,
     /// <c>Test Coat, .0004-.0006 IN</c>. The name alone, with no comma, when both values are zero or do not read as numbers.
     /// </summary>
@@ -63,15 +63,25 @@ public static class FinishProperties
     {
         ArgumentNullException.ThrowIfNull(finish);
 
-        var name = finish.Name.Trim();
-        var thickness = SpecThicknessText(finish, units);
-        return thickness.Length == 0 ? name : $"{name}, {thickness}";
+        return SpecText(finish.SpecName, finish.ThicknessMinMm, finish.ThicknessMaxMm, units);
     }
 
-    private static string SpecThicknessText(Finish finish, PrintUnits units)
+    /// <summary>
+    /// The Finish Spec text from a name and a thickness range in mm as text: the same rules as
+    /// <see cref="SpecText(Finish, PrintUnits)"/>. Used when the finish is no longer in the finish list and only the
+    /// stored Finish and Finish Thickness are known (task 217).
+    /// </summary>
+    internal static string SpecText(string name, string thicknessMinMm, string thicknessMaxMm, PrintUnits units)
     {
-        if (!FinishListCsv.TryParseThickness(finish.ThicknessMinMm.Trim(), out var min)
-            || !FinishListCsv.TryParseThickness(finish.ThicknessMaxMm.Trim(), out var max)
+        var trimmed = name.Trim();
+        var thickness = SpecThicknessText(thicknessMinMm, thicknessMaxMm, units);
+        return thickness.Length == 0 ? trimmed : $"{trimmed}, {thickness}";
+    }
+
+    private static string SpecThicknessText(string thicknessMinMm, string thicknessMaxMm, PrintUnits units)
+    {
+        if (!FinishListCsv.TryParseThickness(thicknessMinMm.Trim(), out var min)
+            || !FinishListCsv.TryParseThickness(thicknessMaxMm.Trim(), out var max)
             || (min == 0 && max == 0))
         {
             return "";

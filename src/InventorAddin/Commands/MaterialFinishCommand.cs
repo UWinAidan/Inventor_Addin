@@ -4,6 +4,7 @@ using Inventor;
 using InventorAddin.Core.Logging;
 using InventorAddin.Core.Materials;
 using InventorAddin.Core.Models;
+using InventorAddin.Core.PartProperties;
 using InventorAddin.Core.Ribbon;
 using InventorAddin.Core.Settings;
 using InventorAddin.Core.ViewModels;
@@ -194,6 +195,8 @@ namespace InventorAddin.Commands
             foreach (FinishListProblem problem in finishList.Problems)
                 log.Warn(MaterialLibraryMessages.FinishListProblemLogLine(finishListPath, problem));
 
+            BackfillFinishSpecs(plan, finishList.Finishes, runInTransaction, log);
+
             MaterialFinishCurrent current = MaterialFinishTargets.ReadCurrent(target, plan);
             var targets = new MaterialFinishTargets(plan, library, appearances, runInTransaction, log);
 
@@ -209,6 +212,41 @@ namespace InventorAddin.Commands
 
             WindowHost.ShowDialog(new MaterialFinishWindow(viewModel), IconNames.MaterialFinish, owner);
             return true;
+        }
+
+        /// <summary>
+        /// Fills in a missing Finish Spec on the parts the window opens on (task 217), written at once in one transaction
+        /// and logged. A failure is logged and does not stop the window.
+        /// </summary>
+        private static void BackfillFinishSpecs(
+            MaterialFinishTargetPlan<Document> plan, IReadOnlyList<Finish> finishes, Action<Action> runInTransaction, ILog log)
+        {
+            try
+            {
+                var pending = new List<(MaterialFinishCandidate<Document> Part, PropertyWrite Write)>();
+                foreach (MaterialFinishCandidate<Document> part in plan.Parts)
+                {
+                    PropertyWrite? write = FinishSpecBackfiller.WriteFor(part.Item, finishes);
+                    if (write != null)
+                        pending.Add((part, write));
+                }
+
+                if (pending.Count == 0)
+                    return;
+
+                runInTransaction(() =>
+                {
+                    foreach (var (part, write) in pending)
+                        PropertyWriter.Apply(part.Item, new[] { write });
+                });
+
+                foreach (var (part, write) in pending)
+                    log.Info($"{MaterialFinishTargeting.LogPrefix}Finish Spec \"{write.TextValue}\" filled in on {part.Name}.");
+            }
+            catch (Exception ex)
+            {
+                log.Warn($"{MaterialFinishTargeting.LogPrefix}Finish Spec could not be filled in. {ex.Message}");
+            }
         }
 
         private static bool TryAddinFolder(ILog log, out string addinFolder, out string? error)
