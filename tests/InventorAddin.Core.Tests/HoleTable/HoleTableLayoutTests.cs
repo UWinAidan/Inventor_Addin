@@ -476,13 +476,23 @@ public class HoleTableLayoutTests
     }
 
     [Fact]
-    public void Fit_puts_precision_on_the_anchor_when_the_clearance_table_does_not_fit()
+    public void Fit_gives_precision_no_spot_when_the_clearance_table_does_not_fit()
     {
         var a = HoleTableAlign.Fit(Corner, Border, new HoleTableSize(10, 40), new HoleTableSize(8, 3));
         Assert.Null(a.Clearance);
-        Assert.Equal(Corner, a.Precision);
-        Assert.Contains("Clearance", a.Warning);
-        Assert.DoesNotContain("Precision", a.Warning);
+        Assert.Null(a.Precision);
+        Assert.Contains("Clearance and Precision", a.Warning);
+    }
+
+    [Fact]
+    public void Align_of_an_old_too_tall_clearance_table_and_a_precision_table_moves_neither_onto_the_other()
+    {
+        // The clearance table stays where it is (it cannot be cut here); the precision table must not land on the anchor.
+        var a = HoleTableAlign.Fit(Corner, Border, new HoleTableSize(10, 40), new HoleTableSize(8, 3), moving: true);
+        Assert.Null(a.Clearance);
+        Assert.Empty(a.ClearanceParts!);
+        Assert.Null(a.Precision);
+        Assert.Contains("not moved", a.Warning);
     }
 
     [Fact]

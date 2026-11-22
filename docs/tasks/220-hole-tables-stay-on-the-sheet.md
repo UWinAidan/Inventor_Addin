@@ -2,7 +2,7 @@
 
 - **Milestone:** M5 (from Aidan's task 187 check, 2026-11-22)
 - **Feature spec:** `docs/features/04-hole-table-wizard.md`
-- **Status:** blocked after two review rounds (2026-11-22). The work is on branch `wip/220-hole-tables-blocked`. Remaining must-fix: when clearance parts exist but do not fit, `HoleTableAlign.Fit` still gives the precision table the anchor, so Align (and Create of the precision table alone) can put it on top of a clearance table that stayed where it was. Fix: give the precision table no spot and warn, or fit it relative to the clearance table's position; add an Align test (an old, too-tall clearance table plus a precision table).
+- **Status:** done (passed review in round 3, with Aidan's OK for a third round, 2026-11-22)
 - **Depends on:** none
 - **Needs:** windows build
 - **Parallel-safe with:** any Core-only task
@@ -22,15 +22,15 @@ On a small sheet (ANSI B) the stacked hole tables ran off the top of the sheet. 
 
 ## Acceptance criteria
 
-- [ ] On ANSI B, the tables that ran off the top now sit inside the border in two columns, or warn.
-- [ ] No table is ever placed outside the border.
-- [ ] `dotnet test tests/InventorAddin.Core.Tests` passes; `dotnet build InventorAddin.slnx -p:DeployToInventor=false` has 0 errors.
+- [x] On ANSI B, the tables that ran off the top now sit inside the border in two columns, or warn.
+- [x] No table is ever placed outside the border.
+- [x] `dotnet test tests/InventorAddin.Core.Tests` passes; `dotnet build InventorAddin.slnx -p:DeployToInventor=false` has 0 errors.
 
 ## Verification
 
 Filled in by the implementer.
 
-- **Ran:** `dotnet build InventorAddin.slnx -p:DeployToInventor=false` on Windows: 0 errors. `dotnet test tests/InventorAddin.Core.Tests`: 5269 passed, 0 failed. New Core tests cover: the stack fits; precision beside; a clearance table cut into parts (parts no taller than the limit, title and heading repeated, every row kept, whole groups kept, a row taller than a part); parts lined up to the left; parts past the left border (warn); a misfitting clearance table puts precision on the anchor; unknown width never gets a neighbour beside it; warning wording (not moved / nothing was changed); `KeepInside`; `BlockWidth`; precision beside the clearance table follows it when it widens; part names (`_Clearance_2`) and `PartOf`.
+- **Ran:** (third round) `dotnet build InventorAddin.slnx -p:DeployToInventor=false` and `dotnet test tests/InventorAddin.Core.Tests` in the worktree; build 0 errors; Core tests 5270 passed, 0 failed. Third-round change: `HoleTableAlign.Fit` gives the precision table no spot, and names it in the warning, when a clearance table exists but does not fit, so Align and a precision-only Create never put it on top of a clearance table that stayed put. Earlier rounds' tests are kept; the anchor test was changed and an Align case added.
 - **Not compiled (changed under `src/InventorAddin`):** none. `HoleTable/HoleTableDrawer.cs` and `HoleTable/HoleTableStateStore.cs` built on Windows. Not run in Inventor.
 - **Inventor API members not confirmed:** none new (`Sheet.Border.RangeBox`, `SketchedSymbols`, `SketchedSymbolDefinitions`, `Definition.Delete`, `AttributeSets`, `SketchLine`, as used elsewhere in the drawer).
 - **How it works:**
@@ -56,3 +56,4 @@ Filled in by the implementer.
 - Defaults taken (log in DECISIONS.md as Default): tables split only between rows of the clearance table (a group taller than a column is cut, both pieces keep the description and note); the precision table is never split; the column gap is 0.5 cm; Align cannot split a table already drawn (it warns and points to Create Tables); an Update that cannot fit is undone as a whole.
 - When Create Tables draws only one kind and an already placed other kind cannot fit, the other kind is left where it is and not reported.
 - Part counts are assumed to be numbered 1 to N without gaps; a hand-deleted middle part is not repaired until Create Tables or Update.
+- Defaults (third round list): a group too tall for a column is cut, and both pieces repeat the description and note; the precision table is never split; the gap between columns is 0.5 cm; Align cannot split a table and points to Create Tables; an Update that cannot fit is undone as a whole; a refit discards the user's placement.

@@ -455,9 +455,16 @@ public static class HoleTableAlign
         SheetPoint? precisionAt = null;
         if (precision is { } p)
         {
+            // A clearance table that exists but does not fit stays where it is, so the precision table gets no spot
+            // rather than one on top of it (task 220).
+            var blocked = clearanceParts.Count > 0 && !clearancePlaced;
             var offset = clearancePlaced ? clearanceParts[0].HeightCm : 0;
             var above = new SheetPoint(anchor.XCm, anchor.YCm + offset);
-            if (Inside(border, above, p))
+            if (blocked)
+            {
+                // no spot
+            }
+            else if (Inside(border, above, p))
             {
                 precisionAt = above;
             }
