@@ -598,7 +598,7 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [ ] 210 Part Properties: Status (Aidan, 2026-11-22; the title block prints the custom Status)
 - [x] 211 Finish Spec property, written with the finish (Aidan, 2026-11-22; spec 05 question 23)
 - [ ] 212 Fix: the hole table's workbook warning (task 179 follow-up)
-- [ ] 213 Fix: Finish Spec thickness in µm or inches (Aidan, 2026-11-22)
+- [x] 213 Fix: Finish Spec thickness in µm or inches (Aidan, 2026-11-22)
 - [x] 214 Print template layout: the triad above the title block on portrait sheets (Aidan, 2026-11-22)
 
 **Check**

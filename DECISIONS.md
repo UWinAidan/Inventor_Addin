@@ -517,3 +517,4 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-22 | ANSI margins: 20 mm on the left (filing edge), 12.7 mm elsewhere | Aidan | spec 05 question 25 |
 | 2026-11-22 | ANSI sheets keep the listed (ASME) zone counts; ISO sheets use about 50 mm per zone | Aidan | spec 05 question 26 |
 | 2026-11-22 | Initial Views window: unticking Front unticks Top and Right, Iso stays (confirms the task 190 Default) | Aidan | spec 05 question 27 |
+| 2026-11-22 | Finish Spec units: a part whose length unit is inch or foot is imperial, anything else (or unreadable) metric | Default | task 213 |

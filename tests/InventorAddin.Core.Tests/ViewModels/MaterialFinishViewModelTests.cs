@@ -577,7 +577,7 @@ public sealed class MaterialFinishViewModelTests
         var choice = Assert.Single(fixture.Target.Calls);
         Assert.Equal("Steel, Test 100", choice.MaterialName);
         Assert.Same(Chrome, choice.Finish);
-        Assert.Equal(FinishProperties.For(Chrome), choice.PropertyWrites);
+        Assert.Equal(FinishProperties.For(Chrome, InventorAddin.Core.Drawing.PrintUnits.Metric), choice.PropertyWrites);
     }
 
     [Fact]

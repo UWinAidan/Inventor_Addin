@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Inventor;
+using InventorAddin.Core.Drawing;
 using InventorAddin.Core.Logging;
 using InventorAddin.Core.Materials;
 using InventorAddin.Core.Models;
@@ -128,8 +129,8 @@ namespace InventorAddin.Commands
         /// <summary>
         /// Applies <paramref name="choice"/> to every part in one transaction: <c>ActiveMaterial</c> set to the library
         /// asset (never <c>CopyTo</c>, spike 067), then <c>ActiveAppearance</c> when the finish names an appearance that is
-        /// found (setting the material has already reset the appearance to the material's, spike 067), then the four
-        /// finish iProperties. A missing or ambiguous appearance gives a note and the part keeps its material's
+        /// found (setting the material has already reset the appearance to the material's, spike 067), then the five
+        /// finish iProperties, with Finish Spec in each part's own units. A missing or ambiguous appearance gives a note and the part keeps its material's
         /// appearance (Default, spec 03 questions 9 and 10). Any failure aborts the transaction and the result names the
         /// part that failed.
         /// </summary>
@@ -175,7 +176,7 @@ namespace InventorAddin.Commands
                         partDocument.ActiveMaterial = material;
                         if (appearance != null)
                             partDocument.ActiveAppearance = appearance;
-                        PropertyWriter.Apply(part.Item, choice.PropertyWrites);
+                        PropertyWriter.Apply(part.Item, choice.WritesFor(UnitsOf(part.Item)));
                     }
                 });
             }
@@ -189,6 +190,18 @@ namespace InventorAddin.Commands
 
             LogNotes(notes);
             return MaterialFinishResult.Success(MaterialFinishTargeting.AppliedMessage(_plan.Parts.Count), notes);
+        }
+
+        /// <summary>
+        /// The part's units for Finish Spec (Default, Aidan to confirm): inch or foot length units are imperial, anything
+        /// else metric. Reads <c>UnitsOfMeasure.LengthUnits</c>, as <c>HoleTableSource</c> does.
+        /// </summary>
+        private static PrintUnits UnitsOf(Document doc)
+        {
+            UnitsTypeEnum? units = ComSafe.Get(() => (UnitsTypeEnum?)doc.UnitsOfMeasure.LengthUnits);
+            return units == UnitsTypeEnum.kInchLengthUnits || units == UnitsTypeEnum.kFootLengthUnits
+                ? PrintUnits.Imperial
+                : PrintUnits.Metric;
         }
 
         private void LogNotes(IEnumerable<string> notes)

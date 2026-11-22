@@ -20,7 +20,7 @@ namespace InventorAddin.Commands
     /// Material and Finish (spec 03; task 075): opens the material library and the finish list set in Settings (or the
     /// starter files), finds the parts to change (<see cref="MaterialFinishTargets"/>), and shows the Select Material and
     /// Finish window. Each Apply (or OK) changes every target in one transaction on the document open in the window, so
-    /// one Undo reverts the material, the appearance and the four finish iProperties (spike 067). The window's star saves
+    /// one Undo reverts the material, the appearance and the five finish iProperties (spike 067). The window's star saves
     /// the preferred materials to Settings straight away.
     /// </summary>
     /// <remarks>

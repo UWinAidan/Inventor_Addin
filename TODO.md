@@ -111,6 +111,13 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Follow-ups from finished tasks
 
+- Task 213:
+  - The inch-or-foot rule lives in the add-in (`MaterialFinishTargets.UnitsOf`), while `HoleTableViewRules.UnitsFor` in Core also counts mil, yard and mile as imperial. Move it to one Core rule.
+  - `IMaterialFinishTarget.cs:11` still says the target applies `PropertyWrites`.
+  - An unreadable unit silently counts as metric.
+  - Parts finished before 213 keep the mm-based Finish Spec until the finish is applied again.
+  - Check in Inventor that µ shows in the iProperty and on the print.
+
 - Task 190: `InitialViewsResult.Fits`' doc still says only "the smallest standard scale" (also false when a chosen scale is too big). With no views ticked and a fixed scale, `ScaleText` shows 1:1 (OK is disabled). For task 192: bind the scale ComboBox with `DisplayMemberPath="Label"` (the suggested label changes at run time). `RenamePlanTests.ListFilesToSearch_AFolderThatDoesNotAnswer_IsSkippedAfterTheProbeTimeout` failed again in the reviewer's run.
 
 - Task 189, for tasks 190 and 192: Top and Right are projected from Front, so ticking either forces Front on. Task 192 maps the range box to `InitialViewsBoxCm`, supplies the flat pattern size (or null), and checks that the flat pattern view is Length wide by Width high. The usable area ignores the triad, parts list and NOTES list.
