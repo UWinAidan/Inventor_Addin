@@ -3,7 +3,7 @@
 - **Milestone:** M5
 - **Feature spec:** `docs/features/05-drawing-tools.md` ("Decided for M5", "Added for M5: Template additions", open question 22)
 - **Status:** todo
-- **Depends on:** 183, 185, 186
+- **Depends on:** 183, 185, 186, 214
 - **Needs:** **windows** (drives Inventor; local session)
 - **Parallel-safe with:** none
 
@@ -37,7 +37,7 @@ Out of scope: Create Print using the template (188); views.
   - Styles: third angle only through a local copy of the standard. Parts list and revision table styles go through copied styles and a copied object defaults style.
   - Sheet colour: `SheetSettings.SheetColor`.
   - Sheets: one sheet format per size (`SheetFormats.Add(sheet, name)`), then save as `.idw`.
-- Triad: leave it off A4 and ANSI A portrait, where it would lie over the title block (Default, spec 05 question 24). Draw each cell's `Texts`, `Logo` and `Symbol`, never its `FixedText`, which only describes the cell (task 185).
+- Triad: place it where the layout says; on A4 and ANSI A portrait that is just above the title block's left end (Aidan, spec 05 question 24; task 214). Draw each cell's `Texts`, `Logo` and `Symbol`, never its `FixedText`, which only describes the cell (task 185).
 - Decimal marker: the copied ISO standard prints dimensions with a decimal comma ("260,00", spike 184). Set the standard's `DecimalMarkerType` to a period (the member is confirmed; its value is not) and list it under Verification.
 - Mass: the field shows "N/A" until the model's mass is computed; the acceptance check reads `MassProperties.Mass` and calls `DrawingDocument.Update()` first. Mass in lb is not settled (spike 183, round 3). Try the imperial template with lb as the drawing's mass unit from the start. If the field still prints kg, stop and add an open question to spec 05; do not invent another field.
 - Keep every engineering choice (positions, texts, sizes) in Core's layout; the builder only draws.

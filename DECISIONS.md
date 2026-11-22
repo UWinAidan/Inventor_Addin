@@ -512,3 +512,8 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-22 | Task 187 leaves the X/Y triad off A4 and ANSI A portrait, where it would lie over the title block, until Aidan answers | Default | spec 05 question 24 |
 | 2026-11-22 | Place Initial Views layout: 15 mm between views; the usable area is the border less the title block's full-width band; the view group is centred in it; an iso view's size is estimated from the box's isometric outline | Default | task 189 |
 | 2026-11-22 | Initial Views window: ticking Top or Right turns Front on (they are projected from it); unticking Front unticks Top and Right but keeps Iso. A scale the user picks is used as given, with a warning when the views do not fit | Default | spec 05 question 27, task 190 |
+| 2026-11-22 | Finish Spec shows the thickness in the part's units: µm on metric parts ("ANODISE, CLEAR, 10-15 µm"), inches on imperial parts (".0004-.0006 IN"), no trailing comma without a thickness; Finish Thickness stays stored in mm. Overturns the Finish Spec format Default | Aidan | spec 05 question 23, task 213 |
+| 2026-11-22 | On A4 and ANSI A portrait the X/Y triad sits just above the title block at its left end. Overturns the Default leaving it off | Aidan | spec 05 question 24, task 214 |
+| 2026-11-22 | ANSI margins: 20 mm on the left (filing edge), 12.7 mm elsewhere | Aidan | spec 05 question 25 |
+| 2026-11-22 | ANSI sheets keep the listed (ASME) zone counts; ISO sheets use about 50 mm per zone | Aidan | spec 05 question 26 |
+| 2026-11-22 | Initial Views window: unticking Front unticks Top and Right, Iso stays (confirms the task 190 Default) | Aidan | spec 05 question 27 |

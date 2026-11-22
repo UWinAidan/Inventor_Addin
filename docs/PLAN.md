@@ -533,7 +533,7 @@ Aidan answered the planning questions and the title block questions on 2026-11-2
 | 184 | **windows** (spike, with Aidan) | none | 183 |
 | 185 | Core | none | 186 |
 | 186 | Core, add-in XAML | none | 185 |
-| 187 | **windows** (drives Inventor) | 183, 185, 186 | none |
+| 187 | **windows** (drives Inventor) | 183, 185, 186, 214 | none |
 | 188 | windows build | 186, 187 | none |
 | 189 | Core | none | 185, 186 |
 | 190 | Core | 189 | 191 |
@@ -558,7 +558,9 @@ Aidan answered the planning questions and the title block questions on 2026-11-2
 | 210 | windows build | none | any Core-only task |
 | 211 | Core | none | 186, 189, 190 |
 | 212 | windows build | none | any Core-only task |
-| 209 | **windows** (Aidan) | 183 to 208, 210 to 212 | none |
+| 213 | windows build | 211 | none |
+| 214 | Core | 185 | 213 |
+| 209 | **windows** (Aidan) | 183 to 208, 210 to 214 | none |
 
 The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their own files; 186, 196 and 205 all touch `AddinSettings`, `LibraryPaths` and the Settings window, so run those three one after another.
 
@@ -596,6 +598,8 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [ ] 210 Part Properties: Status (Aidan, 2026-11-22; the title block prints the custom Status)
 - [x] 211 Finish Spec property, written with the finish (Aidan, 2026-11-22; spec 05 question 23)
 - [ ] 212 Fix: the hole table's workbook warning (task 179 follow-up)
+- [ ] 213 Fix: Finish Spec thickness in µm or inches (Aidan, 2026-11-22)
+- [ ] 214 Print template layout: the triad above the title block on portrait sheets (Aidan, 2026-11-22)
 
 **Check**
 - [ ] 209 M5 combined Inventor check
