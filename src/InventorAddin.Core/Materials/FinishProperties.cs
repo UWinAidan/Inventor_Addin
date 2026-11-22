@@ -4,14 +4,14 @@ namespace InventorAddin.Core.Materials;
 
 /// <summary>
 /// Turns a chosen finish into the iProperties stored on the part (spec 03, "Decided"): <c>Finish</c>,
-/// <c>Finish Code</c>, <c>Finish Thickness</c> and <c>Finish Note</c>, all custom text properties.
+/// <c>Finish Code</c>, <c>Finish Thickness</c>, <c>Finish Note</c> and <c>Finish Spec</c>, all custom text properties.
 /// </summary>
 public static class FinishProperties
 {
     /// <summary>
-    /// The four writes, in the order Finish, Finish Code, Finish Thickness, Finish Note. Each is Set to its value,
+    /// The five writes, in the order Finish, Finish Code, Finish Thickness, Finish Note, Finish Spec. Each is Set to its value,
     /// or Removed when the value is blank, the same way Part Properties removes a cleared custom property.
-    /// No finish (null) removes all four.
+    /// No finish (null) removes all five.
     /// </summary>
     public static IReadOnlyList<PropertyWrite> For(Finish? finish) =>
         new[]
@@ -20,6 +20,7 @@ public static class FinishProperties
             Write(PartPropertyStorage.FinishCode, finish?.Code),
             Write(PartPropertyStorage.FinishThickness, finish is null ? null : ThicknessText(finish)),
             Write(PartPropertyStorage.FinishNote, finish?.PrintNote),
+            Write(PartPropertyStorage.FinishSpec, finish is null ? null : SpecText(finish)),
         }.AsReadOnly();
 
     /// <summary>
@@ -48,6 +49,20 @@ public static class FinishProperties
         }
 
         return $"{minText}-{maxText} mm";
+    }
+
+    /// <summary>
+    /// The Finish Spec text (Default, spec 05 question 23): the finish name, then <c>, </c> and
+    /// <see cref="ThicknessText"/> when that is not empty, such as <c>Test Coat, 0.010-0.015 mm</c>. Name and thickness
+    /// are used exactly as stored.
+    /// </summary>
+    public static string SpecText(Finish finish)
+    {
+        ArgumentNullException.ThrowIfNull(finish);
+
+        var name = finish.Name.Trim();
+        var thickness = ThicknessText(finish);
+        return thickness.Length == 0 ? name : $"{name}, {thickness}";
     }
 
     private static PropertyWrite Write(PropertyLocation location, string? value)

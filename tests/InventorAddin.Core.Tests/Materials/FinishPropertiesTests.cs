@@ -14,7 +14,7 @@ public sealed class FinishPropertiesTests
         new(code, name, FinishKind.Plating, ["Metal"], "Test Shine", min, max, true, note);
 
     [Fact]
-    public void For_Finish_SetsAllFour_InOrder()
+    public void For_Finish_SetsAllFive_InOrder()
     {
         var writes = FinishProperties.For(Finish());
 
@@ -24,12 +24,13 @@ public sealed class FinishPropertiesTests
                 PropertyWrite.SetText(PartPropertyStorage.FinishCode, "TF1"),
                 PropertyWrite.SetText(PartPropertyStorage.FinishThickness, "0.013-0.025 mm"),
                 PropertyWrite.SetText(PartPropertyStorage.FinishNote, "TEST NOTE."),
+                PropertyWrite.SetText(PartPropertyStorage.FinishSpec, "Test finish, 0.013-0.025 mm"),
             ],
             writes);
     }
 
     [Fact]
-    public void For_Null_RemovesAllFour()
+    public void For_Null_RemovesAllFive()
     {
         var writes = FinishProperties.For(null);
 
@@ -39,6 +40,7 @@ public sealed class FinishPropertiesTests
                 PropertyWrite.Remove(PartPropertyStorage.FinishCode),
                 PropertyWrite.Remove(PartPropertyStorage.FinishThickness),
                 PropertyWrite.Remove(PartPropertyStorage.FinishNote),
+                PropertyWrite.Remove(PartPropertyStorage.FinishSpec),
             ],
             writes);
     }
@@ -83,7 +85,32 @@ public sealed class FinishPropertiesTests
     }
 
     [Fact]
-    public void AllFourLocations_AreCustomText()
+    public void For_Finish_WritesFinishSpecLast()
+    {
+        var writes = FinishProperties.For(Finish(name: "Test Coat", min: "0.010", max: "0.015"));
+
+        Assert.Equal(5, writes.Count);
+        Assert.Equal(PropertyWrite.SetText(PartPropertyStorage.FinishSpec, "Test Coat, 0.010-0.015 mm"), writes[4]);
+    }
+
+    [Fact]
+    public void For_ZeroThickness_FinishSpecHasNoTrailingComma()
+    {
+        var writes = FinishProperties.For(Finish(name: "Test Coat", min: "0", max: "0"));
+
+        Assert.Equal(PropertyWrite.SetText(PartPropertyStorage.FinishSpec, "Test Coat"), writes[4]);
+    }
+
+    [Fact]
+    public void For_SingleThickness_FinishSpecUsesOneValue()
+    {
+        var writes = FinishProperties.For(Finish(name: "Test Coat", min: "0.025", max: "0.025"));
+
+        Assert.Equal("Test Coat, 0.025 mm", writes[4].TextValue);
+    }
+
+    [Fact]
+    public void AllFiveLocations_AreCustomText()
     {
         Assert.All(
             FinishProperties.For(Finish()),

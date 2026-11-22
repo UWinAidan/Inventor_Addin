@@ -111,6 +111,9 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Follow-ups from finished tasks
 
+- Task 211: two add-in comments still say "four finish iProperties" (`MaterialFinishCommand.cs:23`, `MaterialFinishTargets.cs` near line 131). Parts finished before 211 get Finish Spec only when the finish is applied again.
+- Core tests: Numbering tests failed intermittently in task 211's runs, a different one each run (`SaveAsReplacerTests.Replace_NameThatCannotBeSet_KeepsTheReplace_LogsIt_AndSaysSo`, `RenamePlanTests.ListFilesToSearch_AFolderThatDoesNotAnswer_IsSkippedAfterTheProbeTimeout`); the reviewer's run passed all 4972. Probably timing-dependent.
+
 - Task 178: the precision table's position is read with its height (`ReadPlacement(...)?.Position`), so if its height cannot be read a table the user moved is treated as new and restacked; if the clearance table's position cannot be read after the redraw, it is treated as deleted. Both unlikely (the height is a stored attribute).
 - Task 182: a hole whose workbook Tapped row's tap drill is edited after the hole was made (thread unchanged), with Inventor's diameter unreadable, now prints the row's tap drill rather than the stored one. The once-per-hole warning set is static and never cleared (fine for one session).
 - Task 179: the cause of the lost drill line is not proven. The warning `... is tapped but its tap drill could not be read` is now logged once per hole per session (task 182).

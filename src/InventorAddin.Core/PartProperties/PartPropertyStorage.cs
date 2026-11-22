@@ -69,4 +69,11 @@ public static class PartPropertyStorage
     /// <summary>The finish's print note for the drawing (spec 03).</summary>
     public static readonly PropertyLocation FinishNote =
         new(PropertySetNames.UserDefined, "Finish Note", PropertyValueKind.Text);
+
+    /// <summary>
+    /// The finish name and thickness as one line for the title block, such as "Test Coat, 0.010-0.015 mm" (spec 05,
+    /// "Finish on the print"). Written with the finish so the print reads one property.
+    /// </summary>
+    public static readonly PropertyLocation FinishSpec =
+        new(PropertySetNames.UserDefined, "Finish Spec", PropertyValueKind.Text);
 }

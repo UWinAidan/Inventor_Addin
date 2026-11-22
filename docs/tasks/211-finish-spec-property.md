@@ -2,7 +2,7 @@
 
 - **Milestone:** M5
 - **Feature spec:** `docs/features/05-drawing-tools.md` ("Finish on the print", open question 23); `docs/features/03-material-finish.md` (finish properties)
-- **Status:** todo
+- **Status:** done
 - **Depends on:** none
 - **Needs:** Core only
 - **Parallel-safe with:** 186, 189, 190 (not 185: 185's field list names this property)
@@ -37,12 +37,16 @@ Out of scope: the title block itself (tasks 185 and 187 read the property); fill
 
 Filled in by the implementer.
 
-- **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):**
-- **Inventor API members not confirmed:**
+- **Ran:** `dotnet build src/InventorAddin.Core`: 0 errors. `dotnet test tests/InventorAddin.Core.Tests`: 4971 passed, 1 failed on each of two runs, and the failing test differed (first `SaveAsReplacerTests.Replace_NameThatCannotBeSet_KeepsTheReplace_LogsIt_AndSaysSo`, then `RenamePlanTests.ListFilesToSearch_AFolderThatDoesNotAnswer_IsSkippedAfterTheProbeTimeout`). Both are in Numbering, which this task does not touch, and look timing-dependent. All `FinishProperties` and `MaterialFinishViewModel` tests pass. Existing `FinishPropertiesTests` that assumed four writes were updated (renamed `...AllFive...`, a fifth expected write added); `MaterialFinishViewModelTests` compared against `FinishProperties.For` and needed no change. Three tests added: Finish Spec with a thickness, none (no comma), a single value.
+- **Not compiled (changed under `src/InventorAddin`):** none changed. `MaterialFinishTargets.Apply` passes `choice.PropertyWrites` to `PropertyWriter.Apply` as a list, so it does not assume four.
+- **Inventor API members not confirmed:** none (no Inventor API used).
 - **Manual checklist for Inventor:** (copied into `docs/checklists/m5.md` by the parent for the combined check, task 209)
-  1. …
+  1. Open a part, run Material and Finish, pick a finish with a thickness range, Apply. In iProperties > Custom, Finish Spec reads "<finish name>, <min>-<max> mm".
+  2. Apply a finish whose thicknesses are both 0: Finish Spec is just the name, no comma.
+  3. Apply "no finish": Finish Spec, Finish, Finish Code, Finish Thickness and Finish Note are all removed.
+  4. One Undo reverts the material, finish and Finish Spec together.
 
 ## Follow-ups
 
-Things noticed but not done.
+- Stale "four finish iProperties" wording in comments: `src/InventorAddin/Commands/MaterialFinishTargets.cs` line 131 and `src/InventorAddin/Commands/MaterialFinishCommand.cs` line 23. Comment-only, left alone because they are add-in files outside this task's list.
+- Two timing-dependent Numbering tests failed intermittently (see Ran); worth checking for flakiness.

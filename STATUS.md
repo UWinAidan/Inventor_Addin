@@ -6,36 +6,39 @@ Last updated: 2026-11-22
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-22 10:31. Branch `claude/m5-drawing-tools`, latest commit `384c7ae`. Nothing committed this session; docs edits below are uncommitted.
-- Goal: run spikes 183 and 184 live with Aidan in Inventor, then M5 tasks in PLAN order in chunks of 4 to 5 (implementer, reviewer, one commit per task, push after each; stop after each chunk with a summary, Defaults and an Inventor checklist). Fit in a Finish Spec property task (spec 05 q23) and the two 179 follow-ups in TODO.md. Nothing from work prints in the repo.
-- Done this session:
-  - Spike 183 rounds 1 and 2 done and recorded in `docs/tasks/183-spike-print-template-and-views.md` (Results). Covered: title block from code, field syntax, border zones, logo, ISO start file, third angle via a local standard copy, white sheet colour, sheet formats A4/A3/ANSI B, saving the `.idw` template, new drawings from it, custom fields matched by name with no id.
-  - Aidan decided (DECISIONS.md 2026-11-22): a custom "Status" property printed by the template, written by Part Properties alongside Design Status; the property name is "Material Size". Default row: a Status mismatch on open is a pre-fill (spec 07 q7).
-  - Edited DECISIONS.md, spec 05, spec 07 (q7), tasks 185 and 187, PLAN.md; added `docs/tasks/210-part-properties-status.md`.
-  - Renamed the test part's "Material size" to "Material Size" and saved the part (Aidan allowed it).
-- Current state: no code changed; nothing built or tested this session. Test template at `C:\AwbSpike\183\AWB-spike.idw` (outside the repo). Unsaved `Drawing5` is open in Inventor (closing it is harmless).
+- Updated: 2026-11-22 11:07. Branch `claude/m5-drawing-tools`, latest commit `7d8ad8e` (pushed).
+- Goal: spikes 183 and 184 live with Aidan, then the M5 tasks in PLAN order in chunks of 4 to 5. For each task: implementer, then reviewer, one commit, push. Stop after each chunk with a summary, the Defaults logged and an Inventor checklist; Aidan says "next chunk". Nothing from work prints goes in the repo.
+- Done this session (all committed and pushed):
+  - `53579d2`: Aidan's Status and Material Size decisions, and task 210.
+  - `4e1a24a`: spike 183 rounds 1 to 3 recorded; tasks 187 and 192 have the confirmed calls.
+  - `b2b09c2`: spike 184 rounds 1 and 2 recorded; tasks 195, 197, 199, 200, 202, 204, 206 and 208 have the confirmed calls. Two Defaults: PDFsharp merges the PDFs, and the marking zone is 40 x 15 mm on the part.
+  - `7d8ad8e`: new tasks 211 (Finish Spec property; Aidan chose the first option of spec 05 question 23; the value format is a Default) and 212 (the hole table's workbook warning wording, plus warn once per source). Both spikes ticked in PLAN; the 179 TODO line removed.
+  - The second 179 follow-up, the missing "↧ 12.0" test, was already done by task 182 (`HoleTableTests.cs:228`). No task needed.
+- Current state:
+  - Chunk 1 = 211, 185, 186, 189, 190, run one at a time (parallel `dotnet build` runs collide on `obj/`).
+  - The task 211 implementer was launched in the background; its result is not yet seen (unverified).
+  - Nothing built or tested by me this session.
 - Open:
-  - Sheet metal part mass prints "N/A" (asked Aidan to check its iProperties Physical tab).
-  - Triad lands about 8 mm off: `SketchedSymbol.Position` is the symbol centre, so the build must offset it.
-  - Waiting on Aidan's go for round 3.
+  - Mass in lb: the title block's mass field ignores unit attributes and later MassUnits changes. Task 187 tries an imperial template with lb from the start; if that also fails, add a question to spec 05.
+  - Spec 05 question 23 is still open on mm versus µm for Finish Thickness.
+  - The copied ISO standard prints a decimal comma ("260,00"); task 187 sets `DecimalMarkerType`.
 - Next:
-  1. Spike 183 round 3, on Aidan's go: views on a new drawing from the test template.
-     - Part: base, projected top and right (third angle), an iso view, shaded and hidden-line.
-     - Sheet metal part: the flat pattern view.
-     - Read back `DrawingView` Width, Height and Center.
-     - Assembly `C:\Users\4aida\OneDrive\Documents\CADING\DESIGN FILES\PRINT PROFILES\DESK\DES_ASSY.iam`: parts list and revision table styles and columns (Vendor, Stock Number, a custom Make/Buy).
-  2. Record round 3. Update tasks 186, 187 and 192 with the confirmed members (views are task 192; task 183's text says 191, which is wrong). Commit the spike docs.
-  3. Spike 184 (`docs/tasks/184-spike-drawing-tools-api.md`).
-  4. M5 chunks, as in the goal.
+  1. Check the 211 implementer's result. Run the reviewer on `docs/tasks/211-finish-spec-property.md`. On a PASS: status done, tick it in PLAN, copy follow-ups to TODO, commit `task 211: Finish Spec property, written with the finish`, push.
+  2. Same for 185 (its FinishSpec field now reads the Finish Spec property), then 186, 189 and 190.
+  3. Stop and give Aidan the chunk 1 summary, the Defaults and any checklist.
+  4. Chunk 2 starts with 187, which drives Inventor with Aidan, then 188, 191, 192 and 193. 210 and 212 fit in a later chunk.
 - Gotchas:
-  - PowerShell names ignore case. `$Part` clobbered `$part`, and `$ud` clobbered `$UD`, which caused all the "Value does not fall within the expected range" refusals of custom fields. `$pid` is read-only. `MP` is an alias, so don't use it as a function name.
-  - A function that logs with Write-Output returns those lines; log with `[Console]::WriteLine` instead.
-  - Don't pipe the long scripts through `tail`: they take minutes, `tail` shows nothing until the end, and the job got moved to the background.
-  - `GetResultText` needs text boxes from `Definition.Sketch.TextBoxes`, not the ones `AddFitted` returned during Edit.
-  - `Documents.Add` fails while the template is open in Inventor.
-  - `AddUsingSheetFormat`: pass `Missing` as the model.
-  - Logs contain the material name from Aidan's library; keep it out of the repo.
-- Read first: task 183 Results, `spike-local/183/` (scripts and logs; round2c, probe2 and probe3 are the latest), DECISIONS.md 2026-11-22 rows.
+  - PowerShell over COM:
+    - Variable names ignore case (`$ud` is `$UD`), and `$pid` is read-only.
+    - Log with `[Console]::WriteLine`, not Write-Output, inside functions.
+    - Don't nest double-quoted strings inside `$()` (PowerShell 5.1 can't parse them); build strings with `+`.
+    - `foreach` over `DrawingCurves` sees one object; walk it with `Count` and `Item(i)`.
+    - `PartsLists.Add` needs real Int32 and Boolean arguments, not `Missing`.
+  - `Documents.Add` fails while the template is open.
+  - The title block's mass field shows "N/A" until `MassProperties.Mass` has been read and `DrawingDocument.Update()` has run.
+  - A view sketch is in model units.
+  - Spike scripts and logs are in `spike-local/183/` and `spike-local/184/` (gitignored). Test files are in `C:\AwbSpike\183\` and `C:\AwbSpike\184\`. The logs contain the material name from Aidan's library; keep it out of the repo.
+- Read first: `docs/WORKFLOW.md` (run mode), `docs/PLAN.md` M5 table, tasks 183 and 184 (Results), DECISIONS.md rows dated 2026-11-22.
 
 ## Big items
 

@@ -8,7 +8,7 @@ namespace InventorAddin.Core.Materials;
 /// The chosen finish, or null for None. Its <see cref="Finish.AppearanceName"/> is the appearance to set; null keeps
 /// the material's appearance.
 /// </param>
-/// <param name="PropertyWrites">The four finish iProperties, from <see cref="FinishProperties.For"/>.</param>
+/// <param name="PropertyWrites">The five finish iProperties, from <see cref="FinishProperties.For"/>.</param>
 public sealed record MaterialFinishChoice(string MaterialName, Finish? Finish, IReadOnlyList<PropertyWrite> PropertyWrites)
 {
     /// <summary>The choice for <paramref name="materialName"/> and <paramref name="finish"/>, with its property writes.</summary>
