@@ -36,6 +36,7 @@ from PIL import Image, ImageChops, ImageDraw, ImageFont
 REPO = Path(__file__).resolve().parents[2]
 ICON_DIR = REPO / "src" / "InventorAddin" / "UI" / "Icons"
 PREVIEW = REPO / "docs" / "ui-mockups" / "ribbon-icons.png"
+PREVIEW_M5 = REPO / "docs" / "ui-mockups" / "m5-icons-preview.png"
 
 # File stem (IconNames in Core) and the command name shown in the preview.
 ICONS = [
@@ -51,7 +52,18 @@ ICONS = [
     ("MassUpdate", "Mass Update"),
     ("MaterialFinish", "Material and Finish"),
     ("AwbHole", "AWB Hole"),
+    # M5 (task 191)
+    ("OpenDrawing", "Open Drawing"),
+    ("PlaceInitialViews", "Place Initial Views"),
+    ("CheckOutOfBounds", "Check Out of Bounds"),
+    ("UpdateNotes", "Update Notes"),
+    ("PartMarking", "Part Marking"),
+    ("BatchPrint", "Batch Print"),
+    ("OverallRefDimensions", "Overall REF Dimensions"),
+    ("StockSize", "Stock Size"),
+    ("UpdatePartsList", "Update Parts List"),
 ]
+M5_COUNT = 9  # the last M5_COUNT entries of ICONS are the M5 icons (task 191)
 
 SETS = ("Light", "Dark")  # "Light" is for Inventor's light theme (dark strokes)
 
@@ -521,7 +533,8 @@ def _on(bg: str, icon: Image.Image, scale: int) -> Image.Image:
     return patch.convert("RGB").resize((icon.width * scale, icon.height * scale), Image.NEAREST)
 
 
-def render_preview(icons) -> Image.Image:
+def render_preview(icons, rows=None) -> Image.Image:
+    rows = ICONS if rows is None else rows
     s = PREVIEW_SCALE
     font = ImageFont.load_default(size=26)
     title_font = ImageFont.load_default(size=32)
@@ -534,7 +547,7 @@ def render_preview(icons) -> Image.Image:
     coltile = col32 + 32 * s + gap
     width = coltile + tile + margin
     head_h = 120
-    panel_h = head_h + row_h * len(ICONS) + margin - 28
+    panel_h = head_h + row_h * len(rows) + margin - 28
     img = Image.new("RGB", (width, panel_h * len(PANELS)), "#000000")
     for p, (set_name, title, bg, tile_bg, text, muted) in enumerate(PANELS):
         top = p * panel_h
@@ -543,7 +556,7 @@ def render_preview(icons) -> Image.Image:
         draw.text((margin, top + 28), f"{title}  (ribbon {bg})", font=title_font, fill=text)
         for x, label, w in ((col16, "16 px", 16 * s), (col32, "32 px", 32 * s), (coltile, "32 px on tile", tile)):
             draw.text((x + w / 2, top + head_h - 22), label, font=small, fill=muted, anchor="ms")
-        for i, (name, command) in enumerate(ICONS):
+        for i, (name, command) in enumerate(rows):
             y = top + head_h + i * row_h
             mid = y + tile // 2
             draw.text((margin, mid), command, font=font, fill=text, anchor="lm")
@@ -576,7 +589,8 @@ def main() -> int:
     for (name, set_name, size), img in icons.items():
         save_png(img, ICON_DIR / f"{name}.{set_name}.{size}.png")
     save_png(render_preview(icons), PREVIEW)
-    print(f"wrote {len(icons)} icons to {ICON_DIR.relative_to(REPO)} and {PREVIEW.relative_to(REPO)}")
+    save_png(render_preview(icons, ICONS[-M5_COUNT:]), PREVIEW_M5)
+    print(f"wrote {len(icons)} icons to {ICON_DIR.relative_to(REPO)} and the previews {PREVIEW.relative_to(REPO)}, {PREVIEW_M5.relative_to(REPO)}")
     return 0
 
 

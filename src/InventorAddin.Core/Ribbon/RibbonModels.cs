@@ -160,4 +160,15 @@ public static class IconNames
     /// are copies of <see cref="AwbHole"/>'s, the closest to a table of holes. The design replaces those four files.
     /// </summary>
     public const string HoleTable = "HoleTable";
+
+    // M5 (task 191). Drawn before their commands exist; each command's own task adds its layout entry.
+    public const string OpenDrawing = "OpenDrawing";
+    public const string PlaceInitialViews = "PlaceInitialViews";
+    public const string CheckOutOfBounds = "CheckOutOfBounds";
+    public const string UpdateNotes = "UpdateNotes";
+    public const string PartMarking = "PartMarking";
+    public const string BatchPrint = "BatchPrint";
+    public const string OverallRefDimensions = "OverallRefDimensions";
+    public const string StockSize = "StockSize";
+    public const string UpdatePartsList = "UpdatePartsList";
 }

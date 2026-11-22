@@ -7,10 +7,10 @@ The add-in's ribbon icons are drawn here as SVG and rendered to the PNG files th
 | Sources, 32 px drawing | `src/InventorAddin/UI/Icons/{Name}.svg` |
 | Sources, 16 px drawing | `src/InventorAddin/UI/Icons/{Name}.16.svg` |
 | Rendered icons (what the add-in uses) | `src/InventorAddin/UI/Icons/{Name}.{Light\|Dark}.{16\|32}.png` |
-| Preview for review | `docs/ui-mockups/ribbon-icons.png` |
+| Preview for review | `docs/ui-mockups/ribbon-icons.png` (all), `docs/ui-mockups/m5-icons-preview.png` (the M5 nine) |
 | Renderer | `tools/icons/render.py` |
 
-`{Name}` is the icon name from `IconNames` in Core: `PartProperties`, `Settings`, `About`, `ExportModelData`, `ExportLibraries`, `NewPart`, `SaveAsCopy`, `SaveAsReplace`, `CreatePrint`, `MassUpdate`, `MaterialFinish`, `AwbHole`. `Light` is the set for Inventor's light theme (dark strokes); `Dark` is the set for its dark theme (light strokes).
+`{Name}` is the icon name from `IconNames` in Core: `PartProperties`, `Settings`, `About`, `ExportModelData`, `ExportLibraries`, `NewPart`, `SaveAsCopy`, `SaveAsReplace`, `CreatePrint`, `MassUpdate`, `MaterialFinish`, `AwbHole`, and the M5 set `OpenDrawing`, `PlaceInitialViews`, `CheckOutOfBounds`, `UpdateNotes`, `PartMarking`, `BatchPrint`, `OverallRefDimensions`, `StockSize`, `UpdatePartsList`. `Light` is the set for Inventor's light theme (dark strokes); `Dark` is the set for its dark theme (light strokes).
 
 ## Re-rendering
 
@@ -22,7 +22,7 @@ SVG sources for the ribbon icons are plain files with the light-set colours writ
 
 Needs Python 3.8 or later and Pillow 10.1 or later (with FreeType, which the usual Pillow wheels include). Nothing else.
 
-It rewrites all 48 PNGs and the preview. Commit the sources, the PNGs and the preview together. The output depends only on the sources and the Pillow version, so a second run gives byte-identical files.
+It rewrites all 84 PNGs and the previews. Commit the sources, the PNGs and the previews together. The output depends only on the sources and the Pillow version, so a second run gives byte-identical files.
 
 ## How it renders
 
@@ -35,7 +35,7 @@ ImageMagick was the first option, but the copy in the cloud session cannot read 
 - A PNG is RGBA (32-bit) with a transparent background and no metadata, colour profile or dpi.
 - The script stops with an error if any part of a drawing, including half the stroke width, lies outside the frame.
 
-If a `{Name}.16.svg` is missing, the 32 px drawing is halved and drawn with a 1 px stroke. All twelve icons have their own 16 px drawing, because halving a 32 px drawing puts its lines between pixels.
+If a `{Name}.16.svg` is missing, the 32 px drawing is halved and drawn with a 1 px stroke. All the icons above have their own 16 px drawing, because halving a 32 px drawing puts its lines between pixels.
 
 ### SVG features read
 
@@ -67,5 +67,14 @@ Elements `line`, `polyline`, `polygon`, `rect` (with `rx`), `circle`, `path` (co
 | `MassUpdate` | A stack of three sheets with a check mark on the front one |
 | `MaterialFinish` | A material ball: a circle with a short highlight arc at the upper left and section hatching across the lower right |
 | `AwbHole` | A block in section with a blind drilled hole and its drill point; section hatching either side at 32 px only |
+| `OpenDrawing` | A landscape sheet with a view rectangle and an arrow leaving it to the lower right |
+| `PlaceInitialViews` | A landscape sheet with three view rectangles laid out as front, top and side |
+| `CheckOutOfBounds` | A border frame with a view rectangle crossing its right edge |
+| `UpdateNotes` | A sheet with a numbered list: three bullets and text lines |
+| `PartMarking` | A box in oblique view with a marked rectangle on its face and a leader to a dot |
+| `BatchPrint` | A stack of three sheets, the front one with text lines and a coloured band |
+| `OverallRefDimensions` | A rectangle with a horizontal dimension below it and a vertical one beside it |
+| `StockSize` | A bar in oblique view with a dimension arrow below it; Properties (blue) panel colours, since it writes a property |
+| `UpdatePartsList` | A table grid with coloured marks in its last column |
 
 To add an icon: draw `{Name}.svg` and `{Name}.16.svg`, add the name to `ICONS` in `render.py` and to `IconNames` in Core, re-render, and add a row above.
