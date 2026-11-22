@@ -407,6 +407,210 @@ public class HoleTableLayoutTests
         Assert.Equal(new SheetPoint(40, 5), a.Precision);
     }
 
+    // ---- tables stay inside the border (task 220)
+
+    private static readonly SheetBox Border = new(2, 2, 42, 30);
+    private static readonly SheetPoint Corner = new(40, 5);
+
+    [Fact]
+    public void Fit_stacks_while_the_stack_fits()
+    {
+        var a = HoleTableAlign.Fit(Corner, Border, new HoleTableSize(10, 6), new HoleTableSize(10, 3));
+        Assert.Equal(Corner, a.Clearance);
+        Assert.Equal(new SheetPoint(40, 11), a.Precision);
+        Assert.Null(a.Warning);
+    }
+
+    [Fact]
+    public void Fit_puts_precision_in_a_second_column_when_the_stack_is_too_tall()
+    {
+        var a = HoleTableAlign.Fit(Corner, Border, new HoleTableSize(10, 15), new HoleTableSize(8, 12));
+        Assert.Equal(Corner, a.Clearance);
+        Assert.Equal(new SheetPoint(40 - 10 - HoleTableAlign.ColumnGapCm, 5), a.Precision);
+        Assert.Null(a.Warning);
+    }
+
+    [Fact]
+    public void Fit_warns_and_places_nothing_when_the_second_column_runs_past_the_left_border()
+    {
+        var a = HoleTableAlign.Fit(Corner, Border, new HoleTableSize(30, 15), new HoleTableSize(8, 12));
+        Assert.Equal(Corner, a.Clearance);
+        Assert.Null(a.Precision);
+        Assert.Contains("bigger sheet", a.Warning);
+        Assert.Contains("Precision", a.Warning);
+    }
+
+    [Fact]
+    public void Fit_warns_and_places_nothing_when_a_table_alone_is_taller_than_the_space()
+    {
+        var a = HoleTableAlign.Fit(Corner, Border, new HoleTableSize(10, 40), null);
+        Assert.Null(a.Clearance);
+        Assert.Null(a.Precision);
+        Assert.Contains("Clearance", a.Warning);
+        Assert.Contains("bigger sheet", a.Warning);
+    }
+
+    [Fact]
+    public void Fit_without_a_border_stacks_without_limit()
+    {
+        var a = HoleTableAlign.Fit(Corner, null, new HoleTableSize(10, 400), new HoleTableSize(10, 300));
+        Assert.Equal(new SheetPoint(40, 405), a.Precision);
+        Assert.Null(a.Warning);
+    }
+
+    [Fact]
+    public void Fit_places_a_lone_precision_table_on_the_corner()
+    {
+        var a = HoleTableAlign.Fit(Corner, Border, (HoleTableSize?)null, new HoleTableSize(10, 3));
+        Assert.Null(a.Clearance);
+        Assert.Equal(Corner, a.Precision);
+    }
+
+    [Fact]
+    public void Inside_rejects_a_table_past_any_edge()
+    {
+        Assert.True(HoleTableAlign.Inside(Border, new SheetPoint(42, 2), new HoleTableSize(40, 28)));
+        Assert.False(HoleTableAlign.Inside(Border, new SheetPoint(42, 2), new HoleTableSize(40, 28.1)));
+        Assert.False(HoleTableAlign.Inside(Border, new SheetPoint(42, 2), new HoleTableSize(40.1, 5)));
+        Assert.False(HoleTableAlign.Inside(Border, new SheetPoint(42.1, 2), new HoleTableSize(5, 5)));
+    }
+
+    [Fact]
+    public void Fit_gives_precision_no_spot_when_the_clearance_table_does_not_fit()
+    {
+        var a = HoleTableAlign.Fit(Corner, Border, new HoleTableSize(10, 40), new HoleTableSize(8, 3));
+        Assert.Null(a.Clearance);
+        Assert.Null(a.Precision);
+        Assert.Contains("Clearance and Precision", a.Warning);
+    }
+
+    [Fact]
+    public void Align_of_an_old_too_tall_clearance_table_and_a_precision_table_moves_neither_onto_the_other()
+    {
+        // The clearance table stays where it is (it cannot be cut here); the precision table must not land on the anchor.
+        var a = HoleTableAlign.Fit(Corner, Border, new HoleTableSize(10, 40), new HoleTableSize(8, 3), moving: true);
+        Assert.Null(a.Clearance);
+        Assert.Empty(a.ClearanceParts!);
+        Assert.Null(a.Precision);
+        Assert.Contains("not moved", a.Warning);
+    }
+
+    [Fact]
+    public void Fit_lines_the_clearance_parts_up_to_the_left()
+    {
+        var parts = new[] { new HoleTableSize(10, 20), new HoleTableSize(10, 20), new HoleTableSize(10, 5) };
+        var a = HoleTableAlign.Fit(Corner, Border, parts, null);
+        Assert.Null(a.Warning);
+        Assert.Equal(
+            [Corner, new SheetPoint(29.5, 5), new SheetPoint(19, 5)],
+            a.ClearanceParts);
+    }
+
+    [Fact]
+    public void Fit_warns_when_the_parts_run_past_the_left_border()
+    {
+        var parts = new[] { new HoleTableSize(20, 20), new HoleTableSize(20, 20), new HoleTableSize(20, 5) };
+        var a = HoleTableAlign.Fit(Corner, Border, parts, null);
+        Assert.Null(a.Clearance);
+        Assert.Empty(a.ClearanceParts!);
+        Assert.Contains("bigger sheet", a.Warning);
+    }
+
+    [Fact]
+    public void Fit_puts_precision_beside_the_last_part_when_it_does_not_fit_above()
+    {
+        var parts = new[] { new HoleTableSize(10, 20), new HoleTableSize(8, 20) };
+        var a = HoleTableAlign.Fit(Corner, Border, parts, new HoleTableSize(5, 12));
+        Assert.Equal(new SheetPoint(40 - 10 - 0.5 - 8 - 0.5, 5), a.Precision);
+    }
+
+    [Fact]
+    public void Fit_does_not_place_beside_a_table_of_unknown_width()
+    {
+        var a = HoleTableAlign.Fit(Corner, Border, new HoleTableSize(0, 15), new HoleTableSize(8, 12));
+        Assert.Equal(Corner, a.Clearance);
+        Assert.Null(a.Precision);
+        Assert.Contains("Precision", a.Warning);
+
+        var parts = new[] { new HoleTableSize(0, 20), new HoleTableSize(8, 20) };
+        var b = HoleTableAlign.Fit(Corner, Border, parts, null);
+        Assert.Null(b.Clearance);
+        Assert.Contains("Clearance", b.Warning);
+    }
+
+    [Fact]
+    public void The_warning_says_not_moved_for_Align_and_nothing_changed_otherwise()
+    {
+        var big = new HoleTableSize(10, 40);
+        Assert.Contains("not moved", HoleTableAlign.Fit(Corner, Border, big, null, moving: true).Warning);
+        Assert.Contains("nothing was changed", HoleTableAlign.Fit(Corner, Border, big, null).Warning);
+    }
+
+    [Fact]
+    public void KeepInside_keeps_a_table_that_is_inside_and_moves_one_that_sticks_out()
+    {
+        var size = new HoleTableSize(10, 10);
+        Assert.Equal(new SheetPoint(40, 5), HoleTableAlign.KeepInside(Border, new SheetPoint(40, 5), size, new SheetPoint(30, 5)));
+        Assert.Equal(new SheetPoint(30, 5), HoleTableAlign.KeepInside(Border, new SheetPoint(40, 25), size, new SheetPoint(30, 5)));
+        Assert.Null(HoleTableAlign.KeepInside(Border, new SheetPoint(40, 25), size, null));
+    }
+
+    // ---- splitting the clearance table (task 220)
+
+    private static HoleTablePlan ManyClearance(int count) => Plan(Enumerable.Range(1, count).Select(i => Plain("B#" + i, 0.5, i, 5)));
+
+    private static double ClearanceHeight(int rows) => 2 * RowH + rows * RowH;
+
+    [Fact]
+    public void A_table_that_fits_is_one_part()
+    {
+        var d = HoleTableLayout.For(ManyClearance(5), new FakeMeasure(), Metrics, "V1", ClearanceHeight(5));
+        var c = Of(d, HoleTableKind.Clearance);
+        Assert.Equal(1, c.Part);
+        Assert.Equal(ClearanceHeight(5), c.HeightCm, Tol);
+    }
+
+    [Fact]
+    public void A_tall_table_is_cut_into_parts_no_taller_than_the_limit()
+    {
+        var d = HoleTableLayout.For(ManyClearance(10), new FakeMeasure(), Metrics, "V1", ClearanceHeight(4));
+        var parts = d.Where(x => x.Table == HoleTableKind.Clearance).ToList();
+        Assert.Equal([1, 2, 3], parts.Select(x => x.Part));
+        Assert.All(parts, x => Assert.True(x.HeightCm <= ClearanceHeight(4) + Tol));
+        Assert.Equal(ClearanceHeight(2), parts[2].HeightCm, Tol);
+        // Each part repeats the title and the heading, and all parts share the column widths.
+        Assert.All(parts, x => Assert.Equal(HoleTableLayout.Columns.Count, x.Texts.Count(t => t.Role == HoleTableTextRole.Header)));
+        Assert.All(parts, x => Assert.Single(x.Texts, t => t.Role == HoleTableTextRole.Title));
+        Assert.All(parts, x => Assert.Equal(parts[0].WidthCm, x.WidthCm, Tol));
+    }
+
+    [Fact]
+    public void Cutting_keeps_every_row()
+    {
+        var plan = ManyClearance(10);
+        var parts = HoleTableLayout.SplitRows(plan.Clearance, Metrics, ClearanceHeight(4));
+        Assert.Equal(10, parts.Sum(p => p.Sum(g => g.Rows.Count)));
+        Assert.Equal(plan.Clearance.SelectMany(g => g.Rows).Select(r => r.Tag), parts.SelectMany(p => p).SelectMany(g => g.Rows).Select(r => r.Tag));
+    }
+
+    [Fact]
+    public void Whole_groups_stay_together_when_they_fit()
+    {
+        var plan = Plan(Plate());
+        var rowsOf = plan.Clearance.Select(g => g.Rows.Count).ToList();
+        var parts = HoleTableLayout.SplitRows(plan.Clearance, Metrics, 100);
+        Assert.Single(parts);
+        Assert.Equal(rowsOf, parts[0].Select(g => g.Rows.Count));
+    }
+
+    [Fact]
+    public void A_row_taller_than_the_limit_still_gets_a_part()
+    {
+        var parts = HoleTableLayout.SplitRows(ManyClearance(3).Clearance, Metrics, 0.1);
+        Assert.Equal(3, parts.Count);
+        Assert.All(parts, p => Assert.Equal(1, p.Sum(g => g.Rows.Count)));
+    }
+
     // ---- precision after a redraw that did not align (task 178)
 
     private static readonly SheetPoint Anchor = new(40, 5);
@@ -495,5 +699,32 @@ public class HoleTableLayoutTests
     public void Redraw_new_precision_with_no_clearance_goes_on_the_anchor()
     {
         Assert.Equal(Anchor, HoleTableAlign.PrecisionAfterRedraw(Anchor, null, null, null));
+    }
+
+    [Fact]
+    public void A_precision_table_beside_the_clearance_table_follows_it_when_it_widens()
+    {
+        var before = new HoleTablePlacement(Anchor, 20, 10);
+        var beside = new SheetPoint(40 - 10 - HoleTableAlign.ColumnGapCm, 5);
+        var after = new HoleTablePlacement(Anchor, 20, 14);
+        var r = HoleTableAlign.PrecisionAfterRedraw(Anchor, before, beside, after);
+        Assert.Equal(new SheetPoint(40 - 14 - HoleTableAlign.ColumnGapCm, 5), r);
+    }
+
+    [Fact]
+    public void A_precision_table_beside_the_clearance_table_stays_when_nothing_changed()
+    {
+        var c = new HoleTablePlacement(Anchor, 20, 10);
+        var beside = new SheetPoint(40 - 10 - HoleTableAlign.ColumnGapCm, 5);
+        Assert.Null(HoleTableAlign.PrecisionAfterRedraw(Anchor, c, beside, c));
+    }
+
+    [Fact]
+    public void BlockWidth_adds_the_parts_and_the_gaps_between_and_is_0_when_a_width_is_unknown()
+    {
+        Assert.Equal(10, HoleTableAlign.BlockWidth([new HoleTableSize(10, 5)]));
+        Assert.Equal(10 + 0.5 + 8, HoleTableAlign.BlockWidth([new HoleTableSize(10, 5), new HoleTableSize(8, 5)]), 9);
+        Assert.Equal(0, HoleTableAlign.BlockWidth([new HoleTableSize(10, 5), new HoleTableSize(0, 5)]));
+        Assert.Equal(0, HoleTableAlign.BlockWidth([]));
     }
 }

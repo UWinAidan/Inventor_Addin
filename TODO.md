@@ -111,7 +111,10 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Follow-ups from finished tasks
 
-- Task 220 is blocked after two review rounds. Its split and inside-the-border work is on `wip/220-hole-tables-blocked`. One must-fix remains: when the clearance table does not fit and stays where it is, `HoleTableAlign.Fit` gives the precision table the anchor, so it can land on top. A third round needs Aidan's OK.
+- Task 220 (done in round 3):
+  - When Create Tables draws only one kind, an already placed table of the other kind that cannot fit is left where it is and not reported.
+  - A hand-deleted middle part is not repaired until the next Create or Update.
+  - Check in Inventor that `Border.RangeBox` leaves out the zone labels on the AWB templates.
 
 - Task 210, check in Inventor:
   - At 150%, the Status box shows "WORK IN PROGRESS" in full; it sizes to its text, so it may change width (remove `HorizontalAlignment="Left"` to stretch it).
