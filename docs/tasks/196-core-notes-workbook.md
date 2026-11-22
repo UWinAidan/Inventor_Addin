@@ -1,7 +1,7 @@
 # 196: Automatic notes: workbook and rules (Core)
 
 - **Milestone:** M5
-- **Feature spec:** `docs/features/05-drawing-tools.md` ("Added for M5: New tools", item 1; open questions 12 and 15)
+- **Feature spec:** `docs/features/05-drawing-tools.md` ("Added for M5: New tools", item 1; open questions 12, 15 and 23)
 - **Status:** todo
 - **Depends on:** none
 - **Needs:** cloud
@@ -9,7 +9,7 @@
 
 ## Goal
 
-Core reads the notes workbook and gives, for a material and a finish, the notes to place and where.
+Core reads the notes workbook and gives, for a material, a finish and the model's Finish Note, the notes to place and where.
 
 ## Scope
 
@@ -23,7 +23,8 @@ Out of scope: Inventor (197).
 ## Acceptance criteria
 
 - [ ] A 3D-print material gives a Bottom note "NOTE: 3D PRINTED PART"; a hardened material its heat-treat note in the list; a finish rule its extra note.
-- [ ] The Finish Note property itself is never added (FINISH line shows it, question 12).
+- [ ] The Finish Note is a numbered List note when it is not blank: after the material notes, before the finish rows' notes (Aidan 2026-11-21; order is Default, question 23). Blank adds nothing; a rule note with the same text is not repeated.
+- [ ] Starter finish rows are process instructions (masking, handling, surface requirements), invented.
 - [ ] Bad rows (blank pattern, unknown placement) give a message naming tab and row; the rest still load.
 - [ ] The workbook opens in Excel with no repair prompt (Aidan checks).
 - [ ] `dotnet test tests/InventorAddin.Core.Tests` passes

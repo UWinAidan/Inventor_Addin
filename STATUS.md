@@ -6,18 +6,18 @@ Last updated: 2026-11-21
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-21. Branch `claude/m5-drawing-tools` (pushed).
+- Updated: 2026-11-21 21:00. Branch `claude/m5-drawing-tools` (pushed), latest commit `fb035e7`; the FINISH line change below is uncommitted.
 - Goal: plan M5 (spec 05). Done: the plan is written.
 - Done this session:
-  - Title block mockup: tolerance box lists the rules (metric and imperial, both with the heading), back to 45 by 22 mm; Designer and Detailer as stored. Aidan approved it on 2026-11-21 with template additions, now drawn in (blue numbers 18 to 25): zone grid and centring arrows, X/Y triad, FINISH line, project and file name, Material Size, the part number on the right edge. The block is 180 by 62 mm.
-  - Aidan's additions logged as his, and six new tools (automatic notes, part marking, Batch Print, REF dimensions, Stock Size, Make/Buy) in spec 05 "Added for M5"; defaults logged as Default with questions 12 to 22.
+  - Title block mockup: tolerance box lists the rules (metric and imperial, both with the heading), back to 45 by 22 mm; Designer and Detailer as stored. Aidan approved it on 2026-11-21 with template additions, now drawn in (blue numbers 18 to 25): zone grid and centring arrows, X/Y triad, project and file name, Material Size, the part number on the right edge. Aidan then removed the full-width FINISH line: the Finish field shows the finish spec (Finish and Finish Thickness, 45 mm wide, Material 40), and the Finish Note and the finish's process notes are numbered notes in the NOTES list (18). The block is 180 by 55 mm. Then the left section was rearranged from Aidan's markup: logo in a 22 mm square cell, tolerance box 43 by 22 beside it, projection across the section, the URL in its own cell along the bottom. Spec 05 (question 12 answered, new question 23), tasks 183, 185, 196, 197, PLAN, DECISIONS and TODO updated.
+  - Aidan's additions logged as his, and six new tools (automatic notes, part marking, Batch Print, REF dimensions, Stock Size, Make/Buy) in spec 05 "Added for M5"; defaults logged as Default with questions 13 to 23.
   - Tasks 183 to 209 written; `docs/PLAN.md` M5 section has the order and dependencies.
-- Current state: docs only; no code changed, nothing built.
+- Current state: docs only; no code changed, nothing built or tested this session. Plan not yet reviewed by Aidan beyond the mockup approval (unverified that he accepts the task split).
 - Next:
-  1. Aidan takes a last look at `docs/ui-mockups/title-block.png` (only the additions are new).
+  1. Aidan takes a last look at `docs/ui-mockups/title-block.png` (no FINISH line; wider Finish field; finish notes on the sheet; the new left section), then commit.
   2. Run M5 per `docs/WORKFLOW.md`: spikes 183 and 184 with Aidan in Inventor (local session); the Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) can run meanwhile. Update the add-in tasks with the spikes' confirmed members before they run.
   3. Every task's Inventor steps go into `docs/checklists/m5.md` for one check at the end (task 209).
-  4. Open for Aidan: spec 05 questions 12 to 22 (defaults built), spec 09 question 29, spec 04 questions 20 to 25, the Hole Table icon.
+  4. Open for Aidan: spec 05 questions 13 to 23 (defaults built), spec 09 question 29, spec 04 questions 20 to 25, the Hole Table icon.
 - Gotchas: long Bash heredocs fail here (`unexpected EOF`); write scripts with Write and run them. Render mockups with headless Edge (command at the top of the HTML; window height 3600 now), then trim the bottom with Pillow. Nothing from prints seen at work goes in the repo. Build with `-p:DeployToInventor=false` while Inventor is open. Flaky Core tests: NewPartCreator, RenamePlan, Numbering, SaveAsReplacer, SaveAsCopyCreator, RegisterStore.
 - Read first: spec 05 "Added for M5", `docs/PLAN.md` M5, the 2026-11-21 rows of `DECISIONS.md`.
 

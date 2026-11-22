@@ -9,7 +9,7 @@
 
 ## Goal
 
-A drawing button writes or refreshes AWB's notes on the first sheet from the model's material and finish; Create Print runs it once.
+A drawing button writes or refreshes AWB's notes on the first sheet from the model's material, finish and Finish Note; Create Print runs it once.
 
 ## Scope
 
@@ -19,6 +19,7 @@ A drawing button writes or refreshes AWB's notes on the first sheet from the mod
 ## Acceptance criteria
 
 - [ ] Steel part with a heat-treat rule: one numbered note; changing the material and pressing Update Notes changes it.
+- [ ] A part with a finish: its Finish Note is a numbered note, then the finish's process notes; editing the Finish Note and pressing Update Notes changes the note.
 - [ ] A 3D-print material: the bold bottom line appears; changing to aluminium removes it.
 - [ ] A note typed by hand stays. One Undo reverts an update.
 - [ ] `dotnet build InventorAddin.slnx -p:DeployToInventor=false` has 0 errors; every Inventor API member used is confirmed in the spike results or existing code, or listed under Verification

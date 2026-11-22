@@ -20,7 +20,8 @@ Settle, before any template or view task is written against them, the Inventor c
    outside the block's own rectangle (the small part number in the right margin, task 185's layout)?
 2. Property fields in title block text: the `<Property Document='model' ...>` (or equivalent) formatted text for
    Part Number, Description, Material, Revision Number, Designer, Project, Mass, Design Status, and the custom
-   properties Finish, Finish Note and Material Size. Does Design Status print as text (Work In Progress) or a number?
+   properties Finish, Finish Thickness and Material Size. Can one text box hold two property fields on one line
+   (the Finish field: Finish, ", ", Finish Thickness)? Does Design Status print as text (Work In Progress) or a number?
    Can Mass be formatted in kg or lb with 2 decimals?
 3. Drawing fields: the drawing's own Author and Creation Date; sheet scale (the first view's), sheet number and sheet
    count, sheet size; the model's file name with its extension.

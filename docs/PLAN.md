@@ -519,7 +519,7 @@ Not in part 1: AWB Hole on the Flat Pattern tab (it keeps Inventor's Hole; the S
 
 ### M5: Drawing tools (spec 05)
 
-Aidan answered the planning questions and the title block questions on 2026-11-20, approved the title block mockup on 2026-11-21 with template additions (zone grid, triad, FINISH line, project and file name, the part number on the right edge, Material Size), and added six tools (automatic notes, part marking, Batch Print, overall REF dimensions, Stock Size, parts list Make/Buy). Planned 2026-11-21 in a local session on Aidan's PC. Defaults are logged in `DECISIONS.md` (2026-11-21) and asked in spec 05 questions 12 to 22.
+Aidan answered the planning questions and the title block questions on 2026-11-20, approved the title block mockup on 2026-11-21 with template additions (zone grid, triad, project and file name, the part number on the right edge, Material Size), and added six tools (automatic notes, part marking, Batch Print, overall REF dimensions, Stock Size, parts list Make/Buy). Planned 2026-11-21 in a local session on Aidan's PC. Defaults are logged in `DECISIONS.md` (2026-11-21) and asked in spec 05 questions 13 to 23. Later on 2026-11-21 Aidan replaced the full-width FINISH line he had added: the Finish field shows the finish spec and the finish instructions are numbered notes (tasks 183, 185, 196 and 197 updated).
 
 **Before building:** Aidan takes a last look at the updated `docs/ui-mockups/title-block.png` (blue numbers 18 to 25).
 

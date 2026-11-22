@@ -5,8 +5,9 @@
 <title>AWB title block mockup</title>
 <!--
   Source of title-block.png (M5, before any task). Revised after Aidan's answers A to G and his changes to B (2026-11-20),
-  then his template additions (2026-11-21): FINISH line, project and file name, material size, the part number on the
-  right edge, the zone grid with centring arrows, and the X/Y triad.
+  then his template additions (2026-11-21): project and file name, material size, the part number on the
+  right edge, the zone grid with centring arrows, and the X/Y triad. Later on 2026-11-21 Aidan removed the full-width
+  FINISH line: the Finish field shows the finish spec, and the finish instructions are numbered notes on the sheet (18).
   A mockup only: nothing here is used by the add-in.
   Drawn by us in millimetres. The only picture used is Aidan's own mark, libraries/Branding/aidanwbrown-mark-black-1024.png,
   loaded by relative path. Every value shown is made up.
@@ -40,12 +41,15 @@
   <h1>AWB title block: template additions for approval</h1>
   <p class="lead">One title block, 180 mm wide, the same on every sheet size (ISO A4 to A0, ANSI A to E). White sheet, third angle projection.
     Every value is read from the model or the drawing, so the print changes when they do. All values below are made up.
-    The 50 mm block is as approved on 2026-11-21. New in this round (blue numbers): a full-width FINISH line directly above the block for the long finish callout,
-    a row of small fields above it (project and file name), a Material Size field, the part number repeated small in the right margin,
-    and on the sheet the zone grid with centring arrows and an X/Y triad. The block with the two new rows is 180 by 62 mm.</p>
+    The 50 mm block is as approved on 2026-11-21. Additions (blue numbers): a row of small fields on top of the block (project and file name),
+    a Material Size field, the part number repeated small in the right margin, and on the sheet the zone grid with centring arrows and an X/Y triad.
+    Changed in this round: no full-width FINISH line. The Finish field (9) shows the finish spec and is wider (45 mm, Material 40 mm);
+    the finish instructions are numbered notes in the NOTES list (18). The block with the new row is 180 by 55 mm.
+    Left section rearranged (Aidan's markup): the logo in its own 22 mm square cell beside the tolerance box (now 43 by 22 mm),
+    the projection symbol in a wide cell across the section under them, and aidanwbrown.com in its own cell across the bottom, level with the Scale/Sheet row.</p>
 
   <div class="card">
-    <svg id="tb" width="1280" viewBox="-6 -8 200 79" style="display:block"></svg>
+    <svg id="tb" width="1280" viewBox="-6 -8 200 72" style="display:block"></svg>
     <div class="cap">Metric, drawn at about 6.5 times full size. Labels 1.8 mm, values 2.8 mm (project, file name and material size 2.5 mm), description 4 mm,
       part number and revision 7 mm bold, status 2.5 mm. The part number in the right margin is 2.5 mm, read from the bottom, and sits outside the border.
       Text in Tahoma (Inventor's drawing font).</div>
@@ -53,7 +57,7 @@
 
   <h2>Imperial</h2>
   <div class="card">
-    <svg id="tbin" width="1280" viewBox="-6 -8 200 79" style="display:block"></svg>
+    <svg id="tbin" width="1280" viewBox="-6 -8 200 72" style="display:block"></svg>
     <div class="cap">Only the tolerance box (2), the units, the weight's unit, the material size's unit and the size differ. Both tolerance boxes carry the "UNLESS OTHERWISE SPECIFIED:" heading.</div>
   </div>
 
@@ -61,16 +65,16 @@
   <div class="card">
     <table>
       <tr><th></th><th>Field</th><th>Reads</th><th>Note</th></tr>
-      <tr><td class="n"><span class="num">1</span></td><td>Logo and URL</td><td>Fixed in the template: <code>libraries/Branding/aidanwbrown-mark-black-1024.png</code> and the text "aidanwbrown.com"</td><td>The black mark (answer A)</td></tr>
+      <tr><td class="n"><span class="num">1</span></td><td>Logo and URL</td><td>Fixed in the template: <code>libraries/Branding/aidanwbrown-mark-black-1024.png</code> and the text "aidanwbrown.com"</td><td>The black mark (answer A) in a 22 mm square cell, 1.5 mm margin round it; the URL in its own cell across the bottom of the left section, 2.8 mm</td></tr>
       <tr><td class="n"><span class="num">2</span></td><td>General tolerances</td><td>Fixed text in the template. Metric: "UNLESS OTHERWISE SPECIFIED: DIMENSIONS IN MM. TOLERANCES: X ±0.5, X.X ±0.2, X.XX ±0.05, ANGLES ±0.5°. REMOVE BURRS, BREAK SHARP EDGES."
       Imperial: the same heading, then "DIMENSIONS IN INCHES. TOLERANCES: .X ±.03, .XX ±.01, .XXX ±.005, ANGLES ±0.5°. REMOVE BURRS, BREAK SHARP EDGES."</td><td>Heading on top, the linear tolerances stacked, angles beside them, the edge note under them</td></tr>
-      <tr><td class="n"><span class="num">3</span></td><td>Projection</td><td>Fixed: third angle symbol</td><td></td></tr>
+      <tr><td class="n"><span class="num">3</span></td><td>Projection</td><td>Fixed: third angle symbol</td><td>A 65 by 20 mm cell across the left section, the symbol centred</td></tr>
       <tr><td class="n"><span class="num">4</span></td><td>Description</td><td>Model: Design Tracking, Description</td><td></td></tr>
       <tr><td class="n"><span class="num">5</span></td><td>Part number</td><td>Model: Design Tracking, Part Number</td><td></td></tr>
       <tr><td class="n"><span class="num">6</span></td><td>Revision</td><td>Model: Inventor's standard Revision Number</td><td>Set by hand in Part Properties for now</td></tr>
       <tr><td class="n"><span class="num">7</span></td><td>Status</td><td>Model: Inventor's built-in Design Status (Work In Progress, Pending, Released)</td><td>Vault and a later PDM read it</td></tr>
       <tr><td class="n"><span class="num">8</span></td><td>Material</td><td>Model: Material</td><td></td></tr>
-      <tr><td class="n"><span class="num">9</span></td><td>Finish</td><td>Model: custom Finish (the short name)</td><td>The long callout is on the FINISH line (18)</td></tr>
+      <tr><td class="n"><span class="num">9</span></td><td>Finish</td><td>Model: custom Finish and Finish Thickness on one line, for example "ANODISE, CLEAR, 10-15 µm"</td><td>The finish spec. Widened to 45 mm (Material 40 mm). Instructions go in the notes (18)</td></tr>
       <tr><td class="n"><span class="num">10</span></td><td>Designer</td><td>Model: Design Tracking, Designer</td><td>Exactly as stored</td></tr>
       <tr><td class="n"><span class="num">11</span></td><td>Detailer</td><td>Drawing: Author</td><td>Exactly as stored</td></tr>
       <tr><td class="n"><span class="num">12</span></td><td>Date</td><td>Drawing: its Creation Date</td><td></td></tr>
@@ -79,7 +83,7 @@
       <tr><td class="n"><span class="num">15</span></td><td>Sheet x of y</td><td>Sheet number and sheet count</td><td></td></tr>
       <tr><td class="n"><span class="num">16</span></td><td>Units</td><td>MM or IN, from the template the print was made from</td><td></td></tr>
       <tr><td class="n"><span class="num">17</span></td><td>Size</td><td>The sheet size</td><td></td></tr>
-      <tr><td class="n"><span class="num new">18</span></td><td>FINISH line</td><td>Model: custom Finish Note (the full callout), across the whole width</td><td>New. Replaces the separate finish notes block</td></tr>
+      <tr><td class="n"><span class="num new">18</span></td><td>Finish notes</td><td>On the sheet, not in the template: numbered notes in the NOTES list. The model's Finish Note first, then the finish's process notes (masking, handling, surface requirements)</td><td>Written by Update Notes. Replaces the full-width FINISH line</td></tr>
       <tr><td class="n"><span class="num new">19</span></td><td>Project</td><td>Model: Design Tracking, Project (the top assembly or project)</td><td>New</td></tr>
       <tr><td class="n"><span class="num new">20</span></td><td>File name</td><td>Model: its file name with the extension</td><td>New</td></tr>
       <tr><td class="n"><span class="num new">21</span></td><td>Material size</td><td>Model: custom Material Size, filled by the Stock Size command</td><td>New</td></tr>
@@ -111,28 +115,27 @@ function el(parent, name, attrs, text) {
   parent.appendChild(e);
   return e;
 }
-// The two new rows sit on top of the approved 50 mm block: TOP = their height.
-const TOP = 12;
-// Cells: x, y, w, h (mm, y from the top of the 62 mm block), label, value (and its imperial value), value size, callout number, options
+// The new row sits on top of the approved 50 mm block: TOP = its height.
+const TOP = 5;
+// Cells: x, y, w, h (mm, y from the top of the 55 mm block), label, value (and its imperial value), value size, callout number, options
 const cells = [
   { x: 0,      y: 0,  w: 90,    h: 5,  label: "PROJECT", value: "TEST RIG FRAME", size: 2.5, n: 19, isNew: true, inline: true },
   { x: 90,     y: 0,  w: 90,    h: 5,  label: "FILE NAME", value: "AWB-10001.ipt", size: 2.5, n: 20, isNew: true, inline: true },
-  { x: 0,      y: 5,  w: 180,   h: 7,  label: "FINISH", value: "ANODISE, CLEAR, 10-15 µm. MASK ALL THREADED HOLES. NO SURFACE MARKS ON FACE A.", size: 2.8, n: 18, isNew: true, inline: true },
-  { x: 65,     y: 12, w: 115,   h: 12, label: "DESCRIPTION", value: "MOUNTING BRACKET, LEFT", size: 4, n: 4 },
-  { x: 65,     y: 24, w: 71,    h: 14, label: "PART NUMBER", value: "AWB-10001", size: 7, bold: true, n: 5 },
-  { x: 136,    y: 24, w: 16,    h: 14, label: "REV", value: "B", size: 7, bold: true, n: 6, centre: true },
-  { x: 152,    y: 24, w: 28,    h: 14, label: "STATUS", value: "WORK IN PROGRESS", size: 2.5, n: 7 },
-  { x: 65,     y: 38, w: 45,    h: 8,  label: "MATERIAL", value: "ALUMINIUM 6061-T6", size: 2.8, n: 8 },
-  { x: 110,    y: 38, w: 30,    h: 8,  label: "MATERIAL SIZE", value: "PL 12 x 65 x 130", imperial: "PL .500 x 2.50 x 5.00", size: 2.5, n: 21, isNew: true },
-  { x: 140,    y: 38, w: 40,    h: 8,  label: "FINISH", value: "CLEAR ANODISE", size: 2.8, n: 9 },
-  { x: 65,     y: 46, w: 28.75, h: 8,  label: "DESIGNER", value: "AidanwBrown", size: 2.8, n: 10 },
-  { x: 93.75,  y: 46, w: 28.75, h: 8,  label: "DETAILER", value: "AidanwBrown", size: 2.8, n: 11 },
-  { x: 122.5,  y: 46, w: 28.75, h: 8,  label: "DATE", value: "2026-11-21", size: 2.8, n: 12 },
-  { x: 151.25, y: 46, w: 28.75, h: 8,  label: "WEIGHT", value: "0.42 kg", imperial: "0.93 lb", size: 2.8, n: 13 },
-  { x: 65,     y: 54, w: 28.75, h: 8,  label: "SCALE", value: "1:2", size: 2.8, n: 14 },
-  { x: 93.75,  y: 54, w: 28.75, h: 8,  label: "SHEET", value: "1 OF 2", size: 2.8, n: 15 },
-  { x: 122.5,  y: 54, w: 28.75, h: 8,  label: "UNITS", value: "MM", imperial: "IN", size: 2.8, n: 16 },
-  { x: 151.25, y: 54, w: 28.75, h: 8,  label: "SIZE", value: "A3", imperial: "B", size: 2.8, n: 17 },
+  { x: 65,     y: 5,  w: 115,   h: 12, label: "DESCRIPTION", value: "MOUNTING BRACKET, LEFT", size: 4, n: 4 },
+  { x: 65,     y: 17, w: 71,    h: 14, label: "PART NUMBER", value: "AWB-10001", size: 7, bold: true, n: 5 },
+  { x: 136,    y: 17, w: 16,    h: 14, label: "REV", value: "B", size: 7, bold: true, n: 6, centre: true },
+  { x: 152,    y: 17, w: 28,    h: 14, label: "STATUS", value: "WORK IN PROGRESS", size: 2.5, n: 7 },
+  { x: 65,     y: 31, w: 40,    h: 8,  label: "MATERIAL", value: "ALUMINIUM 6061-T6", size: 2.8, n: 8 },
+  { x: 105,    y: 31, w: 30,    h: 8,  label: "MATERIAL SIZE", value: "PL 12 x 65 x 130", imperial: "PL .500 x 2.50 x 5.00", size: 2.5, n: 21, isNew: true },
+  { x: 135,    y: 31, w: 45,    h: 8,  label: "FINISH", value: "ANODISE, CLEAR, 10-15 µm", size: 2.8, n: 9 },
+  { x: 65,     y: 39, w: 28.75, h: 8,  label: "DESIGNER", value: "AidanwBrown", size: 2.8, n: 10 },
+  { x: 93.75,  y: 39, w: 28.75, h: 8,  label: "DETAILER", value: "AidanwBrown", size: 2.8, n: 11 },
+  { x: 122.5,  y: 39, w: 28.75, h: 8,  label: "DATE", value: "2026-11-21", size: 2.8, n: 12 },
+  { x: 151.25, y: 39, w: 28.75, h: 8,  label: "WEIGHT", value: "0.42 kg", imperial: "0.93 lb", size: 2.8, n: 13 },
+  { x: 65,     y: 47, w: 28.75, h: 8,  label: "SCALE", value: "1:2", size: 2.8, n: 14 },
+  { x: 93.75,  y: 47, w: 28.75, h: 8,  label: "SHEET", value: "1 OF 2", size: 2.8, n: 15 },
+  { x: 122.5,  y: 47, w: 28.75, h: 8,  label: "UNITS", value: "MM", imperial: "IN", size: 2.8, n: 16 },
+  { x: 151.25, y: 47, w: 28.75, h: 8,  label: "SIZE", value: "A3", imperial: "B", size: 2.8, n: 17 },
 ];
 
 function bubbleIn(g, x, y, n, isNew) {
@@ -147,9 +150,12 @@ function titleBlock(svg, ox, oy, callouts, imperial, rightMarginPn) {
   const line = { stroke: "#000", "stroke-width": 0.35, fill: "none" };
   el(g, "rect", { x: 0, y: 0, width: 180, height: 50 + TOP, stroke: "#000", "stroke-width": 0.7, fill: "#fff" });
   el(g, "line", { x1: 0, y1: TOP, x2: 180, y2: TOP, stroke: "#000", "stroke-width": 0.5 });
-  el(g, "line", { x1: 20, y1: TOP, x2: 20, y2: 50 + TOP, ...line });
+  // Left section, 65 wide: logo (22 square) and tolerances (43 by 22) on top, the projection across it (20 high),
+  // and the URL across the bottom (8 high, level with the Scale/Sheet row).
+  el(g, "line", { x1: 22, y1: TOP, x2: 22, y2: TOP + 22, ...line });
   el(g, "line", { x1: 65, y1: TOP, x2: 65, y2: 50 + TOP, ...line });
-  el(g, "line", { x1: 20, y1: TOP + 22, x2: 65, y2: TOP + 22, ...line });
+  el(g, "line", { x1: 0, y1: TOP + 22, x2: 65, y2: TOP + 22, ...line });
+  el(g, "line", { x1: 0, y1: TOP + 42, x2: 65, y2: TOP + 42, ...line });
   for (const c of cells) {
     el(g, "rect", { x: c.x, y: c.y, width: c.w, height: c.h, ...line });
     const value = imperial && c.imperial ? c.imperial : c.value;
@@ -164,24 +170,24 @@ function titleBlock(svg, ox, oy, callouts, imperial, rightMarginPn) {
     el(g, "text", { x: c.centre ? c.x + c.w / 2 : c.x + 1.5, y: vy, "font-size": c.size,
       "text-anchor": c.centre ? "middle" : "start", "font-weight": c.bold ? 700 : 400 }, value);
   }
-  // 1: logo panel, 20 wide
-  el(g, "image", { href: "../../libraries/Branding/aidanwbrown-mark-black-1024.png", x: 3, y: TOP + 10, width: 14, height: 14 });
-  el(g, "text", { x: 10, y: TOP + 34, "font-size": 2, "text-anchor": "middle" }, "aidanwbrown.com");
-  // 2: general tolerances, 45 by 22: heading, units, linear tolerances stacked with angles beside them, then the edge note
+  // 1: the logo in its own 22 mm square cell, 1.5 mm margin round the mark; the URL in its own cell across the bottom
+  el(g, "image", { href: "../../libraries/Branding/aidanwbrown-mark-black-1024.png", x: 1.5, y: TOP + 1.5, width: 19, height: 19 });
+  el(g, "text", { x: 32.5, y: TOP + 47, "font-size": 2.8, "text-anchor": "middle" }, "aidanwbrown.com");
+  // 2: general tolerances, 43 by 22: heading, units, linear tolerances stacked with angles beside them, then the edge note
   const t = (x, y, size, text, extra) => el(g, "text", { x, y: y + TOP, "font-size": size, ...(extra || {}) }, text);
   const lab = { fill: "#333" };
-  t(21, 2.4, 1.8, "UNLESS OTHERWISE SPECIFIED:", lab);
-  t(21, 5.9, 2.5, imperial ? "DIMENSIONS IN INCHES" : "DIMENSIONS IN MM", { "font-weight": 700 });
-  t(21, 8.7, 1.8, "TOLERANCES:", lab);
+  t(23, 2.4, 1.8, "UNLESS OTHERWISE SPECIFIED:", lab);
+  t(23, 5.9, 2.5, imperial ? "DIMENSIONS IN INCHES" : "DIMENSIONS IN MM", { "font-weight": 700 });
+  t(23, 8.7, 1.8, "TOLERANCES:", lab);
   const rows = imperial ? [[".X", "±.03"], [".XX", "±.01"], [".XXX", "±.005"]] : [["X", "±0.5"], ["X.X", "±0.2"], ["X.XX", "±0.05"]];
-  rows.forEach((rw, i) => { t(22, 11.8 + i * 2.9, 2.4, rw[0]); t(29, 11.8 + i * 2.9, 2.4, rw[1]); });
-  el(g, "line", { x1: 43, y1: TOP + 9.8, x2: 43, y2: TOP + 18.6, ...line });
-  t(45, 11.8, 2.4, "ANGLES");
-  t(45, 14.7, 2.4, "±0.5°");
-  t(21, 21.1, 1.8, "REMOVE BURRS, BREAK SHARP EDGES.");
-  // 3: third angle symbol: frustum on the left, small end towards the circles on the right
-  t(21, 24.4, 1.8, "THIRD ANGLE PROJECTION", lab);
-  const sx = 37.25, sy = TOP + 37.5;
+  rows.forEach((rw, i) => { t(24, 11.8 + i * 2.9, 2.4, rw[0]); t(31, 11.8 + i * 2.9, 2.4, rw[1]); });
+  el(g, "line", { x1: 45, y1: TOP + 9.8, x2: 45, y2: TOP + 18.6, ...line });
+  t(47, 11.8, 2.4, "ANGLES");
+  t(47, 14.7, 2.4, "±0.5°");
+  t(23, 21.1, 1.8, "REMOVE BURRS, BREAK SHARP EDGES.");
+  // 3: third angle symbol, centred in the wide cell: frustum on the left, small end towards the circles on the right
+  t(1, 24.4, 1.8, "THIRD ANGLE PROJECTION", lab);
+  const sx = 27, sy = TOP + 32.5;
   const cl = { stroke: "#000", "stroke-width": 0.18, "stroke-dasharray": "3 0.8 0.6 0.8" };
   el(g, "path", { d: `M${sx - 4.5},${sy - 3.5} L${sx + 3.5},${sy - 2.1} L${sx + 3.5},${sy + 2.1} L${sx - 4.5},${sy + 3.5} Z`, ...line });
   el(g, "line", { x1: sx - 6, y1: sy, x2: sx + 5, y2: sy, ...cl });
@@ -195,9 +201,9 @@ function titleBlock(svg, ox, oy, callouts, imperial, rightMarginPn) {
   }
 
   if (!callouts) return;
-  bubbleIn(g, 2.5, TOP + 2.5, 1); bubbleIn(g, 62.5, TOP + 2.5, 2); bubbleIn(g, 62.5, TOP + 25, 3);
+  bubbleIn(g, -3, TOP + 2.5, 1); bubbleIn(g, 62.5, TOP + 2.5, 2); bubbleIn(g, 62.5, TOP + 24.5, 3); bubbleIn(g, -3, TOP + 46, 1);
   for (const c of cells) {
-    const y = c.y === 0 ? -3 : c.y === 54 ? 50 + TOP + 2.5 : c.y + (c.inline ? c.h / 2 : 2.5);
+    const y = c.y === 0 ? -3 : c.y === 47 ? 50 + TOP + 2.5 : c.y + (c.inline ? c.h / 2 : 2.5);
     bubbleIn(g, c.inline && c.y !== 0 ? c.x + c.w - 2.5 : c.x + c.w - 2.5, y, c.n, c.isNew);
   }
   if (rightMarginPn) bubbleIn(g, 190, 50 + TOP - 16, 22, true);
@@ -259,9 +265,10 @@ function sheet(svg, w, h, zonesAcross, zonesDown, views, notes, callouts) {
   const tbx = bx + bw - 180, tby = by + bh - 50 - TOP;
   if (notes) {
     // Examples from the automatic notes command: a NOTES list above the block, and a bold line at the bottom of the sheet
-    el(g, "text", { x: tbx + 1.5, y: tby - 13, "font-size": 2.8, "font-family": FONT }, "NOTES:");
-    el(g, "text", { x: tbx + 1.5, y: tby - 8.5, "font-size": 2.8, "font-family": FONT }, "1. HEAT TREAT TO 40-45 HRC AFTER MACHINING.");
-    el(g, "text", { x: tbx + 1.5, y: tby - 4, "font-size": 2.8, "font-family": FONT }, "2. PART MARK PER MARKING ZONE.");
+    // 18: the finish notes are numbered notes in this list: the model's Finish Note first, then the finish's process notes
+    const notes = ["NOTES:", "1. DIMENSIONS APPLY AFTER FINISH. BREAK SHARP EDGES BEFORE ANODISING.",
+      "2. MASK ALL THREADED HOLES.", "3. NO SURFACE MARKS ON FACE A.", "4. PART MARK PER MARKING ZONE."];
+    notes.forEach((n, i) => el(g, "text", { x: tbx + 1.5, y: tby - 4 - (notes.length - 1 - i) * 4.5, "font-size": 2.8, "font-family": FONT }, n));
     el(g, "text", { x: bx + 30, y: by + bh - 4, "font-size": 4, "font-weight": 700, "font-family": FONT }, "NOTE: 3D PRINTED PART");
   }
   titleBlock(g, tbx, tby, false, false, false);
@@ -272,6 +279,7 @@ function sheet(svg, w, h, zonesAcross, zonesDown, views, notes, callouts) {
   bubbleIn(g, bx + bw / zonesAcross / 2 + 5, fy - 3, 23, true);
   bubbleIn(g, mx + 5, fy - 3, 24, true);
   bubbleIn(g, tx + 6, ty - 16, 25, true);
+  bubbleIn(g, tbx - 3, tby - 13, 18, true);
   bubbleIn(g, w - 3, by + bh - 30, 22, true);
 }
 sheet(document.getElementById("a3"), 420, 297, 8, 6,
