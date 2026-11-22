@@ -13,7 +13,7 @@ public enum PrintField
     PartNumber,
     Description,
     Revision,
-    /// <summary>The custom Status text property (task 210), not Inventor's Design Status (Aidan, 2026-11-22).</summary>
+    /// <summary>Inventor's own Status field: Design Tracking "User Status" (PropertyID 17), the Status tab's Status text (Aidan, 2026-11-22, task 219).</summary>
     Status,
     Material,
     /// <summary>The custom Material Size property the Stock Size command fills.</summary>

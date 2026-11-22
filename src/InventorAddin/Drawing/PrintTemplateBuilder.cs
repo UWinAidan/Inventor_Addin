@@ -45,6 +45,7 @@ namespace InventorAddin.PrintTemplates
         private readonly string _logoPath;
         private readonly ILog _log;
         private readonly List<string> _warnings = new List<string>();
+        private readonly List<double> _widthRatios = new List<double>();
 
         public PrintTemplateBuilder(Application app, string logoPath, ILog log)
         {
@@ -206,7 +207,46 @@ namespace InventorAddin.PrintTemplates
             copy.FirstAngleProjection = false;
             ComSafe.Run(() => copy.DecimalMarkerType = DecimalMarkerTypeEnum.kPeriodDecimalMarker, _warnings, "Setting the period decimal marker");
             styles.ActiveStandardStyle = copy;
+            SetStyleDecimalMarkers(styles);
             return copy;
+        }
+
+        /// <summary>
+        /// Task 187 set only the standard's marker and a metric dimension still printed "260,00" (Aidan's check): the dimension styles
+        /// and feature control frame styles each carry their own marker (and an alternate-units one), so every one in the drawing is set
+        /// to a period and the result read back into the log. The parts list, revision table and hole table styles have no marker
+        /// member; their numbers follow the standard.
+        /// </summary>
+        private void SetStyleDecimalMarkers(DrawingStylesManager styles)
+        {
+            const DecimalMarkerTypeEnum period = DecimalMarkerTypeEnum.kPeriodDecimalMarker;
+            int dimensions = 0, frames = 0, notPeriod = 0;
+
+            foreach (DimensionStyle style in styles.DimensionStyles.Cast<DimensionStyle>().ToList())
+            {
+                DimensionStyle s = style;
+                string? name = ComSafe.Get(() => s.Name);
+                ComSafe.Run(() => s.DecimalMarkerType = period, _warnings, $"Setting the decimal marker of dimension style '{name}'");
+                ComSafe.Run(() => s.AlternateDecimalMarkerType = period, _warnings, $"Setting the alternate decimal marker of dimension style '{name}'");
+                dimensions++;
+                if (ComSafe.Get(() => (DecimalMarkerTypeEnum?)s.DecimalMarkerType) != period)
+                    notPeriod++;
+            }
+
+            foreach (FeatureControlFrameStyle style in styles.FeatureControlFrameStyles.Cast<FeatureControlFrameStyle>().ToList())
+            {
+                FeatureControlFrameStyle s = style;
+                string? name = ComSafe.Get(() => s.Name);
+                ComSafe.Run(() => s.DecimalMarkerType = period, _warnings, $"Setting the decimal marker of feature control frame style '{name}'");
+                ComSafe.Run(() => s.AlternateDecimalMarkerType = period, _warnings, $"Setting the alternate decimal marker of feature control frame style '{name}'");
+                frames++;
+                if (ComSafe.Get(() => (DecimalMarkerTypeEnum?)s.DecimalMarkerType) != period)
+                    notPeriod++;
+            }
+
+            _log.Info($"Build Print Template: decimal marker set to a period on {dimensions} dimension style(s) and {frames} feature control frame style(s); {notPeriod} did not read back as a period.");
+            if (notPeriod > 0)
+                _warnings.Add($"{notPeriod} style(s) did not read back with a period decimal marker.");
         }
 
         /// <summary>
@@ -290,8 +330,9 @@ namespace InventorAddin.PrintTemplates
 
                 foreach (TitleBlockText text in layout.Texts)
                 {
+                    TitleBlockCell? home = layout.Cells.FirstOrDefault(c => c.Name == text.CellName);
                     AddText(sketch, EscapeText(text.Text), text.SizeMm, text.Bold, text.XMm, text.BaselineYMm,
-                        text.Anchor == TextAnchor.Centre, false, $"text '{text.Text}'");
+                        text.Anchor == TextAnchor.Centre, false, $"text '{text.Text}'", home, text.Text);
                 }
 
                 DrawProjectionSymbol(sketch, layout.Symbol);
@@ -299,6 +340,13 @@ namespace InventorAddin.PrintTemplates
                 DrawSmallPartNumber(sketch, layout);
 
                 def.ExitEdit(true, Type.Missing);
+
+                if (_widthRatios.Count > 0)
+                {
+                    _log.Info(
+                        $"Build Print Template: drawn width over PrintTextFit width (about 1 means FontSize is the cap height as sized) for {_widthRatios.Count} plain text(s): " +
+                        $"min {_widthRatios.Min():0.00}, mean {_widthRatios.Average():0.00}, max {_widthRatios.Max():0.00}.");
+                }
             }
             catch (Exception)
             {
@@ -339,7 +387,7 @@ namespace InventorAddin.PrintTemplates
             {
                 string label = cell.Inline ? cell.Label + ":" : cell.Label;
                 AddText(sketch, EscapeText(label), PrintTemplateLayout.LabelSizeMm, false, cell.LabelXMm, cell.LabelBaselineYMm,
-                    false, false, $"label '{label}'");
+                    false, false, $"label '{label}'", cell, label);
             }
 
             bool centre = cell.ValueAnchor == TextAnchor.Centre;
@@ -347,7 +395,7 @@ namespace InventorAddin.PrintTemplates
             // placeholder keeps the centring close to the real value's.
             string placeholder = centre ? "A" : (cell.Label ?? cell.Name);
             string content = FieldContent(cell.Field!.Value, layout, placeholder);
-            AddText(sketch, content, cell.ValueSizeMm, cell.Bold, cell.ValueXMm, cell.ValueBaselineYMm, centre, false, $"value of '{cell.Name}'");
+            AddText(sketch, content, cell.ValueSizeMm, cell.Bold, cell.ValueXMm, cell.ValueBaselineYMm, centre, false, $"value of '{cell.Name}'", cell, null, placeholder);
         }
 
         /// <summary>
@@ -364,7 +412,7 @@ namespace InventorAddin.PrintTemplates
                 case PrintField.Material: return Property("model", DesignTrackingSet, DesignTracking, "Material", 20, placeholder);
                 case PrintField.Designer: return Property("model", DesignTrackingSet, DesignTracking, "Designer", 41, placeholder);
                 case PrintField.Project: return Property("model", DesignTrackingSet, DesignTracking, "Project", 7, placeholder);
-                case PrintField.Status: return CustomProperty("Status", placeholder);
+                case PrintField.Status: return Property("model", DesignTrackingSet, DesignTracking, "User Status", 17, placeholder);
                 case PrintField.MaterialSize: return CustomProperty("Material Size", placeholder);
                 case PrintField.FinishSpec: return CustomProperty("Finish Spec", placeholder);
                 case PrintField.DrawingAuthor: return Property("drawing", SummarySet, SummaryInfo, "Author", 4, placeholder);
@@ -398,10 +446,13 @@ namespace InventorAddin.PrintTemplates
         /// formatting overrides in the text (spike 183, round 1: bold runs; Inventor's own title block uses the size override, in cm).
         /// </summary>
         private TextBox AddText(
-            DrawingSketch sketch, string content, double sizeMm, bool bold, double xMm, double yMm, bool centre, bool rotated, string what)
+            DrawingSketch sketch, string content, double sizeMm, bool bold, double xMm, double yMm, bool centre, bool rotated, string what,
+            TitleBlockCell? bounds = null, string? exactText = null, string? placeholderText = null)
         {
+            // The layout's size is the em (the mockup's font-size); Inventor's FontSize override is the cap height (task 215), so convert.
+            double fontSizeCm = Cm(sizeMm * PrintTextFit.CapHeightEm);
             string formatted =
-                $"<StyleOverride Font='{PrintTemplateLayout.FontName}' FontSize='{Cm(sizeMm).ToString("0.####", CultureInfo.InvariantCulture)}'" +
+                $"<StyleOverride Font='{PrintTemplateLayout.FontName}' FontSize='{fontSizeCm.ToString("0.####", CultureInfo.InvariantCulture)}'" +
                 (bold ? " Bold='True'" : string.Empty) + $">{content}</StyleOverride>";
 
             TextBox box = sketch.TextBoxes.AddFitted(P(xMm, yMm), formatted, Type.Missing);
@@ -420,7 +471,45 @@ namespace InventorAddin.PrintTemplates
                 box.Origin = _geometry.CreatePoint2d(origin.X + dx, origin.Y + dy);
             }, _warnings, $"Placing {what}");
 
+            if (!rotated)
+                MeasureText(box, what, sizeMm, bold, bounds, exactText, placeholderText);
             return box;
+        }
+
+        /// <summary>
+        /// Reads the drawn text's range box back: warns when it reaches past its cell (the cell's own bounds, in the title block's
+        /// coordinates), and for text whose content is plain (labels, fixed text) records the width against <see cref="PrintTextFit.WidthMm"/>
+        /// so the log shows whether FontSize really is the cap height (ratio near 1).
+        /// </summary>
+        private void MeasureText(TextBox box, string what, double sizeMm, bool bold, TitleBlockCell? cell, string? exactText, string? placeholderText)
+        {
+            Box2d? range = ComSafe.Get(() => box.RangeBox);
+            if (range == null)
+                return;
+
+            double minX = range.MinPoint.X * 10, maxX = range.MaxPoint.X * 10, minY = range.MinPoint.Y * 10, maxY = range.MaxPoint.Y * 10;
+
+            if (exactText != null && exactText.Length >= 4)
+            {
+                double estimate = PrintTextFit.WidthMm(exactText, sizeMm, bold);
+                if (estimate > 0)
+                    _widthRatios.Add((maxX - minX) / estimate);
+            }
+
+            if (cell == null)
+                return;
+
+            const double tolerance = 0.1;
+            var past = new List<string>();
+            if (minX < cell.XMm - tolerance) past.Add($"left by {cell.XMm - minX:0.##}");
+            if (maxX > cell.RightMm + tolerance) past.Add($"right by {maxX - cell.RightMm:0.##}");
+            if (minY < cell.YMm - tolerance) past.Add($"bottom by {cell.YMm - minY:0.##}");
+            if (maxY > cell.TopMm + tolerance) past.Add($"top by {maxY - cell.TopMm:0.##}");
+            if (past.Count > 0)
+            {
+                string note = placeholderText != null ? $" (measured with the placeholder '{placeholderText}'; a longer real value may reach further)" : string.Empty;
+                _warnings.Add($"The {what} extends past its cell '{cell.Name}' {string.Join(", ", past)} mm{note}.");
+            }
         }
 
         private SketchLine AddLine(DrawingSketch sketch, double x1Mm, double y1Mm, double x2Mm, double y2Mm, double weightMm)
