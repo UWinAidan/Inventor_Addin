@@ -68,6 +68,23 @@ public static class HoleTableMessages
     public static string StoredStateUnreadable(string? reason) =>
         string.IsNullOrWhiteSpace(reason) ? "The stored hole table data could not be read." : reason;
 
+    /// <summary>A table cannot go inside the border, even in a second column or split (task 220).</summary>
+    /// <param name="moving">Align moves tables that exist; otherwise nothing was drawn or changed.</param>
+    public static string TablesDoNotFit(IReadOnlyList<HoleTableKind> kinds, bool moving = false)
+    {
+        var names = string.Join(" and ", kinds.Select(k => k == HoleTableKind.Precision ? "Precision" : "Clearance"));
+        var one = kinds.Count == 1;
+        var consequence = moving ? (one ? "it was not moved" : "they were not moved") : "nothing was changed";
+        return $"The {names} {(one ? "table does" : "tables do")} not fit inside the border, so {consequence}. Use a bigger sheet.";
+    }
+
+    /// <summary>Said after a clearance table was cut into parts to fit the sheet (task 220).</summary>
+    public static string ClearanceContinued(int parts) =>
+        $"The Clearance table is continued in {parts} columns to fit inside the border.";
+
+    /// <summary>Added to Align's warning for a clearance table too tall for one column: Align cannot cut a drawn table.</summary>
+    public const string CreateCanContinue = "Create Tables can continue a long table in a second column.";
+
     public static string Aligned(int count) => count == 1 ? "Aligned 1 table." : $"Aligned {count} tables.";
 
     /// <summary>Heading above the list of views whose tables no longer match the model (task 171).</summary>

@@ -14,6 +14,9 @@ public static class HoleTableNames
     /// <summary>The attribute (a double, in cm) that holds the table's drawn height.</summary>
     public const string HeightAttributeName = "HeightCm";
 
+    /// <summary>The attribute (a double, in cm) that holds the table's drawn width (task 220).</summary>
+    public const string WidthAttributeName = "WidthCm";
+
     /// <summary>The readable sheet name when the table was drawn, for display only.</summary>
     public const string SheetNameAttributeName = "SheetName";
 
@@ -44,9 +47,36 @@ public static class HoleTableNames
     public static string GenerateTransactionName(HoleTableKind kind) =>
         Branding.ShortName + " " + Suffix(kind).ToLowerInvariant() + " hole table";
 
-    /// <summary>The definition's name: <c>AWB_HoleTable_&lt;sheetKey&gt;_&lt;viewKey&gt;_Precision</c> (or <c>_Clearance</c>), from the stable keys of task 163, so a rename never changes it.</summary>
-    public static string Definition(string sheetKey, string viewKey, HoleTableKind kind) =>
-        DefinitionPrefix + Clean(sheetKey) + "_" + Clean(viewKey) + "_" + Suffix(kind);
+    /// <summary>
+    /// The definition's name: <c>AWB_HoleTable_&lt;sheetKey&gt;_&lt;viewKey&gt;_Precision</c> (or <c>_Clearance</c>), from the stable keys of task 163, so a rename never changes it.
+    /// A clearance table cut into parts (task 220) names part 2 onward with a suffix: <c>..._Clearance_2</c>; part 1 keeps the plain name.
+    /// </summary>
+    public static string Definition(string sheetKey, string viewKey, HoleTableKind kind, int part = 1) =>
+        DefinitionPrefix + Clean(sheetKey) + "_" + Clean(viewKey) + "_" + Suffix(kind) + (part > 1 ? "_" + part : "");
+
+    /// <summary>The part number (1 for the plain name) when <paramref name="definitionName"/> is a part of the view's table of this kind; 0 when it is not.</summary>
+    public static int PartOf(string? definitionName, string sheetKey, string viewKey, HoleTableKind kind)
+    {
+        var plain = Definition(sheetKey, viewKey, kind);
+        if (definitionName == plain)
+        {
+            return 1;
+        }
+
+        if (definitionName is not null && definitionName.StartsWith(plain + "_", StringComparison.Ordinal)
+            && int.TryParse(definitionName.AsSpan(plain.Length + 1), out var part) && part >= 2
+            && definitionName == Definition(sheetKey, viewKey, kind, part))
+        {
+            return part;
+        }
+
+        return 0;
+    }
+
+    /// <summary>True when the name is any part of either of the view's tables.</summary>
+    public static bool IsViewTable(string? definitionName, string sheetKey, string viewKey) =>
+        PartOf(definitionName, sheetKey, viewKey, HoleTableKind.Precision) > 0
+        || PartOf(definitionName, sheetKey, viewKey, HoleTableKind.Clearance) > 0;
 
     /// <summary>
     /// Keeps letters, digits, underscore and hyphen; every other character (a colon, a space, an apostrophe) becomes an

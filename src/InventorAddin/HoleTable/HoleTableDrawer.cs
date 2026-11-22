@@ -131,14 +131,21 @@ namespace InventorAddin.HoleTables
         /// <summary>
         /// Draws (or redraws) the tables of <paramref name="kinds"/> from the plan. A new table's symbol goes where Align
         /// would put it; with <paramref name="align"/> every table of the view is also moved there (Create Tables).
+        /// Every table stays inside the border (task 220): a clearance table too tall for the space above the title block
+        /// is cut into parts that stand side by side to the left, and when something still does not fit the call changes
+        /// nothing and says so (the caller's transaction is aborted, so no tags, marks or state are left behind).
+        /// An Update whose redrawn table would stick out of the border is placed again the same way.
         /// </summary>
         public HoleTableDrawResult Draw(
             Sheet sheet, DrawingView view, string sheetKey, string viewKey, string sheetName, string viewName,
             HoleTablePlan plan, IReadOnlyList<HoleTableKind> kinds, bool align, HoleTablePlacement? deletedClearance = null)
         {
-            SheetPoint? anchor = ReadAnchor(sheet);
-            if (anchor == null)
+            SheetPoint? anchorOrNull = ReadAnchor(sheet);
+            if (anchorOrNull == null)
                 return HoleTableDrawResult.Unchanged(HoleTableMessages.NoTitleBlockOrBorder);
+            SheetPoint anchor = anchorOrNull.Value;
+
+            SheetBox? border = ReadBorder(sheet);
 
             HoleTableStyleSet? styles = ReadStyles(sheet, view);
             if (styles == null)
@@ -147,83 +154,133 @@ namespace InventorAddin.HoleTables
             var measure = new HoleTableTextMeasure(sheet, _geometry, styles, _log);
             IReadOnlyList<HoleTableDrawing> drawings = HoleTableLayout.For(plan, measure, styles.Metrics, viewName);
 
-            var weightWarnings = new List<string>();
-            var drawn = new List<HoleTableKind>();
-            var heights = new Dictionary<HoleTableKind, double?>();
-            foreach (HoleTableKind kind in Kinds)
-                heights[kind] = null;
-
             // Where the tables were before this call redraws anything (task 178). A clearance table that Update deleted
             // just before is passed in, since its symbol is gone.
-            HoleTablePlacement? clearanceBefore = ReadPlacement(sheet, sheetKey, viewKey, HoleTableKind.Clearance) ?? deletedClearance;
+            HoleTablePlacement? placedClearance = ReadPlacement(sheet, sheetKey, viewKey, HoleTableKind.Clearance);
+            HoleTablePlacement? clearanceBefore = placedClearance ?? deletedClearance;
             SheetPoint? precisionBefore = ReadPlacement(sheet, sheetKey, viewKey, HoleTableKind.Precision)?.Position;
 
-            // Heights of tables already on the sheet that this call does not redraw.
-            foreach (HoleTableKind kind in Kinds)
+            bool clearanceDrawn = kinds.Contains(HoleTableKind.Clearance) && drawings.Any(d => d.Table == HoleTableKind.Clearance);
+            bool precisionDrawn = kinds.Contains(HoleTableKind.Precision) && drawings.Any(d => d.Table == HoleTableKind.Precision);
+
+            // The sizes the tables will have: the new drawings, or what is on the sheet for a table this call leaves alone.
+            List<HoleTableSize> ClearanceSizes() => clearanceDrawn
+                ? drawings.Where(d => d.Table == HoleTableKind.Clearance).OrderBy(d => d.Part).Select(d => new HoleTableSize(d.WidthCm, d.HeightCm)).ToList()
+                : ReadSizes(FindParts(sheet, sheetKey, viewKey, HoleTableKind.Clearance)) ?? new List<HoleTableSize>();
+            HoleTableSize? PrecisionSize()
             {
-                if (kinds.Contains(kind))
-                    continue;
-                string name = HoleTableNames.Definition(sheetKey, viewKey, kind);
-                if (FindSymbol(sheet, name) != null && FindDefinition(name) is { } existing)
-                    heights[kind] = ReadHeight(existing);
+                HoleTableDrawing? d = drawings.FirstOrDefault(x => x.Table == HoleTableKind.Precision);
+                if (precisionDrawn && d != null)
+                    return new HoleTableSize(d.WidthCm, d.HeightCm);
+                return ReadSizes(FindParts(sheet, sheetKey, viewKey, HoleTableKind.Precision)) is { Count: > 0 } list ? list[0] : null;
             }
 
+            List<HoleTableSize> clearanceSizes = ClearanceSizes();
+            HoleTableSize? precisionSize = PrecisionSize();
+
+            // Create Tables places everything again. Update leaves a table where it is unless the redrawn clearance table
+            // would stick out of the border there.
+            bool refit = align;
+            if (!refit && clearanceDrawn)
+            {
+                SheetPoint first = placedClearance?.Position ?? anchor;
+                refit = HoleTableAlign.Fit(first, border, clearanceSizes, null).Warning != null;
+            }
+
+            HoleTableAlignment positions = HoleTableAlign.Fit(anchor, border, clearanceSizes, precisionSize);
+            if (refit && positions.Clearance == null && clearanceSizes.Count > 0 && clearanceDrawn && border is { } b)
+            {
+                // Too tall for one column: continue the table in more columns to the left (task 220).
+                IReadOnlyList<HoleTableDrawing> split = HoleTableLayout.For(plan, measure, styles.Metrics, viewName, b.MaxYCm - anchor.YCm);
+                if (split.Count(d => d.Table == HoleTableKind.Clearance) > 1)
+                {
+                    drawings = split;
+                    clearanceSizes = ClearanceSizes();
+                    positions = HoleTableAlign.Fit(anchor, border, clearanceSizes, precisionSize);
+                }
+            }
+
+            if (refit)
+            {
+                var misfits = new List<HoleTableKind>();
+                if (clearanceDrawn && positions.Clearance == null)
+                    misfits.Add(HoleTableKind.Clearance);
+                if (precisionDrawn && positions.Precision == null)
+                    misfits.Add(HoleTableKind.Precision);
+                if (misfits.Count > 0)
+                    return HoleTableDrawResult.Unchanged(HoleTableMessages.TablesDoNotFit(misfits));
+            }
+
+            var weightWarnings = new List<string>();
+            var drawn = new List<HoleTableKind>();
             foreach (HoleTableKind kind in Kinds.Where(kinds.Contains))
             {
-                HoleTableDrawing? drawing = drawings.FirstOrDefault(d => d.Table == kind);
-                if (drawing == null)
+                List<HoleTableDrawing> parts = drawings.Where(d => d.Table == kind).OrderBy(d => d.Part).ToList();
+                if (parts.Count == 0)
                     continue;
-                DrawDefinition(HoleTableNames.Definition(sheetKey, viewKey, kind), drawing, styles, weightWarnings, sheetName, viewName);
-                heights[kind] = drawing.HeightCm;
+                foreach (HoleTableDrawing part in parts)
+                    DrawDefinition(HoleTableNames.Definition(sheetKey, viewKey, kind, part.Part), part, styles, weightWarnings, sheetName, viewName);
+                DeleteLeftoverParts(sheet, sheetKey, viewKey, kind, parts.Count);
                 drawn.Add(kind);
             }
 
             foreach (string w in weightWarnings.Distinct())
                 _log.Warn(LogPrefix + w);
 
-            HoleTableAlignment positions = HoleTableAlign.Positions(
-                anchor.Value.XCm, anchor.Value.YCm, heights[HoleTableKind.Clearance], heights[HoleTableKind.Precision]);
-            if (align)
+            if (refit)
             {
                 foreach (HoleTableKind kind in drawn)
-                {
-                    SheetPoint? at = kind == HoleTableKind.Precision ? positions.Precision : positions.Clearance;
-                    if (at != null)
-                        PlaceSymbol(sheet, HoleTableNames.Definition(sheetKey, viewKey, kind), at.Value, styles.Layer, moveExisting: true);
-                }
+                    PlaceKind(sheet, sheetKey, viewKey, kind, positions, styles.Layer, moveExisting: true);
 
                 MoveExisting(sheet, sheetKey, viewKey, positions, drawn);
             }
             else
             {
-                // A new clearance table goes on the anchor; one already placed stays where it is.
-                if (drawn.Contains(HoleTableKind.Clearance) && positions.Clearance is { } clearanceAt)
-                    PlaceSymbol(sheet, HoleTableNames.Definition(sheetKey, viewKey, HoleTableKind.Clearance), clearanceAt, styles.Layer, moveExisting: false);
+                // A new clearance table goes on the anchor; one already placed stays where it is. Its later parts follow it.
+                if (clearanceDrawn)
+                {
+                    SheetPoint first = placedClearance?.Position ?? anchor;
+                    IReadOnlyList<SheetPoint> chain = HoleTableAlign.Fit(first, null, clearanceSizes, null).ClearanceParts ?? Array.Empty<SheetPoint>();
+                    for (int i = 0; i < chain.Count; i++)
+                        PlaceSymbol(sheet, HoleTableNames.Definition(sheetKey, viewKey, HoleTableKind.Clearance, i + 1), chain[i], styles.Layer, moveExisting: i > 0);
+                }
 
-                // The precision table follows the clearance table's top edge if it sat on it; one the user moved stays.
+                // The precision table follows the clearance table's top edge (or its left edge, when it stood beside it) if
+                // it sat there; one the user moved stays.
                 HoleTablePlacement? clearanceAfter = null;
-                if (heights[HoleTableKind.Clearance] is { } clearanceHeight
+                if (clearanceSizes.Count > 0
                     && ReadPlacement(sheet, sheetKey, viewKey, HoleTableKind.Clearance) is { } placed)
                 {
-                    clearanceAfter = new HoleTablePlacement(placed.Position, clearanceHeight);
+                    clearanceAfter = new HoleTablePlacement(placed.Position, clearanceSizes[0].HeightCm, HoleTableAlign.BlockWidth(clearanceSizes));
                 }
 
                 string precisionName = HoleTableNames.Definition(sheetKey, viewKey, HoleTableKind.Precision);
-                bool precisionExists = drawn.Contains(HoleTableKind.Precision) || FindSymbol(sheet, precisionName) != null;
-                if (precisionExists)
+                SketchedSymbol? precisionSymbol = FindSymbol(sheet, precisionName);
+                if (precisionDrawn || precisionSymbol != null)
                 {
-                    SheetPoint? to = HoleTableAlign.PrecisionAfterRedraw(anchor.Value, clearanceBefore, precisionBefore, clearanceAfter);
-                    if (to is { } target)
-                    {
-                        if (FindSymbol(sheet, precisionName) is { } existing)
-                            existing.Position = _geometry.CreatePoint2d(target.XCm, target.YCm);
-                        else
-                            PlaceSymbol(sheet, precisionName, target, styles.Layer, moveExisting: false);
-                    }
+                    SheetPoint? to = HoleTableAlign.PrecisionAfterRedraw(anchor, clearanceBefore, precisionBefore, clearanceAfter);
+
+                    // Never outside the border (task 220): checked at the spot it will have, against its new size.
+                    SheetPoint? current = precisionSymbol == null ? null : SymbolPosition(precisionSymbol);
+                    SheetPoint? wanted = to ?? current;
+                    SheetPoint? target = wanted is { } w && precisionSize is { } size
+                        ? HoleTableAlign.KeepInside(border, w, size, positions.Precision)
+                        : wanted ?? positions.Precision;
+                    if (target is not { } place)
+                        return HoleTableDrawResult.Unchanged(HoleTableMessages.TablesDoNotFit(new[] { HoleTableKind.Precision }));
+
+                    if (precisionSymbol != null)
+                        precisionSymbol.Position = _geometry.CreatePoint2d(place.XCm, place.YCm);
+                    else
+                        PlaceSymbol(sheet, precisionName, place, styles.Layer, moveExisting: false);
                 }
             }
 
-            return drawn.Count == 0 ? HoleTableDrawResult.Unchanged(HoleTableMessages.Drawn(drawn, viewName)) : HoleTableDrawResult.Done(HoleTableMessages.Drawn(drawn, viewName));
+            string message = HoleTableMessages.Drawn(drawn, viewName);
+            int clearanceParts = clearanceSizes.Count;
+            if (clearanceDrawn && clearanceParts > 1)
+                message += " " + HoleTableMessages.ClearanceContinued(clearanceParts);
+            return drawn.Count == 0 ? HoleTableDrawResult.Unchanged(message) : HoleTableDrawResult.Done(message);
         }
 
         /// <summary>Moves the view's placed tables to the stack on the title block corner; returns the plain-words result.</summary>
@@ -233,50 +290,66 @@ namespace InventorAddin.HoleTables
             if (anchor == null)
                 return HoleTableDrawResult.Unchanged(HoleTableMessages.NoTitleBlockOrBorder);
 
-            var found = new Dictionary<HoleTableKind, SketchedSymbol>();
-            var heights = new Dictionary<HoleTableKind, double?>();
+            SheetBox? border = ReadBorder(sheet);
+            var found = new Dictionary<HoleTableKind, List<PlacedPart>>();
+            var sizes = new Dictionary<HoleTableKind, List<HoleTableSize>>();
             foreach (HoleTableKind kind in Kinds)
             {
-                string name = HoleTableNames.Definition(sheetKey, viewKey, kind);
-                SketchedSymbol? symbol = FindSymbol(sheet, name);
-                if (symbol == null)
+                List<PlacedPart> parts = FindParts(sheet, sheetKey, viewKey, kind);
+                if (parts.Count == 0)
                     continue;
-                SketchedSymbolDefinition? def = FindDefinition(name);
-                double? height = def == null ? null : ReadHeight(def);
-                if (height == null)
+                List<HoleTableSize>? partSizes = ReadSizes(parts);
+                if (partSizes == null)
                     return HoleTableDrawResult.Unchanged(HoleTableMessages.HeightUnreadable(kind));
-                found[kind] = symbol;
-                heights[kind] = height;
+                found[kind] = parts;
+                sizes[kind] = partSizes;
             }
 
             if (found.Count == 0)
                 return HoleTableDrawResult.Unchanged(HoleTableMessages.NoTablesToAlign);
 
-            HoleTableAlignment positions = HoleTableAlign.Positions(
-                anchor.Value.XCm, anchor.Value.YCm,
-                heights.TryGetValue(HoleTableKind.Clearance, out double? c) ? c : null,
-                heights.TryGetValue(HoleTableKind.Precision, out double? p) ? p : null);
-            foreach (var pair in found)
+            List<HoleTableSize> clearanceSizes = sizes.TryGetValue(HoleTableKind.Clearance, out List<HoleTableSize>? c) ? c : new List<HoleTableSize>();
+            HoleTableSize? precisionSize = sizes.TryGetValue(HoleTableKind.Precision, out List<HoleTableSize>? p) ? p[0] : null;
+            HoleTableAlignment positions = HoleTableAlign.Fit(anchor.Value, border, clearanceSizes, precisionSize, moving: true);
+
+            int moved = 0;
+            if (positions.ClearanceParts is { Count: > 0 } chain && found.TryGetValue(HoleTableKind.Clearance, out List<PlacedPart>? clearanceParts))
             {
-                SheetPoint? at = pair.Key == HoleTableKind.Precision ? positions.Precision : positions.Clearance;
-                if (at != null)
-                    pair.Value.Position = _geometry.CreatePoint2d(at.Value.XCm, at.Value.YCm);
+                for (int i = 0; i < clearanceParts.Count && i < chain.Count; i++)
+                {
+                    clearanceParts[i].Symbol.Position = _geometry.CreatePoint2d(chain[i].XCm, chain[i].YCm);
+                    moved++;
+                }
             }
 
-            return HoleTableDrawResult.Done(HoleTableMessages.Aligned(found.Count));
+            if (positions.Precision is { } at && found.TryGetValue(HoleTableKind.Precision, out List<PlacedPart>? precisionParts))
+            {
+                precisionParts[0].Symbol.Position = _geometry.CreatePoint2d(at.XCm, at.YCm);
+                moved++;
+            }
+
+            string warning = positions.Warning ?? "";
+            if (positions.Clearance == null && clearanceSizes.Count == 1)
+                warning += " " + HoleTableMessages.CreateCanContinue;
+            return moved == 0
+                ? HoleTableDrawResult.Unchanged(WithWarning(HoleTableMessages.Aligned(0), warning.Trim()))
+                : HoleTableDrawResult.Done(WithWarning(HoleTableMessages.Aligned(moved), warning.Trim()));
         }
 
         /// <summary>
-        /// Deletes a table that has no group any more: every placed symbol of its definition, then the definition
-        /// (Update, task 166). False when there was nothing to delete.
+        /// Deletes a table that has no group any more: every placed symbol of its definition (every part), then the
+        /// definitions (Update, task 166). False when there was nothing to delete.
         /// </summary>
-        public bool DeleteTable(Sheet sheet, string sheetKey, string viewKey, HoleTableKind kind)
+        public bool DeleteTable(Sheet sheet, string sheetKey, string viewKey, HoleTableKind kind) =>
+            DeleteLeftoverParts(sheet, sheetKey, viewKey, kind, 0);
+
+        // Deletes the symbols and definitions of the table's parts numbered above keep (all parts when keep is 0).
+        private bool DeleteLeftoverParts(Sheet sheet, string sheetKey, string viewKey, HoleTableKind kind, int keep)
         {
-            string name = HoleTableNames.Definition(sheetKey, viewKey, kind);
             var symbols = new List<SketchedSymbol>();
             foreach (SketchedSymbol symbol in sheet.SketchedSymbols)
             {
-                if (ComSafe.Get(() => symbol.Definition.Name) == name)
+                if (HoleTableNames.PartOf(ComSafe.Get(() => symbol.Definition.Name), sheetKey, viewKey, kind) is int part && part > keep)
                     symbols.Add(symbol);
             }
 
@@ -284,12 +357,28 @@ namespace InventorAddin.HoleTables
                 symbol.Delete();
 
             // The symbols go first: a definition that is still placed cannot be deleted.
-            SketchedSymbolDefinition? def = FindDefinition(name);
-            def?.Delete();
-            return symbols.Count > 0 || def != null;
+            var definitions = new List<SketchedSymbolDefinition>();
+            foreach (SketchedSymbolDefinition def in _drawing.SketchedSymbolDefinitions)
+            {
+                if (HoleTableNames.PartOf(ComSafe.Get(() => def.Name), sheetKey, viewKey, kind) is int part && part > keep)
+                    definitions.Add(def);
+            }
+
+            foreach (SketchedSymbolDefinition def in definitions)
+                def.Delete();
+            return symbols.Count > 0 || definitions.Count > 0;
         }
 
         // ---- Anchor
+
+        private static string WithWarning(string message, string? warning) =>
+            string.IsNullOrEmpty(warning) ? message : message + " " + warning;
+
+        private static SheetBox? ReadBorder(Sheet sheet) => ComSafe.Get(() =>
+        {
+            Box2d b = sheet.Border.RangeBox;
+            return (SheetBox?)new SheetBox(b.MinPoint.X, b.MinPoint.Y, b.MaxPoint.X, b.MaxPoint.Y);
+        });
 
         // The title block's max corner, or the border's bottom-right; null with neither.
         private static SheetPoint? ReadAnchor(Sheet sheet)
@@ -402,7 +491,7 @@ namespace InventorAddin.HoleTables
             }
 
             SketchedSymbolDefinition written = def;
-            ComSafe.Run(() => WriteHeight(written, drawing.HeightCm, sheetName, viewName), warnings, "Table height attribute");
+            ComSafe.Run(() => WriteHeight(written, drawing.HeightCm, drawing.WidthCm, sheetName, viewName), warnings, "Table height attribute");
         }
 
         // A text box centred on the asked point: justified to its centre, then shifted by what its range box says.
@@ -422,13 +511,14 @@ namespace InventorAddin.HoleTables
         }
 
         // The drawn height, kept on the definition: a sketched symbol has no range box, and Align needs it.
-        private static void WriteHeight(SketchedSymbolDefinition def, double heightCm, string sheetName, string viewName)
+        private static void WriteHeight(SketchedSymbolDefinition def, double heightCm, double widthCm, string sheetName, string viewName)
         {
             AttributeSets sets = def.AttributeSets;
             if (sets.NameIsUsed[HoleTableNames.DrawingAttributeSetName])
                 sets[HoleTableNames.DrawingAttributeSetName].Delete();
             AttributeSet set = sets.Add(HoleTableNames.DrawingAttributeSetName, false);
             set.Add(HoleTableNames.HeightAttributeName, ValueTypeEnum.kDoubleType, heightCm);
+            set.Add(HoleTableNames.WidthAttributeName, ValueTypeEnum.kDoubleType, widthCm);
             set.Add(HoleTableNames.SheetNameAttributeName, ValueTypeEnum.kStringType, sheetName);
             set.Add(HoleTableNames.ViewNameAttributeName, ValueTypeEnum.kStringType, viewName);
         }
@@ -456,6 +546,35 @@ namespace InventorAddin.HoleTables
             });
         }
 
+        // The drawn size: the attributes first; a definition drawn before task 220 has no width attribute, so its width is
+        // the furthest left point of its lines (the table's right edge is x = 0). Null when the height is unreadable.
+        private static HoleTableSize? ReadSize(SketchedSymbolDefinition def)
+        {
+            double? height = ReadHeight(def);
+            if (height == null)
+                return null;
+
+            double? width = ComSafe.Get(() =>
+            {
+                AttributeSets sets = def.AttributeSets;
+                if (!sets.NameIsUsed[HoleTableNames.DrawingAttributeSetName])
+                    return (double?)null;
+                AttributeSet set = sets[HoleTableNames.DrawingAttributeSetName];
+                return set.NameIsUsed[HoleTableNames.WidthAttributeName] ? set[HoleTableNames.WidthAttributeName].Value as double? : null;
+            });
+            if (width is > 0)
+                return new HoleTableSize(width.Value, height.Value);
+
+            double? fromLines = ComSafe.Get(() =>
+            {
+                double left = 0;
+                foreach (SketchLine line in def.Sketch.SketchLines)
+                    left = Math.Min(left, Math.Min(line.StartSketchPoint.Geometry.X, line.EndSketchPoint.Geometry.X));
+                return left < 0 ? (double?)(-left) : null;
+            });
+            return new HoleTableSize(fromLines ?? 0, height.Value);
+        }
+
         // ---- Symbols
 
         private static SketchedSymbol? FindSymbol(Sheet sheet, string definitionName)
@@ -469,20 +588,58 @@ namespace InventorAddin.HoleTables
             return null;
         }
 
-        /// <summary>A placed table's position and height; null when it is not on the sheet or either cannot be read. Public for Update, which reads a clearance table before deleting it.</summary>
+        /// <summary>One placed part of a table: its number, definition name and symbol.</summary>
+        private sealed record PlacedPart(int Part, string Name, SketchedSymbol Symbol);
+
+        // The placed symbols of a table's parts, part 1 first (task 220).
+        private static List<PlacedPart> FindParts(Sheet sheet, string sheetKey, string viewKey, HoleTableKind kind)
+        {
+            var found = new List<PlacedPart>();
+            foreach (SketchedSymbol symbol in sheet.SketchedSymbols)
+            {
+                string? name = ComSafe.Get(() => symbol.Definition.Name);
+                int part = HoleTableNames.PartOf(name, sheetKey, viewKey, kind);
+                if (part > 0 && name != null)
+                    found.Add(new PlacedPart(part, name, symbol));
+            }
+
+            found.Sort((a, b) => a.Part.CompareTo(b.Part));
+            return found;
+        }
+
+        // The sizes of the parts' definitions; null when one cannot be read.
+        private List<HoleTableSize>? ReadSizes(List<PlacedPart> parts)
+        {
+            var sizes = new List<HoleTableSize>();
+            foreach (PlacedPart part in parts)
+            {
+                SketchedSymbolDefinition? def = FindDefinition(part.Name);
+                HoleTableSize? size = def == null ? null : ReadSize(def);
+                if (size == null)
+                    return null;
+                sizes.Add(size.Value);
+            }
+
+            return sizes;
+        }
+
+        private static SheetPoint? SymbolPosition(SketchedSymbol symbol) => ComSafe.Get(() =>
+        {
+            Point2d p = symbol.Position;
+            return (SheetPoint?)new SheetPoint(p.X, p.Y);
+        });
+
+        /// <summary>A placed table's first part's position and height (and the block width of all its parts); null when it is not on the sheet or either cannot be read. Public for Update, which reads a clearance table before deleting it.</summary>
         public HoleTablePlacement? ReadPlacement(Sheet sheet, string sheetKey, string viewKey, HoleTableKind kind)
         {
-            string name = HoleTableNames.Definition(sheetKey, viewKey, kind);
-            SketchedSymbol? symbol = FindSymbol(sheet, name);
-            if (symbol == null || FindDefinition(name) is not { } def)
+            List<PlacedPart> parts = FindParts(sheet, sheetKey, viewKey, kind);
+            if (parts.Count == 0 || parts[0].Part != 1)
                 return null;
-            double? height = ReadHeight(def);
-            SheetPoint? position = ComSafe.Get(() =>
-            {
-                Point2d p = symbol.Position;
-                return (SheetPoint?)new SheetPoint(p.X, p.Y);
-            });
-            return height is { } h && position is { } at ? new HoleTablePlacement(at, h) : null;
+            List<HoleTableSize>? sizes = ReadSizes(parts);
+            if (sizes == null)
+                return null;
+            SheetPoint? position = SymbolPosition(parts[0].Symbol);
+            return position is { } at ? new HoleTablePlacement(at, sizes[0].HeightCm, HoleTableAlign.BlockWidth(sizes)) : null;
         }
 
         private void PlaceSymbol(Sheet sheet, string definitionName, SheetPoint at, Layer? layer, bool moveExisting)
@@ -503,15 +660,40 @@ namespace InventorAddin.HoleTables
                 ComSafe.Run(() => placed.Layer = layer);
         }
 
+        // Puts every part of a drawn table on its fitted spot.
+        private void PlaceKind(Sheet sheet, string sheetKey, string viewKey, HoleTableKind kind, HoleTableAlignment positions, Layer? layer, bool moveExisting)
+        {
+            if (kind == HoleTableKind.Precision)
+            {
+                if (positions.Precision is { } at)
+                    PlaceSymbol(sheet, HoleTableNames.Definition(sheetKey, viewKey, kind), at, layer, moveExisting);
+                return;
+            }
+
+            IReadOnlyList<SheetPoint> chain = positions.ClearanceParts ?? Array.Empty<SheetPoint>();
+            for (int i = 0; i < chain.Count; i++)
+                PlaceSymbol(sheet, HoleTableNames.Definition(sheetKey, viewKey, kind, i + 1), chain[i], layer, moveExisting);
+        }
+
         // Create Tables aligns once: the view's tables that were not redrawn this time also go to the stack.
         private void MoveExisting(Sheet sheet, string sheetKey, string viewKey, HoleTableAlignment positions, List<HoleTableKind> drawn)
         {
             foreach (HoleTableKind kind in Kinds.Where(k => !drawn.Contains(k)))
             {
-                SketchedSymbol? symbol = FindSymbol(sheet, HoleTableNames.Definition(sheetKey, viewKey, kind));
-                SheetPoint? at = kind == HoleTableKind.Precision ? positions.Precision : positions.Clearance;
-                if (symbol != null && at != null)
-                    symbol.Position = _geometry.CreatePoint2d(at.Value.XCm, at.Value.YCm);
+                List<PlacedPart> parts = FindParts(sheet, sheetKey, viewKey, kind);
+                if (kind == HoleTableKind.Precision)
+                {
+                    if (parts.Count > 0 && positions.Precision is { } at)
+                        parts[0].Symbol.Position = _geometry.CreatePoint2d(at.XCm, at.YCm);
+                    continue;
+                }
+
+                IReadOnlyList<SheetPoint> chain = positions.ClearanceParts ?? Array.Empty<SheetPoint>();
+                if (chain.Count == parts.Count)
+                {
+                    for (int i = 0; i < parts.Count; i++)
+                        parts[i].Symbol.Position = _geometry.CreatePoint2d(chain[i].XCm, chain[i].YCm);
+                }
             }
         }
     }

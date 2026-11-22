@@ -71,4 +71,32 @@ public class HoleTableNamesTests
         Assert.Equal("Aligned 1 table.", HoleTableMessages.Aligned(1));
         Assert.Equal("Aligned 2 tables.", HoleTableMessages.Aligned(2));
     }
+
+    [Fact]
+    public void Part_two_onward_has_a_suffix_and_part_one_keeps_the_plain_name()
+    {
+        Assert.Equal("AWB_HoleTable_k1_k2_Clearance", HoleTableNames.Definition("k1", "k2", HoleTableKind.Clearance, 1));
+        Assert.Equal("AWB_HoleTable_k1_k2_Clearance_2", HoleTableNames.Definition("k1", "k2", HoleTableKind.Clearance, 2));
+    }
+
+    [Fact]
+    public void PartOf_reads_the_part_back_and_ignores_other_names()
+    {
+        var k = HoleTableKind.Clearance;
+        Assert.Equal(1, HoleTableNames.PartOf("AWB_HoleTable_k1_k2_Clearance", "k1", "k2", k));
+        Assert.Equal(3, HoleTableNames.PartOf("AWB_HoleTable_k1_k2_Clearance_3", "k1", "k2", k));
+        Assert.Equal(0, HoleTableNames.PartOf("AWB_HoleTable_k1_k2_Clearance_1", "k1", "k2", k));
+        Assert.Equal(0, HoleTableNames.PartOf("AWB_HoleTable_k1_k2_Clearance_x", "k1", "k2", k));
+        Assert.Equal(0, HoleTableNames.PartOf("AWB_HoleTable_k1_k2_Precision", "k1", "k2", k));
+        Assert.Equal(0, HoleTableNames.PartOf("AWB_HoleTable_k1_k3_Clearance", "k1", "k2", k));
+        Assert.Equal(0, HoleTableNames.PartOf(null, "k1", "k2", k));
+    }
+
+    [Fact]
+    public void IsViewTable_accepts_parts_of_either_table()
+    {
+        Assert.True(HoleTableNames.IsViewTable("AWB_HoleTable_k1_k2_Precision", "k1", "k2"));
+        Assert.True(HoleTableNames.IsViewTable("AWB_HoleTable_k1_k2_Clearance_2", "k1", "k2"));
+        Assert.False(HoleTableNames.IsViewTable("AWB_HoleTable_k1_k9_Clearance_2", "k1", "k2"));
+    }
 }

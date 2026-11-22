@@ -39,7 +39,8 @@ public sealed record HoleTableDrawing(
     double HeightCm,
     IReadOnlyList<double> ColumnWidthsCm,
     IReadOnlyList<HoleTableLine> Lines,
-    IReadOnlyList<HoleTableText> Texts);
+    IReadOnlyList<HoleTableText> Texts,
+    int Part = 1);
 
 /// <summary>Lays out hole tables as lines and text (task 161), following spike 160, round 6b (<c>Layout</c> and <c>Draw-Table</c>).</summary>
 public static class HoleTableLayout
@@ -56,12 +57,17 @@ public static class HoleTableLayout
         return string.IsNullOrWhiteSpace(viewName) ? name : name + ": " + viewName;
     }
 
-    /// <summary>One drawing per non-empty table, precision first. Both tables share their column widths.</summary>
+    /// <summary>
+    /// One drawing per non-empty table, precision first. Both tables share their column widths. With
+    /// <paramref name="clearanceMaxHeightCm"/> a clearance table taller than that is cut into parts (task 220), each with
+    /// the title and heading, numbered from 1 in <see cref="HoleTableDrawing.Part"/>.
+    /// </summary>
     public static IReadOnlyList<HoleTableDrawing> For(
         HoleTablePlan plan,
         IHoleTableTextMeasure measure,
         HoleTableMetrics metrics,
-        string viewName)
+        string viewName,
+        double? clearanceMaxHeightCm = null)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(measure);
@@ -128,7 +134,106 @@ public static class HoleTableLayout
             widths[Description] += titleW - sum;
         }
 
-        return tables.Select(t => Draw(t.Kind, t.Groups, widths, HoleTableFormattedText.Escape(Title(t.Kind, viewName)), h, rowH)).ToList();
+        var result = new List<HoleTableDrawing>();
+        foreach (var t in tables)
+        {
+            var title = HoleTableFormattedText.Escape(Title(t.Kind, viewName));
+            if (t.Kind != HoleTableKind.Clearance || clearanceMaxHeightCm is not { } max)
+            {
+                result.Add(Draw(t.Kind, t.Groups, widths, title, h, rowH));
+                continue;
+            }
+
+            var part = 1;
+            foreach (var chunk in SplitPrepared(t.Groups, h, rowH, max))
+            {
+                result.Add(Draw(t.Kind, chunk, widths, title, h, rowH) with { Part = part++ });
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Cuts a table's groups into parts no taller than <paramref name="maxHeightCm"/>, each part with its own title and
+    /// heading rows (task 220). Groups stay whole where they fit; a group that does not fit the room left is cut between
+    /// its rows (both pieces keep the description and the note) or starts the next part. A row that alone is taller than a
+    /// part still gets a part to itself, so nothing is dropped. Returns one list of groups per part.
+    /// </summary>
+    public static IReadOnlyList<IReadOnlyList<HoleTableGroup>> SplitRows(
+        IReadOnlyList<HoleTableGroup> groups, HoleTableMetrics metrics, double maxHeightCm)
+    {
+        ArgumentNullException.ThrowIfNull(groups);
+        ArgumentNullException.ThrowIfNull(metrics);
+
+        var prepared = groups.Select(g => Prepare(g, metrics.TextHeightCm, metrics.RowHeightCm)).ToList();
+        return SplitPrepared(prepared, metrics.TextHeightCm, metrics.RowHeightCm, maxHeightCm)
+            .Select(chunk => (IReadOnlyList<HoleTableGroup>)chunk.Select(p => p.Group).ToList())
+            .ToList();
+    }
+
+    private static List<List<Prepared>> SplitPrepared(List<Prepared> groups, double h, double rowH, double maxHeight)
+    {
+        var parts = new List<List<Prepared>>();
+        var current = new List<Prepared>();
+        var room = maxHeight - 2 * rowH;
+        var used = 0.0;
+        foreach (var g in groups)
+        {
+            var rows = g.Group.Rows.ToList();
+            while (rows.Count > 0)
+            {
+                var whole = Prepare(g.Group with { Rows = rows }, h, rowH);
+                if (used + whole.GroupH <= room + 1e-9)
+                {
+                    current.Add(whole);
+                    used += whole.GroupH;
+                    break;
+                }
+
+                // How many of the rows fit the room left?
+                var take = 0;
+                for (var k = rows.Count - 1; k >= 1; k--)
+                {
+                    if (used + Prepare(g.Group with { Rows = rows.Take(k).ToList() }, h, rowH).GroupH <= room + 1e-9)
+                    {
+                        take = k;
+                        break;
+                    }
+                }
+
+                if (take == 0)
+                {
+                    if (current.Count > 0)
+                    {
+                        parts.Add(current);
+                        current = [];
+                        used = 0;
+                        continue;
+                    }
+
+                    take = 1; // one row alone is taller than a part: it still goes in
+                }
+
+                var piece = Prepare(g.Group with { Rows = rows.Take(take).ToList() }, h, rowH);
+                current.Add(piece);
+                used += piece.GroupH;
+                rows = rows.Skip(take).ToList();
+                if (rows.Count > 0)
+                {
+                    parts.Add(current);
+                    current = [];
+                    used = 0;
+                }
+            }
+        }
+
+        if (current.Count > 0)
+        {
+            parts.Add(current);
+        }
+
+        return parts;
     }
 
     private sealed record Prepared(HoleTableGroup Group, HoleTableFormattedDescription Formatted, double GroupH, double RowH);
@@ -247,7 +352,18 @@ public static class HoleTableLayout
 }
 
 /// <summary>Where the two tables go on Align (spec 04, question 4).</summary>
-public sealed record HoleTableAlignment(SheetPoint? Clearance, SheetPoint? Precision);
+/// <param name="Clearance">The clearance table's bottom-right corner; null when it has none or none fits.</param>
+/// <param name="Precision">The precision table's bottom-right corner; null when it has none or none fits.</param>
+/// <param name="Warning">Plain words when a table could not go inside the border (task 220); null otherwise.</param>
+/// <param name="ClearanceParts">Every part of the clearance table, first part first; empty when none fits.</param>
+public sealed record HoleTableAlignment(SheetPoint? Clearance, SheetPoint? Precision, string? Warning = null, IReadOnlyList<SheetPoint>? ClearanceParts = null);
+
+/// <summary>A table's drawn size, in cm.</summary>
+/// <param name="WidthCm">0 when the width could not be read; such a table never gets a neighbour placed beside it.</param>
+public readonly record struct HoleTableSize(double WidthCm, double HeightCm)
+{
+    public bool WidthKnown => WidthCm > 0;
+}
 
 /// <summary>A box on the sheet, in cm.</summary>
 public readonly record struct SheetBox(double MinXCm, double MinYCm, double MaxXCm, double MaxYCm);
@@ -275,6 +391,124 @@ public static class HoleTableAlign
             clearanceHeightCm is null ? null : new SheetPoint(titleBlockMaxXCm, titleBlockMaxYCm),
             precisionHeightCm is null ? null : new SheetPoint(titleBlockMaxXCm, titleBlockMaxYCm + (clearanceHeightCm ?? 0)));
 
+    /// <summary>The gap between the stack's column and the second column (task 220, Default).</summary>
+    public const double ColumnGapCm = 0.5;
+
+    /// <summary>Slack allowed when a table touches the border.</summary>
+    public const double BorderToleranceCm = 0.001;
+
+    /// <summary>
+    /// True when a table whose bottom-right corner is <paramref name="at"/> lies inside the border (task 220).
+    /// Without a border there is nothing to stay inside.
+    /// </summary>
+    public static bool Inside(SheetBox? border, SheetPoint at, HoleTableSize size) =>
+        border is not { } b
+        || (at.XCm <= b.MaxXCm + BorderToleranceCm
+            && at.XCm - size.WidthCm >= b.MinXCm - BorderToleranceCm
+            && at.YCm >= b.MinYCm - BorderToleranceCm
+            && at.YCm + size.HeightCm <= b.MaxYCm + BorderToleranceCm);
+
+    /// <summary>
+    /// <see cref="Positions"/> that also keeps every table inside the border (task 220). The clearance table's parts
+    /// (one part when it is not split) stand side by side from the anchor to the left, each <see cref="ColumnGapCm"/> from
+    /// the last. The precision table goes above the first part while that fits, else beside the last part. A table that
+    /// does not fit gets no point and the result carries a warning suggesting a bigger sheet. A width of 0 (unknown) never
+    /// has anything placed beside it.
+    /// </summary>
+    /// <param name="moving">The caller moves existing tables (Align) rather than drawing them; only changes the warning's wording.</param>
+    public static HoleTableAlignment Fit(
+        SheetPoint anchor, SheetBox? border, IReadOnlyList<HoleTableSize> clearanceParts, HoleTableSize? precision, bool moving = false)
+    {
+        var misfits = new List<HoleTableKind>();
+        var partPoints = new List<SheetPoint>();
+        var x = anchor.XCm;
+        var clearancePlaced = clearanceParts.Count > 0;
+        for (var i = 0; i < clearanceParts.Count && clearancePlaced; i++)
+        {
+            if (i > 0)
+            {
+                if (!clearanceParts[i - 1].WidthKnown)
+                {
+                    clearancePlaced = false;
+                    break;
+                }
+
+                x -= clearanceParts[i - 1].WidthCm + ColumnGapCm;
+            }
+
+            var at = new SheetPoint(x, anchor.YCm);
+            if (!Inside(border, at, clearanceParts[i]))
+            {
+                clearancePlaced = false;
+                break;
+            }
+
+            partPoints.Add(at);
+        }
+
+        if (clearanceParts.Count > 0 && !clearancePlaced)
+        {
+            partPoints.Clear();
+            misfits.Add(HoleTableKind.Clearance);
+        }
+
+        SheetPoint? precisionAt = null;
+        if (precision is { } p)
+        {
+            var offset = clearancePlaced ? clearanceParts[0].HeightCm : 0;
+            var above = new SheetPoint(anchor.XCm, anchor.YCm + offset);
+            if (Inside(border, above, p))
+            {
+                precisionAt = above;
+            }
+            else if (clearancePlaced && clearanceParts[^1].WidthKnown)
+            {
+                var beside = new SheetPoint(partPoints[^1].XCm - clearanceParts[^1].WidthCm - ColumnGapCm, anchor.YCm);
+                if (Inside(border, beside, p))
+                {
+                    precisionAt = beside;
+                }
+            }
+
+            if (precisionAt is null)
+            {
+                misfits.Add(HoleTableKind.Precision);
+            }
+        }
+
+        return new HoleTableAlignment(
+            partPoints.Count > 0 ? partPoints[0] : null,
+            precisionAt,
+            misfits.Count == 0 ? null : HoleTableMessages.TablesDoNotFit(misfits, moving),
+            partPoints);
+    }
+
+    /// <summary>One whole clearance table; see the list overload.</summary>
+    public static HoleTableAlignment Fit(
+        SheetPoint anchor, SheetBox? border, HoleTableSize? clearance, HoleTableSize? precision, bool moving = false) =>
+        Fit(anchor, border, clearance is { } c ? new[] { c } : Array.Empty<HoleTableSize>(), precision, moving);
+
+    /// <summary>
+    /// The width from the first part's right edge to the last part's left edge: every part but the last with the gap
+    /// after it, then the last part (task 220). 0 when a width is unknown or there are no parts.
+    /// </summary>
+    public static double BlockWidth(IReadOnlyList<HoleTableSize> parts)
+    {
+        if (parts.Count == 0 || parts.Any(p => !p.WidthKnown))
+        {
+            return 0;
+        }
+
+        return parts.Take(parts.Count - 1).Sum(p => p.WidthCm + ColumnGapCm) + parts[^1].WidthCm;
+    }
+
+    /// <summary>
+    /// Where a table that was redrawn in place ends up (task 220): where it is when that is inside the border, else
+    /// <paramref name="fitted"/> (which is null when no spot fits).
+    /// </summary>
+    public static SheetPoint? KeepInside(SheetBox? border, SheetPoint current, HoleTableSize size, SheetPoint? fitted) =>
+        Inside(border, current, size) ? current : fitted;
+
     /// <summary>How close (cm) the precision table must be to the stack point to count as stacked.</summary>
     public const double StackToleranceCm = 0.01;
 
@@ -292,10 +526,14 @@ public static class HoleTableAlign
     public static SheetPoint? PrecisionAfterRedraw(
         SheetPoint anchor, HoleTablePlacement? clearanceBefore, SheetPoint? precisionBefore, HoleTablePlacement? clearanceAfter)
     {
+        // A precision table beside the clearance table (task 220) moves with its left edge.
+        var wasBeside = precisionBefore is { } pb && clearanceBefore is { } cb && Beside(cb) is { } bs && Near(pb, bs);
         SheetPoint target;
         if (clearanceAfter is { } after)
         {
-            target = new SheetPoint(after.Position.XCm, after.Position.YCm + after.HeightCm);
+            target = wasBeside && Beside(after) is { } follow
+                ? follow
+                : new SheetPoint(after.Position.XCm, after.Position.YCm + after.HeightCm);
         }
         else
         {
@@ -311,7 +549,7 @@ public static class HoleTableAlign
         var stackPoint = clearanceBefore is { } before
             ? new SheetPoint(before.Position.XCm, before.Position.YCm + before.HeightCm)
             : anchor;
-        if (!Near(old, stackPoint))
+        if (!wasBeside && !Near(old, stackPoint))
         {
             return null;
         }
@@ -319,9 +557,16 @@ public static class HoleTableAlign
         return Near(old, target) ? null : target;
     }
 
+    /// <summary>The spot beside a clearance table (after its last part); null when its block width is unknown.</summary>
+    private static SheetPoint? Beside(HoleTablePlacement clearance) =>
+        clearance.BlockWidthCm > 0
+            ? new SheetPoint(clearance.Position.XCm - clearance.BlockWidthCm - ColumnGapCm, clearance.Position.YCm)
+            : null;
+
     private static bool Near(SheetPoint a, SheetPoint b) =>
         Math.Abs(a.XCm - b.XCm) <= StackToleranceCm && Math.Abs(a.YCm - b.YCm) <= StackToleranceCm;
 }
 
 /// <summary>A placed table: its bottom-right corner and its height, in cm.</summary>
-public readonly record struct HoleTablePlacement(SheetPoint Position, double HeightCm);
+/// <param name="BlockWidthCm">From the first part's right edge to the last part's left edge (all parts and the gaps); 0 when unknown.</param>
+public readonly record struct HoleTablePlacement(SheetPoint Position, double HeightCm, double BlockWidthCm = 0);

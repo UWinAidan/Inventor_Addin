@@ -110,18 +110,14 @@ namespace InventorAddin.HoleTables
             return result.State;
         }
 
-        // The view's placed table symbols: those whose definition is one of its two table names.
+        // The view's placed table symbols: those whose definition is one of its tables or a part of one (task 220).
         private static List<SketchedSymbol> Symbols(Sheet sheet, string sheetKey, string viewKey)
         {
-            var names = new HashSet<string>(StringComparer.Ordinal);
-            foreach (HoleTableKind kind in Kinds)
-                names.Add(HoleTableNames.Definition(sheetKey, viewKey, kind));
-
             var found = new List<SketchedSymbol>();
             foreach (SketchedSymbol symbol in sheet.SketchedSymbols)
             {
                 string? name = ComSafe.Get(() => symbol.Definition.Name);
-                if (name != null && names.Contains(name))
+                if (HoleTableNames.IsViewTable(name, sheetKey, viewKey))
                     found.Add(symbol);
             }
 
