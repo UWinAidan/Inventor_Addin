@@ -1,7 +1,11 @@
 namespace InventorAddin.Core.PartProperties;
 
-/// <summary>The fields the user can edit in the Part Properties window, as they stand when Apply is pressed.</summary>
-public sealed record PartEditedValues(string? PartType, string? Designer, string? Detailer, decimal? Cost);
+/// <summary>
+/// The fields the user can edit in the Part Properties window, as they stand when Apply is pressed.
+/// <paramref name="Revision"/> and <paramref name="Status"/> are left out of the plan when null (task 210).
+/// </summary>
+public sealed record PartEditedValues(
+    string? PartType, string? Designer, string? Detailer, decimal? Cost, string? Revision = null, PartStatus? Status = null);
 
 /// <summary>
 /// Turns the values read from a file and the edited values into the exact iProperty writes to make, so only
@@ -10,7 +14,8 @@ public sealed record PartEditedValues(string? PartType, string? Designer, string
 public static class PartPropertiesWritePlan
 {
     /// <summary>
-    /// The writes, in the spec's field order: Description, Part Type, Designer, Author, Detailer, Cost.
+    /// The writes, in the spec's field order: Description, Part Type, Designer, Author, Detailer, Cost, then Revision
+    /// Number, Design Status and User Status (the last two when <see cref="PartEditedValues.Status"/> is given).
     /// Text is compared after <see cref="PropertyValues.NormaliseText"/> (null and blank are the same).
     /// A changed standard property is Set, to <c>""</c> when cleared. A changed custom property is Set when
     /// not blank, and Removed when cleared. Cost is compared and written as <see cref="PropertyValues.CostToStore"/>.
@@ -68,6 +73,31 @@ public static class PartPropertiesWritePlan
         if (originalCost != editedCost)
         {
             writes.Add(PropertyWrite.SetCurrency(PartPropertyStorage.Cost, editedCost));
+        }
+
+        // Revision Number is a standard property, so a change is always a Set. A null edited value is not edited.
+        if (edited.Revision is not null)
+        {
+            var revision = PropertyValues.NormaliseText(edited.Revision);
+            if (revision.Length > 0 && revision != PropertyValues.NormaliseText(original.RevisionNumber))
+            {
+                writes.Add(PropertyWrite.SetText(PartPropertyStorage.RevisionNumber, revision));
+            }
+        }
+
+        // Status: Design Status, then the User Status words, each only when the file differs (task 210).
+        if (edited.Status is { } status)
+        {
+            if (original.DesignStatus != PartStatuses.DesignStatusOf(status))
+            {
+                writes.Add(PropertyWrite.SetInteger(PartPropertyStorage.DesignStatus, PartStatuses.DesignStatusOf(status)));
+            }
+
+            var words = PartStatuses.UserStatusText(status);
+            if (PropertyValues.NormaliseText(original.UserStatus) != words)
+            {
+                writes.Add(PropertyWrite.SetText(PartPropertyStorage.UserStatus, words));
+            }
         }
 
         return writes.AsReadOnly();

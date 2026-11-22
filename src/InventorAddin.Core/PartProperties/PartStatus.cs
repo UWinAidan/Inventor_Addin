@@ -41,6 +41,24 @@ public static class PartStatuses
         _ => null,
     };
 
+    /// <summary>
+    /// The status whose User Status words <paramref name="text"/> is (ignoring case and surrounding spaces), or null
+    /// for anything else.
+    /// </summary>
+    public static PartStatus? FromUserStatusText(string? text)
+    {
+        var trimmed = PropertyValues.NormaliseText(text);
+        foreach (var status in new[] { PartStatus.WorkInProgress, PartStatus.Pending, PartStatus.Released })
+        {
+            if (string.Equals(trimmed, UserStatusText(status), StringComparison.OrdinalIgnoreCase))
+            {
+                return status;
+            }
+        }
+
+        return null;
+    }
+
     /// <summary>The two writes that set a status: Design Status, then the User Status words in step with it.</summary>
     public static IReadOnlyList<PropertyWrite> WritesFor(PartStatus status) =>
     [

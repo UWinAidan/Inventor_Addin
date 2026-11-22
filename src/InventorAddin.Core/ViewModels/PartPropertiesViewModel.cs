@@ -41,6 +41,18 @@ public sealed record PartTypeOption(string Code, string FullName, string Display
     }
 }
 
+/// <summary>One entry in the Status dropdown (task 210): the status and the words the dropdown shows.</summary>
+public sealed record StatusOption(PartStatus Status, string Text)
+{
+    /// <summary>The three statuses, in order.</summary>
+    public static IReadOnlyList<StatusOption> All { get; } =
+    [
+        new(PartStatus.WorkInProgress, PartStatuses.UserStatusText(PartStatus.WorkInProgress)),
+        new(PartStatus.Pending, PartStatuses.UserStatusText(PartStatus.Pending)),
+        new(PartStatus.Released, PartStatuses.UserStatusText(PartStatus.Released)),
+    ];
+}
+
 /// <summary>
 /// Opens the Material and Finish window from Part Properties (spec 07; task 076). The add-in supplies it: it shows the
 /// window for the part Part Properties shows, owned by the Part Properties window, and reads the part again when it
@@ -84,6 +96,7 @@ public sealed class PartPropertiesViewModel : ObservableObject
     public const string NotSavedFileName = "Not saved yet";
     public const string NoWeightText = "-";
     public const string NotSetText = "Not set";
+    public const string NoRevisionText = "-";
     public const string NewFileTitlePrefix = "New ";
     public const string HeaderSeparator = " · ";
     public const string PreFillNotice = "Pre-filled values will be written when you apply.";
@@ -121,6 +134,9 @@ public sealed class PartPropertiesViewModel : ObservableObject
     private string _detailer;
     private string _costText;
     private bool _detailerFollowsDesigner;
+    private string _revision;
+    private readonly bool _revisionReadable;
+    private PartStatus? _status;
 
     // Read-only values that the Material and Finish window can change (task 076).
     private string _materialDisplay;
@@ -242,6 +258,18 @@ public sealed class PartPropertiesViewModel : ObservableObject
         }
 
         _costText = PropertyValues.FormatCost(snapshot.Cost, culture);
+
+        // Status and revision (task 210). Design Status 0 follows a User Status that is one of the three words, else
+        // Work In Progress (as the backfill does). A Design Status that could not be read, or is outside 0 to 3, shows
+        // nothing and is not written. A User Status that differs from the status is a pre-filled pending change.
+        _revision = PropertyValues.NormaliseText(snapshot.RevisionNumber);
+        _revisionReadable = snapshot.RevisionNumber is not null; // a standard property: null means it could not be read
+        _status = PartStatuses.FromDesignStatus(snapshot.DesignStatus);
+        if (IsEditable && snapshot.DesignStatus is 0)
+        {
+            _status = PartStatuses.FromUserStatusText(snapshot.UserStatus) ?? PartStatuses.Initial;
+        }
+        ReviseCommand = new RelayCommand(Revise, () => CanRevise);
 
         ApplyCommand = new RelayCommand(() => Apply(), () => CanApply);
         OkCommand = new RelayCommand(Ok, () => IsValid || !IsEditable);
@@ -501,6 +529,36 @@ public sealed class PartPropertiesViewModel : ObservableObject
         }
     }
 
+    /// <summary>The three statuses the dropdown lists.</summary>
+    public IReadOnlyList<StatusOption> StatusOptions => StatusOption.All;
+
+    /// <summary>
+    /// The status, or null when Design Status could not be read. Choosing one writes Design Status and the User Status
+    /// words together on Apply.
+    /// </summary>
+    public PartStatus? Status
+    {
+        get => _status;
+        set
+        {
+            if (_status == value)
+                return;
+
+            _status = value;
+            OnPropertyChanged();
+            OnEditChanged();
+        }
+    }
+
+    /// <summary>The revision as it stands, pending changes included; <see cref="NoRevisionText"/> when blank.</summary>
+    public string RevisionDisplay => _revision.Length == 0 ? NoRevisionText : _revision;
+
+    /// <summary>False for a file that cannot be edited, or when the revision could not be read (Apply would overwrite it with "A").</summary>
+    public bool CanRevise => IsEditable && _revisionReadable;
+
+    /// <summary>Steps the revision (<see cref="RevisionStep.Next"/>) as a pending change until Apply. Enabled while <see cref="CanRevise"/>.</summary>
+    public RelayCommand ReviseCommand { get; }
+
     // State.
 
     /// <summary>
@@ -606,7 +664,7 @@ public sealed class PartPropertiesViewModel : ObservableObject
             return false;
 
         writes = PartPropertiesWritePlan.Build(
-            _original, new PartEditedValues(_partType, _designer, _detailer, cost), _namesThatMeanMe);
+            _original, new PartEditedValues(_partType, _designer, _detailer, cost, _revisionReadable ? _revision : null, _status), _namesThatMeanMe);
         return true;
     }
 
@@ -772,7 +830,7 @@ public sealed class PartPropertiesViewModel : ObservableObject
     /// <summary>
     /// Runs the changer and shows the material, finish and weight it read back. Only those change: the edited fields,
     /// and so any pending changes, are kept, since the Material and Finish window writes none of the properties this
-    /// window edits. On failure the status line shows the reason.
+    /// window edits, except that its backfill can write Revision and Status (tasks 219 and 210; they are not read again here). On failure the status line shows the reason.
     /// </summary>
     private void ChangeMaterialFinish()
     {
@@ -817,6 +875,16 @@ public sealed class PartPropertiesViewModel : ObservableObject
         OnStateChanged();
     }
 
+    private void Revise()
+    {
+        if (!CanRevise)
+            return;
+
+        _revision = RevisionStep.Next(_revision);
+        OnPropertyChanged(nameof(RevisionDisplay));
+        OnStateChanged();
+    }
+
     private void Ok()
     {
         if (IsEditable && _hasChanges && !Apply())
@@ -844,6 +912,12 @@ public sealed class PartPropertiesViewModel : ObservableObject
                 snapshot = snapshot with { Detailer = text };
             else if (location == PartPropertyStorage.Cost)
                 snapshot = snapshot with { Cost = write.CurrencyValue };
+            else if (location == PartPropertyStorage.RevisionNumber)
+                snapshot = snapshot with { RevisionNumber = text };
+            else if (location == PartPropertyStorage.DesignStatus)
+                snapshot = snapshot with { DesignStatus = write.IntegerValue };
+            else if (location == PartPropertyStorage.UserStatus)
+                snapshot = snapshot with { UserStatus = text };
         }
 
         return snapshot;

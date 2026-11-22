@@ -53,6 +53,15 @@ public sealed record PartPropertiesSnapshot
     /// <summary>Mass formatted in the document's units; null when it could not be read (the window shows a dash).</summary>
     public string? WeightDisplay { get; init; }
 
+    /// <summary>Summary Information Revision Number; null when it could not be read (task 210).</summary>
+    public string? RevisionNumber { get; init; }
+
+    /// <summary>The Design Status number (0 is not set); null when it could not be read (task 210).</summary>
+    public int? DesignStatus { get; init; }
+
+    /// <summary>Inventor's own Status text (Design Tracking User Status); null when it could not be read (task 210).</summary>
+    public string? UserStatus { get; init; }
+
     public EditBlock EditBlock { get; init; }
 
     /// <summary>The line the window shows for <paramref name="block"/>, or null for <see cref="EditBlock.None"/>.</summary>

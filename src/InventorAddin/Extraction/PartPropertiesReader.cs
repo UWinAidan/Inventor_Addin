@@ -32,6 +32,9 @@ namespace InventorAddin.Extraction
                 Material = ReadMaterial(doc, kind),
                 Finish = ReadText(doc, PartPropertyStorage.Finish),
                 WeightDisplay = ReadWeight(doc, kind),
+                RevisionNumber = ReadText(doc, PartPropertyStorage.RevisionNumber),
+                DesignStatus = FinishSpecBackfiller.ReadDesignStatus(doc),
+                UserStatus = ReadText(doc, PartPropertyStorage.UserStatus),
                 EditBlock = ReadEditBlock(doc, fullFileName),
             };
         }

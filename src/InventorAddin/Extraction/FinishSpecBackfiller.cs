@@ -58,7 +58,7 @@ namespace InventorAddin.Extraction
         }
 
         /// <summary>Design Status as a number, or null when it cannot be read.</summary>
-        private static int? ReadDesignStatus(Document doc)
+        internal static int? ReadDesignStatus(Document doc)
         {
             object? value = PropertyReader.Get(
                 doc, PartPropertyStorage.DesignStatus.SetName, PartPropertyStorage.DesignStatus.PropertyName);

@@ -64,10 +64,20 @@ public sealed class PrintPropertyBackfillTests
         Assert.Equal([Design(1), User("WORK IN PROGRESS")], Run(designStatus: 0, userStatus: null));
     }
 
-    [Fact]
-    public void DesignStatusNotSet_KeepsASetUserStatus()
+    [Theory]
+    [InlineData("WORK IN PROGRESS", 1)]
+    [InlineData("PENDING", 2)]
+    [InlineData("RELEASED", 3)]
+    [InlineData(" released ", 3)]
+    public void DesignStatusNotSet_FollowsAUserStatusThatIsOneOfTheWords_AndKeepsIt(string userStatus, int expected)
     {
-        Assert.Equal([Design(1)], Run(designStatus: 0, userStatus: "PENDING"));
+        Assert.Equal([Design(expected)], Run(designStatus: 0, userStatus: userStatus));
+    }
+
+    [Fact]
+    public void DesignStatusNotSet_OtherUserStatusText_GivesWorkInProgress_AndKeepsTheText()
+    {
+        Assert.Equal([Design(1)], Run(designStatus: 0, userStatus: "Draft"));
     }
 
     [Theory]

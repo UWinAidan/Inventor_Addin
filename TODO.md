@@ -111,6 +111,11 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Follow-ups from finished tasks
 
+- Task 210, check in Inventor:
+  - At 150%, the Status box shows "WORK IN PROGRESS" in full; it sizes to its text, so it may change width (remove `HorizontalAlignment="Left"` to stretch it).
+  - Material and Finish's backfill can write Revision and Status while Part Properties is open, without the window re-reading them (a harmless rewrite on Apply).
+  - Typing a revision directly is not offered.
+
 - Task 219, check first when Inventor is open:
   - The Design Tracking property names "Design Status" (id 40) and "User Status" (id 17), and Summary "Revision Number" (id 9).
   - That Design Status takes a .NET int.

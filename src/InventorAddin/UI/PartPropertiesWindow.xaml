@@ -158,6 +158,32 @@
                     </controls:FieldRow>
                 </controls:FormSection>
 
+                <!--
+                    Task 210. Status writes Design Status and Inventor's own Status together on Apply. Revise steps the
+                    revision (A to B ...) as a pending change; the value shown is the pending one, so the binding is OneWay.
+                    Access keys S and V.
+                -->
+                <controls:FormSection Heading="Status and revision">
+                    <controls:FieldRow Label="_Status" Target="{Binding ElementName=StatusBox}">
+                        <controls:AwbComboBox x:Name="StatusBox"
+                                  HorizontalAlignment="Left"
+                                  IsEditable="False"
+                                  IsEnabled="{Binding IsEditable, Mode=OneWay}"
+                                  ItemsSource="{Binding StatusOptions, Mode=OneWay}"
+                                  DisplayMemberPath="Text"
+                                  SelectedValuePath="Status"
+                                  SelectedValue="{Binding Status, Mode=TwoWay}" />
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="Revision">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{DynamicResource ValueText}" Text="{Binding RevisionDisplay, Mode=OneWay}" />
+                            <Button Style="{DynamicResource SideButton}"
+                                    Content="Re_vise"
+                                    Command="{Binding ReviseCommand}" />
+                        </StackPanel>
+                    </controls:FieldRow>
+                </controls:FormSection>
+
                 <controls:FormSection Heading="People">
                     <controls:FieldRow Label="_Designer" Target="{Binding ElementName=DesignerBox}">
                         <TextBox x:Name="DesignerBox"
