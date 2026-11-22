@@ -112,3 +112,4 @@ Each command is a thin read, call Core, apply. Creating drawings and placing vie
     (b) the add-in writes a custom text property, for example "Mass", with the mass formatted in the part's units (kg or lb, 2 decimals) on Create Print and Mass Update, and the template prints that instead of Inventor's live mass. It is always readable, but it goes stale when the part changes until the next Create Print or Mass Update;
     (c) the imperial template prints kg.
     Which?
+    Answered by Aidan 2026-11-22: try (a) first in a short spike round; if a fresh drawing still prints kg, use (b), with the Mass property refreshed whenever the part is saved.

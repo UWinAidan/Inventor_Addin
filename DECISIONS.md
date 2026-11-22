@@ -528,3 +528,4 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-22 | Hole tables never sit outside the border: when the stack does not fit above the title block, the clearance table continues in a second column to the left, and if that still does not fit the command warns and suggests a bigger sheet | Aidan | task 220 |
 | 2026-11-22 | Settings labels "Metric template" and "Imperial template" | Aidan | task 221 |
 | 2026-11-22 | Revise skips I and O (A to H, J to N, P to Z, then AA) | Default | task 210 |
+| 2026-11-22 | Mass in lb on the imperial template: first try (a), an imperial part's own mass unit set to lb (short spike round); if a fresh drawing still prints kg, fall back to (b), a Mass text property in the part's units that the template prints, refreshed automatically whenever the part is saved (not only on Create Print or Mass Update) | Aidan | spec 05 question 28 |

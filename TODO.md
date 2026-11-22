@@ -114,7 +114,6 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Task 215: the mockup caption (`docs/ui-mockups/title-block.html`) and task 185's notes still say "20 mm filing edge" (now centred). In the 7 mm part number row, the Status value keeps the mockup's lower baseline.
 
 - Long term (Aidan, 2026-11-22): a PDM's release action takes over Revision and Status from the add-in.
-- Spec 05 question 28 (mass in lb on the imperial template) waits on Aidan.
 
 - Task 213:
   - The inch-or-foot rule lives in the add-in (`MaterialFinishTargets.UnitsOf`), while `HoleTableViewRules.UnitsFor` in Core also counts mil, yard and mile as imperial. Move it to one Core rule.
