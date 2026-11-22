@@ -2,7 +2,7 @@
 
 - **Milestone:** M5 (from Aidan's task 187 check, 2026-11-22)
 - **Feature spec:** `docs/features/04-hole-table-wizard.md`
-- **Status:** todo
+- **Status:** blocked after two review rounds (2026-11-22). The work is on branch `wip/220-hole-tables-blocked`; see that branch's copy of this file for the remaining must-fix (a precision table placed over a clearance table that did not fit).
 - **Depends on:** none
 - **Needs:** windows build
 - **Parallel-safe with:** any Core-only task

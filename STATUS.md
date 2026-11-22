@@ -6,30 +6,29 @@ Last updated: 2026-11-22
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-22 18:06. Branch `claude/m5-drawing-tools`, latest commit `348dbe2` (pushed).
+- Updated: 2026-11-22 18:24. Branch `claude/m5-drawing-tools`, latest commit `0c4bad5` (pushed).
 - Goal: M5 tasks in chunks: implementer, then reviewer, one commit per task, push. Stop after each chunk with a summary, Defaults and a checklist. Nothing from work prints goes in the repo (Aidan's screenshots are in ADDIN_PICS, gitignored).
 - Done this session:
-  - Spikes 183 and 184; chunk 1 (211, 185, 186, 189, 190); 214 and 213.
-  - 187 code (`58323b0`). Aidan's first template check gave 11 items, now tasks 215 to 221 and 210 reworked (`700fc55`).
-  - Done since: 215 `677df08` (layout: mockup sizes, tolerance columns, baselines, centred border, `PrintTextFit` width estimate), 216 `e462f3b`/`dc52b8c` (decimal marker on dimension and FCF styles, STATUS reads User Status id 17, FontSize = size × 0.727 cap height, RangeBox overflow warnings), 221 `7d2339b` (Settings labels).
-  - Q28 answered (`348dbe2`): try (a) the part's mass unit set to lb (spike); if a fresh drawing still prints kg, use (b), a Mass text property refreshed whenever the part is saved.
-  - Core tests 5161 passed at the last run; the solution builds with 0 errors.
-- In progress:
-  - The 217 implementer is running (finish print name and Finish Spec backfill); its result is not seen yet (unverified).
-  - Aidan deployed the 216 build and is to rebuild both templates with Build Print Template and check them against task 216's checklist. He also reports the log's "width ratio" mean (about 1.0 confirms FontSize is the cap height).
-  - The Q28 spike `spike-local/183/spike-q28-lb.ps1` is ready. It failed only because Inventor was closed (`GetActiveObject` MK_E_UNAVAILABLE). Rerun it when Aidan has Inventor open with `AWB Imperial.idw` closed. It works on a copy in `C:\AwbSpike\q28\`.
+  - Spikes 183 and 184; chunk 1 (211, 185, 186, 189, 190); 214 and 213; 187 code.
+  - From Aidan's first template check: 215, 216, 221, 217 (`828e67a`), 219 (`35425a4`) and 210 (`0c4bad5`) done.
+  - Spec 05 question 28 answered: try (a), the part's mass unit set to lb; else (b), a Mass property refreshed on save.
+  - All Defaults are logged in DECISIONS.md (2026-11-22). Core tests 5244 passed; the solution builds with 0 errors.
+- In progress: the 220 implementer (hole tables stay inside the border) is running; its result is not seen yet (unverified).
+- Waiting on Aidan:
+  1. His check of the rebuilt templates (task 216's checklist), including the log's "width ratio" mean. If they pass, commit `libraries/Templates/*.idw` (untracked now) and mark 187 and 216 done.
+  2. Inventor open, so that:
+     - (a) the parent verifies the property names New Part now writes: Design Tracking "Design Status" (id 40, int), "User Status" (17), Summary "Revision Number" (9). If one is wrong, New Part and Save As Copy lose all their properties; fix `PartPropertyStorage`. See TODO.
+     - (b) the parent runs `spike-local/183/spike-q28-lb.ps1` (works on a copy in `C:\AwbSpike\q28\`; `AWB Imperial.idw` must be closed). If lb prints, write a task for New Part and Mass Update to set the mass unit; if not, write a task for option (b).
 - Next:
-  1. Run the Q28 spike. If lb prints, write a task: New Part and Mass Update set an imperial part's mass unit to lb. If not, write a task for (b): a Mass property written on part save (an on-save event handler) and the template field switched to it. Record the result in spec 05 question 28.
-  2. When Aidan passes the rebuilt templates, commit `libraries/Templates/AWB Metric.idw` and `AWB Imperial.idw`, and mark 187 and 216 done in their task files and in PLAN. If he reports problems, write fix tasks.
-  3. Review 217, then commit it. Then 219, 210 and 220. Run spike 218 (shrinking long title block values) with Aidan's OK.
-  4. Then chunk 2's 188, 191, 192 and 193, and the chunk 2 summary.
+  1. Review 220, then commit and push it.
+  2. Spike 218 (shrinking long values) with Aidan's OK.
+  3. Chunk 2: 188, 191, 192 and 193. Then the chunk 2 summary with the Defaults and an Inventor checklist.
 - Gotchas:
-  - Numbering and RegisterStore tests are flaky on timing; rerun.
+  - Numbering and RegisterStore tests are flaky; rerun.
   - Agents can hit the session limit; resume them with SendMessage.
-  - In Python, '\a' and '\1' inside path strings become control characters. Use raw strings or chr(92).
-  - Bash heredocs holding Python with quotes break; write a .py file in the job tmp folder.
-  - Don't build while Aidan deploys (both use `obj/`).
-- Read first: `docs/WORKFLOW.md`, `docs/PLAN.md` M5, tasks 216 and 217 to 221, DECISIONS.md rows dated 2026-11-22.
+  - Python: '\a' in paths becomes a control character; write .py files in the job tmp folder rather than using bash heredocs.
+  - Don't build while Aidan deploys.
+- Read first: `docs/WORKFLOW.md`, `docs/PLAN.md` M5, tasks 216 to 221, DECISIONS.md rows dated 2026-11-22, TODO.md follow-ups.
 
 ## Big items
 

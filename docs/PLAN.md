@@ -612,7 +612,7 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [x] 217 Finish print name and Finish Spec backfill
 - [ ] 218 Spike: fitting long title block values (Windows)
 - [x] 219 Revision and Status filled in automatically
-- [ ] 220 Hole tables stay on the sheet
+- [ ] 220 Hole tables stay on the sheet (blocked; branch `wip/220-hole-tables-blocked`)
 - [x] 221 Settings template labels
 
 **Check**
