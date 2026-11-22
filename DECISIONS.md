@@ -510,3 +510,4 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-22 | Finish Spec's value is the finish name, then ", " and the Finish Thickness text when there is one, as stored (mm) | Default | spec 05 question 23, task 211 |
 | 2026-11-22 | The print template's parts list and revision table column widths are the layout's own values (spec 05 gives none); the revision table columns are rev, description, date, by | Default | task 185 |
 | 2026-11-22 | Task 187 leaves the X/Y triad off A4 and ANSI A portrait, where it would lie over the title block, until Aidan answers | Default | spec 05 question 24 |
+| 2026-11-22 | Place Initial Views layout: 15 mm between views; the usable area is the border less the title block's full-width band; the view group is centred in it; an iso view's size is estimated from the box's isometric outline | Default | task 189 |

@@ -111,6 +111,8 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Follow-ups from finished tasks
 
+- Task 189, for tasks 190 and 192: Top and Right are projected from Front, so ticking either forces Front on. Task 192 maps the range box to `InitialViewsBoxCm`, supplies the flat pattern size (or null), and checks that the flat pattern view is Length wide by Width high. The usable area ignores the triad, parts list and NOTES list.
+
 - Task 186: the print template rows sit in Settings' "Material and finish" section, whose heading no longer covers them (rename?). The collapsed summary shows a set template as a bare file name, and nothing when blank. "_Imperial print template" shares Alt+I with "Use _Inventor's Hole command". The starter template files only exist after task 187.
 
 - Task 185, for task 187's check in Inventor: on ISO sheets the rotated small part number clears the zone frame by about 0.2 mm (if it touches, raise `SmallPartNumberEdgeInsetMm`, for example to 2.5). Whether `AddFitted` anchors at the baseline start or a box corner decides the margin text's exact place. The title block outline is 0.7 mm per the mockup (cells 0.35). Spec 05 questions 24 to 26 hold the open layout questions.

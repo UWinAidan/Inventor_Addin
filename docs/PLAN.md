@@ -570,7 +570,7 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [ ] 188 Create Print uses the AWB template
 
 **Views and drawings**
-- [ ] 189 Initial views: which views and where (Core)
+- [x] 189 Initial views: which views and where (Core)
 - [ ] 190 Initial Views window view-model (Core)
 - [ ] 191 Ribbon icons for the M5 commands
 - [ ] 192 Place Initial Views window and command; Create Print shows it
