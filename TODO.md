@@ -111,6 +111,9 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Follow-ups from finished tasks
 
+- Long term (Aidan, 2026-11-22): a PDM's release action takes over Revision and Status from the add-in.
+- Spec 05 question 28 (mass in lb on the imperial template) waits on Aidan.
+
 - Task 213:
   - The inch-or-foot rule lives in the add-in (`MaterialFinishTargets.UnitsOf`), while `HoleTableViewRules.UnitsFor` in Core also counts mil, yard and mile as imperial. Move it to one Core rule.
   - `IMaterialFinishTarget.cs:11` still says the target applies `PropertyWrites`.

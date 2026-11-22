@@ -23,7 +23,7 @@ Out of scope: Create Print using the template (188); views.
 ## Acceptance criteria
 
 - [ ] Running the command makes both `.idw` files; opened in Inventor, each has the sheet formats ISO A4 to A0 and ANSI A to E (A4 and ANSI A portrait), white sheets, third angle, the zone grid, centring arrows and triad, and the title block as in the mockup.
-- [ ] A drawing made from either template with a view of a test part shows that part's values in every field, including Status (the custom Status property, task 210) and Mass in kg or lb with 2 decimals; changing a property in the model changes the print without any AWB step.
+- [ ] A drawing made from either template with a view of a test part shows that part's values in every field, including Status (Inventor's Status field, User Status; task 216) and Mass in kg or lb with 2 decimals; changing a property in the model changes the print without any AWB step.
 - [ ] The logo is embedded (the template opens on a PC without `libraries/Branding/`).
 - [ ] Only the developer panel shows the button; it is query-free (it creates new files), command type as Create Print.
 - [ ] `dotnet build InventorAddin.slnx -p:DeployToInventor=false` has 0 errors; every Inventor API member used is confirmed in the spike results or existing code, or listed under Verification

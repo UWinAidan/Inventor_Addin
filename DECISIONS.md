@@ -518,3 +518,13 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-22 | ANSI sheets keep the listed (ASME) zone counts; ISO sheets use about 50 mm per zone | Aidan | spec 05 question 26 |
 | 2026-11-22 | Initial Views window: unticking Front unticks Top and Right, Iso stays (confirms the task 190 Default) | Aidan | spec 05 question 27 |
 | 2026-11-22 | Finish Spec units: a part whose length unit is inch or foot is imperial, anything else (or unreadable) metric | Default | task 213 |
+| 2026-11-22 | Print template borders are centred: equal margins all round, 10 mm on ISO and 12.7 mm on ANSI (no 20 mm filing edge; Aidan does not file prints). Overturns question 25's answer | Aidan | spec 05 question 25, task 215 |
+| 2026-11-22 | Title block text matches the mockup's sizes and spacing, and every text box is measured against its cell so nothing overflows; the tolerance values line up in columns | Aidan | task 215 |
+| 2026-11-22 | finishes.csv gets a short print name column (for example "ENP, MID PHOS") used by Finish Spec; the full wording stays in the finish note. Any title block value too long for its cell is shrunk to fit, if Inventor allows (spike 218) | Aidan | task 217, task 218 |
+| 2026-11-22 | Finish Spec is filled in automatically on parts that have Finish but no Finish Spec: on opening Material and Finish, on Create Print and in Mass Update | Aidan | task 217 |
+| 2026-11-22 | The AWB Metric standard uses a period as the decimal marker in every style that shows numbers | Aidan | task 216 |
+| 2026-11-22 | Status is Inventor's own Status field (Design Tracking "User Status", the iProperties Status tab), written in words matching Design Status ("WORK IN PROGRESS", "PENDING", "RELEASED") whenever the add-in sets the status, with Design Status kept in step; the template prints it. Replaces the custom Status property decision of the same day | Aidan | tasks 210, 216, 219 |
+| 2026-11-22 | Revision and Status fill in automatically: New Part and Save As Copy write Revision Number "A" and Work In Progress; Create Print and Mass Update fill a missing Revision or Status on older parts; Part Properties gets a Status dropdown and a Revise button (A to B to C). Later a PDM's release action takes over both | Aidan | tasks 210, 219 |
+| 2026-11-22 | Hole tables never sit outside the border: when the stack does not fit above the title block, the clearance table continues in a second column to the left, and if that still does not fit the command warns and suggests a bigger sheet | Aidan | task 220 |
+| 2026-11-22 | Settings labels "Metric template" and "Imperial template" | Aidan | task 221 |
+| 2026-11-22 | Revise skips I and O (A to H, J to N, P to Z, then AA) | Default | task 210 |

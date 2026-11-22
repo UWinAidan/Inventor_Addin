@@ -555,12 +555,19 @@ Aidan answered the planning questions and the title block questions on 2026-11-2
 | 206 | windows build | 184, 187, 191, 205 | none |
 | 207 | Core | none | 205 |
 | 208 | windows build | 184, 187, 191, 207 | none |
-| 210 | windows build | none | any Core-only task |
+| 210 | windows build | 219 | any Core-only task |
 | 211 | Core | none | 186, 189, 190 |
 | 212 | windows build | none | any Core-only task |
 | 213 | windows build | 211 | none |
 | 214 | Core | 185 | 213 |
-| 209 | **windows** (Aidan) | 183 to 208, 210 to 214 | none |
+| 215 | Core | 185, 214 | 217, 221 |
+| 216 | **windows** (drives Inventor; Aidan) | 187, 215 | none |
+| 217 | windows build | 213 | 215 |
+| 218 | **windows** (spike) | 187 | any |
+| 219 | windows build | 217 | none |
+| 220 | windows build | none | any Core-only task |
+| 221 | windows build | 186 | any |
+| 209 | **windows** (Aidan) | 183 to 208, 210 to 221 | none |
 
 The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their own files; 186, 196 and 205 all touch `AddinSettings`, `LibraryPaths` and the Settings window, so run those three one after another.
 
@@ -595,11 +602,18 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [ ] 206 Stock Size command
 - [ ] 207 Parts list Make/Buy rule (Core)
 - [ ] 208 Update Parts List command
-- [ ] 210 Part Properties: Status (Aidan, 2026-11-22; the title block prints the custom Status)
+- [ ] 210 Part Properties: Status dropdown and Revise (Aidan, 2026-11-22)
 - [x] 211 Finish Spec property, written with the finish (Aidan, 2026-11-22; spec 05 question 23)
 - [ ] 212 Fix: the hole table's workbook warning (task 179 follow-up)
 - [x] 213 Fix: Finish Spec thickness in µm or inches (Aidan, 2026-11-22)
 - [x] 214 Print template layout: the triad above the title block on portrait sheets (Aidan, 2026-11-22)
+- [ ] 215 Print template layout fixes from the first build
+- [ ] 216 Print template builder fixes and rebuild (Windows, Aidan runs it)
+- [ ] 217 Finish print name and Finish Spec backfill
+- [ ] 218 Spike: fitting long title block values (Windows)
+- [ ] 219 Revision and Status filled in automatically
+- [ ] 220 Hole tables stay on the sheet
+- [ ] 221 Settings template labels
 
 **Check**
 - [ ] 209 M5 combined Inventor check
