@@ -111,6 +111,8 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Follow-ups from finished tasks
 
+- Task 185, for task 187's check in Inventor: on ISO sheets the rotated small part number clears the zone frame by about 0.2 mm (if it touches, raise `SmallPartNumberEdgeInsetMm`, for example to 2.5). Whether `AddFitted` anchors at the baseline start or a box corner decides the margin text's exact place. The title block outline is 0.7 mm per the mockup (cells 0.35). Spec 05 questions 24 to 26 hold the open layout questions.
+
 - Task 211: two add-in comments still say "four finish iProperties" (`MaterialFinishCommand.cs:23`, `MaterialFinishTargets.cs` near line 131). Parts finished before 211 get Finish Spec only when the finish is applied again.
 - Core tests: Numbering tests failed intermittently in task 211's runs, a different one each run (`SaveAsReplacerTests.Replace_NameThatCannotBeSet_KeepsTheReplace_LogsIt_AndSaysSo`, `RenamePlanTests.ListFilesToSearch_AFolderThatDoesNotAnswer_IsSkippedAfterTheProbeTimeout`); the reviewer's run passed all 4972. Probably timing-dependent.
 

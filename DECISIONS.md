@@ -508,3 +508,5 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-22 | The part marking zone's 40 by 15 mm is measured on the part: a view sketch is in model units, so the zone scales with the view (spike 184) | Default | spec 05 question 16, task 199 |
 | 2026-11-22 | The title block's Finish field reads a ready-made custom "Finish Spec" property, written when a finish is applied (spec 05 question 23, first option) | Aidan | spec 05, task 211 |
 | 2026-11-22 | Finish Spec's value is the finish name, then ", " and the Finish Thickness text when there is one, as stored (mm) | Default | spec 05 question 23, task 211 |
+| 2026-11-22 | The print template's parts list and revision table column widths are the layout's own values (spec 05 gives none); the revision table columns are rev, description, date, by | Default | task 185 |
+| 2026-11-22 | Task 187 leaves the X/Y triad off A4 and ANSI A portrait, where it would lie over the title block, until Aidan answers | Default | spec 05 question 24 |

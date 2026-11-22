@@ -6,39 +6,42 @@ Last updated: 2026-11-22
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-22 11:07. Branch `claude/m5-drawing-tools`, latest commit `7d8ad8e` (pushed).
-- Goal: spikes 183 and 184 live with Aidan, then the M5 tasks in PLAN order in chunks of 4 to 5. For each task: implementer, then reviewer, one commit, push. Stop after each chunk with a summary, the Defaults logged and an Inventor checklist; Aidan says "next chunk". Nothing from work prints goes in the repo.
-- Done this session (all committed and pushed):
-  - `53579d2`: Aidan's Status and Material Size decisions, and task 210.
-  - `4e1a24a`: spike 183 rounds 1 to 3 recorded; tasks 187 and 192 have the confirmed calls.
-  - `b2b09c2`: spike 184 rounds 1 and 2 recorded; tasks 195, 197, 199, 200, 202, 204, 206 and 208 have the confirmed calls. Two Defaults: PDFsharp merges the PDFs, and the marking zone is 40 x 15 mm on the part.
-  - `7d8ad8e`: new tasks 211 (Finish Spec property; Aidan chose the first option of spec 05 question 23; the value format is a Default) and 212 (the hole table's workbook warning wording, plus warn once per source). Both spikes ticked in PLAN; the 179 TODO line removed.
-  - The second 179 follow-up, the missing "↧ 12.0" test, was already done by task 182 (`HoleTableTests.cs:228`). No task needed.
-- Current state:
-  - Chunk 1 = 211, 185, 186, 189, 190, run one at a time (parallel `dotnet build` runs collide on `obj/`).
-  - The task 211 implementer was launched in the background; its result is not yet seen (unverified).
-  - Nothing built or tested by me this session.
+- Updated: 2026-11-22 11:18. Branch `claude/m5-drawing-tools`, latest commit `14b9a9a` (task 211, pushed).
+- Goal: M5 tasks in PLAN order, in chunks of 4 to 5. For each task: implementer, then reviewer, one commit, push. Stop after each chunk with a summary, the Defaults logged and an Inventor checklist; Aidan says "next chunk". Nothing from work prints goes in the repo.
+- Done this session (pushed):
+  - Spike 183 (`4e1a24a`) and spike 184 (`b2b09c2`) recorded; the dependent tasks have the confirmed calls.
+  - Aidan's decisions and task 210 (`53579d2`).
+  - Tasks 211 and 212 written (`7d8ad8e`).
+  - Task 211, Finish Spec property, is done (`14b9a9a`; 4972/4972 Core tests in the reviewer's run).
+- In the working tree, uncommitted:
+  - Task 185 (print template layout):
+    - New files `src/InventorAddin.Core/Drawing/PrintTemplateLayout.cs` and `tests/.../Drawing/PrintTemplateLayoutTests.cs`; `Branding.cs` gains `WebsiteUrl` and `PrintLogoFileName`.
+    - The first review returned CHANGES REQUIRED; both items are fixed. The small part number now sits at sheet width − 3 mm, and a glyph-band test uses 1.8 mm. `FixedText` is documented as never drawn.
+    - Re-review is running (result unverified). The implementer reports 5018/5018 tests.
+  - Parent edits that go in task 185's commit:
+    - spec 05 open questions 24 to 26 (the triad over the block on portrait sheets, the ANSI margins, the ANSI zone counts)
+    - two Default rows in DECISIONS.md
+    - task 187 notes (triad left off portrait sheets; draw `Texts`, `Logo` and `Symbol`, not `FixedText`)
+  - This STATUS.md handoff.
 - Open:
-  - Mass in lb: the title block's mass field ignores unit attributes and later MassUnits changes. Task 187 tries an imperial template with lb from the start; if that also fails, add a question to spec 05.
-  - Spec 05 question 23 is still open on mm versus µm for Finish Thickness.
-  - The copied ISO standard prints a decimal comma ("260,00"); task 187 sets `DecimalMarkerType`.
+  - Mass in lb is not settled (task 187 tries an imperial template).
+  - Spec 05 question 23: mm or µm for Finish Thickness.
+  - Numbering tests sometimes fail, a different one each run (`RenamePlanTests` timeout, `SaveAsReplacerTests`); listed in TODO.md.
 - Next:
-  1. Check the 211 implementer's result. Run the reviewer on `docs/tasks/211-finish-spec-property.md`. On a PASS: status done, tick it in PLAN, copy follow-ups to TODO, commit `task 211: Finish Spec property, written with the finish`, push.
-  2. Same for 185 (its FinishSpec field now reads the Finish Spec property), then 186, 189 and 190.
-  3. Stop and give Aidan the chunk 1 summary, the Defaults and any checklist.
-  4. Chunk 2 starts with 187, which drives Inventor with Aidan, then 188, 191, 192 and 193. 210 and 212 fit in a later chunk.
+  1. On 185's re-review PASS: set the task to done, tick it in PLAN, copy its follow-ups to TODO.md, commit `task 185: Print template layout (Core)` together with the spec, DECISIONS and 187 edits, then push. On CHANGES REQUIRED: one more fix round, then mark it blocked.
+  2. Tasks 186, 189 and 190, one at a time (parallel builds collide on `obj/`).
+  3. Chunk 1 summary for Aidan: 211, 185, 186, 189, 190; Defaults; questions 24 to 26; any checklist.
+  4. Chunk 2: 187 (drives Inventor with Aidan), 188, 191, 192, 193. 210 and 212 fit in later.
 - Gotchas:
-  - PowerShell over COM:
-    - Variable names ignore case (`$ud` is `$UD`), and `$pid` is read-only.
-    - Log with `[Console]::WriteLine`, not Write-Output, inside functions.
-    - Don't nest double-quoted strings inside `$()` (PowerShell 5.1 can't parse them); build strings with `+`.
-    - `foreach` over `DrawingCurves` sees one object; walk it with `Count` and `Item(i)`.
-    - `PartsLists.Add` needs real Int32 and Boolean arguments, not `Missing`.
-  - `Documents.Add` fails while the template is open.
-  - The title block's mass field shows "N/A" until `MassProperties.Mass` has been read and `DrawingDocument.Update()` has run.
+  - PowerShell COM spikes:
+    - Variable names ignore case, and `$pid` is read-only.
+    - Log with `[Console]::WriteLine`.
+    - Don't nest double-quoted strings inside `$()`.
+    - Walk COM enumerators with `Count` and `Item(i)`.
+  - The mass field shows N/A until `MassProperties.Mass` is read and the drawing updated.
   - A view sketch is in model units.
-  - Spike scripts and logs are in `spike-local/183/` and `spike-local/184/` (gitignored). Test files are in `C:\AwbSpike\183\` and `C:\AwbSpike\184\`. The logs contain the material name from Aidan's library; keep it out of the repo.
-- Read first: `docs/WORKFLOW.md` (run mode), `docs/PLAN.md` M5 table, tasks 183 and 184 (Results), DECISIONS.md rows dated 2026-11-22.
+  - Spike files are in `spike-local/18x/` (gitignored) and `C:\AwbSpike\`. The logs hold the material name from Aidan's library; keep it out of the repo.
+- Read first: `docs/WORKFLOW.md` (run mode), `docs/PLAN.md` M5, task files 185 to 190, DECISIONS.md rows dated 2026-11-22.
 
 ## Big items
 

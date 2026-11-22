@@ -28,4 +28,10 @@ public static class Branding
 
     /// <summary>Name of the current log file.</summary>
     public const string LogFileName = LogFileBaseName + ".log";
+
+    /// <summary>The web address printed in the title block of a print.</summary>
+    public const string WebsiteUrl = "aidanwbrown.com";
+
+    /// <summary>File name (in <c>libraries/Branding/</c>) of the black mark that goes in the print's title block.</summary>
+    public const string PrintLogoFileName = "aidanwbrown-mark-black-1024.png";
 }
