@@ -54,7 +54,7 @@ Filled in by the implementer (Windows, Inventor 2026 installed and running; I di
   - Whether `RangeBox` of a title block text gives title block coordinates in cm (the triad code assumes the same).
 - **Manual checklist for Inventor** (copied into `docs/checklists/m5.md` by the parent for the combined check, task 209):
   1. Close any open AWB templates. Deploy the new build (`dotnet build InventorAddin.slnx`, Inventor closed), start Inventor, and open any document.
-  2. Run Build Print Template for both Metric and Imperial. Note the warning count in the report. Then search `%APPDATA%\AwbAddinwbaddin.log` for "extends past its cell": there must be none, or note which texts are listed.
+  2. Run Build Print Template for both Metric and Imperial. Note the warning count in the report. Then search `%APPDATA%\AwbAddin\awbaddin.log` for "extends past its cell": there must be none, or note which texts are listed.
   3. In `%APPDATA%\AwbAddin\awbaddin.log`, find "decimal marker set to a period on N dimension style(s)..."; it must say 0 did not read back as a period.
   4. In the same log, find "drawn width over PrintTextFit width"; the mean should be near 1.0 (roughly 0.9 to 1.1). Send me the numbers if it is not.
   5. Open `libraries/Templates/AWB Metric.idw` and look at each sheet format (A4 portrait through A0): no text touches or crosses a cell line, and the labels and values sit where the mockup puts them.
