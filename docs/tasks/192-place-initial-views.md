@@ -29,6 +29,13 @@ Out of scope: dimensions, notes.
 
 ## Notes for the implementer
 
+- Confirmed calls (spike 183, round 3):
+  - Base view: `AddBaseView(doc, centre, scale, kFrontViewOrientation, kHiddenLineRemovedDrawingViewStyle, Missing, Missing, Missing)`; the point is the view's centre.
+  - Projected views: `AddProjectedView(base, point, kFromBaseDrawingViewStyle, Missing)`. In the template's third angle standard, right of the base is the right view, above is the top view, and up-right is the iso (pass `kShadedDrawingViewStyle` for a shaded iso).
+  - Flat pattern: `AddBaseView` with a `NameValueMap` holding `SheetMetalFoldedModel` = false as `AdditionalOptions`. Check `SheetMetalComponentDefinition.HasFlatPattern` first; a part without one was not tried.
+  - Sizes: `DrawingView.Width`, `Height`, `Left`, `Top` and `Center` are in sheet cm.
+- Read `MassProperties.Mass` on the model before placing views, or the title block's mass field shows "N/A" (spike 183, round 3).
+
 - Read spec 05's "Added for M5" section and the 2026-11-21 rows of `DECISIONS.md` first. Defaults are marked there; do not change them.
 
 ## Verification

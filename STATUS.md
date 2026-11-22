@@ -2,24 +2,40 @@
 
 Where each big item stands. One line per item, kept current by the parent session. For the order of work and the task lists see `docs/PLAN.md`; for what needs doing next see `TODO.md`.
 
-Last updated: 2026-11-21
+Last updated: 2026-11-22
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-21 21:00. Branch `claude/m5-drawing-tools` (pushed), latest commit `fb035e7`; the FINISH line change below is uncommitted.
-- Goal: plan M5 (spec 05). Done: the plan is written.
+- Updated: 2026-11-22 10:31. Branch `claude/m5-drawing-tools`, latest commit `384c7ae`. Nothing committed this session; docs edits below are uncommitted.
+- Goal: run spikes 183 and 184 live with Aidan in Inventor, then M5 tasks in PLAN order in chunks of 4 to 5 (implementer, reviewer, one commit per task, push after each; stop after each chunk with a summary, Defaults and an Inventor checklist). Fit in a Finish Spec property task (spec 05 q23) and the two 179 follow-ups in TODO.md. Nothing from work prints in the repo.
 - Done this session:
-  - Title block mockup: tolerance box lists the rules (metric and imperial, both with the heading), back to 45 by 22 mm; Designer and Detailer as stored. Aidan approved it on 2026-11-21 with template additions, now drawn in (blue numbers 18 to 25): zone grid and centring arrows, X/Y triad, project and file name, Material Size, the part number on the right edge. Aidan then removed the full-width FINISH line: the Finish field shows the finish spec (Finish and Finish Thickness, 45 mm wide, Material 40), and the Finish Note and the finish's process notes are numbered notes in the NOTES list (18). The block is 180 by 55 mm. Then the left section was rearranged from Aidan's markup: logo in a 22 mm square cell, tolerance box 43 by 22 beside it, projection across the section, the URL in its own cell along the bottom. Spec 05 (question 12 answered, new question 23), tasks 183, 185, 196, 197, PLAN, DECISIONS and TODO updated.
-  - Aidan's additions logged as his, and six new tools (automatic notes, part marking, Batch Print, REF dimensions, Stock Size, Make/Buy) in spec 05 "Added for M5"; defaults logged as Default with questions 13 to 23.
-  - Tasks 183 to 209 written; `docs/PLAN.md` M5 section has the order and dependencies.
-- Current state: docs only; no code changed, nothing built or tested this session. Plan not yet reviewed by Aidan beyond the mockup approval (unverified that he accepts the task split).
+  - Spike 183 rounds 1 and 2 done and recorded in `docs/tasks/183-spike-print-template-and-views.md` (Results). Covered: title block from code, field syntax, border zones, logo, ISO start file, third angle via a local standard copy, white sheet colour, sheet formats A4/A3/ANSI B, saving the `.idw` template, new drawings from it, custom fields matched by name with no id.
+  - Aidan decided (DECISIONS.md 2026-11-22): a custom "Status" property printed by the template, written by Part Properties alongside Design Status; the property name is "Material Size". Default row: a Status mismatch on open is a pre-fill (spec 07 q7).
+  - Edited DECISIONS.md, spec 05, spec 07 (q7), tasks 185 and 187, PLAN.md; added `docs/tasks/210-part-properties-status.md`.
+  - Renamed the test part's "Material size" to "Material Size" and saved the part (Aidan allowed it).
+- Current state: no code changed; nothing built or tested this session. Test template at `C:\AwbSpike\183\AWB-spike.idw` (outside the repo). Unsaved `Drawing5` is open in Inventor (closing it is harmless).
+- Open:
+  - Sheet metal part mass prints "N/A" (asked Aidan to check its iProperties Physical tab).
+  - Triad lands about 8 mm off: `SketchedSymbol.Position` is the symbol centre, so the build must offset it.
+  - Waiting on Aidan's go for round 3.
 - Next:
-  1. Aidan takes a last look at `docs/ui-mockups/title-block.png` (no FINISH line; wider Finish field; finish notes on the sheet; the new left section), then commit.
-  2. Run M5 per `docs/WORKFLOW.md`: spikes 183 and 184 with Aidan in Inventor (local session); the Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) can run meanwhile. Update the add-in tasks with the spikes' confirmed members before they run.
-  3. Every task's Inventor steps go into `docs/checklists/m5.md` for one check at the end (task 209).
-  4. Open for Aidan: spec 05 questions 13 to 23 (defaults built), spec 09 question 29, spec 04 questions 20 to 25, the Hole Table icon.
-- Gotchas: long Bash heredocs fail here (`unexpected EOF`); write scripts with Write and run them. Render mockups with headless Edge (command at the top of the HTML; window height 3600 now), then trim the bottom with Pillow. Nothing from prints seen at work goes in the repo. Build with `-p:DeployToInventor=false` while Inventor is open. Flaky Core tests: NewPartCreator, RenamePlan, Numbering, SaveAsReplacer, SaveAsCopyCreator, RegisterStore.
-- Read first: spec 05 "Added for M5", `docs/PLAN.md` M5, the 2026-11-21 rows of `DECISIONS.md`.
+  1. Spike 183 round 3, on Aidan's go: views on a new drawing from the test template.
+     - Part: base, projected top and right (third angle), an iso view, shaded and hidden-line.
+     - Sheet metal part: the flat pattern view.
+     - Read back `DrawingView` Width, Height and Center.
+     - Assembly `C:\Users\4aida\OneDrive\Documents\CADING\DESIGN FILES\PRINT PROFILES\DESK\DES_ASSY.iam`: parts list and revision table styles and columns (Vendor, Stock Number, a custom Make/Buy).
+  2. Record round 3. Update tasks 186, 187 and 192 with the confirmed members (views are task 192; task 183's text says 191, which is wrong). Commit the spike docs.
+  3. Spike 184 (`docs/tasks/184-spike-drawing-tools-api.md`).
+  4. M5 chunks, as in the goal.
+- Gotchas:
+  - PowerShell names ignore case. `$Part` clobbered `$part`, and `$ud` clobbered `$UD`, which caused all the "Value does not fall within the expected range" refusals of custom fields. `$pid` is read-only. `MP` is an alias, so don't use it as a function name.
+  - A function that logs with Write-Output returns those lines; log with `[Console]::WriteLine` instead.
+  - Don't pipe the long scripts through `tail`: they take minutes, `tail` shows nothing until the end, and the job got moved to the background.
+  - `GetResultText` needs text boxes from `Definition.Sketch.TextBoxes`, not the ones `AddFitted` returned during Edit.
+  - `Documents.Add` fails while the template is open in Inventor.
+  - `AddUsingSheetFormat`: pass `Missing` as the model.
+  - Logs contain the material name from Aidan's library; keep it out of the repo.
+- Read first: task 183 Results, `spike-local/183/` (scripts and logs; round2c, probe2 and probe3 are the latest), DECISIONS.md 2026-11-22 rows.
 
 ## Big items
 

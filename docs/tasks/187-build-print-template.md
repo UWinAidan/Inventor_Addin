@@ -23,14 +23,21 @@ Out of scope: Create Print using the template (188); views.
 ## Acceptance criteria
 
 - [ ] Running the command makes both `.idw` files; opened in Inventor, each has the sheet formats ISO A4 to A0 and ANSI A to E (A4 and ANSI A portrait), white sheets, third angle, the zone grid, centring arrows and triad, and the title block as in the mockup.
-- [ ] A drawing made from either template with a view of a test part shows that part's values in every field, including Design Status as text and Mass in kg or lb with 2 decimals; changing a property in the model changes the print without any AWB step.
+- [ ] A drawing made from either template with a view of a test part shows that part's values in every field, including Status (the custom Status property, task 210) and Mass in kg or lb with 2 decimals; changing a property in the model changes the print without any AWB step.
 - [ ] The logo is embedded (the template opens on a PC without `libraries/Branding/`).
 - [ ] Only the developer panel shows the button; it is query-free (it creates new files), command type as Create Print.
 - [ ] `dotnet build InventorAddin.slnx -p:DeployToInventor=false` has 0 errors; every Inventor API member used is confirmed in the spike results or existing code, or listed under Verification
 
 ## Notes for the implementer
 
-- Spike 183's results are the only source for API calls; anything not there is listed under Verification.
+- Spike 183's results (rounds 1 to 3) are the only source for API calls; anything not there is listed under Verification. In short:
+  - Title block: `TitleBlockDefinitions.Add`, `Edit` through `IDispatch` (by-ref sketch), `AddFitted` text with the confirmed field syntax, `ExitEdit`, `Sheet.AddTitleBlock(def, kBottomRightPosition, Missing)`. The sketch origin is the block's bottom-left; the block's bottom-right sits on the border's inner corner.
+  - Custom property fields carry no `PropertyID` (they match by name).
+  - Border: `AddDefaultBorder` as in the results. The triad is a sketched symbol whose `Position` is its centre.
+  - Styles: third angle only through a local copy of the standard. Parts list and revision table styles go through copied styles and a copied object defaults style.
+  - Sheet colour: `SheetSettings.SheetColor`.
+  - Sheets: one sheet format per size (`SheetFormats.Add(sheet, name)`), then save as `.idw`.
+- Mass: the field shows "N/A" until the model's mass is computed; the acceptance check reads `MassProperties.Mass` and calls `DrawingDocument.Update()` first. Mass in lb is not settled (spike 183, round 3). Try the imperial template with lb as the drawing's mass unit from the start. If the field still prints kg, stop and add an open question to spec 05; do not invent another field.
 - Keep every engineering choice (positions, texts, sizes) in Core's layout; the builder only draws.
 - Close Inventor's documents it opened; a failure deletes the half-made file and says which step failed (as Create Print does).
 - Read spec 05's "Added for M5" section and the 2026-11-21 rows of `DECISIONS.md` first. Defaults are marked there; do not change them.
