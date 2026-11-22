@@ -346,4 +346,34 @@ public sealed class PrintTemplateLayoutTests
             Assert.InRange(l.Y2Mm, -Eps, 55 + Eps);
         }
     }
+
+    [Fact]
+    public void TriadExtent_IsDerivedFromTheLabels_SoTheDrawingAndTheOriginCannotDrift()
+    {
+        var t = PrintTemplateLayout.Triad;
+        Assert.Equal(17.5, PrintTemplateLayout.TriadExtentMm, 6);
+        Assert.Equal(t.LabelDistanceMm + t.LabelSizeMm, t.ExtentMm, 6);
+        // Both labels end at the extent along their axis, and nothing else reaches further.
+        Assert.Equal(t.ExtentMm, t.XLabelMm.X + t.LabelSizeMm, 6);
+        Assert.Equal(t.ExtentMm, t.YLabelMm.Y + t.LabelSizeMm, 6);
+        Assert.True(t.ArrowLengthMm <= t.ExtentMm);
+        Assert.Equal(0.4, t.AxisWeightMm, 6);
+    }
+
+    [Theory]
+    [InlineData("A3", PrintUnits.Metric, "AWB ISO A3")]
+    [InlineData("A4", PrintUnits.Metric, "AWB ISO A4")]
+    [InlineData("B", PrintUnits.Imperial, "AWB ANSI B")]
+    [InlineData("A", PrintUnits.Imperial, "AWB ANSI A")]
+    public void FormatNames(string name, PrintUnits units, string expected) =>
+        Assert.Equal(expected, Find(name, units).FormatName);
+
+    [Fact]
+    public void TheDefaultSheetIsA3OrB_AndIsOneOfTheSizes()
+    {
+        Assert.Equal("A3", PrintTemplateLayout.Metric.DefaultSheetName);
+        Assert.Equal("B", PrintTemplateLayout.Imperial.DefaultSheetName);
+        Assert.Contains(PrintTemplateLayout.Metric.SheetSizes, s => s.Name == "A3");
+        Assert.Contains(PrintTemplateLayout.Imperial.SheetSizes, s => s.Name == "B");
+    }
 }

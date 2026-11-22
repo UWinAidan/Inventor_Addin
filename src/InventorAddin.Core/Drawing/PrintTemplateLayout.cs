@@ -62,6 +62,9 @@ public sealed record SheetSizeSpec(
 {
     public bool IsPortrait => HeightMm > WidthMm;
 
+    /// <summary>The sheet format's name in the template (Create Print, task 188, picks a sheet by it): "AWB ISO A3", "AWB ANSI B".</summary>
+    public string FormatName => (Units == PrintUnits.Metric ? "AWB ISO " : "AWB ANSI ") + Name;
+
     public double BorderLeftMm => FilingMarginMm;
     public double BorderRightMm => WidthMm - OtherMarginMm;
     public double BorderBottomMm => OtherMarginMm;
@@ -207,12 +210,25 @@ public sealed record ProjectionSymbol(
     double InnerRadiusMm);
 
 /// <summary>The X/Y triad. <see cref="OriginXMm"/> and <see cref="OriginYMm"/> are its inset from the border's bottom-left corner (or from the title block's top-left, see <see cref="SheetSizeSpec.TriadOriginMm"/>, which gives the origin per sheet in border coordinates).</summary>
-/// <remarks>The axis lines are drawn at 0.4 mm; the X and Y labels sit 14.5 mm out along their axes.</remarks>
+/// <remarks>
+/// The axis lines are drawn at <see cref="AxisWeightMm"/>; the X and Y labels sit <see cref="LabelDistanceMm"/> out along their axes.
+/// Label positions are the labels' lower-left corners relative to the triad's origin, and <see cref="ExtentMm"/> is derived from them,
+/// so the drawing and <see cref="SheetSizeSpec.TriadOriginMm"/> cannot drift apart.
+/// </remarks>
 public sealed record TriadSpec(double OriginXMm, double OriginYMm, double AxisLengthMm, double ArrowLengthMm, double ArrowHalfWidthMm,
-    double LabelSizeMm)
+    double LabelSizeMm, double AxisWeightMm = 0.4, double LabelDistanceMm = 14.5)
 {
     public string XLabel => "X";
     public string YLabel => "Y";
+
+    /// <summary>The X label's lower-left corner: beyond the x axis's end, centred (about) on the axis.</summary>
+    public (double X, double Y) XLabelMm => (LabelDistanceMm, -LabelSizeMm / 2);
+
+    /// <summary>The Y label's lower-left corner: above the y axis's end, centred (about) on the axis.</summary>
+    public (double X, double Y) YLabelMm => (-LabelSizeMm * 0.35, LabelDistanceMm);
+
+    /// <summary>How far the labels reach from the origin along an axis: the label distance plus the label height.</summary>
+    public double ExtentMm => LabelDistanceMm + LabelSizeMm;
 }
 
 /// <summary>
@@ -295,8 +311,11 @@ public sealed class PrintTemplateLayout
     /// <summary>A baseline measured down from the block's top, as a y up from its bottom.</summary>
     private static double Baseline(double yDown) => TitleBlockHeightMm - yDown;
 
-    /// <summary>How far the triad's labels reach from its origin: 14.5 mm out plus the 3 mm label height.</summary>
-    public const double TriadExtentMm = 17.5;
+    /// <summary>How far the triad's labels reach from its origin (17.5 mm), derived from <see cref="Triad"/>.</summary>
+    public static double TriadExtentMm => Triad.ExtentMm;
+
+    /// <summary>The sheet size made last, so the saved template's own sheet is the one Create Print most often wants.</summary>
+    public string DefaultSheetName => Units == PrintUnits.Metric ? "A3" : "B";
 
     public static TriadSpec Triad { get; } = new(5, 5, 11, 13, 1, 3);
 

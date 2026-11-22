@@ -56,6 +56,9 @@ public static class CommandDocuments
         // A folder of files, not a document.
         [CommandNames.MassUpdate] = CommandDocument.None,
         [CommandNames.ExportLibraries] = CommandDocument.None,
+
+        // Makes new files from the layout; no document is read.
+        [CommandNames.BuildPrintTemplate] = CommandDocument.None,
     };
 
     /// <summary>The document <paramref name="commandName"/> acts on. A name with no row gives <see cref="CommandDocument.Edited"/>.</summary>

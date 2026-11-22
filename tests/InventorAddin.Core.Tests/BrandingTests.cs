@@ -30,6 +30,7 @@ public sealed class BrandingTests
         Assert.Equal("id_Panel_Awb_Awb", RibbonIds.AwbPanelId);
         Assert.Equal("Awb_ExportModelData", CommandNames.ExportModelData);
         Assert.Equal("Awb_ExportLibraries", CommandNames.ExportLibraries);
+        Assert.Equal("Awb_BuildPrintTemplate", CommandNames.BuildPrintTemplate);
         Assert.Equal("Awb_Settings", CommandNames.Settings);
         Assert.Equal("Awb_About", CommandNames.About);
     }

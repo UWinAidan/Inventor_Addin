@@ -116,7 +116,7 @@ public sealed class RibbonLayoutTests
             {
                 Create(Large("NewPart")),
                 Properties(Small("MassUpdate")),
-                Developer(Small("ExportLibraries")),
+                Developer(Small("ExportLibraries"), Small("BuildPrintTemplate")),
                 Awb(),
             },
             (RibbonEnvironment.Part, false) => new[]
@@ -131,7 +131,7 @@ public sealed class RibbonLayoutTests
                 Create(Large("NewPart"), Small("SaveAsCopy"), Large("AwbHole")),
                 Properties(Large("PartProperties"), Small("MassUpdate"), Small("MaterialFinish")),
                 DrawingPanel(Large("CreatePrint")),
-                Developer(Small("ExportModelData"), Small("ExportLibraries")),
+                Developer(Small("ExportModelData"), Small("ExportLibraries"), Small("BuildPrintTemplate")),
                 Awb(),
             },
             (RibbonEnvironment.Assembly, false) => new[]
@@ -146,7 +146,7 @@ public sealed class RibbonLayoutTests
                 Create(Large("NewPart"), Small("SaveAsCopy"), Small("SaveAsReplace")),
                 Properties(Large("PartProperties"), Small("MassUpdate"), Small("MaterialFinish")),
                 DrawingPanel(Large("CreatePrint")),
-                Developer(Small("ExportModelData"), Small("ExportLibraries")),
+                Developer(Small("ExportModelData"), Small("ExportLibraries"), Small("BuildPrintTemplate")),
                 Awb(),
             },
             (RibbonEnvironment.Drawing, false) => new[]
@@ -157,7 +157,7 @@ public sealed class RibbonLayoutTests
             (RibbonEnvironment.Drawing, true) => new[]
             {
                 DrawingPanel(HoleTableButton),
-                Developer(Small("ExportModelData"), Small("ExportLibraries")),
+                Developer(Small("ExportModelData"), Small("ExportLibraries"), Small("BuildPrintTemplate")),
                 Awb(),
             },
             _ => throw new ArgumentOutOfRangeException(nameof(environment)),
@@ -284,6 +284,7 @@ public sealed class RibbonLayoutTests
     [InlineData(CommandNames.About, IconNames.About)]
     [InlineData(CommandNames.ExportModelData, IconNames.ExportModelData)]
     [InlineData(CommandNames.ExportLibraries, IconNames.ExportLibraries)]
+    [InlineData(CommandNames.BuildPrintTemplate, IconNames.BuildPrintTemplate)]
     [InlineData(CommandNames.NewPart, IconNames.NewPart)]
     [InlineData(CommandNames.CreatePrint, IconNames.CreatePrint)]
     [InlineData(CommandNames.SaveAsCopy, IconNames.SaveAsCopy)]
@@ -321,6 +322,7 @@ public sealed class RibbonLayoutTests
     [InlineData(CommandNames.HoleTable, ButtonSize.Large)]
     [InlineData(CommandNames.ExportModelData, ButtonSize.Small)]
     [InlineData(CommandNames.ExportLibraries, ButtonSize.Small)]
+    [InlineData(CommandNames.BuildPrintTemplate, ButtonSize.Small)]
     public void EachCommand_HasItsSize_InEveryEnvironment(string command, ButtonSize size)
     {
         var buttons = RibbonEnvironments.All
@@ -347,7 +349,7 @@ public sealed class RibbonLayoutTests
         Assert.Equal(
             new[]
             {
-                CommandNames.About, CommandNames.AwbHole, CommandNames.CreatePrint, CommandNames.ExportLibraries, CommandNames.ExportModelData, CommandNames.HoleTable,
+                CommandNames.About, CommandNames.AwbHole, CommandNames.BuildPrintTemplate, CommandNames.CreatePrint, CommandNames.ExportLibraries, CommandNames.ExportModelData, CommandNames.HoleTable,
                 CommandNames.MassUpdate, CommandNames.MaterialFinish, CommandNames.NewPart, CommandNames.PartProperties, CommandNames.SaveAsCopy,
                 CommandNames.SaveAsReplace, CommandNames.Settings,
             }.OrderBy(n => n, StringComparer.Ordinal),
@@ -382,7 +384,7 @@ public sealed class RibbonLayoutTests
             .Select(g => g.First().IconName)
             .ToList();
 
-        Assert.Equal(13, iconNames.Count);
+        Assert.Equal(14, iconNames.Count);
         Assert.Equal(iconNames.Count, iconNames.Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
 

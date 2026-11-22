@@ -94,6 +94,8 @@ public static class RibbonLayout
         {
             new(CommandNames.ExportModelData, ButtonSize.Small, IconNames.ExportModelData, DocumentEnvironments),
             new(CommandNames.ExportLibraries, ButtonSize.Small, IconNames.ExportLibraries, AllEnvironments),
+            // Task 187: it creates new files, so it needs no open document. Its icon is a copy of the existing developer icon (Export Model Data).
+            new(CommandNames.BuildPrintTemplate, ButtonSize.Small, IconNames.BuildPrintTemplate, AllEnvironments),
         }),
         new(RibbonIds.AwbPanelId, RibbonIds.AwbPanelName, DeveloperOnly: false, new ButtonDefinition[]
         {

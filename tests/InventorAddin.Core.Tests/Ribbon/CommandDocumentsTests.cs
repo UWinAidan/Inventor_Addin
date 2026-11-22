@@ -22,6 +22,7 @@ public sealed class CommandDocumentsTests
     [InlineData(CommandNames.UseInventorHoleByDefault, CommandDocument.None)]
     [InlineData(CommandNames.MassUpdate, CommandDocument.None)]
     [InlineData(CommandNames.ExportLibraries, CommandDocument.None)]
+    [InlineData(CommandNames.BuildPrintTemplate, CommandDocument.None)]
     public void For_GivesTheCommandsRow(string commandName, CommandDocument expected)
     {
         Assert.Equal(expected, CommandDocuments.For(commandName));

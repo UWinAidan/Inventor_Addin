@@ -6,25 +6,31 @@ Last updated: 2026-11-22
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-22 13:00. Branch `claude/m5-drawing-tools`, latest commit `bfee63a` (pushed).
-- Goal: M5 tasks in PLAN order, in chunks of 4 to 5. For each task: implementer, then reviewer, one commit, push. Stop after each chunk with a summary, Defaults and a checklist; Aidan says "next chunk". Nothing from work prints goes in the repo.
+- Updated: 2026-11-22 13:18. Branch `claude/m5-drawing-tools`, latest commit `81d1c4c` (pushed).
+- Goal: M5 tasks in PLAN order, in chunks. For each task: implementer, then reviewer, one commit, push. Stop after each chunk with a summary, Defaults and a checklist; Aidan says "next chunk". Nothing from work prints goes in the repo.
 - Done this session:
-  - Spikes 183 and 184 recorded, and the dependent tasks updated.
-  - Tasks 210 to 212 written.
-  - Chunk 1 done and pushed: 211 `14b9a9a`, 185 `a7eb4bf`, 186 `9551141`, 189 `c4200e4`, 190 `bfee63a`. Each passed review; 185 and 189 needed one fix round.
-  - Core tests: 5097 total in the last run; `RenamePlanTests` and `SaveAsReplacerTests` (Numbering) are flaky on timing (TODO.md).
-  - Solution builds with 0 errors as of task 186.
-- Waiting on Aidan: "next chunk". New spec 05 questions 24 to 27 (the triad on portrait sheets, ANSI margins, ANSI zone counts, unticking Front).
-- Next, chunk 2:
-  1. 187, the Build Print Template command. It drives Inventor, so run it live with Aidan: the implementer writes it and Aidan runs it to make `libraries/Templates/*.idw`.
-  2. Then 188, 191 (icons, Python with Pillow), 192 and 193.
-  3. Later chunks: 194 to 208, plus 210 and 212.
+  - Spikes 183 and 184.
+  - Chunk 1, pushed: 211, 185, 186, 189, 190.
+  - Aidan answered spec 05 questions 23 to 27 (DECISIONS.md, 2026-11-22; `c4edaa8`): Finish Spec in µm or inches, the triad above the title block on portrait sheets, ANSI margins 20/12.7 mm, ANSI zone counts as listed, the unticking-Front rule kept.
+  - Chunk 2 so far: 214 (triad above the block, `d1f33ae`), 213 (Finish Spec units, `81d1c4c`). Both passed review.
+  - Last builds and tests: solution 0 errors, Core 5122 passed.
+- In progress: the task 187 implementer (Build Print Template command) was launched in the background. Its result is not seen yet (unverified). It must not run Inventor; Aidan deploys and runs it.
+- Waiting on Aidan:
+  - Settings at 150%: his message left the placeholder, so the two template rows are unchecked.
+  - Run 187 once it passes review: close Inventor and build (deploy), reopen, Developer panel, Build Print Template, check both `.idw` files, then commit them in `libraries/Templates/`.
+- Next:
+  1. Review 187, then fix if needed. Commit `task 187: Build Print Template command and the starter templates` (the code first; the `.idw` files after Aidan runs it), then push.
+  2. Tell Aidan that 187 needs him at the PC, with the steps.
+  3. Then 188, 191 (icons, Python with Pillow), 192 and 193. Then the chunk 2 summary.
+  4. Later chunks: 194 to 208, plus 210 and 212.
 - Open:
-  - Mass in lb (task 187 tries an imperial template with lb from the start).
-  - Question 23: mm or µm.
-  - The small part number's 0.2 mm clearance on ISO sheets, to check in task 187.
-- Gotchas: spike notes are in tasks 183 and 184 (Results). An agent can hit the account session limit and stop mid-task; resume it with SendMessage after the reset.
-- Read first: `docs/WORKFLOW.md` (run mode), `docs/PLAN.md` M5, task 187, DECISIONS.md rows dated 2026-11-22.
+  - Mass in lb (187 tries an imperial template with lb from the start; if it fails, add a spec 05 question).
+  - The small part number's 0.2 mm clearance on ISO sheets; `TriadExtentMm` 17.5 to check against the drawn triad.
+- Gotchas:
+  - Numbering and RegisterStore tests fail intermittently on timing; rerun.
+  - Agents can hit the account session limit; resume them with SendMessage after the reset.
+  - Bash heredocs with quotes inside Python failed to parse; write a script file instead.
+- Read first: `docs/WORKFLOW.md` (run mode), `docs/PLAN.md` M5, task 187, tasks 183 and 184 Results, DECISIONS.md rows dated 2026-11-22.
 
 ## Big items
 

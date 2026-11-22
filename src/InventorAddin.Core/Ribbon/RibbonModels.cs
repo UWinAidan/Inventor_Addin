@@ -87,6 +87,10 @@ public static class CommandNames
 {
     public const string ExportModelData = Prefix + "ExportModelData";
     public const string ExportLibraries = Prefix + "ExportLibraries";
+
+    /// <summary>Developer tool (task 187): draws the metric and imperial print templates from <c>PrintTemplateLayout</c>.</summary>
+    public const string BuildPrintTemplate = Prefix + "BuildPrintTemplate";
+
     public const string Settings = Prefix + "Settings";
     public const string About = Prefix + "About";
     public const string PartProperties = Prefix + "PartProperties";
@@ -134,6 +138,9 @@ public static class IconNames
     public const string About = "About";
     public const string ExportModelData = "ExportModelData";
     public const string ExportLibraries = "ExportLibraries";
+
+    /// <summary>Build Print Template (task 187). A placeholder: its four images are copies of <see cref="ExportModelData"/>'s, the existing developer icon.</summary>
+    public const string BuildPrintTemplate = "BuildPrintTemplate";
 
     // M2 commands (task 042). Drawn before their commands exist; each command's own task adds its layout entry.
     public const string NewPart = "NewPart";

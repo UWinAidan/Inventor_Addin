@@ -78,6 +78,7 @@ namespace InventorAddin.UI
             yield return new AboutCommand();
             yield return new ExportModelDataCommand();
             yield return new ExportLibrariesCommand();
+            yield return new BuildPrintTemplateCommand();
         }
 
         /// <summary>
