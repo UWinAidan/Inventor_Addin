@@ -555,7 +555,8 @@ Aidan answered the planning questions and the title block questions on 2026-11-2
 | 206 | windows build | 184, 187, 191, 205 | none |
 | 207 | Core | none | 205 |
 | 208 | windows build | 184, 187, 191, 207 | none |
-| 209 | **windows** (Aidan) | 183 to 208 | none |
+| 210 | windows build | none | any Core-only task |
+| 209 | **windows** (Aidan) | 183 to 208, 210 | none |
 
 The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their own files; 186, 196 and 205 all touch `AddinSettings`, `LibraryPaths` and the Settings window, so run those three one after another.
 
@@ -590,6 +591,7 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [ ] 206 Stock Size command
 - [ ] 207 Parts list Make/Buy rule (Core)
 - [ ] 208 Update Parts List command
+- [ ] 210 Part Properties: Status (Aidan, 2026-11-22; the title block prints the custom Status)
 
 **Check**
 - [ ] 209 M5 combined Inventor check
