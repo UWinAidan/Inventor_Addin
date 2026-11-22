@@ -57,10 +57,15 @@ public sealed record SheetSizeSpec(
     double HeightMm,
     int ZonesAcross,
     int ZonesDown,
-    double FilingMarginMm,
-    double OtherMarginMm)
+    double MarginMm)
 {
     public bool IsPortrait => HeightMm > WidthMm;
+
+    /// <summary>The margin on the left. The same as every other side: the border is centred (Aidan, 2026-11-22), no filing edge.</summary>
+    public double FilingMarginMm => MarginMm;
+
+    /// <summary>The margin on the top, right and bottom.</summary>
+    public double OtherMarginMm => MarginMm;
 
     /// <summary>The sheet format's name in the template (Create Print, task 188, picks a sheet by it): "AWB ISO A3", "AWB ANSI B".</summary>
     public string FormatName => (Units == PrintUnits.Metric ? "AWB ISO " : "AWB ANSI ") + Name;
@@ -259,6 +264,20 @@ public sealed class PrintTemplateLayout
     public const double PartNumberSizeMm = 7;
     public const double SmallFieldSizeMm = 2.5;
 
+    /// <summary>The gap between an inline label's colon and its value ("PROJECT:" then the value).</summary>
+    public const double InlineGapMm = 2;
+
+    // Tolerance box: sizes as the mockup (heading and edge note 1.8, units line 2.5 bold, class/tolerance/angle texts 2.4).
+    public const double ToleranceTextSizeMm = 2.4;
+    public const double ToleranceUnitsSizeMm = 2.5;
+    public const double ToleranceBoxPaddingMm = 0.5;
+    /// <summary>Gap between the class column ("X.XX") and the tolerance column ("±0.05").</summary>
+    public const double ToleranceColumnGapMm = 2;
+    /// <summary>Gap each side of the divider between the linear tolerances and the angles.</summary>
+    public const double ToleranceDividerGapMm = 2;
+    /// <summary>Distance between the edge note's baselines when it wraps.</summary>
+    public const double EdgeNoteLineSpacingMm = 2;
+
     /// <summary>Outline weight as drawn in the mockup (0.7). A reviewer remembered 0.35; task 187 confirms the real weight against the mockup.</summary>
     public const double OutlineWeightMm = 0.7;
     public const double RowLineWeightMm = 0.5;
@@ -317,6 +336,9 @@ public sealed class PrintTemplateLayout
     /// <summary>The sheet size made last, so the saved template's own sheet is the one Create Print most often wants.</summary>
     public string DefaultSheetName => Units == PrintUnits.Metric ? "A3" : "B";
 
+    private static readonly string[] AllToleranceClasses = { "X", "X.X", "X.XX", ".X", ".XX", ".XXX" };
+    private static readonly string[] AllToleranceValues = { "±0.5", "±0.2", "±0.05", "±.03", "±.01", "±.005" };
+
     public static TriadSpec Triad { get; } = new(5, 5, 11, 13, 1, 3);
 
     public PrintUnits Units { get; }
@@ -355,21 +377,21 @@ public sealed class PrintTemplateLayout
 
     public static IReadOnlyList<SheetSizeSpec> IsoSheets { get; } = new[]
     {
-        new SheetSizeSpec("A4", PrintUnits.Metric, 210, 297, 4, 6, 20, 10),
-        new SheetSizeSpec("A3", PrintUnits.Metric, 420, 297, 8, 6, 20, 10),
-        new SheetSizeSpec("A2", PrintUnits.Metric, 594, 420, 12, 8, 20, 10),
-        new SheetSizeSpec("A1", PrintUnits.Metric, 841, 594, 16, 12, 20, 10),
-        new SheetSizeSpec("A0", PrintUnits.Metric, 1189, 841, 24, 16, 20, 10),
+        new SheetSizeSpec("A4", PrintUnits.Metric, 210, 297, 4, 6, 10),
+        new SheetSizeSpec("A3", PrintUnits.Metric, 420, 297, 8, 6, 10),
+        new SheetSizeSpec("A2", PrintUnits.Metric, 594, 420, 12, 8, 10),
+        new SheetSizeSpec("A1", PrintUnits.Metric, 841, 594, 16, 12, 10),
+        new SheetSizeSpec("A0", PrintUnits.Metric, 1189, 841, 24, 16, 10),
     };
 
-    /// <summary>ANSI A to E (A portrait, the rest landscape), 0.5 in border, the filing edge 20 mm as on the ISO sheets.</summary>
+    /// <summary>ANSI A to E (A portrait, the rest landscape), 0.5 in border on every side.</summary>
     public static IReadOnlyList<SheetSizeSpec> AnsiSheets { get; } = new[]
     {
-        new SheetSizeSpec("A", PrintUnits.Imperial, 215.9, 279.4, 4, 2, 20, 12.7),
-        new SheetSizeSpec("B", PrintUnits.Imperial, 431.8, 279.4, 4, 4, 20, 12.7),
-        new SheetSizeSpec("C", PrintUnits.Imperial, 558.8, 431.8, 8, 4, 20, 12.7),
-        new SheetSizeSpec("D", PrintUnits.Imperial, 863.6, 558.8, 8, 4, 20, 12.7),
-        new SheetSizeSpec("E", PrintUnits.Imperial, 1117.6, 863.6, 16, 8, 20, 12.7),
+        new SheetSizeSpec("A", PrintUnits.Imperial, 215.9, 279.4, 4, 2, 12.7),
+        new SheetSizeSpec("B", PrintUnits.Imperial, 431.8, 279.4, 4, 4, 12.7),
+        new SheetSizeSpec("C", PrintUnits.Imperial, 558.8, 431.8, 8, 4, 12.7),
+        new SheetSizeSpec("D", PrintUnits.Imperial, 863.6, 558.8, 8, 4, 12.7),
+        new SheetSizeSpec("E", PrintUnits.Imperial, 1117.6, 863.6, 16, 8, 12.7),
     };
 
     public static PrintTemplateLayout Metric { get; } = new(PrintUnits.Metric);
@@ -391,20 +413,23 @@ public sealed class PrintTemplateLayout
 
         // Field cells: the mockup's x, y (down from the top of the block), w, h.
         void Field(string name, double x, double yDown, double w, double h, string label, PrintField field, double size,
-            bool bold = false, bool centre = false, bool inline = false)
+            bool bold = false, bool centre = false, bool inline = false, double? baselineSize = null)
         {
             double labelX = x + 1, labelBase, valueX, valueBase;
             if (inline)
             {
-                labelBase = Baseline(yDown + h / 2 + 0.65);
-                valueX = x + 1 + label.Length * 1.25 + 2;
-                valueBase = Baseline(yDown + h / 2 + size * 0.36);
+                // The label and the value share one baseline: the value's, so a 2.5 mm value sits centred in the row.
+                valueBase = labelBase = Baseline(yDown + h / 2 + size * 0.36);
+                valueX = x + 1 + PrintTextFit.WidthMm(label + ":", LabelSizeMm) + InlineGapMm;
             }
             else
             {
+                // Values in one row of cells share a baseline: baselineSize names the row's size (the Material row is 2.8 mm
+                // whatever its Material Size cell's own size).
+                double rowSize = baselineSize ?? size;
                 labelBase = Baseline(yDown + 2.4);
                 valueX = centre ? x + w / 2 : x + 1.5;
-                valueBase = Baseline(yDown + h - (h - 2.6 - size) / 2 - 0.6);
+                valueBase = Baseline(yDown + h - (h - 2.6 - rowSize) / 2 - 0.6);
             }
             cells.Add(new TitleBlockCell(name, x, FromTop(yDown, h), w, h, label, field, null, size, bold,
                 centre ? TextAnchor.Centre : TextAnchor.Start, inline, labelX, labelBase, valueX, valueBase));
@@ -417,7 +442,7 @@ public sealed class PrintTemplateLayout
         Field("Revision", 136, 17, 16, 14, "REV", PrintField.Revision, PartNumberSizeMm, bold: true, centre: true);
         Field("Status", 152, 17, 28, 14, "STATUS", PrintField.Status, SmallFieldSizeMm);
         Field("Material", 65, 31, 40, 8, "MATERIAL", PrintField.Material, ValueSizeMm);
-        Field("MaterialSize", 105, 31, 30, 8, "MATERIAL SIZE", PrintField.MaterialSize, SmallFieldSizeMm);
+        Field("MaterialSize", 105, 31, 30, 8, "MATERIAL SIZE", PrintField.MaterialSize, SmallFieldSizeMm, baselineSize: ValueSizeMm);
         Field("Finish", 135, 31, 45, 8, "FINISH", PrintField.FinishSpec, ValueSizeMm);
         Field("Designer", 65, 39, 28.75, 8, "DESIGNER", PrintField.Designer, ValueSizeMm);
         Field("Detailer", 93.75, 39, 28.75, 8, "DETAILER", PrintField.DrawingAuthor, ValueSizeMm);
@@ -441,23 +466,33 @@ public sealed class PrintTemplateLayout
         Logo = new TitleBlockLogo(Branding.PrintLogoFileName, LogoMarginMm,
             FromTop(TopRowHeightMm + LogoMarginMm, LogoSizeMm), LogoSizeMm, LogoSizeMm);
 
-        // Tolerance box texts: heading, units, linear tolerances stacked, angles beside them, the edge note.
+        // Tolerance box texts: heading, units, then the linear tolerances in two aligned columns (class, tolerance) with the angles
+        // beside them, then the edge note wrapped to the box. y is measured down from the top of the block's top row.
         TitleBlockText T(string text, double x, double yDownInBlock, double size, bool bold = false, bool label = false) =>
             new(ToleranceCellName, text, x, Baseline(yDownInBlock + TopRowHeightMm), size, bold, label, TextAnchor.Start);
-        texts.Add(T(ToleranceHeading, 23, 2.4, LabelSizeMm, label: true));
-        texts.Add(T(metric ? "DIMENSIONS IN MM" : "DIMENSIONS IN INCHES", 23, 5.9, 2.5, bold: true));
-        texts.Add(T("TOLERANCES:", 23, 8.7, LabelSizeMm, label: true));
+        const double boxX = LogoCellMm + 1;
+        texts.Add(T(ToleranceHeading, boxX, 2.3, LabelSizeMm, label: true));
+        texts.Add(T(metric ? "DIMENSIONS IN MM" : "DIMENSIONS IN INCHES", boxX, 5.4, ToleranceUnitsSizeMm, bold: true));
+        texts.Add(T("TOLERANCES:", boxX, 8.2, LabelSizeMm, label: true));
         string[][] rows = metric
             ? new[] { new[] { "X", "±0.5" }, new[] { "X.X", "±0.2" }, new[] { "X.XX", "±0.05" } }
             : new[] { new[] { ".X", "±.03" }, new[] { ".XX", "±.01" }, new[] { ".XXX", "±.005" } };
+        // Column positions come from both templates' widest entries, so metric and imperial boxes line up identically.
+        double classX = boxX + 1;
+        double toleranceX = classX + AllToleranceClasses.Max(c => PrintTextFit.WidthMm(c, ToleranceTextSizeMm)) + ToleranceColumnGapMm;
+        double dividerX = toleranceX + AllToleranceValues.Max(v => PrintTextFit.WidthMm(v, ToleranceTextSizeMm)) + ToleranceDividerGapMm;
+        double anglesX = dividerX + ToleranceDividerGapMm;
         for (int i = 0; i < rows.Length; i++)
         {
-            texts.Add(T(rows[i][0], 24, 11.8 + i * 2.9, 2.4));
-            texts.Add(T(rows[i][1], 31, 11.8 + i * 2.9, 2.4));
+            texts.Add(T(rows[i][0], classX, 11.1 + i * 2.8, ToleranceTextSizeMm));
+            texts.Add(T(rows[i][1], toleranceX, 11.1 + i * 2.8, ToleranceTextSizeMm));
         }
-        texts.Add(T("ANGLES", 47, 11.8, 2.4));
-        texts.Add(T("±0.5°", 47, 14.7, 2.4));
-        texts.Add(T(EdgeNote, 23, 21.1, LabelSizeMm));
+        texts.Add(T("ANGLES", anglesX, 11.1, ToleranceTextSizeMm));
+        texts.Add(T("±0.5°", anglesX, 13.9, ToleranceTextSizeMm));
+        double noteWidth = LeftSectionWidthMm - boxX - ToleranceBoxPaddingMm;
+        var noteLines = PrintTextFit.Wrap(EdgeNote, LabelSizeMm, noteWidth);
+        for (int i = 0; i < noteLines.Count; i++)
+            texts.Add(T(noteLines[i], boxX, 19.0 + i * EdgeNoteLineSpacingMm, LabelSizeMm));
         // Projection and URL cells.
         texts.Add(new TitleBlockText(ProjectionCellName, ThirdAngleText, 1, Baseline(TopRowHeightMm + 24.4), LabelSizeMm, false, true, TextAnchor.Start));
         texts.Add(new TitleBlockText(UrlCellName, Branding.WebsiteUrl, LeftSectionWidthMm / 2, Baseline(TopRowHeightMm + 47), ValueSizeMm, false, false, TextAnchor.Centre));
@@ -472,7 +507,7 @@ public sealed class PrintTemplateLayout
             new(0, TitleBlockHeightMm, 0, 0, OutlineWeightMm),
             new(0, FromTop(TopRowHeightMm), TitleBlockWidthMm, FromTop(TopRowHeightMm), RowLineWeightMm),
             new(LeftSectionWidthMm, 0, LeftSectionWidthMm, FromTop(TopRowHeightMm), CellLineWeightMm),
-            new(45, FromTop(TopRowHeightMm + 9.8), 45, FromTop(TopRowHeightMm + 18.6), CellLineWeightMm),
+            new(dividerX, FromTop(TopRowHeightMm + 9.4), dividerX, FromTop(TopRowHeightMm + 17.4), CellLineWeightMm),
         };
 
         // Third angle symbol: frustum on the left, circles on the right, centre lines through both (block coordinates).

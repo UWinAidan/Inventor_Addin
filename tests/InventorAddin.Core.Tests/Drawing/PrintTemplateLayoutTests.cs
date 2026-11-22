@@ -30,14 +30,26 @@ public sealed class PrintTemplateLayoutTests
     public void BorderMargins()
     {
         var a3 = Find("A3", PrintUnits.Metric);
-        Assert.Equal(20, a3.BorderLeftMm);
+        Assert.Equal(10, a3.BorderLeftMm);
         Assert.Equal(410, a3.BorderRightMm);
         Assert.Equal(10, a3.BorderBottomMm);
         Assert.Equal(287, a3.BorderTopMm);
         var ansiB = Find("B", PrintUnits.Imperial);
-        Assert.Equal(20, ansiB.BorderLeftMm);
+        Assert.Equal(12.7, ansiB.BorderLeftMm, 6);
         Assert.Equal(12.7, ansiB.BorderBottomMm, 6);
         Assert.Equal(431.8 - 12.7, ansiB.BorderRightMm, 6);
+    }
+
+    [Theory]
+    [MemberData(nameof(AllSheets))]
+    public void TheBorderIsCentred_10mmOnIso_12_7mmOnAnsi(string name, PrintUnits units)
+    {
+        var s = Find(name, units);
+        double margin = units == PrintUnits.Metric ? 10 : 12.7;
+        Assert.Equal(margin, s.BorderLeftMm, 6);
+        Assert.Equal(margin, s.BorderBottomMm, 6);
+        Assert.Equal(margin, s.WidthMm - s.BorderRightMm, 6);
+        Assert.Equal(margin, s.HeightMm - s.BorderTopMm, 6);
     }
 
     [Theory]
@@ -150,10 +162,11 @@ public sealed class PrintTemplateLayoutTests
     }
 
     [Fact]
-    public void A4PortraitIsExactly180Wide()
+    public void A4PortraitBorderHoldsTheBlock()
     {
         var a4 = Find("A4", PrintUnits.Metric);
-        Assert.Equal(180, a4.BorderWidthMm, 6);
+        // A centred 10 mm border is 190 wide: the 180 block fits, flush with the right edge.
+        Assert.Equal(190, a4.BorderWidthMm, 6);
         Assert.Equal(20, a4.TitleBlockOriginMm.X, 6);
         Assert.True(a4.IsPortrait);
         var ansiA = Find("A", PrintUnits.Imperial);
@@ -263,7 +276,7 @@ public sealed class PrintTemplateLayoutTests
         var t = layout.Texts.Where(x => x.CellName == PrintTemplateLayout.ToleranceCellName).Select(x => x.Text).ToList();
         // heading, units, "TOLERANCES:", three name/value pairs, "ANGLES" and its value, the edge note
         string linear = string.Join(", ", new[] { 3, 5, 7 }.Select(i => $"{t[i]} {t[i + 1]}"));
-        return $"{t[0]} {t[1]}. {t[2]} {linear}, {t[9]} {t[10]}. {t[11]}";
+        return $"{t[0]} {t[1]}. {t[2]} {linear}, {t[9]} {t[10]}. {string.Join(" ", t.Skip(11))}";
     }
 
     [Fact]

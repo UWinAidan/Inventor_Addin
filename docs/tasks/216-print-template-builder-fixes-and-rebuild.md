@@ -21,6 +21,10 @@ The builder draws task 215's corrected layout. The metric standard prints a deci
     - Change `PrintField.Status`'s documentation in Core to match.
     - The field uses the confirmed `<Property Document='model' PropertySet='Design Tracking Properties' ... PropertyID='17'>` form.
   - **Measure each text.** After drawing each text, read its `RangeBox` and warn in the log (and in the command's report) when it extends past its cell. Use the layout's cell bounds.
+- **Text size meaning (from task 215).** The layout's sizes are the mockup's SVG font sizes (em). Inventor's `<StyleOverride FontSize=...>` appears to be the cap height: spike 184's engraved part number at FontSize 0.3 cm was 3.87 cm wide for "AWB-ENGRAVE-TEST", about 1.3 times the em-based Tahoma width.
+  - So `AddText` passes `size × PrintTextFit.CapHeightEm` (0.727) as FontSize.
+  - Confirm by measuring one text's `RangeBox` height or width after drawing against `PrintTextFit.WidthMm`, and log the ratio.
+  - Also read the margins from task 215's single `MarginMm` (`FilingMarginMm` and `OtherMarginMm` still work).
 - **Rebuild.** Aidan deploys and runs Build Print Template again. The parent commits the two `.idw` files when he passes them.
 
 ## Acceptance criteria

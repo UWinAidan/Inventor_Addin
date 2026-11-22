@@ -6,31 +6,36 @@ Last updated: 2026-11-22
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-22 13:18. Branch `claude/m5-drawing-tools`, latest commit `81d1c4c` (pushed).
-- Goal: M5 tasks in PLAN order, in chunks. For each task: implementer, then reviewer, one commit, push. Stop after each chunk with a summary, Defaults and a checklist; Aidan says "next chunk". Nothing from work prints goes in the repo.
+- Updated: 2026-11-22 15:04. Branch `claude/m5-drawing-tools`, latest commit `700fc55` (pushed).
+- Goal: M5 tasks in chunks: implementer, then reviewer, one commit per task, push. Stop after each chunk with a summary, Defaults and a checklist. Nothing from work prints goes in the repo (Aidan's screenshots are in ADDIN_PICS, gitignored).
 - Done this session:
-  - Spikes 183 and 184.
-  - Chunk 1, pushed: 211, 185, 186, 189, 190.
-  - Aidan answered spec 05 questions 23 to 27 (DECISIONS.md, 2026-11-22; `c4edaa8`): Finish Spec in µm or inches, the triad above the title block on portrait sheets, ANSI margins 20/12.7 mm, ANSI zone counts as listed, the unticking-Front rule kept.
-  - Chunk 2 so far: 214 (triad above the block, `d1f33ae`), 213 (Finish Spec units, `81d1c4c`). Both passed review.
-  - Last builds and tests: solution 0 errors, Core 5122 passed.
-- In progress: the task 187 implementer (Build Print Template command) was launched in the background. Its result is not seen yet (unverified). It must not run Inventor; Aidan deploys and runs it.
-- Waiting on Aidan:
-  - Settings at 150%: his message left the placeholder, so the two template rows are unchecked.
-  - Run 187 once it passes review: close Inventor and build (deploy), reopen, Developer panel, Build Print Template, check both `.idw` files, then commit them in `libraries/Templates/`.
+  - Spikes 183 and 184; chunk 1 (211, 185, 186, 189, 190).
+  - Spec 05 questions 23 to 27 answered. 214 and 213 done.
+  - 187 code committed (`58323b0`; status "code done, waiting for the templates").
+  - Aidan ran 187: both templates built with 0 warnings, and the logo is embedded. He found 11 problems; each is now a task (`700fc55`):
+    - 215: Core layout. Text sizes to the mockup, tolerance columns, the edge note wrapping, value baselines, a centred border (10 mm ISO, 12.7 mm ANSI), and a no-overflow test.
+    - 216: builder. Decimal point in every metric style, STATUS reads User Status (Design Tracking id 17), each text measured against its cell. Then Aidan rebuilds.
+    - 217: finishes.csv print name column, and Finish Spec backfill (opening Material and Finish, Create Print, Mass Update).
+    - 218: spike on shrinking or wrapping long title block values (the parent drives Inventor over COM; ask Aidan first).
+    - 219: Revision "A" and Status written automatically, and filled in on older parts.
+    - 210 reworked: the Status dropdown and a Revise button (Default: I and O are skipped).
+    - 220: hole tables stay inside the border.
+    - 221: Settings labels "Metric template" and "Imperial template".
+  - Spec 05 question 28 (mass in lb; options a, b, c) waits on Aidan.
+  - `libraries/Templates/*.idw` from the first build are untracked. Do not commit them; they will be rebuilt.
+- In progress: the task 215 implementer was launched (result not yet seen; unverified).
 - Next:
-  1. Review 187, then fix if needed. Commit `task 187: Build Print Template command and the starter templates` (the code first; the `.idw` files after Aidan runs it), then push.
-  2. Tell Aidan that 187 needs him at the PC, with the steps.
-  3. Then 188, 191 (icons, Python with Pillow), 192 and 193. Then the chunk 2 summary.
-  4. Later chunks: 194 to 208, plus 210 and 212.
-- Open:
-  - Mass in lb (187 tries an imperial template with lb from the start; if it fails, add a spec 05 question).
-  - The small part number's 0.2 mm clearance on ISO sheets; `TriadExtentMm` 17.5 to check against the drawn triad.
+  1. Review 215, then commit and push it.
+  2. Then 216 (Aidan deploys and runs Build Print Template again), then 221.
+  3. Tell Aidan to look at the rebuilt templates. When he passes them, commit the `.idw` files and mark 187 and 216 done.
+  4. Then 217, 219, 210 and 220; run 218 with Aidan's OK.
+  5. Then chunk 2's 188, 191, 192 and 193, and the chunk 2 summary.
 - Gotchas:
   - Numbering and RegisterStore tests fail intermittently on timing; rerun.
   - Agents can hit the account session limit; resume them with SendMessage after the reset.
-  - Bash heredocs with quotes inside Python failed to parse; write a script file instead.
-- Read first: `docs/WORKFLOW.md` (run mode), `docs/PLAN.md` M5, task 187, tasks 183 and 184 Results, DECISIONS.md rows dated 2026-11-22.
+  - Bash heredocs holding Python with quotes break; write a .py file in the job tmp folder.
+  - Design Status values: 1 Work In Progress, 2 Pending, 3 Released. User Status is id 17.
+- Read first: `docs/WORKFLOW.md`, `docs/PLAN.md` M5, tasks 187 and 215 to 221, DECISIONS.md rows dated 2026-11-22.
 
 ## Big items
 

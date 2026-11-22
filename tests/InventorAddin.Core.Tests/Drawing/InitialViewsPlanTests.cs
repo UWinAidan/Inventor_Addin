@@ -32,7 +32,7 @@ public sealed class InitialViewsPlanTests
     public void UsableArea_IsInsideTheBorderAndAboveTheTitleBlock()
     {
         SheetAreaCm a = InitialViewsPlan.UsableArea(A3);
-        Assert.Equal(2.0, a.LeftCm, 9);
+        Assert.Equal(1.0, a.LeftCm, 9); // centred border (task 215): 10 mm on every side, no filing edge
         Assert.Equal(1.0 + 5.5, a.BottomCm, 9);
         Assert.Equal(41.0, a.RightCm, 9);
         Assert.Equal(28.7 - 0.0, a.TopCm, 9);

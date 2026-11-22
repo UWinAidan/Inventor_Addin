@@ -607,7 +607,7 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [ ] 212 Fix: the hole table's workbook warning (task 179 follow-up)
 - [x] 213 Fix: Finish Spec thickness in µm or inches (Aidan, 2026-11-22)
 - [x] 214 Print template layout: the triad above the title block on portrait sheets (Aidan, 2026-11-22)
-- [ ] 215 Print template layout fixes from the first build
+- [x] 215 Print template layout fixes from the first build
 - [ ] 216 Print template builder fixes and rebuild (Windows, Aidan runs it)
 - [ ] 217 Finish print name and Finish Spec backfill
 - [ ] 218 Spike: fitting long title block values (Windows)
