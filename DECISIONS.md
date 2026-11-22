@@ -506,3 +506,5 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-22 | Part Properties shows Design Status as a dropdown; on open, a custom Status that is missing or does not match Design Status counts as a pre-filled pending change (as spec 07 question 5), so Apply or OK brings it in line | Default | spec 07 question 7, task 210 |
 | 2026-11-22 | Batch Print merges the per-drawing PDFs with PDFsharp (MIT licence), because Inventor's PDF export cannot append to an existing file (spike 184) | Default | spec 05 question 17, task 202 |
 | 2026-11-22 | The part marking zone's 40 by 15 mm is measured on the part: a view sketch is in model units, so the zone scales with the view (spike 184) | Default | spec 05 question 16, task 199 |
+| 2026-11-22 | The title block's Finish field reads a ready-made custom "Finish Spec" property, written when a finish is applied (spec 05 question 23, first option) | Aidan | spec 05, task 211 |
+| 2026-11-22 | Finish Spec's value is the finish name, then ", " and the Finish Thickness text when there is one, as stored (mm) | Default | spec 05 question 23, task 211 |

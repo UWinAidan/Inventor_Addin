@@ -556,12 +556,14 @@ Aidan answered the planning questions and the title block questions on 2026-11-2
 | 207 | Core | none | 205 |
 | 208 | windows build | 184, 187, 191, 207 | none |
 | 210 | windows build | none | any Core-only task |
-| 209 | **windows** (Aidan) | 183 to 208, 210 | none |
+| 211 | Core | none | 186, 189, 190 |
+| 212 | windows build | none | any Core-only task |
+| 209 | **windows** (Aidan) | 183 to 208, 210 to 212 | none |
 
 The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their own files; 186, 196 and 205 all touch `AddinSettings`, `LibraryPaths` and the Settings window, so run those three one after another.
 
 **Template**
-- [ ] 183 Spike: building the print template and placing views (Windows)
+- [x] 183 Spike: building the print template and placing views (Windows)
 - [ ] 185 Print template layout (Core)
 - [ ] 186 Print template paths in Settings
 - [ ] 187 Build Print Template command and the starter templates (Windows)
@@ -577,7 +579,7 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [ ] 195 Check Out of Bounds command
 
 **Tools**
-- [ ] 184 Spike: Inventor calls for the M5 drawing tools (Windows)
+- [x] 184 Spike: Inventor calls for the M5 drawing tools (Windows)
 - [ ] 196 Automatic notes: workbook and rules (Core)
 - [ ] 197 Update Notes command; Create Print runs it
 - [ ] 198 Part marking: options, note text and window model (Core)
@@ -592,6 +594,8 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [ ] 207 Parts list Make/Buy rule (Core)
 - [ ] 208 Update Parts List command
 - [ ] 210 Part Properties: Status (Aidan, 2026-11-22; the title block prints the custom Status)
+- [ ] 211 Finish Spec property, written with the finish (Aidan, 2026-11-22; spec 05 question 23)
+- [ ] 212 Fix: the hole table's workbook warning (task 179 follow-up)
 
 **Check**
 - [ ] 209 M5 combined Inventor check
