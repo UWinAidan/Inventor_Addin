@@ -16,6 +16,47 @@ public sealed class PrintPropertyBackfillTests
 
     private static PropertyWrite User(string text) => PropertyWrite.SetText(PartPropertyStorage.UserStatus, text);
 
+    private static IReadOnlyList<PropertyWrite> RunAssembly(
+        string? revision = null, int? designStatus = 0, string? userStatus = null,
+        string? material = null, string? size = null, string? spec = null) =>
+        PrintPropertyBackfill.ForAssembly(revision, designStatus, userStatus, material, size, spec);
+
+    [Fact]
+    public void Assembly_Blank_GetsRevStatusAndThreeDashes()
+    {
+        Assert.Equal(
+            [
+                Rev,
+                Design(1),
+                User("WORK IN PROGRESS"),
+                PropertyWrite.SetText(PartPropertyStorage.Material, "—"),
+                PropertyWrite.SetText(PartPropertyStorage.MaterialSize, "—"),
+                PropertyWrite.SetText(PartPropertyStorage.FinishSpec, "—"),
+            ],
+            RunAssembly());
+    }
+
+    [Fact]
+    public void Assembly_EverythingSet_WritesNothing()
+    {
+        Assert.Empty(RunAssembly("C", 2, "PENDING", "Mixed", "n/a", "Coat"));
+    }
+
+    [Fact]
+    public void Assembly_WhitespaceFields_AreBlank()
+    {
+        var writes = RunAssembly("B", 1, "WORK IN PROGRESS", "  ", "", "\t");
+        Assert.Equal(3, writes.Count);
+        Assert.All(writes, w => Assert.Equal("—", w.TextValue));
+    }
+
+    [Fact]
+    public void Assembly_SetMaterialSize_IsLeftAlone()
+    {
+        var writes = RunAssembly("B", 1, "PENDING", size: "1 x 2 x 3 mm");
+        Assert.DoesNotContain(writes, w => w.Location == PartPropertyStorage.MaterialSize);
+    }
+
     [Fact]
     public void EverythingSet_WritesNothing()
     {

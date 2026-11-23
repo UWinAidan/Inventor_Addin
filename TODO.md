@@ -84,7 +84,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Question 20 in spec 04: Renumber on a re-opened table waits for Update to redraw (Default); or should it redraw at once?
 
 **Drawing tools (spec 05), blocks M5 tasks**
-- Spec 05 question 32: the smallest text height for a long title block value (Default 1.8 mm). Question 33: an off-units print's FINISH and WEIGHT are drawing properties written by Create Print (Default), or the part carries both units. Question 34: a hand-typed sheet metal Material Size is replaced (Default), and whether it follows the print's units
+- Spec 05 question 32: the smallest text height for a long title block value (Default 1.8 mm). Question 33: an off-units print's FINISH and WEIGHT are drawing properties written by Create Print (Default), or the part carries both units. Question 34: a hand-typed sheet metal Material Size is replaced (Default), and whether it follows the print's units. Question 35: assembly dashes written into the model (Default) or on the drawing only
 - Spec 04 question 26: the hole tag leader distance (Default 5 mm from the hole's edge, set on Update)
 - Last look at the title block mockup with the 2026-11-21 additions (`docs/ui-mockups/title-block.png`, blue numbers 18 to 25; the FINISH line is gone and 18 is now the finish notes on the sheet) before task 185 is built
 - Spec 05 questions 13 to 23: the M5 defaults (zones, Project property, notes rules, marking sizes and colour, Batch Print, REF dimensions, stock shapes, Make/Buy blanks and manufacturer properties, Create Print's sheet, template built from code, the Finish field's text and the finish notes' order). Each has a default the tasks build
@@ -117,6 +117,10 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 - Task 222, Mass property (Aidan's check passed 2026-11-23):
   - Later: remove the lb mass unit step from the template builder; an imperial sample value for the fit check; the backfill warnings in Create Print and Material and Finish do not mention Mass.
+
+- Task 231, assemblies on the print:
+  - Writing text to an assembly's Design Tracking Material is unconfirmed; it is best effort (logged, never fails the other writes). If Inventor refuses, point MATERIAL at a custom property on assemblies.
+  - After 232, the dashes could move to the drawing instead of the model (spec 05 question 35).
 
 - Task 230, sheet metal Material Size:
   - When the Stock Size command is built (205, 206), make its number format agree with this one (spec 05 shows "PL 12 x 65 x 130", no suffix) and decide whether it skips sheet metal parts.

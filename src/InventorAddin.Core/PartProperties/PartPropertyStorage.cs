@@ -108,4 +108,11 @@ public static class PartPropertyStorage
     /// </summary>
     public static readonly PropertyLocation MaterialSize =
         new(PropertySetNames.UserDefined, "Material Size", PropertyValueKind.Text);
+
+    /// <summary>
+    /// Design Tracking "Material" (PropertyID 20), the print's MATERIAL field. A part's material is set through its asset; this
+    /// location is written only for an assembly, which has none (task 231).
+    /// </summary>
+    public static readonly PropertyLocation Material =
+        new(PropertySetNames.DesignTracking, "Material", PropertyValueKind.Text);
 }

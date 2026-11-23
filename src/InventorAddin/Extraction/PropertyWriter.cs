@@ -14,6 +14,30 @@ namespace InventorAddin.Extraction
     {
         public static void Apply(Document doc, IReadOnlyList<PropertyWrite> writes)
         {
+            // An assembly's Material dash is best effort (task 231): the write is not yet confirmed in Inventor, so it goes last,
+            // and a refusal is logged and does not fail the other writes or abort the caller's transaction.
+            var main = new List<PropertyWrite>();
+            var bestEffort = new List<PropertyWrite>();
+            foreach (PropertyWrite write in writes)
+                (write.Location == PartPropertyStorage.Material ? bestEffort : main).Add(write);
+
+            ApplyAll(doc, main);
+            foreach (PropertyWrite write in bestEffort)
+            {
+                AddinServices.Log.Info($"Property write: {write.Action} {write.Location.SetName}/{write.Location.PropertyName} (best effort)");
+                try
+                {
+                    ApplyOne(doc, write);
+                }
+                catch (Exception ex)
+                {
+                    AddinServices.Log.Warn($"{FailureMessage(write)} It was left unset. {ex.Message}");
+                }
+            }
+        }
+
+        private static void ApplyAll(Document doc, IReadOnlyList<PropertyWrite> writes)
+        {
             foreach (PropertyWrite write in writes)
             {
                 PropertyLocation location = write.Location;

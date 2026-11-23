@@ -626,7 +626,7 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [x] 228 Every view black and white, and an iso on every print (Aidan, 2026-11-23)
 - [x] 229 Sheet metal: front view on the base face, and bend notes
 - [x] 230 Sheet metal Material Size: thickness x flat pattern size
-- [ ] 231 Assemblies: Rev, Status, and a dash for blank part fields
+- [x] 231 Assemblies: Rev, Status, and a dash for blank part fields
 - [ ] 232 Initial Views: Metric or Imperial, and the sheet size
 - [ ] 233 Initial Views: the Front view choice and Auto
 - [ ] 234 Initial Views: live sheet preview

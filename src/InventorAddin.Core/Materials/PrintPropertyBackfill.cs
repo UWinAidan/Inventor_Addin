@@ -61,6 +61,50 @@ public static class PrintPropertyBackfill
             writes.Add(spec);
         }
 
+        AddRevisionAndStatus(writes, storedRevision, storedDesignStatus, storedUserStatus);
+        return writes.AsReadOnly();
+    }
+
+    /// <summary>The text printed for a title block field that does not apply to the document (an assembly's material, size and finish).</summary>
+    public const string NotApplicable = "—";
+
+    /// <summary>
+    /// The writes an assembly needs (task 231; Aidan, 2026-11-23): Revision Number and Status exactly as for a part (see
+    /// <see cref="For"/>), then a dash (<see cref="NotApplicable"/>) in each of Material, Material Size and Finish Spec that is blank, so the
+    /// print shows a dash. A value already set is never changed. No finish is looked up and no Finish Spec is built.
+    /// </summary>
+    public static IReadOnlyList<PropertyWrite> ForAssembly(
+        string? storedRevision,
+        int? storedDesignStatus,
+        string? storedUserStatus,
+        string? storedMaterial,
+        string? storedMaterialSize,
+        string? storedFinishSpec)
+    {
+        var writes = new List<PropertyWrite>();
+        AddRevisionAndStatus(writes, storedRevision, storedDesignStatus, storedUserStatus);
+
+        if (PropertyValues.NormaliseText(storedMaterial).Length == 0)
+        {
+            writes.Add(PropertyWrite.SetText(PartPropertyStorage.Material, NotApplicable));
+        }
+
+        if (PropertyValues.NormaliseText(storedMaterialSize).Length == 0)
+        {
+            writes.Add(PropertyWrite.SetText(PartPropertyStorage.MaterialSize, NotApplicable));
+        }
+
+        if (PropertyValues.NormaliseText(storedFinishSpec).Length == 0)
+        {
+            writes.Add(PropertyWrite.SetText(PartPropertyStorage.FinishSpec, NotApplicable));
+        }
+
+        return writes.AsReadOnly();
+    }
+
+    private static void AddRevisionAndStatus(
+        List<PropertyWrite> writes, string? storedRevision, int? storedDesignStatus, string? storedUserStatus)
+    {
         if (PropertyValues.NormaliseText(storedRevision).Length == 0)
         {
             writes.Add(PropertyWrite.SetText(PartPropertyStorage.RevisionNumber, PartStatuses.FirstRevision));
@@ -77,7 +121,5 @@ public static class PrintPropertyBackfill
         {
             writes.Add(PropertyWrite.SetText(PartPropertyStorage.UserStatus, PartStatuses.UserStatusText(words)));
         }
-
-        return writes.AsReadOnly();
     }
 }

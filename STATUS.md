@@ -17,9 +17,9 @@ Last updated: 2026-11-22
     - Spec 05 Q31 overturned, new Q32 (height floor, Default 1.8 mm) and Q33 (off-units FINISH and WEIGHT); spec 04 Q26 (tag leader, Default 5 mm).
     - Task 232 gained "FINISH and WEIGHT follow the print's units"; task 238 now depends on 241.
 - 239 (`9df967d`), 227 (`9d9b3e4`, views measured in a hidden scratch drawing) and 228 (`5b15a9d`) done and reviewed; not run in Inventor.
-- 229 (`e9c93dc`) and 230 (`d36d649`) done and reviewed; not run in Inventor. Next: 231.
+- 229 (`e9c93dc`), 230 (`d36d649`) and 231 done and reviewed; not run in Inventor. Next: 232.
 - Next, in order:
-  1. 231 assemblies, 232 units and sheet size plus print-units FINISH and WEIGHT, 233 front view choice, 234 preview, 235 open existing print, 236 Designer.
+  1. 232 units and sheet size plus print-units FINISH and WEIGHT, 233 front view choice, 234 preview, 235 open existing print, 236 Designer.
   2. 240 hole tag leaders.
   3. Spike 241, run by the parent over COM like 218 and 225. Fill in its Results, then adjust 238's scope.
   4. 238: narrow to 0.6, then reduce height to the floor, Description wraps to two lines, single-line fields warn only at the floor.
