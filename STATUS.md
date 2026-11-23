@@ -6,7 +6,7 @@ Last updated: 2026-11-22
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-23. Branch `claude/m5-drawing-tools`, latest commit `a25de70` (pushed).
+- Updated: 2026-11-23 11:53. Branch `claude/m5-drawing-tools`, latest commit `7dc684b` (pushed).
 - Goal: M5 tasks in chunks: implementer, then reviewer, one commit per task, push. Stop after each chunk with a summary, Defaults and an Inventor checklist. Nothing from work prints goes in the repo (ADDIN_PICS is gitignored).
 - Chunk 2 is done and checked by Aidan (2026-11-23): 188, 192, 193, 223, 224 pass, apart from the fails and requests now planned as tasks 225 to 236 (DECISIONS rows 2026-11-23). The parent's own fix on 192 passed a review.
 - Spike 225 done (`a25de70`): arbitrary-camera base views, OrientedMinimumRangeBox, bend notes, dimension styles (library styles with the same name replace the template's on Documents.Add; copy them to "AWB ..." names), the feature control frame needs LinearUnits set first, and WEIGHT cannot print "lb", so 222 is the Mass text property.

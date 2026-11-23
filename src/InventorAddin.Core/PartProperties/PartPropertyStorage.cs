@@ -94,4 +94,11 @@ public static class PartPropertyStorage
     /// <summary>Design Tracking "User Status" (PropertyID 17), the iProperties Status tab's Status text (task 219).</summary>
     public static readonly PropertyLocation UserStatus =
         new(PropertySetNames.DesignTracking, "User Status", PropertyValueKind.Text);
+
+    /// <summary>
+    /// The custom text property "Mass" ("4.33 kg" or "9.55 lb"), written by the add-in on every save and read by both print
+    /// templates' WEIGHT field (task 222; spike 225 showed the live mass field cannot print "lb").
+    /// </summary>
+    public static readonly PropertyLocation Mass =
+        new(PropertySetNames.UserDefined, "Mass", PropertyValueKind.Text);
 }

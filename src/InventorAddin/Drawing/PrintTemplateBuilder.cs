@@ -440,7 +440,8 @@ namespace InventorAddin.PrintTemplates
                 case PrintField.FinishSpec: return CustomProperty("Finish Spec", placeholder);
                 case PrintField.DrawingAuthor: return Property("drawing", SummarySet, SummaryInfo, "Author", 4, placeholder);
                 case PrintField.DrawingCreationDate: return Property("drawing", DesignTrackingSet, DesignTracking, "Creation Time", 4, placeholder);
-                case PrintField.Mass: return "<PhysicalProperty PhysicalPropertyID='72449' Precision='2'>" + placeholder + "</PhysicalProperty>";
+                // Task 222: the model's custom "Mass" text ("4.33 kg" / "9.55 lb"), not the live mass, which prints "lbmass" (spike 225).
+                case PrintField.Mass: return CustomProperty("Mass", placeholder);
                 case PrintField.Scale: return Derived(29707, placeholder);
                 case PrintField.SheetNumberOfCount: return Derived(29704, "SHEET NUMBER") + " OF " + Derived(29703, "SHEET COUNT");
                 case PrintField.SheetSize: return Derived(29705, placeholder);

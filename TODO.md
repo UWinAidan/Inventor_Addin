@@ -111,6 +111,14 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Follow-ups from finished tasks
 
+- Task 222, Mass property (check in Inventor):
+  - A property written in `OnSaveDocument` kBefore is saved with the file and is there after reopening.
+  - The event fires for Save As and for Mass Update's `Save()`. If it also fires for Save Copy As, the write lands on the open document, not the copy, and leaves it dirty (check the event's context map).
+  - Whether the save-time write adds an Undo step (the code comment says it does not; unconfirmed).
+  - Save time on a large assembly (reading the mass can force a full calculation).
+  - The custom "Mass" shares its name with Design Tracking's Mass; check the Custom tab accepts it.
+  - Later: remove the lb mass unit step from the template builder; an imperial sample value for the fit check; the backfill warnings in Create Print and Material and Finish do not mention Mass.
+
 - Spike 225, for the tasks that use it:
   - 229 and 233: the base face edge's sign is arbitrary; choose the up vector so the view is not upside down.
   - 229: an imperial bend note printed its radius in mm (try `BendNote.UsePartUnits`).

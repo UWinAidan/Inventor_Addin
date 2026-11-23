@@ -36,17 +36,18 @@ namespace InventorAddin.Extraction
         }
 
         /// <summary>
-        /// Every missing print property of <paramref name="doc"/> as writes (Finish Spec, Revision Number, Design Status,
-        /// User Status; task 219): empty when it is not a part or nothing is missing. Never throws for a property that
+        /// Every missing print property of <paramref name="doc"/> as writes (Mass, then, for a part, Finish Spec, Revision Number, Design Status,
+        /// User Status; tasks 219 and 222): a part or assembly gets Mass, only a part the rest; empty when nothing is missing. Never throws for a property that
         /// cannot be read.
         /// </summary>
         public static IReadOnlyList<PropertyWrite> WritesFor(Document doc, IReadOnlyList<Finish> finishList)
         {
             DocumentKind kind = ComSafe.Get(() => DocumentKinds.Of(doc));
+            PropertyWrite? mass = MassPropertyReader.WriteFor(doc);
             if (!kind.IsPart())
-                return Array.Empty<PropertyWrite>();
+                return mass == null ? Array.Empty<PropertyWrite>() : new[] { mass };
 
-            return PrintPropertyBackfill.For(
+            var writes = new List<PropertyWrite>(PrintPropertyBackfill.For(
                 Read(doc, PartPropertyStorage.Finish),
                 Read(doc, PartPropertyStorage.FinishThickness),
                 Read(doc, PartPropertyStorage.FinishSpec),
@@ -54,7 +55,10 @@ namespace InventorAddin.Extraction
                 ReadDesignStatus(doc),
                 Read(doc, PartPropertyStorage.UserStatus),
                 finishList,
-                MaterialFinishTargets.UnitsOf(doc));
+                MaterialFinishTargets.UnitsOf(doc)));
+            if (mass != null)
+                writes.Add(mass);
+            return writes;
         }
 
         /// <summary>Design Status as a number, or null when it cannot be read.</summary>
