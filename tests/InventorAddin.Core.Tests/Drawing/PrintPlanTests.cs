@@ -350,6 +350,9 @@ public sealed class PrintPlanTests
     {
         Assert.Equal("Save the part before creating its print.", PrintPlan.UnsavedMessage);
         Assert.Equal("A print for this part already exists. Open it?", PrintPlan.AlreadyExistsQuestion);
+        Assert.Equal("This part has no print. Create one now?", PrintPlan.NoPrintQuestion);
+        Assert.Equal("Save the part before opening its print.", PrintPlan.OpenUnsavedMessage);
+        Assert.Equal("Open Drawing works on parts and assemblies.", PrintPlan.OpenWrongDocumentMessage);
         Assert.Equal(
             @"The AWB print template was not found at 'C:\Libs\AWB Metric.idw'. No print was created.",
             PrintPlan.MissingTemplateMessage(@"C:\Libs\AWB Metric.idw"));

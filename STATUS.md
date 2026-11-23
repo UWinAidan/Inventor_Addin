@@ -6,28 +6,27 @@ Last updated: 2026-11-22
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-22 18:45. Branch `claude/m5-drawing-tools`, latest commit `6ab6d66` (pushed). Working tree clean except the untracked `libraries/Templates/` (do not commit until Aidan passes them).
-- Goal: M5 tasks in chunks: implementer, then reviewer, one commit per task, push. Stop after each chunk with a summary, Defaults and a checklist. Nothing from work prints goes in the repo (Aidan's screenshots are in ADDIN_PICS, gitignored).
+- Updated: 2026-11-22 19:21. Branch `claude/m5-drawing-tools`, latest commit `65b3d4b` (pushed).
+- Goal: M5 tasks in chunks: implementer, then reviewer, one commit per task, push. Stop after each chunk with a summary, Defaults and an Inventor checklist. Nothing from work prints goes in the repo (ADDIN_PICS is gitignored).
 - Done this session:
-  - Spikes 183 and 184.
-  - Done tasks: 211, 185, 186, 189, 190, 214, 213, 215, 216 (code), 221, 217, 219, 210, 220 (passed in round 3 with Aidan's OK; merged `6ab6d66`), 191 (`2565f09`).
-  - 187 code is done; it waits on the template files.
-  - Spec 05 questions 23 to 28 are answered (DECISIONS.md, 2026-11-22). All Defaults are logged.
-  - Core tests were 5280 passed at the last main-folder run; the solution builds with 0 errors.
-- Waiting on Aidan:
-  1. His check of the rebuilt templates (task 216's checklist), including the log's "width ratio" mean. If they pass, commit `libraries/Templates/*.idw` and mark 187 and 216 done (task files and PLAN).
-  2. Inventor open, so that:
-     - (a) the parent verifies the names New Part now writes: Design Tracking "Design Status" (id 40, int), "User Status" (17), Summary "Revision Number" (9). A wrong name makes New Part and Save As Copy lose all their properties; fix `PartPropertyStorage`.
-     - (b) the parent runs `spike-local/183/spike-q28-lb.ps1` (`AWB Imperial.idw` closed). If lb prints, write a task for New Part and Mass Update to set the mass unit to lb; if not, write a task for option (b), a Mass property refreshed on part save, with the template field switched to it.
-  3. "Go on" to start 188: Aidan's last message seemed cut off, so the parent paused.
-- Next: 188, 192, 193, then the chunk 2 summary. Spike 218 with Aidan's OK. Later: 194 to 208, 212.
+  - Property names New Part writes confirmed in Inventor ("Design Status" id 40 int, "User Status" 17, "Revision Number" 9). Spike 183 round 4: an imperial part's own lb mass unit prints "9.55 lbmass" (`383420f`); task 222 planned; spec 05 question 29 ("lbmass" vs "LB") added with a Default.
+  - 188 Create Print uses the AWB template (`5ed3772`). 192 Place Initial Views (`79b8dde`; round 2's one fix was made by the parent, not re-reviewed).
+  - Aidan's template rebuild check: width ratio 1.00, FILE NAME, STATUS and metric period pass; 216 done. Tasks 223 (title block fixes) and 224 (refresh an old Finish Spec) planned (`65b3d4b`).
+- In progress: task 193 (Open Drawing) is with an implementer agent; its uncommitted changes are in the working tree (PrintPlan, Ribbon files, CreatePrintCommand, RibbonSetup, tests). If the agent is gone, review the diff against `docs/tasks/193-open-drawing.md` with a reviewer, then commit.
+- State: last build 0 errors; Core tests 5305 passed (after 192). `libraries/Templates/*.idw` untracked: commit only after the rebuild after 223 passes, then mark 187 done.
+- Next:
+  1. Review and commit 193.
+  2. 223 (Windows build; then Aidan rebuilds both templates), 224 (Core backfill).
+  3. Chunk 2 summary: Defaults logged since 188 (DECISIONS 2026-11-22 rows for 188, 192, 222, 224) and an Inventor checklist from the 188, 192, 193 task files.
+  4. Then 222; spike 218 needs Aidan's OK and Inventor; later 194 to 208, 212.
 - Gotchas:
-  - Numbering and RegisterStore tests are flaky; rerun.
-  - Agents can hit the session limit; resume them with SendMessage.
-  - Python: '\a' in paths becomes a control character; write .py files in the job tmp folder, not bash heredocs.
-  - Don't build while Aidan deploys.
-  - Use a git worktree (job tmp folder) to work on a second branch while an agent uses the main folder.
-- Read first: `docs/WORKFLOW.md`, `docs/PLAN.md` M5, tasks 187, 188 and 216, DECISIONS.md rows dated 2026-11-22, TODO.md follow-ups.
+  - Flaky tests: NewPartCreator, Numbering, RegisterStore, RenamePlan probe timeout; rerun.
+  - Build with `-p:DeployToInventor=false` while Inventor is open.
+  - Write .py helper files with the Write tool into the job tmp folder; bash heredocs with quotes fail.
+  - A mass unit change does not set `Document.Dirty`; set it before `Save()`.
+  - `Documents.Add` fails while the template .idw is open in Inventor.
+  - Commit only your own paths while an agent has uncommitted work in the tree.
+- Read first: `docs/WORKFLOW.md`, `docs/PLAN.md` M5, tasks 193, 223, 224, 222, DECISIONS rows dated 2026-11-22, TODO.md follow-ups.
 
 ## Big items
 

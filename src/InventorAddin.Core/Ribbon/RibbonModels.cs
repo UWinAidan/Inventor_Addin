@@ -105,6 +105,9 @@ public static class CommandNames
     /// <summary>The Hole Table Wizard (spec 04; task 167), on the drawing ribbon.</summary>
     public const string HoleTable = Prefix + "HoleTable";
 
+    /// <summary>Open Drawing (spec 05; task 193), on the model ribbons next to Create Print.</summary>
+    public const string OpenDrawing = Prefix + "OpenDrawing";
+
     /// <summary>Place Initial Views (spec 05; task 192), on the drawing ribbon.</summary>
     public const string PlaceInitialViews = Prefix + "PlaceInitialViews";
 

@@ -9,6 +9,7 @@ public sealed class CommandDocumentsTests
     [InlineData(CommandNames.PartProperties, CommandDocument.Edited)]
     [InlineData(CommandNames.MaterialFinish, CommandDocument.Edited)]
     [InlineData(CommandNames.CreatePrint, CommandDocument.Edited)]
+    [InlineData(CommandNames.OpenDrawing, CommandDocument.Edited)]
     [InlineData(CommandNames.SaveAsCopy, CommandDocument.Edited)]
     [InlineData(CommandNames.ExportModelData, CommandDocument.Edited)]
     [InlineData(CommandNames.AwbHole, CommandDocument.Edited)]

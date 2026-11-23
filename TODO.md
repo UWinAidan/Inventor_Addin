@@ -112,6 +112,12 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Follow-ups from finished tasks
 
+- Task 193, Open Drawing:
+  - Create Print's "A print already exists. Open it?" now overlaps Open Drawing; Aidan may want Create Print to just open the print.
+  - When Create Print fails after Open Drawing's Yes, the message and log say "Open Drawing failed".
+  - The no-print question and the unsaved message say "part" on an assembly too (as Create Print's messages do).
+  - Check in Inventor that `Documents.Open` on an already-open print returns that copy (checklist step 2).
+
 - Task 192, Place Initial Views:
   - `PrintPlan.ChooseScale` and its tests are unused now; remove them unless another command wants a single-view scale.
   - Placed view sizes are not read back, so an iso estimated too small (or an assembly whose range box is much larger than its geometry) can overlap a neighbour.

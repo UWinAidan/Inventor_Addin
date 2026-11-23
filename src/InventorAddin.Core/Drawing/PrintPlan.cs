@@ -32,6 +32,15 @@ public static class PrintPlan
 
     public const string WrongDocumentMessage = "Create Print works on parts and assemblies.";
 
+    /// <summary>Open Drawing, when the model is unsaved (task 193): it has no folder to look in.</summary>
+    public const string OpenUnsavedMessage = "Save the part before opening its print.";
+
+    /// <summary>Open Drawing on a document that is not a part or assembly (task 193).</summary>
+    public const string OpenWrongDocumentMessage = "Open Drawing works on parts and assemblies.";
+
+    /// <summary>Asked by Open Drawing when the model has no print (spec 05, "Decided for M5: Open Drawing"); Yes runs Create Print.</summary>
+    public const string NoPrintQuestion = "This part has no print. Create one now?";
+
     /// <summary>Shown when the model's range box is empty or flat, so there is nothing to scale a view to (Default).</summary>
     public const string NoGeometryMessage =
         "The model has no geometry to show in a front view, so no print was created.";

@@ -67,6 +67,7 @@ namespace InventorAddin.UI
             yield return new SaveAsReplaceCommand();
             yield return new PartPropertiesCommand();
             yield return new CreatePrintCommand();
+            yield return new OpenDrawingCommand();
             yield return new MassUpdateCommand();
             yield return new MaterialFinishCommand();
             yield return new AwbHoleCommand();

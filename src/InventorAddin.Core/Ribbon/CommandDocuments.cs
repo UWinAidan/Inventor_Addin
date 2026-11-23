@@ -33,6 +33,7 @@ public static class CommandDocuments
         // target.
         [CommandNames.MaterialFinish] = CommandDocument.Edited,
         [CommandNames.CreatePrint] = CommandDocument.Edited,
+        [CommandNames.OpenDrawing] = CommandDocument.Edited,
         [CommandNames.SaveAsCopy] = CommandDocument.Edited,
         [CommandNames.ExportModelData] = CommandDocument.Edited,
         [CommandNames.AwbHole] = CommandDocument.Edited,

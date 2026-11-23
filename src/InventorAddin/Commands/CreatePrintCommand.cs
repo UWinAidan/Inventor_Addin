@@ -52,17 +52,10 @@ namespace InventorAddin.Commands
                 return;
             }
 
-            DocumentKind kind = DocumentKinds.Of(model);
-            if (!kind.IsPart() && !kind.IsAssembly())
+            string? problem = ModelProblem(model, PrintPlan.WrongDocumentMessage, PrintPlan.UnsavedMessage, out DocumentKind kind, out string modelPath);
+            if (problem != null)
             {
-                Show(PrintPlan.WrongDocumentMessage, Forms.MessageBoxIcon.Information);
-                return;
-            }
-
-            string modelPath = ComSafe.Get(() => model.FullFileName) ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(modelPath))
-            {
-                Show(PrintPlan.UnsavedMessage, Forms.MessageBoxIcon.Information);
+                Show(problem, Forms.MessageBoxIcon.Information);
                 return;
             }
 
@@ -124,6 +117,29 @@ namespace InventorAddin.Commands
                 Forms.Cursor.Current = previousCursor;
             }
         }
+
+        /// <summary>
+        /// The checks Create Print and Open Drawing share (task 193): the model must be a part or assembly (else
+        /// <paramref name="wrongDocument"/>) and saved (else <paramref name="unsaved"/>). Returns the message to show, or null
+        /// when the model is fine, in which case <paramref name="kind"/> and <paramref name="modelPath"/> are set.
+        /// </summary>
+        internal static string? ModelProblem(
+            Document model, string wrongDocument, string unsaved, out DocumentKind kind, out string modelPath)
+        {
+            kind = DocumentKinds.Of(model);
+            modelPath = string.Empty;
+            if (!kind.IsPart() && !kind.IsAssembly())
+                return wrongDocument;
+
+            modelPath = ComSafe.Get(() => model.FullFileName) ?? string.Empty;
+            return string.IsNullOrWhiteSpace(modelPath) ? unsaved : null;
+        }
+
+        /// <summary>
+        /// Create Print on the document being edited, run by Open Drawing when the model has no print (task 193). The same
+        /// code as the button, so nothing is duplicated.
+        /// </summary>
+        internal void RunFromOpenDrawing() => Execute();
 
         /// <summary>
         /// Creates, fills and saves the drawing. Any failure closes the half-made drawing without saving and says which
@@ -296,6 +312,12 @@ namespace InventorAddin.Commands
             if (answer != Forms.DialogResult.Yes)
                 return;
 
+            OpenPrint(drawingPath);
+        }
+
+        /// <summary>Opens the drawing visibly, or finds it when already open, and makes it the active document (shared with Open Drawing, task 193).</summary>
+        internal static void OpenPrint(string drawingPath)
+        {
             Document opened = InventorHost.App.Documents.Open(drawingPath, true);
             // If the drawing was already open, Open returns it; make it the active document either way.
             ComSafe.Run(() => opened.Activate());
