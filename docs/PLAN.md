@@ -608,13 +608,15 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [x] 213 Fix: Finish Spec thickness in µm or inches (Aidan, 2026-11-22)
 - [x] 214 Print template layout: the triad above the title block on portrait sheets (Aidan, 2026-11-22)
 - [x] 215 Print template layout fixes from the first build
-- [ ] 216 Print template builder fixes and rebuild (Windows, Aidan runs it)
+- [x] 216 Print template builder fixes and rebuild (Windows, Aidan runs it)
 - [x] 217 Finish print name and Finish Spec backfill
 - [ ] 218 Spike: fitting long title block values (Windows)
 - [x] 219 Revision and Status filled in automatically
 - [x] 220 Hole tables stay on the sheet
 - [x] 221 Settings template labels
 - [ ] 222 Imperial parts weigh in lb (Aidan, 2026-11-22; spec 05 question 28)
+- [ ] 223 Title block fixes from the rebuild (Aidan, 2026-11-22)
+- [ ] 224 Refresh an old Finish Spec (Aidan, 2026-11-22)
 
 **Check**
 - [ ] 209 M5 combined Inventor check

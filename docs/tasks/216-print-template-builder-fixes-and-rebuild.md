@@ -2,7 +2,7 @@
 
 - **Milestone:** M5 (from Aidan's task 187 check, 2026-11-22)
 - **Feature spec:** `docs/features/05-drawing-tools.md`; task 187
-- **Status:** built, awaiting Aidan's rebuild
+- **Status:** done (Aidan rebuilt both templates, 2026-11-22: width ratio mean 1.00; FILE NAME, STATUS and the metric period pass; the rest is task 223, the FINISH line task 224)
 - **Depends on:** 187, 215
 - **Needs:** **windows** (drives Inventor; Aidan runs the command)
 - **Parallel-safe with:** none
