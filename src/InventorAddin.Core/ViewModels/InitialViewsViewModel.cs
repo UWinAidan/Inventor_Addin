@@ -78,6 +78,7 @@ public sealed class InitialViewsViewModel : ObservableObject
     private readonly InitialViewModelKind _model;
     private readonly InitialViewsBoxCm _box;
     private readonly FlatPatternSizeCm? _flatPattern;
+    private readonly IReadOnlyDictionary<InitialViewKind, ViewSizeCm>? _measured;
     private readonly SheetSizeSpec _sheet;
     private readonly SheetAreaCm _area;
     private readonly InitialViewScaleChoice _suggested;
@@ -90,13 +91,15 @@ public sealed class InitialViewsViewModel : ObservableObject
         InitialViewModelKind model,
         InitialViewsBoxCm box,
         FlatPatternSizeCm? flatPattern,
-        SheetSizeSpec sheet)
+        SheetSizeSpec sheet,
+        IReadOnlyDictionary<InitialViewKind, ViewSizeCm>? measured = null)
     {
         ArgumentNullException.ThrowIfNull(box);
         ArgumentNullException.ThrowIfNull(sheet);
         _model = model;
         _box = box;
         _flatPattern = flatPattern;
+        _measured = measured;
         _sheet = sheet;
         _area = InitialViewsPlan.UsableArea(sheet);
 
@@ -207,14 +210,14 @@ public sealed class InitialViewsViewModel : ObservableObject
     private List<InitialViewKind> Ticked() => Views.Where(v => v.IsChecked).Select(v => v.Kind).ToList();
 
     private InitialViewsResult RunPlan() =>
-        InitialViewsPlan.Plan(_model, _box, _flatPattern, _area, Ticked(), _selectedScale.Scale);
+        InitialViewsPlan.Plan(_model, _box, _flatPattern, _area, Ticked(), _selectedScale.Scale, _measured);
 
     // The suggested scale is the one the plan picks for the ticked views, whatever scale is selected now.
     private void UpdateSuggestedLabel()
     {
         InitialViewsResult auto = _selectedScale.Scale is null
             ? _plan
-            : InitialViewsPlan.Plan(_model, _box, _flatPattern, _area, Ticked());
+            : InitialViewsPlan.Plan(_model, _box, _flatPattern, _area, Ticked(), null, _measured);
         _suggested.Label = auto.Views.Count == 0
             ? SuggestedLabelPrefix
             : $"{SuggestedLabelPrefix} ({FormatScale(auto.Scale)})";

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Inventor;
 using InventorAddin.Core.Drawing;
 using InventorAddin.Core.Models;
@@ -93,9 +94,9 @@ namespace InventorAddin.PrintViews
         /// view to the right of the front view would be the right view, which is where an assembly's iso is planned). The caller starts the
         /// transaction. Returns what was placed, for the log.
         /// </summary>
-        public static IReadOnlyList<string> Place(Sheet sheet, Document model, InitialViewsResult plan)
+        private static List<(PlannedView Planned, DrawingView View)> PlaceViews(Sheet sheet, Document model, InitialViewsResult plan, bool scratch = false)
         {
-            var placed = new List<string>();
+            var placed = new List<(PlannedView Planned, DrawingView View)>();
             TransientGeometry geometry = InventorHost.App.TransientGeometry;
             DrawingViews views = sheet.DrawingViews;
             var modelDocument = (_Document)model;
@@ -138,10 +139,117 @@ namespace InventorAddin.PrintViews
                 }
 
                 if (view != null)
-                    placed.Add($"{planned.Kind} at ({planned.CentreXCm:0.##}, {planned.CentreYCm:0.##}) cm");
+                {
+                    // Every base view, the iso included, is at the sheet scale (task 227); a projected view follows its parent's.
+                    if (!scratch && planned.Kind is not (InitialViewKind.Top or InitialViewKind.Right))
+                        EnsureScale(view, plan.Scale, planned.Kind);
+                    placed.Add((planned, view));
+                }
             }
 
             return placed;
+        }
+
+        private static void EnsureScale(DrawingView view, double scale, InitialViewKind kind)
+        {
+            double? actual = ComSafe.Get(() => (double?)view.Scale);
+            if (actual is double a && Math.Abs(a - scale) <= scale * 1e-6)
+                return;
+
+            AddinServices.Log.Warn($"Place Initial Views: the {kind} view was placed at scale {actual?.ToString("0.####") ?? "unknown"}, not {scale:0.####}; setting it.");
+            ComSafe.Run(() => view.Scale = scale);
+        }
+
+        /// <summary>
+        /// Puts the views of <paramref name="plan"/> on <paramref name="sheet"/> (see <see cref="PlaceViews"/>) and reads each placed view's
+        /// size back. Returns one line per view for the log: its centre, its placed size and the size the plan estimated (task 227).
+        /// </summary>
+        public static IReadOnlyList<string> Place(Sheet sheet, Document model, InitialViewsResult plan)
+        {
+            var lines = new List<string>();
+            foreach ((PlannedView planned, DrawingView view) in PlaceViews(sheet, model, plan))
+            {
+                double? width = ComSafe.Get(() => (double?)view.Width);
+                double? height = ComSafe.Get(() => (double?)view.Height);
+                string actual = width is double w && height is double h ? $"placed {w:0.##} x {h:0.##}" : "placed size unknown";
+                lines.Add($"{planned.Kind} at ({planned.CentreXCm:0.##}, {planned.CentreYCm:0.##}) cm, {actual}, planned {planned.WidthCm:0.##} x {planned.HeightCm:0.##} cm");
+            }
+
+            return lines;
+        }
+
+        /// <summary><see cref="Measure"/> with the wait cursor showing, as the measuring takes a moment on a large model.</summary>
+        public static IReadOnlyDictionary<InitialViewKind, ViewSizeCm>? MeasureWithWaitCursor(Document model, InitialViewsModelInfo info, string template)
+        {
+            System.Windows.Forms.Cursor previous = System.Windows.Forms.Cursor.Current;
+            System.Windows.Forms.Cursor.Current = System.Windows.Forms.Cursors.WaitCursor;
+            try
+            {
+                return Measure(model, info, template);
+            }
+            finally
+            {
+                System.Windows.Forms.Cursor.Current = previous;
+            }
+        }
+
+        /// <summary>
+        /// The real size at scale 1 of each view the model's kind gets, read from views placed in a scratch drawing made from
+        /// <paramref name="template"/> and closed without saving (task 227). The range box gives only an upper bound for a view: the
+        /// model's outline is inside it, and an assembly's box can be far larger than its geometry. Null when the measuring fails for any
+        /// reason (logged), so the caller keeps the estimate.
+        /// </summary>
+        public static IReadOnlyDictionary<InitialViewKind, ViewSizeCm>? Measure(Document model, InitialViewsModelInfo info, string template)
+        {
+            Document? scratch = null;
+            bool previousSilent = InventorHost.App.SilentOperation;
+            try
+            {
+                InventorHost.App.SilentOperation = true;
+                try
+                {
+                    scratch = InventorHost.App.Documents.Add(DocumentTypeEnum.kDrawingDocumentObject, template, false);
+                }
+                finally
+                {
+                    InventorHost.App.SilentOperation = previousSilent;
+                }
+
+                Sheet sheet = ((DrawingDocument)scratch).ActiveSheet;
+
+                // At the estimate's own scale on an A3-sized area, so a big assembly stays near the sheet. Only each view's own size is read
+                // (placed size divided by its scale), so overlap does not matter.
+                InitialViewsResult plan = InitialViewsPlan.Plan(
+                    info.Kind, info.Box, info.FlatPattern, new SheetAreaCm(1, 6.5, 41, 28.7));
+
+                var sizes = new Dictionary<InitialViewKind, ViewSizeCm>();
+                foreach ((PlannedView planned, DrawingView view) in PlaceViews(sheet, model, plan, scratch: true))
+                {
+                    double viewScale = ComSafe.Get(() => (double?)view.Scale) ?? plan.Scale;
+                    double? width = ComSafe.Get(() => (double?)view.Width) / viewScale;
+                    double? height = ComSafe.Get(() => (double?)view.Height) / viewScale;
+                    if (IsSize(width) && IsSize(height))
+                        sizes[planned.Kind] = new ViewSizeCm(width!.Value, height!.Value);
+                }
+
+                AddinServices.Log.Info("Initial Views: measured (per view, at scale 1): " + string.Join("; ",
+                    sizes.Select(s => $"{s.Key} {s.Value.WidthCm:0.##} x {s.Value.HeightCm:0.##} cm")) +
+                    $" (estimated from the range box, at scale 1: {string.Join("; ", plan.Views.Select(v => $"{v.Kind} {v.WidthCm / plan.Scale:0.##} x {v.HeightCm / plan.Scale:0.##}"))}).");
+                return sizes.Count == 0 ? null : sizes;
+            }
+            catch (Exception ex)
+            {
+                AddinServices.Log.Warn($"Initial Views: measuring the views failed ({ex.Message}); the range box estimate is used.");
+                return null;
+            }
+            finally
+            {
+                if (scratch != null)
+                {
+                    Document toClose = scratch;
+                    ComSafe.Run(() => toClose.Close(true));
+                }
+            }
         }
     }
 }

@@ -565,3 +565,4 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-23 | A hole tag moved away from its hole gets a leader to it (request) | Aidan | task 240 |
 | 2026-11-23 | The tag leader shows when the gap between the tag and the hole's edge is more than 5 mm on paper, set on Update, not while dragging (spec 04 question 26) | Default | task 240 |
 | 2026-11-23 | Order: 239 before 227 (it affects every template check), 240 after 236, spike 241 before 238 | Default | PLAN |
+| 2026-11-23 | Initial Views fit: the window's scale and fit warning use view sizes measured by placing the views in a hidden scratch drawing (closed unsaved), falling back to the box estimate if measuring fails; every base view is set to the plan's scale | Default | task 227 |

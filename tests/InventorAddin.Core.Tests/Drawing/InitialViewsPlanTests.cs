@@ -280,4 +280,75 @@ public sealed class InitialViewsPlanTests
         Assert.True(r.Fits);
         AssertInside(r, area);
     }
+
+    // Task 227: the box outline is only an upper bound, so measured sizes of the placed views replace it.
+    private static readonly InitialViewsBoxCm TallIsoBox = new(20, 10, 8);
+
+    [Fact]
+    public void MeasuredSizes_NullOrEmpty_KeepTheEstimate()
+    {
+        SheetAreaCm area = InitialViewsPlan.UsableArea(A3);
+        var estimate = InitialViewsPlan.Plan(InitialViewModelKind.Part, TallIsoBox, null, area);
+        var none = InitialViewsPlan.Plan(InitialViewModelKind.Part, TallIsoBox, null, area, null, null,
+            new Dictionary<InitialViewKind, ViewSizeCm>());
+        Assert.Equal(estimate.Scale, none.Scale);
+        Assert.Equal(estimate.Views, none.Views);
+    }
+
+    [Fact]
+    public void MeasuredIso_SmallerThanTheBoxOutline_OffersALargerScale()
+    {
+        SheetAreaCm area = InitialViewsPlan.UsableArea(A3);
+
+        // The box's isometric outline is 19.8 x 19.6 cm at scale 1, so with the front and the top it does not fit at 1:2 (13.3 cm of height).
+        var estimate = InitialViewsPlan.Plan(InitialViewModelKind.Part, TallIsoBox, null, area);
+        Assert.Equal(0.25, estimate.Scale, 9);
+
+        // A placed iso of the real model measured 14 x 9.5 cm: at 1:2 the views fit.
+        var measured = InitialViewsPlan.Plan(InitialViewModelKind.Part, TallIsoBox, null, area, null, null,
+            new Dictionary<InitialViewKind, ViewSizeCm> { [InitialViewKind.Iso] = new ViewSizeCm(14, 9.5) });
+        Assert.Equal(0.5, measured.Scale, 9);
+        Assert.True(measured.Fits);
+        Assert.Equal(7.0, Get(measured, InitialViewKind.Iso).WidthCm, 9);
+        Assert.Equal(4.75, Get(measured, InitialViewKind.Iso).HeightCm, 9);
+        AssertInside(measured, area);
+    }
+
+    [Fact]
+    public void MeasuredSizes_AreUsedAtAFixedScaleToo()
+    {
+        SheetAreaCm area = InitialViewsPlan.UsableArea(A3);
+        var big = new Dictionary<InitialViewKind, ViewSizeCm> { [InitialViewKind.Iso] = new ViewSizeCm(60, 60) };
+        var r = InitialViewsPlan.Plan(InitialViewModelKind.Part, TallIsoBox, null, area, null, 0.5, big);
+        Assert.False(r.Fits);
+        Assert.Contains(InitialViewsPlan.DoesNotFitAtScaleMessage, r.Messages);
+    }
+
+    [Fact]
+    public void MeasuredAssembly_WithAHugeRangeBox_GetsTheScaleItsGeometryFits()
+    {
+        SheetAreaCm area = InitialViewsPlan.UsableArea(A3);
+        var hugeBox = new InitialViewsBoxCm(400, 300, 300);
+        var estimate = InitialViewsPlan.Plan(InitialViewModelKind.Assembly, hugeBox, null, area);
+        var measured = InitialViewsPlan.Plan(InitialViewModelKind.Assembly, hugeBox, null, area, null, null,
+            new Dictionary<InitialViewKind, ViewSizeCm>
+            {
+                [InitialViewKind.Front] = new ViewSizeCm(100, 60),
+                [InitialViewKind.Iso] = new ViewSizeCm(90, 80),
+            });
+        Assert.True(measured.Scale > estimate.Scale);
+        Assert.Equal(0.1, measured.Scale, 9); // 100 + 1.5 + 90*s fits 24 cm wide only at 1:10: 10 + 1.5 + 9 = 20.5
+        Assert.True(measured.Fits);
+    }
+
+    [Theory]
+    [InlineData(0, 5)]
+    [InlineData(5, -1)]
+    [InlineData(double.NaN, 5)]
+    public void MeasuredSizes_MustBePositive(double w, double h)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => InitialViewsPlan.Plan(InitialViewModelKind.Part, Box, null,
+            InitialViewsPlan.UsableArea(A3), null, null,
+            new Dictionary<InitialViewKind, ViewSizeCm> { [InitialViewKind.Iso] = new ViewSizeCm(w, h) }));
+    }
 }

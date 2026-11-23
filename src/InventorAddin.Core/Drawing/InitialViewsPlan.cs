@@ -29,6 +29,9 @@ public sealed record InitialViewsBoxCm(double WidthCm, double HeightCm, double D
 /// <summary>The size of a sheet metal part's flat pattern, in cm (<c>FlatPattern.Length</c> by <c>Width</c>), as the view shows it.</summary>
 public sealed record FlatPatternSizeCm(double LengthCm, double WidthCm);
 
+/// <summary>The size of one view at scale 1, in cm, as a placed view reports it (<c>DrawingView.Width</c> and <c>Height</c> divided by its scale).</summary>
+public sealed record ViewSizeCm(double WidthCm, double HeightCm);
+
 /// <summary>A rectangle on the sheet, in cm from the sheet's bottom-left corner, y up.</summary>
 public sealed record SheetAreaCm(double LeftCm, double BottomCm, double RightCm, double TopCm)
 {
@@ -120,6 +123,11 @@ public static class InitialViewsPlan
     /// A scale the user chose, or null to pick the largest standard scale that fits. A fixed scale is used as given; when the views
     /// do not fit at it the result has <c>Fits</c> false and <see cref="DoesNotFitAtScaleMessage"/>.
     /// </param>
+    /// <param name="measured">
+    /// The real size at scale 1 of any of the views, read from views placed in a scratch drawing (task 227). A measured view replaces
+    /// the estimate from the box, which is only an upper bound (the model's outline is inside its range box, and an assembly's range
+    /// box can be much larger than its geometry). Null, or a view missing from it, keeps the estimate.
+    /// </param>
     /// <exception cref="ArgumentOutOfRangeException">A size is zero, negative or not a finite number.</exception>
     public static InitialViewsResult Plan(
         InitialViewModelKind model,
@@ -127,7 +135,8 @@ public static class InitialViewsPlan
         FlatPatternSizeCm? flatPattern,
         SheetAreaCm area,
         IEnumerable<InitialViewKind>? requested = null,
-        double? fixedScale = null)
+        double? fixedScale = null,
+        IReadOnlyDictionary<InitialViewKind, ViewSizeCm>? measured = null)
     {
         ArgumentNullException.ThrowIfNull(box);
         ArgumentNullException.ThrowIfNull(area);
@@ -180,6 +189,15 @@ public static class InitialViewsPlan
         };
         if (flatPattern is not null)
             sizes[InitialViewKind.FlatPattern] = (flatPattern.LengthCm, flatPattern.WidthCm);
+        if (measured is not null)
+        {
+            foreach ((InitialViewKind kind, ViewSizeCm size) in measured)
+            {
+                RequirePositive(size.WidthCm, nameof(measured));
+                RequirePositive(size.HeightCm, nameof(measured));
+                sizes[kind] = (size.WidthCm, size.HeightCm);
+            }
+        }
 
         // Create Print's scale rule (Aidan, 2026-11-20): the arranged views fit within PrintPlan.SheetFillFraction of the area.
         double maxWidth = area.WidthCm * PrintPlan.SheetFillFraction;

@@ -118,6 +118,11 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Task 222, Mass property (Aidan's check passed 2026-11-23):
   - Later: remove the lb mass unit step from the template builder; an imperial sample value for the fit check; the backfill warnings in Create Print and Material and Finish do not mention Mass.
 
+- Task 227, fit check (views are measured in a hidden scratch drawing before the window opens):
+  - The cause of the iso looking a different scale was not found; each base view's scale is now checked and set to the plan's, with a log warning. Watch the log on Aidan's check.
+  - Measuring places the views twice; if slow on a large assembly, measure only front and iso, or cache per model.
+  - Re-check the measured iso after 228 changes its style. Dimensions and marks added later can still make a view larger than measured.
+
 - Task 237, values on one baseline:
   - Labels and fixed text with descenders now drop up to about 0.47 mm onto their baselines (intended); the rotated small part number keeps lower justification (upper not tried on rotated text).
   - Hole table text (`HoleTableMarker`) still uses lower justification.

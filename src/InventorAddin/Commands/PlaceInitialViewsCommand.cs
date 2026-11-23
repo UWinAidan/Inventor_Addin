@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Inventor;
 using InventorAddin.Core.Drawing;
+using InventorAddin.Core.Materials;
 using InventorAddin.Core.Models;
 using InventorAddin.Core.Settings;
 using InventorAddin.Core.ViewModels;
@@ -103,7 +104,13 @@ namespace InventorAddin.Commands
             PrintUnits units = PrintPlan.PrintUnitsFor(AddinServices.Settings.DefaultUnits);
             SheetSizeSpec spec = InitialViewsSetup.SheetFor(sheet.Width, sheet.Height, units);
 
-            var viewModel = new InitialViewsViewModel(info.Kind, info.Box, info.FlatPattern, spec);
+            // The real size of each view is read from scratch views made from the AWB template (task 227); without the template the
+            // range box estimate is used.
+            string template = LibraryPaths.PrintTemplate(AddinServices.Settings, units, AddinServices.AddinFolder).Path;
+            IReadOnlyDictionary<InitialViewKind, ViewSizeCm>? measured =
+                System.IO.File.Exists(template) ? InitialViewsPlacer.MeasureWithWaitCursor(model, info, template) : null;
+
+            var viewModel = new InitialViewsViewModel(info.Kind, info.Box, info.FlatPattern, spec, measured);
             _plan = InitialViewsWindow.Ask(viewModel);
             if (_plan == null)
             {

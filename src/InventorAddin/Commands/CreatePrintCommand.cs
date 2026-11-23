@@ -91,8 +91,10 @@ namespace InventorAddin.Commands
 
             // The user confirms or changes the views before anything is made (task 192); Cancel creates nothing. The views are laid out on
             // the template's default sheet, the one Create Print makes.
+            // The real size of each view is read from scratch views first (task 227), so the suggested scale matches what is placed.
             var viewModel = new InitialViewsViewModel(
-                info.Kind, info.Box, info.FlatPattern, InitialViewsSetup.DefaultSheet(PrintPlan.PrintUnitsFor(units)));
+                info.Kind, info.Box, info.FlatPattern, InitialViewsSetup.DefaultSheet(PrintPlan.PrintUnitsFor(units)),
+                InitialViewsPlacer.MeasureWithWaitCursor(model, info, template));
             InitialViewsResult? plan = InitialViewsWindow.Ask(viewModel);
             if (plan == null)
             {
