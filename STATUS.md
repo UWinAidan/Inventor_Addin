@@ -6,26 +6,27 @@ Last updated: 2026-11-22
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-23 11:53. Branch `claude/m5-drawing-tools`, latest commit `7dc684b` (pushed).
+- Updated: 2026-11-23. Branch `claude/m5-drawing-tools`, latest commit `1d88623` plus this handoff (pushed). Nothing is running; Inventor has no documents open from the spikes.
 - Goal: M5 tasks in chunks: implementer, then reviewer, one commit per task, push. Stop after each chunk with a summary, Defaults and an Inventor checklist. Nothing from work prints goes in the repo (ADDIN_PICS is gitignored).
-- Chunk 2 is done and checked by Aidan (2026-11-23): 188, 192, 193, 223, 224 pass, apart from the fails and requests now planned as tasks 225 to 236 (DECISIONS rows 2026-11-23). The parent's own fix on 192 passed a review.
-- Spike 225 done (`a25de70`): arbitrary-camera base views, OrientedMinimumRangeBox, bend notes, dimension styles (library styles with the same name replace the template's on Documents.Add; copy them to "AWB ..." names), the feature control frame needs LinearUnits set first, and WEIGHT cannot print "lb", so 222 is the Mass text property.
-- Running when this was written (agents; their results are not yet known):
-  - Spike 218 (long title block values) driving Inventor; it writes Results into `docs/tasks/218-*.md`, uncommitted.
-  - Task 222 implementer (Mass property, save event, template field); uncommitted changes in the tree.
-  If the session was cleared: check `git status`; review 222's diff with a reviewer against its task file; read 218's Results and commit them.
-- Next chunk (Aidan's order, 2026-11-23): 222, spike 218, then the fixes 226 to 236 (226 decimal styles, 227 fit check, 228 black and white and iso, 229 sheet metal front view and bend notes, 230 sheet metal Material Size, 231 assemblies, 232 units and sheet size, 233 front view choice, 234 preview, 235 open existing print, 236 Designer), then 194 onward. Putting 226 to 236 before 194 is the parent's Default.
-- Templates: `libraries/Templates/*.idw` stay uncommitted until Aidan rebuilds after 226 (the dimension comma) and 222 (the WEIGHT field); then commit them and mark 187 done.
-- State: last build 0 errors; Core tests 5325 passed (before 222).
+- Chunk 3 so far (Aidan's order: 222, spike 218, then the chunk 2 fixes, then 194 onward):
+  - Spike 225 done (`a25de70`). 222 Mass property done and reviewed (`17ccf6a`; not run in Inventor). Spike 218 done (`1d88623`), which added tasks 237 and 238 and spec 05 questions 30 and 31.
+- Next, in order (task files in `docs/tasks/`; PLAN M5 lists them):
+  1. 226 decimal period (copy 'Default (ISO)' styles to "AWB ..." names; frame style needs LinearUnits first; SilentOperation around Create Print's Documents.Add).
+  2. 237 values on one baseline (upper justification at baseline + cap height; template rebuild).
+  3. 227 fit check, 228 black and white plus iso on every print, 229 sheet metal front view and bend notes, 230 sheet metal Material Size, 231 assemblies, 232 units and sheet size, 233 front view choice, 234 preview, 235 open existing print, 236 Designer, 238 fit long values.
+  4. Then the chunk 3 summary for Aidan, then 194 onward. Putting 226 to 238 before 194 is the parent's Default.
+- Waiting on Aidan: rebuild both templates after 226, 237 and 222 (WEIGHT now prints the custom "Mass"); on a pass commit `libraries/Templates/*.idw` and mark 187 done. Spec 05 questions 30, 31 (narrowest width scale, Default 0.6; below it warn only). The 222 checks in TODO.md (save event, Save Copy As, undo step).
+- State: last build 0 errors; Core tests 5340 passed with 1 to 2 known flaky failures per run.
 - Gotchas:
-  - Flaky tests: NewPartCreator, Numbering, RegisterStore, RenamePlan probe timeout; rerun.
+  - Flaky tests: RenamePlan, SaveAsCopyCreator, SaveAsReplacer, NewPartCreator, Numbering, RegisterStore probe timeouts; rerun.
   - Build with `-p:DeployToInventor=false` while Inventor is open.
   - Write .py helpers with the Write tool into the job tmp folder; bash heredocs with quotes fail.
-  - Documents.Add from an AWB template can open a modal Style Conflict dialog; scripts set `SilentOperation = true` (Create Print should too, task 226).
-  - A field text box's range box measures the property name, not the printed value.
-  - Spike scripts are in the job tmp folder (`tmp/225/`, `tmp/218/`), not in the repo.
+  - Documents.Add from an AWB template can open a modal Style Conflict dialog; set `SilentOperation = true` around it.
+  - A field text box's range box measures the property name unless the sheet has a view.
+  - `TextBox.WidthScale` only works inside `TitleBlockDefinition.Edit`.
+  - Spike scripts are in the old job tmp folder (`tmp/225/`, `tmp/218/`), not in the repo; the spike task files hold the findings.
   - Agents can stop at the session limit; resume them with SendMessage.
-- Read first: `docs/WORKFLOW.md`, `docs/PLAN.md` M5, tasks 222, 225, 226 to 236, DECISIONS rows dated 2026-11-23, TODO.md follow-ups.
+- Read first: `docs/WORKFLOW.md`, `docs/PLAN.md` M5, spike Results in tasks 225 and 218, tasks 226 and 237, DECISIONS rows dated 2026-11-23, TODO.md follow-ups.
 
 ## Big items
 
