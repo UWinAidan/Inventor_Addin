@@ -6,27 +6,26 @@ Last updated: 2026-11-22
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-23 08:56. Branch `claude/m5-drawing-tools`, latest commit `785a188` (pushed). Chunk 2 is finished; its summary was given to Aidan.
+- Updated: 2026-11-23. Branch `claude/m5-drawing-tools`, latest commit `a25de70` (pushed).
 - Goal: M5 tasks in chunks: implementer, then reviewer, one commit per task, push. Stop after each chunk with a summary, Defaults and an Inventor checklist. Nothing from work prints goes in the repo (ADDIN_PICS is gitignored).
-- Done (chunk 2 so far): spike 183 round 4 and task 222 planned (`383420f`); 188 Create Print uses the AWB template (`5ed3772`); 192 Place Initial Views (`79b8dde`); 216 done and tasks 223, 224 planned (`65b3d4b`); 193 Open Drawing (`9d9a79c`); 223 title block fixes (`4f276cf`). Each task's Defaults are in DECISIONS.md (2026-11-22/23) and its follow-ups in TODO.md.
-- Done: 224 Finish Spec refresh (`785a188`).
-- State: last build 0 errors; Core tests 5325 passed (with 224). Nothing from 188, 192, 193, 223 or 224 has been run in Inventor.
-- Waiting on Aidan:
-  1. Rebuild both templates (developer button) and check task 223's checklist: decimal marker log line (about 17 styles, "0 did not read back as a period"), no REV/SHEET overflow warnings, tolerance gap, MATERIAL SIZE level with MATERIAL, WEIGHT vs DATE (not fixed; layout does not explain it). On a pass, commit `libraries/Templates/*.idw` and mark 187 done.
-  2. Answers: spec 05 question 29 ("lbmass" or "LB"); whether Create Print should just open an existing print (overlaps Open Drawing, task 193 follow-up).
-  3. OK to run spike 218 (long title block values) in Inventor.
-- Next:
-  1. Wait for Aidan's chunk 2 check and "next chunk".
-  2. Then 222 (lb mass), spike 218 with OK, later 194 to 208, 212.
+- Chunk 2 is done and checked by Aidan (2026-11-23): 188, 192, 193, 223, 224 pass, apart from the fails and requests now planned as tasks 225 to 236 (DECISIONS rows 2026-11-23). The parent's own fix on 192 passed a review.
+- Spike 225 done (`a25de70`): arbitrary-camera base views, OrientedMinimumRangeBox, bend notes, dimension styles (library styles with the same name replace the template's on Documents.Add; copy them to "AWB ..." names), the feature control frame needs LinearUnits set first, and WEIGHT cannot print "lb", so 222 is the Mass text property.
+- Running when this was written (agents; their results are not yet known):
+  - Spike 218 (long title block values) driving Inventor; it writes Results into `docs/tasks/218-*.md`, uncommitted.
+  - Task 222 implementer (Mass property, save event, template field); uncommitted changes in the tree.
+  If the session was cleared: check `git status`; review 222's diff with a reviewer against its task file; read 218's Results and commit them.
+- Next chunk (Aidan's order, 2026-11-23): 222, spike 218, then the fixes 226 to 236 (226 decimal styles, 227 fit check, 228 black and white and iso, 229 sheet metal front view and bend notes, 230 sheet metal Material Size, 231 assemblies, 232 units and sheet size, 233 front view choice, 234 preview, 235 open existing print, 236 Designer), then 194 onward. Putting 226 to 236 before 194 is the parent's Default.
+- Templates: `libraries/Templates/*.idw` stay uncommitted until Aidan rebuilds after 226 (the dimension comma) and 222 (the WEIGHT field); then commit them and mark 187 done.
+- State: last build 0 errors; Core tests 5325 passed (before 222).
 - Gotchas:
   - Flaky tests: NewPartCreator, Numbering, RegisterStore, RenamePlan probe timeout; rerun.
   - Build with `-p:DeployToInventor=false` while Inventor is open.
   - Write .py helpers with the Write tool into the job tmp folder; bash heredocs with quotes fail.
-  - A mass unit change does not set `Document.Dirty`; set it before `Save()`.
-  - `Documents.Add` fails while the template .idw is open in Inventor.
-  - A field text box's range box measures the property name, not the printed value (task 223).
+  - Documents.Add from an AWB template can open a modal Style Conflict dialog; scripts set `SilentOperation = true` (Create Print should too, task 226).
+  - A field text box's range box measures the property name, not the printed value.
+  - Spike scripts are in the job tmp folder (`tmp/225/`, `tmp/218/`), not in the repo.
   - Agents can stop at the session limit; resume them with SendMessage.
-- Read first: `docs/WORKFLOW.md`, `docs/PLAN.md` M5, tasks 224, 223, 222, DECISIONS rows dated 2026-11-22/23, TODO.md follow-ups.
+- Read first: `docs/WORKFLOW.md`, `docs/PLAN.md` M5, tasks 222, 225, 226 to 236, DECISIONS rows dated 2026-11-23, TODO.md follow-ups.
 
 ## Big items
 
