@@ -118,6 +118,11 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Task 222, Mass property (Aidan's check passed 2026-11-23):
   - Later: remove the lb mass unit step from the template builder; an imperial sample value for the fit check; the backfill warnings in Create Print and Material and Finish do not mention Mass.
 
+- Task 229, sheet metal front view and bend notes:
+  - Whether `BendNote.UsePartUnits = false` gives the print's units for the bend radius is unverified; if not, set the units through the bend note style.
+  - The iso is still the standard top-right iso, not turned to match the new front view; it may look inconsistent.
+  - Bend notes sit where Inventor puts them; overlap with flat pattern geometry is not handled.
+
 - Task 228, black and white and iso everywhere:
   - The sheet metal iso sits above the folded front; check it shows the folded part (no folded-model option is passed) and does not overlap a tall flat pattern. Its position may change after Aidan's check.
 
@@ -136,8 +141,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
   - Core test runs often fail 1 to 3 timing-sensitive probe tests, a different one each run; worth making them deterministic.
 
 - Spike 225, for the tasks that use it:
-  - 229 and 233: the base face edge's sign is arbitrary; choose the up vector so the view is not upside down.
-  - 229: an imperial bend note printed its radius in mm (try `BendNote.UsePartUnits`).
+  - 233: the base face edge's sign is arbitrary; choose the up vector so the view is not upside down (229 uses `FaceViewRule`).
   - A single ordinate dimension failed ("Value does not fall within the expected range"); `OrdinateDimensionSets.Add` works. Probably needs an origin indicator first (not tried).
   - `HoleThreadNotes.Add` needs `LinearDiameterType = false`; with `Missing` it fails with E_FAIL.
 

@@ -6,7 +6,7 @@ Last updated: 2026-11-22
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-23 16:45. Branch `claude/m5-drawing-tools`, latest commit `f46395b` (pushed).
+- Updated: 2026-11-23 17:00. Branch `claude/m5-drawing-tools`, latest commit: task 229 (pushed).
 - Goal: M5 chunk 3: the chunk 2 fixes (226 to 241), each implementer, then reviewer, one commit per task, push; then the chunk 3 summary for Aidan, then 194 onward.
 - Done this session:
   - Spec 05 Q30 and Q31 answered (`44d09ed`). Aidan then overturned Q31: see 238 and 241 below.
@@ -16,9 +16,10 @@ Last updated: 2026-11-22
     - Planned tasks 239 (template without a redeploy), 240 (hole tag leader) and spike 241 (shrink and wrap).
     - Spec 05 Q31 overturned, new Q32 (height floor, Default 1.8 mm) and Q33 (off-units FINISH and WEIGHT); spec 04 Q26 (tag leader, Default 5 mm).
     - Task 232 gained "FINISH and WEIGHT follow the print's units"; task 238 now depends on 241.
-- 239 done and reviewed (committed with this handoff); not run in Inventor. Nothing running.
+- 239 (`9df967d`), 227 (`9d9b3e4`, views measured in a hidden scratch drawing) and 228 (`5b15a9d`) done and reviewed; not run in Inventor.
+- 229 done and reviewed (committed with this handoff). Nothing running.
 - Next, in order:
-  1. 227 fit check, 228 black and white plus iso, 229 sheet metal front view and bend notes, 230 sheet metal Material Size, 231 assemblies, 232 units and sheet size plus print-units FINISH and WEIGHT, 233 front view choice, 234 preview, 235 open existing print, 236 Designer.
+  1. 230 sheet metal Material Size, 231 assemblies, 232 units and sheet size plus print-units FINISH and WEIGHT, 233 front view choice, 234 preview, 235 open existing print, 236 Designer.
   2. 240 hole tag leaders.
   3. Spike 241, run by the parent over COM like 218 and 225. Fill in its Results, then adjust 238's scope.
   4. 238: narrow to 0.6, then reduce height to the floor, Description wraps to two lines, single-line fields warn only at the floor.

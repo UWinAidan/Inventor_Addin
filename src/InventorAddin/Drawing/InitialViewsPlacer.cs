@@ -110,8 +110,12 @@ namespace InventorAddin.PrintViews
 
                 switch (planned.Kind)
                 {
-                    case InitialViewKind.Front:
                     case InitialViewKind.FoldedFront:
+                        view = AddFoldedFront(views, modelDocument, model, centre, plan.Scale);
+                        front = view;
+                        break;
+
+                    case InitialViewKind.Front:
                         view = views.AddBaseView(modelDocument, centre, plan.Scale,
                             ViewOrientationTypeEnum.kFrontViewOrientation, DrawingViewStyleEnum.kHiddenLineRemovedDrawingViewStyle);
                         front = view;
@@ -145,10 +149,129 @@ namespace InventorAddin.PrintViews
                     if (!scratch && planned.Kind is not (InitialViewKind.Top or InitialViewKind.Right))
                         EnsureScale(view, plan.Scale, planned.Kind);
                     placed.Add((planned, view));
+
+                    // The flat pattern view gets bend notes if it has none (task 229). The scratch drawing is only measured.
+                    if (!scratch && planned.Kind == InitialViewKind.FlatPattern)
+                        AddBendNotes(sheet, view);
                 }
             }
 
             return placed;
+        }
+
+        /// <summary>
+        /// The sheet metal part's folded front view: looking straight at the flat pattern's base face with its longest straight edge
+        /// horizontal (task 229, the rule is <see cref="FaceViewRule"/>). Falls back to the standard front view, logged, when the face
+        /// or its edges cannot be read.
+        /// </summary>
+        private static DrawingView AddFoldedFront(DrawingViews views, _Document modelDocument, Document model, Point2d centre, double scale)
+        {
+            var warnings = new List<string>();
+            Camera? camera = BuildBaseFaceCamera(model, warnings);
+            if (camera == null)
+            {
+                AddinServices.Log.Warn("Place Initial Views: the base face could not be read, so the folded view uses the standard front. " +
+                    (warnings.Count == 0 ? "Reason unknown." : string.Join(" ", warnings)));
+                return views.AddBaseView(modelDocument, centre, scale,
+                    ViewOrientationTypeEnum.kFrontViewOrientation, DrawingViewStyleEnum.kHiddenLineRemovedDrawingViewStyle);
+            }
+
+            return views.AddBaseView(modelDocument, centre, scale,
+                ViewOrientationTypeEnum.kArbitraryViewOrientation, DrawingViewStyleEnum.kHiddenLineRemovedDrawingViewStyle,
+                "", camera, Type.Missing);
+        }
+
+        /// <summary>
+        /// A camera looking at the sheet metal part's base face (spike 225, question 1): the outward normal is the face's plane normal,
+        /// negated when <c>IsParamReversed</c>; the horizontal is its longest line segment edge. Null when any step fails.
+        /// </summary>
+        private static Camera? BuildBaseFaceCamera(Document model, List<string> warnings)
+        {
+            Camera? camera = null;
+            ComSafe.Run(() =>
+            {
+                var definition = (SheetMetalComponentDefinition)((PartDocument)model).ComponentDefinition;
+                if (!definition.HasFlatPattern)
+                {
+                    warnings.Add("The part has no flat pattern.");
+                    return;
+                }
+
+                Face face = definition.FlatPattern.BaseFace;
+                if (face.Geometry is not Plane plane)
+                {
+                    warnings.Add("The base face is not planar.");
+                    return;
+                }
+
+                UnitVector normal = plane.Normal;
+                double sign = face.IsParamReversed ? -1 : 1;
+
+                var edges = new List<FaceEdgeCm>();
+                foreach (Edge edge in face.Edges)
+                {
+                    if (edge.GeometryType != CurveTypeEnum.kLineSegmentCurve)
+                        continue;
+                    Point start = edge.StartVertex.Point;
+                    Point stop = edge.StopVertex.Point;
+                    edges.Add(new FaceEdgeCm(stop.X - start.X, stop.Y - start.Y, stop.Z - start.Z, start.DistanceTo(stop)));
+                }
+
+                FaceViewOrientation? orientation = FaceViewRule.Choose(sign * normal.X, sign * normal.Y, sign * normal.Z, edges);
+                if (orientation == null)
+                {
+                    warnings.Add($"No usable straight edge on the base face ({edges.Count} found).");
+                    return;
+                }
+
+                Box box = definition.RangeBox;
+                TransientGeometry geometry = InventorHost.App.TransientGeometry;
+                Point target = geometry.CreatePoint(
+                    (box.MinPoint.X + box.MaxPoint.X) / 2, (box.MinPoint.Y + box.MaxPoint.Y) / 2, (box.MinPoint.Z + box.MaxPoint.Z) / 2);
+
+                Camera built = InventorHost.App.TransientObjects.CreateCamera();
+                built.Target = target;
+                built.Eye = geometry.CreatePoint(
+                    target.X + orientation.NormalX * 100, target.Y + orientation.NormalY * 100, target.Z + orientation.NormalZ * 100);
+                built.UpVector = geometry.CreateUnitVector(orientation.UpX, orientation.UpY, orientation.UpZ);
+                camera = built;
+            }, warnings, "base face camera");
+            return camera;
+        }
+
+        /// <summary>
+        /// Adds a bend note to each bend centreline of the flat pattern view when the sheet has none (spike 225, question 3: notes are
+        /// not added automatically, the view's curves with <c>kBendUpEdge</c> and <c>kBendDownEdge</c> are the centrelines). A note reads
+        /// direction, angle and radius. Bend notes use the part's units by default, which printed millimetres on an imperial drawing, so
+        /// each note is set to the drawing's units.
+        /// </summary>
+        private static void AddBendNotes(Sheet sheet, DrawingView view)
+        {
+            int added = 0;
+            var warnings = new List<string>();
+            ComSafe.Run(() =>
+            {
+                BendNotes notes = sheet.DrawingNotes.BendNotes;
+                if (notes.Count > 0)
+                    return;
+
+                foreach (DrawingCurve curve in view.DrawingCurves)
+                {
+                    DrawingEdgeTypeEnum type = curve.EdgeType;
+                    if (type != DrawingEdgeTypeEnum.kBendUpEdge && type != DrawingEdgeTypeEnum.kBendDownEdge)
+                        continue;
+
+                    DrawingCurve bend = curve;
+                    ComSafe.Run(() =>
+                    {
+                        BendNote note = notes.Add(bend);
+                        added++;
+                        ComSafe.Run(() => note.UsePartUnits = false);
+                    }, warnings, "bend note");
+                }
+            }, warnings, "bend notes");
+            AddinServices.Log.Info($"Place Initial Views: {added} bend note(s) added to the flat pattern view." +
+                (warnings.Count == 0 ? "" : " Problems: " + string.Join(" ", warnings)));
         }
 
         private static void EnsureScale(DrawingView view, double scale, InitialViewKind kind)
