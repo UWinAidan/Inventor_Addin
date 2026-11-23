@@ -623,7 +623,7 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [x] 225 Spike: view orientation, dimension styles and the lb unit text (Windows, with Aidan)
 - [x] 226 Decimal period on every dimension style a print uses
 - [x] 227 Initial Views fit check matches what is placed
-- [ ] 228 Every view black and white, and an iso on every print (Aidan, 2026-11-23)
+- [x] 228 Every view black and white, and an iso on every print (Aidan, 2026-11-23)
 - [ ] 229 Sheet metal: front view on the base face, and bend notes
 - [ ] 230 Sheet metal Material Size: thickness x flat pattern size
 - [ ] 231 Assemblies: Rev, Status, and a dash for blank part fields

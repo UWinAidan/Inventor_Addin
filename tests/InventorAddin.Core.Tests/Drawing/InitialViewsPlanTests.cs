@@ -154,7 +154,7 @@ public sealed class InitialViewsPlanTests
             new FlatPatternSizeCm(12, 6), area);
 
         PlannedView folded = Get(r, InitialViewKind.FoldedFront), flat = Get(r, InitialViewKind.FlatPattern);
-        Assert.Equal(2, r.Views.Count);
+        Assert.Equal(3, r.Views.Count);
         Assert.Equal(folded.CentreYCm, flat.CentreYCm, 9);
         Assert.Equal(1.5, Left(flat) - Right(folded), 9);
         Assert.Equal(12 * r.Scale, flat.WidthCm, 9);
@@ -168,9 +168,21 @@ public sealed class InitialViewsPlanTests
         var r = InitialViewsPlan.Plan(InitialViewModelKind.SheetMetalPart, new InitialViewsBoxCm(8, 5, 2), null,
             InitialViewsPlan.UsableArea(A3));
 
-        Assert.Single(r.Views);
-        Assert.Equal(InitialViewKind.FoldedFront, r.Views[0].Kind);
+        Assert.Equal(new[] { InitialViewKind.FoldedFront, InitialViewKind.Iso }, r.Views.Select(v => v.Kind).ToArray());
         Assert.Contains(InitialViewsPlan.FlatPatternUnknownMessage, r.Messages);
+    }
+
+    [Fact]
+    public void SheetMetal_IsoSitsAboveTheFoldedFront()
+    {
+        SheetAreaCm area = InitialViewsPlan.UsableArea(A3);
+        var r = InitialViewsPlan.Plan(InitialViewModelKind.SheetMetalPart, new InitialViewsBoxCm(8, 5, 2),
+            new FlatPatternSizeCm(12, 6), area);
+
+        PlannedView folded = Get(r, InitialViewKind.FoldedFront), iso = Get(r, InitialViewKind.Iso);
+        Assert.Equal(folded.CentreXCm, iso.CentreXCm, 9);
+        Assert.True(iso.CentreYCm > folded.CentreYCm);
+        AssertInside(r, area);
     }
 
     [Fact]

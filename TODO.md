@@ -118,6 +118,9 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Task 222, Mass property (Aidan's check passed 2026-11-23):
   - Later: remove the lb mass unit step from the template builder; an imperial sample value for the fit check; the backfill warnings in Create Print and Material and Finish do not mention Mass.
 
+- Task 228, black and white and iso everywhere:
+  - The sheet metal iso sits above the folded front; check it shows the folded part (no folded-model option is passed) and does not overlap a tall flat pattern. Its position may change after Aidan's check.
+
 - Task 227, fit check (views are measured in a hidden scratch drawing before the window opens):
   - The cause of the iso looking a different scale was not found; each base view's scale is now checked and set to the plan's, with a log warning. Watch the log on Aidan's check.
   - Measuring places the views twice; if slow on a large assembly, measure only front and iso, or cache per model.

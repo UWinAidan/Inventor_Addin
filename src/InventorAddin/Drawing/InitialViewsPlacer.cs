@@ -89,8 +89,9 @@ namespace InventorAddin.PrintViews
 
         /// <summary>
         /// Puts the views of <paramref name="plan"/> on <paramref name="sheet"/>, in the plan's order (front, top, right, iso; folded front,
-        /// flat pattern). The front view is the base view; top and right are projected from it, so in the template's third angle standard a
-        /// view placed above it is the top view and one to its right is the right view. The isometric view is its own base view (a projected
+        /// flat pattern, iso). The front view is the base view; top and right are projected from it, so in the template's third angle standard a
+        /// view placed above it is the top view and one to its right is the right view. Every view, the iso included, is black and white
+        /// (hidden line removed, no shading; task 228), and the scratch measuring places the same styles. The isometric view is its own base view (a projected
         /// view to the right of the front view would be the right view, which is where an assembly's iso is planned). The caller starts the
         /// transaction. Returns what was placed, for the log.
         /// </summary>
@@ -125,7 +126,7 @@ namespace InventorAddin.PrintViews
 
                     case InitialViewKind.Iso:
                         view = views.AddBaseView(modelDocument, centre, plan.Scale,
-                            ViewOrientationTypeEnum.kIsoTopRightViewOrientation, DrawingViewStyleEnum.kShadedDrawingViewStyle);
+                            ViewOrientationTypeEnum.kIsoTopRightViewOrientation, DrawingViewStyleEnum.kHiddenLineRemovedDrawingViewStyle);
                         break;
 
                     case InitialViewKind.FlatPattern:

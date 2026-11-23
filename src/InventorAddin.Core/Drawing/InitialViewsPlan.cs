@@ -78,7 +78,7 @@ public static class InitialViewsPlan
     public static IReadOnlyList<InitialViewKind> DefaultViews(InitialViewModelKind model) => model switch
     {
         InitialViewModelKind.Part => new[] { InitialViewKind.Front, InitialViewKind.Top, InitialViewKind.Right, InitialViewKind.Iso },
-        InitialViewModelKind.SheetMetalPart => new[] { InitialViewKind.FoldedFront, InitialViewKind.FlatPattern },
+        InitialViewModelKind.SheetMetalPart => new[] { InitialViewKind.FoldedFront, InitialViewKind.FlatPattern, InitialViewKind.Iso },
         _ => new[] { InitialViewKind.Front, InitialViewKind.Iso },
     };
 
@@ -225,9 +225,11 @@ public static class InitialViewsPlan
     }
 
     // The grid cell of each view (column 0 left, row 0 bottom). A part: front and top stacked on the left, right and iso stacked
-    // on the right. Sheet metal and assembly: one row, the second view in the right column.
+    // on the right. Sheet metal: the folded front with the iso above it, the flat pattern on the right. Assembly: one row, the
+    // second view in the right column.
     private static (int Col, int Row) Cell(InitialViewModelKind model, InitialViewKind kind) => kind switch
     {
+        InitialViewKind.Iso when model == InitialViewModelKind.SheetMetalPart => (0, 1),
         InitialViewKind.Front or InitialViewKind.FoldedFront => (0, 0),
         InitialViewKind.Top => (0, 1),
         InitialViewKind.Right => (1, 0),

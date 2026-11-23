@@ -167,7 +167,8 @@ public sealed class InitialViewsViewModelTests
     public void SheetMetal_WithoutFlatPatternSize_WarnsButOkStaysOn()
     {
         var vm = new InitialViewsViewModel(InitialViewModelKind.SheetMetalPart, Box, null, A3);
-        Assert.Equal(2, vm.Views.Count);
+        Assert.Equal(3, vm.Views.Count);
+        Assert.True(Get(vm, InitialViewKind.Iso).IsChecked);
         Assert.Contains(InitialViewsPlan.FlatPatternUnknownMessage, vm.Messages);
         Assert.True(vm.CanOk);
     }
