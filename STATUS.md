@@ -6,19 +6,18 @@ Last updated: 2026-11-22
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-23 08:56. Branch `claude/m5-drawing-tools`, latest commit `4f276cf` (pushed).
+- Updated: 2026-11-23 08:56. Branch `claude/m5-drawing-tools`, latest commit `785a188` (pushed). Chunk 2 is finished; its summary was given to Aidan.
 - Goal: M5 tasks in chunks: implementer, then reviewer, one commit per task, push. Stop after each chunk with a summary, Defaults and an Inventor checklist. Nothing from work prints goes in the repo (ADDIN_PICS is gitignored).
 - Done (chunk 2 so far): spike 183 round 4 and task 222 planned (`383420f`); 188 Create Print uses the AWB template (`5ed3772`); 192 Place Initial Views (`79b8dde`); 216 done and tasks 223, 224 planned (`65b3d4b`); 193 Open Drawing (`9d9a79c`); 223 title block fixes (`4f276cf`). Each task's Defaults are in DECISIONS.md (2026-11-22/23) and its follow-ups in TODO.md.
-- In progress: task 224 (refresh an old Finish Spec) is implemented, uncommitted in the tree (FinishSpecBackfill, PropertyWrite.IsRefresh, PrintPropertyBackfill.Describe, MaterialFinishCommand, CreatePrintCommand, InventorNewDocument, FinishSpecBackfillTests, task file). A reviewer agent was checking it. If it is gone, review the diff against `docs/tasks/224-refresh-an-old-finish-spec.md`, then commit. Implementer Defaults to log: print name equal to name never refreshed; exact match; Mass Update shows the refresh in the log only (its plan has no backfill lines).
+- Done: 224 Finish Spec refresh (`785a188`).
 - State: last build 0 errors; Core tests 5325 passed (with 224). Nothing from 188, 192, 193, 223 or 224 has been run in Inventor.
 - Waiting on Aidan:
   1. Rebuild both templates (developer button) and check task 223's checklist: decimal marker log line (about 17 styles, "0 did not read back as a period"), no REV/SHEET overflow warnings, tolerance gap, MATERIAL SIZE level with MATERIAL, WEIGHT vs DATE (not fixed; layout does not explain it). On a pass, commit `libraries/Templates/*.idw` and mark 187 done.
   2. Answers: spec 05 question 29 ("lbmass" or "LB"); whether Create Print should just open an existing print (overlaps Open Drawing, task 193 follow-up).
   3. OK to run spike 218 (long title block values) in Inventor.
 - Next:
-  1. Finish 224 (review, commit, push).
-  2. Chunk 2 summary for Aidan: tasks 188, 192, 193, 223, 224; their Defaults; an Inventor checklist from those task files' Verification sections.
-  3. Then 222 (lb mass), spike 218 with OK, later 194 to 208, 212.
+  1. Wait for Aidan's chunk 2 check and "next chunk".
+  2. Then 222 (lb mass), spike 218 with OK, later 194 to 208, 212.
 - Gotchas:
   - Flaky tests: NewPartCreator, Numbering, RegisterStore, RenamePlan probe timeout; rerun.
   - Build with `-p:DeployToInventor=false` while Inventor is open.
