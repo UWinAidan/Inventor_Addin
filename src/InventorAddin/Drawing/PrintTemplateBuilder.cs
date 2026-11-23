@@ -512,9 +512,10 @@ namespace InventorAddin.PrintTemplates
 
         /// <summary>
         /// A text whose lower-left corner (or lower centre, when <paramref name="centre"/>) is at the point. <c>AddFitted</c>'s point depends
-        /// on the box's justification and there is no baseline option, so, as the hole table does, the box is justified (left or centre,
-        /// lower) and then moved by what its range box says, so the bottom of its box sits at <paramref name="yMm"/>. For a text rotated
-        /// to read upward (<paramref name="rotated"/>) the box's right edge is put at <paramref name="xMm"/>. Font, height and bold are
+        /// on the box's justification and there is no baseline option. Task 237 (spike 218): an unrotated text is justified upper (left or
+        /// centre) with its origin at the cap height above <paramref name="yMm"/>, so its baseline sits at <paramref name="yMm"/> whatever
+        /// the letters; x still comes from the range box. A text rotated to read upward (<paramref name="rotated"/>) keeps lower
+        /// justification and the range-box shift, with the box's right edge at <paramref name="xMm"/>. Font, height and bold are
         /// formatting overrides in the text (spike 183, round 1: bold runs; Inventor's own title block uses the size override, in cm).
         /// </summary>
         private TextBox AddText(
@@ -531,7 +532,9 @@ namespace InventorAddin.PrintTemplates
             ComSafe.Run(() =>
             {
                 box.HorizontalJustification = centre ? HorizontalTextAlignmentEnum.kAlignTextCenter : HorizontalTextAlignmentEnum.kAlignTextLeft;
-                box.VerticalJustification = VerticalTextAlignmentEnum.kAlignTextLower;
+                // Upper justification, origin a cap height above the baseline: every text sits on its baseline whatever its letters
+                // (spike 218, task 237). Lower justification lifts text with descenders. The rotated part number keeps lower.
+                box.VerticalJustification = rotated ? VerticalTextAlignmentEnum.kAlignTextLower : VerticalTextAlignmentEnum.kAlignTextUpper;
                 if (rotated)
                     box.Rotation = Math.PI / 2;
 
@@ -539,7 +542,7 @@ namespace InventorAddin.PrintTemplates
                 Point2d origin = box.Origin;
                 double x = Cm(xMm), y = Cm(yMm);
                 double dx = centre ? x - (range.MinPoint.X + range.MaxPoint.X) / 2 : rotated ? x - range.MaxPoint.X : x - range.MinPoint.X;
-                double dy = y - range.MinPoint.Y;
+                double dy = rotated ? y - range.MinPoint.Y : Cm(PrintTextFit.UpperOriginYMm(yMm, sizeMm)) - origin.Y;
                 box.Origin = _geometry.CreatePoint2d(origin.X + dx, origin.Y + dy);
             }, _warnings, $"Placing {what}");
 

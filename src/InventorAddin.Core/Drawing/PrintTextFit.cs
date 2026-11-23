@@ -63,6 +63,14 @@ public static class PrintTextFit
     public static double CapHeightMm(double sizeMm) => CapHeightEm * sizeMm;
 
     /// <summary>
+    /// Where a text's origin goes so its baseline lands on <paramref name="baselineYMm"/> when the box is justified to the upper edge
+    /// (spike 218: Inventor's lower justification puts the bottom of the actual letters at the origin, so descenders lift the text;
+    /// upper justification puts the origin a cap height above the baseline whatever the letters, and the baseline itself cannot be
+    /// requested). The size is the em, as for <see cref="CapHeightMm"/>.
+    /// </summary>
+    public static double UpperOriginYMm(double baselineYMm, double sizeMm) => baselineYMm + CapHeightMm(sizeMm);
+
+    /// <summary>
     /// Breaks the text into lines at spaces so that each is at most <paramref name="maxWidthMm"/> wide. A single word wider than that
     /// stays on a line of its own.
     /// </summary>

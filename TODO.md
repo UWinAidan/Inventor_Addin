@@ -119,6 +119,11 @@ Each spec lists its own open questions in full. These are the ones that block pl
   - The custom "Mass" shares its name with Design Tracking's Mass; check the Custom tab accepts it.
   - Later: remove the lb mass unit step from the template builder; an imperial sample value for the fit check; the backfill warnings in Create Print and Material and Finish do not mention Mass.
 
+- Task 237, values on one baseline:
+  - Labels and fixed text with descenders now drop up to about 0.47 mm onto their baselines (intended); the rotated small part number keeps lower justification (upper not tried on rotated text).
+  - Hole table text (`HoleTableMarker`) still uses lower justification.
+  - The row test in `PrintTemplateFitTests` recomputes the formula; a stronger one would check every field cell in a row gets the same origin.
+
 - Task 226, decimal period (check on the template rebuild):
   - Imperial build: awbaddin.log must have no warning starting "Setting the linear units of feature control frame style" (inch units were not tried in spike 225).
   - The frame style's alternate marker is not set (needs alternate units); only matters if alternate units are ever shown.

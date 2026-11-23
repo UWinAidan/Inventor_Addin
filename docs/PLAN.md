@@ -629,7 +629,7 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [ ] 234 Initial Views: live sheet preview
 - [ ] 235 Create Print opens an existing print without asking (Aidan, 2026-11-23)
 - [ ] 236 Create Print replaces a Windows login Designer (Aidan, 2026-11-23)
-- [ ] 237 Title block values sit on their baseline whatever the letters
+- [x] 237 Title block values sit on their baseline whatever the letters
 - [ ] 238 Fit long title block values to their cells
 
 **Check**

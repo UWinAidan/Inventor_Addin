@@ -168,6 +168,22 @@ public sealed class PrintTemplateFitTests
     }
 
     [Fact]
+    public void UpperOrigin_is_a_cap_height_above_the_baseline()
+    {
+        Assert.Equal(10 + 0.727 * 2.8, PrintTextFit.UpperOriginYMm(10, 2.8), 6);
+        Assert.Equal(-3, PrintTextFit.UpperOriginYMm(-3, 0), 6);
+    }
+
+    [Theory]
+    [MemberData(nameof(BothUnits))]
+    public void UpperOrigin_keeps_every_value_in_a_row_on_the_row_baseline(PrintUnits units)
+    {
+        // The origin depends only on the baseline and the size, never on the text, so values with and without descenders agree.
+        foreach (TitleBlockCell cell in PrintTemplateLayout.For(units).Cells.Where(c => c.Field != null))
+            Assert.Equal(cell.ValueBaselineYMm + PrintTextFit.CapHeightMm(cell.ValueSizeMm), PrintTextFit.UpperOriginYMm(cell.ValueBaselineYMm, cell.ValueSizeMm), 9);
+    }
+
+    [Fact]
     public void PrintTextFit_WrapBreaksAtSpacesAndKeepsEveryWord()
     {
         const string text = "REMOVE BURRS, BREAK SHARP EDGES.";
