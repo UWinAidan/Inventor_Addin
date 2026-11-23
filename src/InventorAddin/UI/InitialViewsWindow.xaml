@@ -15,8 +15,15 @@
         and by Place Initial Views. The views the model offers are tick boxes; the scale is "Suggested (1:2)" or a
         standard scale. The footer shows the plan's warnings. OK is disabled when no view would be placed.
 
-        Access keys: S scale, O OK.
+        Task 232: when the window is made by Create Print it also offers the print's units (Metric | Imperial, the AWB
+        template) and the sheet size, and offers the next larger sheet when the views do not fit; Place Initial Views works on
+        the sheet it is given, so that section is hidden there.
+
+        Access keys: U units, Z sheet size, S scale, O OK.
     -->
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="VisibleWhenTrue" />
+    </Window.Resources>
     <Grid Style="{DynamicResource DialogContent}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -28,7 +35,7 @@
         <controls:DialogHeader Grid.Row="0"
                                Icon="{DynamicResource HeaderIcon}"
                                Title="Initial Views"
-                               Subline="{Binding SheetSizeText, Mode=OneTime}" />
+                               Subline="{Binding SheetSizeText, Mode=OneWay}" />
 
         <ScrollViewer Grid.Row="1" Style="{DynamicResource DialogBody}">
             <StackPanel Style="{DynamicResource DialogBodyContent}">
@@ -42,6 +49,29 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+                </controls:FormSection>
+
+                <controls:FormSection Heading="Sheet"
+                                      Visibility="{Binding CanChooseSheet, Mode=OneTime, Converter={StaticResource VisibleWhenTrue}}">
+                    <controls:FieldRow Label="_Units" Target="{Binding ElementName=UnitsBox}">
+                        <ComboBox x:Name="UnitsBox"
+                                  ItemsSource="{Binding UnitsOptions, Mode=OneTime}"
+                                  DisplayMemberPath="Label"
+                                  SelectedItem="{Binding SelectedUnits, Mode=TwoWay}" />
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="Sheet si_ze" Target="{Binding ElementName=SheetBox}">
+                        <ComboBox x:Name="SheetBox"
+                                  ItemsSource="{Binding SheetOptions, Mode=OneWay}"
+                                  DisplayMemberPath="Label"
+                                  SelectedItem="{Binding SelectedSheet, Mode=TwoWay}" />
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="Fits"
+                                       Visibility="{Binding HasNextSheetOffer, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
+                        <StackPanel>
+                            <TextBlock Style="{DynamicResource ValueText}" TextWrapping="Wrap" Text="{Binding NextSheetOffer, Mode=OneWay}" />
+                            <Button Content="{Binding NextSheetButtonText, Mode=OneWay}" Command="{Binding UseNextSheetCommand}" />
+                        </StackPanel>
+                    </controls:FieldRow>
                 </controls:FormSection>
 
                 <controls:FormSection Heading="Scale">

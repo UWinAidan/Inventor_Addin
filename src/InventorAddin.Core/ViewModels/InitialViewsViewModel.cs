@@ -57,6 +57,34 @@ public sealed class InitialViewScaleChoice : ObservableObject
     public override string ToString() => Label;
 }
 
+/// <summary>One entry of the units list (Metric or Imperial).</summary>
+public sealed class InitialViewUnitsChoice
+{
+    internal InitialViewUnitsChoice(PrintUnits units, string label)
+    {
+        Units = units;
+        Label = label;
+    }
+
+    public PrintUnits Units { get; }
+    public string Label { get; }
+    public override string ToString() => Label;
+}
+
+/// <summary>One entry of the sheet size list, for example "A3, 420 x 297 mm".</summary>
+public sealed class InitialViewSheetChoice
+{
+    internal InitialViewSheetChoice(SheetSizeSpec sheet, string label)
+    {
+        Sheet = sheet;
+        Label = label;
+    }
+
+    public SheetSizeSpec Sheet { get; }
+    public string Label { get; }
+    public override string ToString() => Label;
+}
+
 /// <summary>
 /// View-model for the Initial Views window that Create Print and Place Initial Views show (spec 05, "Decided for M5: Place
 /// Initial Views"; task 190). It starts with the model kind's views ticked and the suggested scale selected, re-runs
@@ -78,21 +106,66 @@ public sealed class InitialViewsViewModel : ObservableObject
     private readonly InitialViewModelKind _model;
     private readonly InitialViewsBoxCm _box;
     private readonly FlatPatternSizeCm? _flatPattern;
-    private readonly IReadOnlyDictionary<InitialViewKind, ViewSizeCm>? _measured;
-    private readonly SheetSizeSpec _sheet;
-    private readonly SheetAreaCm _area;
+    private IReadOnlyDictionary<InitialViewKind, ViewSizeCm>? _measured;
+    private SheetSizeSpec _sheet;
+    private SheetAreaCm _area;
     private readonly InitialViewScaleChoice _suggested;
     private bool _updating = true;
 
     private InitialViewScaleChoice _selectedScale;
     private InitialViewsResult _plan;
 
+    // Units and sheet choice (task 232): only when the window was made with the units constructor (Create Print).
+    private readonly bool _canChoose;
+    private readonly Func<PrintUnits, IReadOnlyDictionary<InitialViewKind, ViewSizeCm>?>? _measureFor;
+    private readonly Dictionary<PrintUnits, IReadOnlyDictionary<InitialViewKind, ViewSizeCm>?> _measuredByUnits = new();
+    private readonly InitialViewUnitsChoice[] _unitsOptions =
+    {
+        new(PrintUnits.Metric, "Metric"),
+        new(PrintUnits.Imperial, "Imperial"),
+    };
+    private InitialViewUnitsChoice? _selectedUnits;
+    private IReadOnlyList<InitialViewSheetChoice> _sheetOptions = Array.Empty<InitialViewSheetChoice>();
+    private InitialViewSheetChoice? _selectedSheet;
+    private bool _sheetChosen;
+    private SheetSizeSpec? _nextSheet;
+
+    /// <summary>A window for a fixed sheet (Place Initial Views): no units or sheet choice.</summary>
     public InitialViewsViewModel(
         InitialViewModelKind model,
         InitialViewsBoxCm box,
         FlatPatternSizeCm? flatPattern,
         SheetSizeSpec sheet,
         IReadOnlyDictionary<InitialViewKind, ViewSizeCm>? measured = null)
+        : this(model, box, flatPattern, sheet, measured, canChoose: false, measureFor: null, partUnits: sheet?.Units ?? PrintUnits.Metric)
+    {
+    }
+
+    /// <summary>
+    /// A window that also offers Metric | Imperial (starting on <paramref name="partUnits"/>) and a sheet size (task 232). The sheet starts on
+    /// the smallest that fits (<see cref="InitialViewsSheetRule"/>) and follows the views and scale until the user picks one.
+    /// <paramref name="measureFor"/> measures the views with the template of the given units (task 227); it is called once per units, when
+    /// those units are first shown, and may return null (the box estimate is used).
+    /// </summary>
+    public InitialViewsViewModel(
+        InitialViewModelKind model,
+        InitialViewsBoxCm box,
+        FlatPatternSizeCm? flatPattern,
+        PrintUnits partUnits,
+        Func<PrintUnits, IReadOnlyDictionary<InitialViewKind, ViewSizeCm>?>? measureFor)
+        : this(model, box, flatPattern, InitialViewsSetup.DefaultSheet(partUnits), null, canChoose: true, measureFor, partUnits)
+    {
+    }
+
+    private InitialViewsViewModel(
+        InitialViewModelKind model,
+        InitialViewsBoxCm box,
+        FlatPatternSizeCm? flatPattern,
+        SheetSizeSpec sheet,
+        IReadOnlyDictionary<InitialViewKind, ViewSizeCm>? measured,
+        bool canChoose,
+        Func<PrintUnits, IReadOnlyDictionary<InitialViewKind, ViewSizeCm>?>? measureFor,
+        PrintUnits partUnits)
     {
         ArgumentNullException.ThrowIfNull(box);
         ArgumentNullException.ThrowIfNull(sheet);
@@ -102,6 +175,14 @@ public sealed class InitialViewsViewModel : ObservableObject
         _measured = measured;
         _sheet = sheet;
         _area = InitialViewsPlan.UsableArea(sheet);
+        _canChoose = canChoose;
+        _measureFor = measureFor;
+        UseNextSheetCommand = new RelayCommand(UseNextSheet, () => _nextSheet is not null);
+        if (canChoose)
+        {
+            _selectedUnits = _unitsOptions.First(u => u.Units == partUnits);
+            LoadUnits(partUnits);
+        }
 
         Views = new ObservableCollection<InitialViewChoice>(
             InitialViewsPlan.DefaultViews(model).Select(k => new InitialViewChoice(this, k, LabelFor(k), true)));
@@ -113,8 +194,15 @@ public sealed class InitialViewsViewModel : ObservableObject
         _selectedScale = _suggested;
 
         _plan = RunPlan();
+        if (_canChoose)
+        {
+            ApplyAutoSheet();
+            _plan = RunPlan();
+        }
+
         _updating = false;
         UpdateSuggestedLabel();
+        RefreshNextSheet();
 
         OkCommand = new RelayCommand(Ok, () => CanOk);
         CancelCommand = new RelayCommand(Cancel);
@@ -141,6 +229,61 @@ public sealed class InitialViewsViewModel : ObservableObject
 
     /// <summary>The sheet the print will use, for display, for example "A3, 420 x 297 mm".</summary>
     public string SheetSizeText => FormatSheet(_sheet);
+
+    /// <summary>True when the window offers the units and the sheet size (Create Print); false for a fixed sheet (Place Initial Views).</summary>
+    public bool CanChooseSheet => _canChoose;
+
+    /// <summary>Metric, Imperial.</summary>
+    public IReadOnlyList<InitialViewUnitsChoice> UnitsOptions => _unitsOptions;
+
+    /// <summary>The print's units: the AWB Metric or the AWB Imperial template. Starts on the part's units.</summary>
+    public InitialViewUnitsChoice? SelectedUnits
+    {
+        get => _selectedUnits;
+        set
+        {
+            if (!_canChoose || value is null || !SetProperty(ref _selectedUnits, value))
+                return;
+            LoadUnits(value.Units);
+            _sheetChosen = false;
+            Replan();
+            OnPropertyChanged(nameof(SheetOptions));
+        }
+    }
+
+    /// <summary>The sheet sizes of the chosen units, smallest first (A4 to A0, or ANSI A to E).</summary>
+    public IReadOnlyList<InitialViewSheetChoice> SheetOptions => _sheetOptions;
+
+    /// <summary>The sheet the print is made on. Picking one stops the window choosing the smallest that fits.</summary>
+    public InitialViewSheetChoice? SelectedSheet
+    {
+        get => _selectedSheet;
+        set
+        {
+            if (!_canChoose || value is null || !SetProperty(ref _selectedSheet, value))
+                return;
+            _sheetChosen = true;
+            _sheet = value.Sheet;
+            _area = InitialViewsPlan.UsableArea(_sheet);
+            Replan();
+        }
+    }
+
+    /// <summary>The units the print is made in (the sheet's units on a fixed sheet).</summary>
+    public PrintUnits ChosenUnits => _sheet.Units;
+
+    /// <summary>The sheet the print is made on; the template sheet format is <see cref="SheetSizeSpec.FormatName"/>.</summary>
+    public SheetSizeSpec ChosenSheet => _sheet;
+
+    /// <summary>Set when the views do not fit the chosen sheet and a larger one does, for example "A2 fits these views at this scale.".</summary>
+    public string NextSheetOffer => _nextSheet is null ? string.Empty : $"{FormatSheetName(_nextSheet)} fits these views at this scale.";
+
+    public bool HasNextSheetOffer => _nextSheet is not null;
+
+    /// <summary>The text of the button that takes the offered sheet.</summary>
+    public string NextSheetButtonText => _nextSheet is null ? string.Empty : $"Use {FormatSheetName(_nextSheet)}";
+
+    public RelayCommand UseNextSheetCommand { get; }
 
     /// <summary>The current plan: what OK would hand back.</summary>
     public InitialViewsResult Plan => _plan;
@@ -196,8 +339,12 @@ public sealed class InitialViewsViewModel : ObservableObject
 
     private void Replan()
     {
+        if (_canChoose && !_sheetChosen)
+            ApplyAutoSheet();
         _plan = RunPlan();
         UpdateSuggestedLabel();
+        RefreshNextSheet();
+        OnPropertyChanged(nameof(SheetSizeText));
         OnPropertyChanged(nameof(Plan));
         OnPropertyChanged(nameof(ScaleText));
         OnPropertyChanged(nameof(Messages));
@@ -205,6 +352,55 @@ public sealed class InitialViewsViewModel : ObservableObject
         OnPropertyChanged(nameof(HasWarning));
         OnPropertyChanged(nameof(CanOk));
         OkCommand.RaiseCanExecuteChanged();
+    }
+
+    // Shows the units' sheets and, for them, the measured view sizes (measured once per units, with that units' template: task 227).
+    private void LoadUnits(PrintUnits units)
+    {
+        _sheetOptions = InitialViewsSheetRule.SheetsFor(units).Select(s => new InitialViewSheetChoice(s, FormatSheet(s))).ToList();
+        if (!_measuredByUnits.TryGetValue(units, out var measured))
+        {
+            measured = _measureFor?.Invoke(units);
+            _measuredByUnits[units] = measured;
+        }
+
+        _measured = measured;
+    }
+
+    private InitialViewsResult PlanOn(SheetSizeSpec sheet, double? scale) =>
+        InitialViewsPlan.Plan(_model, _box, _flatPattern, InitialViewsPlan.UsableArea(sheet), Ticked(), scale, _measured);
+
+    // The smallest sheet that fits the ticked views at the selected scale; set without marking it as the user's choice.
+    private void ApplyAutoSheet()
+    {
+        var sheets = _sheetOptions.Select(o => o.Sheet).ToList();
+        if (sheets.Count == 0)
+            return;
+
+        double? scale = _selectedScale.Scale;
+        SheetSizeSpec best = InitialViewsSheetRule.Smallest(sheets, s => PlanOn(s, scale), scale is null);
+        _sheet = best;
+        _area = InitialViewsPlan.UsableArea(best);
+        _selectedSheet = _sheetOptions.First(o => o.Sheet.FormatName == best.FormatName);
+        OnPropertyChanged(nameof(SelectedSheet));
+    }
+
+    private void RefreshNextSheet()
+    {
+        _nextSheet = _canChoose
+            ? InitialViewsSheetRule.NextThatFits(_sheetOptions.Select(o => o.Sheet).ToList(), _sheet, s => PlanOn(s, _selectedScale.Scale))
+            : null;
+        OnPropertyChanged(nameof(NextSheetOffer));
+        OnPropertyChanged(nameof(HasNextSheetOffer));
+        OnPropertyChanged(nameof(NextSheetButtonText));
+        UseNextSheetCommand.RaiseCanExecuteChanged();
+    }
+
+    private void UseNextSheet()
+    {
+        if (_nextSheet is null)
+            return;
+        SelectedSheet = _sheetOptions.First(o => o.Sheet.FormatName == _nextSheet.FormatName);
     }
 
     private List<InitialViewKind> Ticked() => Views.Where(v => v.IsChecked).Select(v => v.Kind).ToList();
@@ -250,6 +446,8 @@ public sealed class InitialViewsViewModel : ObservableObject
     public static string FormatScale(double scale) => scale >= 1
         ? string.Create(CultureInfo.InvariantCulture, $"{Math.Round(scale, 3)}:1")
         : string.Create(CultureInfo.InvariantCulture, $"1:{Math.Round(1 / scale, 3)}");
+
+    private static string FormatSheetName(SheetSizeSpec sheet) => sheet.Units == PrintUnits.Metric ? sheet.Name : $"ANSI {sheet.Name}";
 
     private static string FormatSheet(SheetSizeSpec sheet) => sheet.Units == PrintUnits.Metric
         ? string.Create(CultureInfo.InvariantCulture, $"{sheet.Name}, {sheet.WidthMm:0.#} x {sheet.HeightMm:0.#} mm")

@@ -59,9 +59,9 @@ namespace InventorAddin.Commands
                 return;
             }
 
-            UnitsSystem units = AddinServices.Settings.DefaultUnits;
-            string template = LibraryPaths.PrintTemplate(
-                AddinServices.Settings, PrintPlan.PrintUnitsFor(units), AddinServices.AddinFolder).Path;
+            // The print starts in the part's units (task 232); the Initial Views window can change them.
+            PrintUnits partUnits = MaterialFinishTargets.UnitsOf(model);
+            string template = TemplateFor(partUnits);
 
             // An existing print, with either drawing extension, in Prints or (made before 2026-10-11) beside the model,
             // is offered instead of making a new one; an .idw is preferred when both exist.
@@ -89,17 +89,35 @@ namespace InventorAddin.Commands
                 return;
             }
 
-            // The user confirms or changes the views before anything is made (task 192); Cancel creates nothing. The views are laid out on
-            // the template's default sheet, the one Create Print makes.
-            // The real size of each view is read from scratch views first (task 227), so the suggested scale matches what is placed.
+            // The user confirms or changes the views, the units and the sheet before anything is made (tasks 192, 232); Cancel creates
+            // nothing. The real size of each view is read from scratch views made from the chosen units' template (task 227), once per
+            // units, so the suggested scale and sheet match what is placed.
             var viewModel = new InitialViewsViewModel(
-                info.Kind, info.Box, info.FlatPattern, InitialViewsSetup.DefaultSheet(PrintPlan.PrintUnitsFor(units)),
-                InitialViewsPlacer.MeasureWithWaitCursor(model, info, template));
+                info.Kind, info.Box, info.FlatPattern, partUnits,
+                u =>
+                {
+                    string t = TemplateFor(u);
+                    return IOFile.Exists(t) ? InitialViewsPlacer.MeasureWithWaitCursor(model, info, t, u) : null;
+                });
             InitialViewsResult? plan = InitialViewsWindow.Ask(viewModel);
             if (plan == null)
             {
                 AddinServices.Log.Info("Create Print: cancelled in the Initial Views window; nothing was created.");
                 return;
+            }
+
+            PrintUnits printUnits = viewModel.ChosenUnits;
+            SheetSizeSpec sheetSpec = viewModel.ChosenSheet;
+            if (printUnits != partUnits)
+            {
+                template = TemplateFor(printUnits);
+                if (!IOFile.Exists(template))
+                {
+                    string message = PrintPlan.MissingTemplateMessage(template);
+                    AddinServices.Log.Warn($"Create Print stopped: {message}");
+                    Show(message, Forms.MessageBoxIcon.Warning);
+                    return;
+                }
             }
 
             string printsFolder = PrintPlan.PrintsFolder(modelPath);
@@ -112,13 +130,17 @@ namespace InventorAddin.Commands
             Forms.Cursor.Current = Forms.Cursors.WaitCursor;
             try
             {
-                Create(model, kind, template, PrintPlan.SheetFormatName(units), printsFolder, drawingPath, plan, partNumber);
+                Create(model, kind, template, sheetSpec.FormatName, printUnits, printsFolder, drawingPath, plan, partNumber);
             }
             finally
             {
                 Forms.Cursor.Current = previousCursor;
             }
         }
+
+        /// <summary>The AWB print template of <paramref name="units"/>, from Settings or the starter folder.</summary>
+        private static string TemplateFor(PrintUnits units) =>
+            LibraryPaths.PrintTemplate(AddinServices.Settings, units, AddinServices.AddinFolder).Path;
 
         /// <summary>
         /// The checks Create Print and Open Drawing share (task 193): the model must be a part or assembly (else
@@ -148,8 +170,8 @@ namespace InventorAddin.Commands
         /// step failed. The <paramref name="printsFolder"/> is created, when missing, just before saving.
         /// </summary>
         private void Create(
-            Document model, DocumentKind kind, string template, string sheetFormatName, string printsFolder, string drawingPath,
-            InitialViewsResult plan, string? partNumber)
+            Document model, DocumentKind kind, string template, string sheetFormatName, PrintUnits printUnits, string printsFolder,
+            string drawingPath, InitialViewsResult plan, string? partNumber)
         {
             string step = "creating the drawing from the template";
             Document? drawing = null;
@@ -185,9 +207,27 @@ namespace InventorAddin.Commands
                 step = "adding the views";
                 Document drawingDoc = drawing;
                 IReadOnlyList<string> placed = Array.Empty<string>();
+                IReadOnlyList<PropertyWrite> unitWrites = Array.Empty<PropertyWrite>();
+                var unitProblems = new List<string>();
                 RunInTransaction(drawingDoc, () =>
                 {
                     placed = InitialViewsPlacer.Place(sheet, model, plan);
+
+                    // FINISH and WEIGHT follow the print's units (task 232): when they differ from the model's, the print-units values go on the
+                    // drawing itself, made by the same Core formatting as the model's own.
+                    // Best effort: a refusal is logged and reported, and the views still go on.
+                    try
+                    {
+                        unitWrites = FinishSpecBackfiller.PrintUnitWritesFor(model, printUnits, FinishSpecBackfiller.LoadFinishList());
+                        if (unitWrites.Count > 0)
+                            PropertyWriter.Apply(drawingDoc, unitWrites);
+                    }
+                    catch (Exception ex)
+                    {
+                        unitWrites = Array.Empty<PropertyWrite>();
+                        unitProblems.Add("the Finish Spec and Mass could not be written on the drawing");
+                        AddinServices.Log.Warn($"Create Print: writing the Finish Spec and Mass in the print's units failed; the views were placed anyway. {ex.Message}");
+                    }
 
                     if (partNumber != null)
                     {
@@ -195,6 +235,28 @@ namespace InventorAddin.Commands
                         PropertyWriter.Apply(drawingDoc, new[] { PropertyWrite.SetText(PartPropertyStorage.PartNumber, partNumber) });
                     }
                 });
+
+                if (unitWrites.Count > 0)
+                {
+                    step = "pointing FINISH and WEIGHT at the drawing's own values";
+                    var fieldWarnings = new List<string>();
+                    int changed = 0;
+                    try
+                    {
+                        changed = TitleBlockPropertySource.PointAtDrawing(
+                            sheet, unitWrites.Select(w => w.Location.PropertyName).ToList(), fieldWarnings);
+                    }
+                    catch (Exception ex)
+                    {
+                        fieldWarnings.Add(ex.Message);
+                    }
+
+                    if (fieldWarnings.Count > 0 || changed < unitWrites.Count)
+                        unitProblems.Add("FINISH and WEIGHT could not all be pointed at the drawing's own values");
+                    AddinServices.Log.Info(
+                        $"Create Print: the print is in {printUnits} units, the model is not; {changed} title block field(s) now read the drawing's {string.Join(", ", unitWrites.Select(w => w.Location.PropertyName))}." +
+                        (fieldWarnings.Count == 0 ? string.Empty : " Problems: " + string.Join(" ", fieldWarnings)));
+                }
 
                 step = "updating the drawing";
                 ComSafe.Run(() => drawingDocument.Update());
@@ -205,6 +267,13 @@ namespace InventorAddin.Commands
 
                 step = $"saving it as '{drawingPath}'";
                 drawing.SaveAs(drawingPath, false);
+
+                if (unitProblems.Count > 0)
+                {
+                    Show(
+                        $"The print was made, but {string.Join(" and ", unitProblems)}, so FINISH and WEIGHT may show the part's units. See the log.",
+                        Forms.MessageBoxIcon.Warning);
+                }
 
                 AddinServices.Log.Info(
                     $"Create Print: '{drawingPath}' created from '{template}' (sheet format '{sheetFormatName}') with {placed.Count} view(s) ({string.Join("; ", placed)}) at scale {plan.Scale} " +

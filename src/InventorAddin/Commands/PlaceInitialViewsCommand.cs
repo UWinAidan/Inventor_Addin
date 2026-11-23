@@ -106,9 +106,10 @@ namespace InventorAddin.Commands
 
             // The real size of each view is read from scratch views made from the AWB template (task 227); without the template the
             // range box estimate is used.
-            string template = LibraryPaths.PrintTemplate(AddinServices.Settings, units, AddinServices.AddinFolder).Path;
+            // The sheet is given, so no units or sheet choice is offered here (task 232, Default); the template of the sheet's units measures.
+            string template = LibraryPaths.PrintTemplate(AddinServices.Settings, spec.Units, AddinServices.AddinFolder).Path;
             IReadOnlyDictionary<InitialViewKind, ViewSizeCm>? measured =
-                System.IO.File.Exists(template) ? InitialViewsPlacer.MeasureWithWaitCursor(model, info, template) : null;
+                System.IO.File.Exists(template) ? InitialViewsPlacer.MeasureWithWaitCursor(model, info, template, spec.Units) : null;
 
             var viewModel = new InitialViewsViewModel(info.Kind, info.Box, info.FlatPattern, spec, measured);
             _plan = InitialViewsWindow.Ask(viewModel);

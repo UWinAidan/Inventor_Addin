@@ -303,13 +303,14 @@ namespace InventorAddin.PrintViews
         }
 
         /// <summary><see cref="Measure"/> with the wait cursor showing, as the measuring takes a moment on a large model.</summary>
-        public static IReadOnlyDictionary<InitialViewKind, ViewSizeCm>? MeasureWithWaitCursor(Document model, InitialViewsModelInfo info, string template)
+        public static IReadOnlyDictionary<InitialViewKind, ViewSizeCm>? MeasureWithWaitCursor(
+            Document model, InitialViewsModelInfo info, string template, PrintUnits units)
         {
             System.Windows.Forms.Cursor previous = System.Windows.Forms.Cursor.Current;
             System.Windows.Forms.Cursor.Current = System.Windows.Forms.Cursors.WaitCursor;
             try
             {
-                return Measure(model, info, template);
+                return Measure(model, info, template, units);
             }
             finally
             {
@@ -323,7 +324,8 @@ namespace InventorAddin.PrintViews
         /// model's outline is inside it, and an assembly's box can be far larger than its geometry. Null when the measuring fails for any
         /// reason (logged), so the caller keeps the estimate.
         /// </summary>
-        public static IReadOnlyDictionary<InitialViewKind, ViewSizeCm>? Measure(Document model, InitialViewsModelInfo info, string template)
+        public static IReadOnlyDictionary<InitialViewKind, ViewSizeCm>? Measure(
+            Document model, InitialViewsModelInfo info, string template, PrintUnits units)
         {
             Document? scratch = null;
             bool previousSilent = InventorHost.App.SilentOperation;
@@ -341,10 +343,11 @@ namespace InventorAddin.PrintViews
 
                 Sheet sheet = ((DrawingDocument)scratch).ActiveSheet;
 
-                // At the estimate's own scale on an A3-sized area, so a big assembly stays near the sheet. Only each view's own size is read
-                // (placed size divided by its scale), so overlap does not matter.
+                // At the estimate's own scale on the usable area of the units' default sheet (A3 or ANSI B), so a big assembly stays near the
+                // sheet. The template's own first sheet is the one measured on. Only each view's own size is read (placed size divided by its
+                // scale), so overlap and the sheet size do not matter (task 232).
                 InitialViewsResult plan = InitialViewsPlan.Plan(
-                    info.Kind, info.Box, info.FlatPattern, new SheetAreaCm(1, 6.5, 41, 28.7));
+                    info.Kind, info.Box, info.FlatPattern, InitialViewsPlan.UsableArea(InitialViewsSetup.DefaultSheet(units)));
 
                 var sizes = new Dictionary<InitialViewKind, ViewSizeCm>();
                 foreach ((PlannedView planned, DrawingView view) in PlaceViews(sheet, model, plan, scratch: true))

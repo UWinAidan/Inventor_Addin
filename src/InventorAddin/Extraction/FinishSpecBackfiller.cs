@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Inventor;
 using InventorAddin.Commands;
+using InventorAddin.Core.Drawing;
 using InventorAddin.Core.Materials;
 using InventorAddin.Core.Models;
 using InventorAddin.Core.PartProperties;
@@ -79,6 +80,25 @@ namespace InventorAddin.Extraction
             if (size != null)
                 writes.Add(size);
             return writes;
+        }
+
+        /// <summary>
+        /// The Finish Spec and Mass to write on a drawing made in <paramref name="printUnits"/> from <paramref name="model"/> (task 232):
+        /// empty when the model's units are the print's. The values come from Core (<see cref="PrintUnitValues"/>), from what the
+        /// model stores today. Never throws for a property that cannot be read.
+        /// </summary>
+        public static IReadOnlyList<PropertyWrite> PrintUnitWritesFor(Document model, PrintUnits printUnits, IReadOnlyList<Finish> finishList)
+        {
+            DocumentKind kind = ComSafe.Get(() => DocumentKinds.Of(model));
+            return PrintUnitValues.WritesFor(
+                MaterialFinishTargets.UnitsOf(model),
+                printUnits,
+                kind.IsAssembly(),
+                MassPropertyReader.MassKg(model),
+                Read(model, PartPropertyStorage.Finish),
+                Read(model, PartPropertyStorage.FinishThickness),
+                Read(model, PartPropertyStorage.FinishSpec),
+                finishList);
         }
 
         /// <summary>Design Status as a number, or null when it cannot be read.</summary>

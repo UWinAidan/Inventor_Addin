@@ -84,7 +84,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Question 20 in spec 04: Renumber on a re-opened table waits for Update to redraw (Default); or should it redraw at once?
 
 **Drawing tools (spec 05), blocks M5 tasks**
-- Spec 05 question 32: the smallest text height for a long title block value (Default 1.8 mm). Question 33: an off-units print's FINISH and WEIGHT are drawing properties written by Create Print (Default), or the part carries both units. Question 34: a hand-typed sheet metal Material Size is replaced (Default), and whether it follows the print's units. Question 35: assembly dashes written into the model (Default) or on the drawing only
+- Spec 05 question 32: the smallest text height for a long title block value (Default 1.8 mm). Question 33: an off-units print's FINISH and WEIGHT are drawing properties written by Create Print (Default), or the part carries both units. Question 34: a hand-typed sheet metal Material Size is replaced (Default), and whether it follows the print's units. Question 35: assembly dashes written into the model (Default) or on the drawing only. Question 36: the suggested sheet is the first giving 1:2 or larger, else the largest (Default)
 - Spec 04 question 26: the hole tag leader distance (Default 5 mm from the hole's edge, set on Update)
 - Last look at the title block mockup with the 2026-11-21 additions (`docs/ui-mockups/title-block.png`, blue numbers 18 to 25; the FINISH line is gone and 18 is now the finish notes on the sheet) before task 185 is built
 - Spec 05 questions 13 to 23: the M5 defaults (zones, Project property, notes rules, marking sizes and colour, Batch Print, REF dimensions, stock shapes, Make/Buy blanks and manufacturer properties, Create Print's sheet, template built from code, the Finish field's text and the finish notes' order). Each has a default the tasks build
@@ -117,6 +117,11 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 - Task 222, Mass property (Aidan's check passed 2026-11-23):
   - Later: remove the lb mass unit step from the template builder; an imperial sample value for the fit check; the backfill warnings in Create Print and Material and Finish do not mention Mass.
+
+- Task 232, units and sheet size:
+  - Unconfirmed in Inventor: writing FormattedText and Edit/ExitEdit on a drawing's own title block definition; `Document='drawing'` resolving custom properties; custom property writes to a drawing; scratch measuring run from inside the open modal window. All best effort, with a notice.
+  - An off-units print's Finish Spec and Mass refresh on Create Print only (question 33); Mass Update could refresh drawings if Aidan wants it.
+  - Material Size stays in the part's units on an off-units print (question 34).
 
 - Task 231, assemblies on the print:
   - Writing text to an assembly's Design Tracking Material is unconfirmed; it is best effort (logged, never fails the other writes). If Inventor refuses, point MATERIAL at a custom property on assemblies.
