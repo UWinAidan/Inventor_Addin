@@ -101,4 +101,11 @@ public static class PartPropertyStorage
     /// </summary>
     public static readonly PropertyLocation Mass =
         new(PropertySetNames.UserDefined, "Mass", PropertyValueKind.Text);
+
+    /// <summary>
+    /// The custom text property "Material Size" (capital S): for sheet metal the thickness and the flat pattern size, "1.5 x 60 x 120 mm"
+    /// (task 230); the title block's MATERIAL SIZE field reads it.
+    /// </summary>
+    public static readonly PropertyLocation MaterialSize =
+        new(PropertySetNames.UserDefined, "Material Size", PropertyValueKind.Text);
 }

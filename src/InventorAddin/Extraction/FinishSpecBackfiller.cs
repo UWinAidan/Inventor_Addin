@@ -58,6 +58,11 @@ namespace InventorAddin.Extraction
                 MaterialFinishTargets.UnitsOf(doc)));
             if (mass != null)
                 writes.Add(mass);
+
+            // A sheet metal part with a flat pattern also gets its Material Size, thickness x flat pattern size (task 230).
+            PropertyWrite? size = SheetMetalSizeReader.WriteFor(doc);
+            if (size != null)
+                writes.Add(size);
             return writes;
         }
 
