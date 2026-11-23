@@ -6,16 +6,15 @@ Last updated: 2026-11-22
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-23. Branch `claude/m5-drawing-tools`, latest commit `21a3ba1` plus this handoff (pushed). Nothing is running. Stopped for Aidan's template rebuild (226, 237 and 222 all built).
+- Updated: 2026-11-23. Branch `claude/m5-drawing-tools`, latest commit `21a3ba1` plus this handoff (pushed). Nothing is running. Running chunk 3 again after Aidan's check.
 - Goal: M5 tasks in chunks: implementer, then reviewer, one commit per task, push. Stop after each chunk with a summary, Defaults and an Inventor checklist. Nothing from work prints goes in the repo (ADDIN_PICS is gitignored).
 - Chunk 3 so far (Aidan's order: 222, spike 218, then the chunk 2 fixes, then 194 onward):
   - Spike 225 done (`a25de70`). 222 Mass property done and reviewed (`17ccf6a`; not run in Inventor). Spike 218 done (`1d88623`), which added tasks 237 and 238 and spec 05 questions 30 and 31 (answered by Aidan: floor 0.6, warn only).
   - 226 decimal period (`7c5e241`) and 237 one baseline (`21a3ba1`) built on Windows and reviewed; not run in Inventor.
 - Next, in order (task files in `docs/tasks/`; PLAN M5 lists them):
-  1. Wait for Aidan's template rebuild and check of 222, 226 and 237.
-  2. 227 fit check, 228 black and white plus iso on every print, 229 sheet metal front view and bend notes, 230 sheet metal Material Size, 231 assemblies, 232 units and sheet size, 233 front view choice, 234 preview, 235 open existing print, 236 Designer, 238 fit long values.
-  3. Then the chunk 3 summary for Aidan, then 194 onward. Putting 226 to 238 before 194 is the parent's Default.
-- Waiting on Aidan: rebuild both templates after 226, 237 and 222 (WEIGHT now prints the custom "Mass"); on a pass commit `libraries/Templates/*.idw` and mark 187 done. The 222 checks in TODO.md (save event, Save Copy As, undo step).
+  1. 239 (rebuilt template without a redeploy), then 227 fit check, 228 black and white plus iso on every print, 229 sheet metal front view and bend notes, 230 sheet metal Material Size, 231 assemblies, 232 units and sheet size, 233 front view choice, 234 preview, 235 open existing print, 236 Designer, 240 hole tag leaders, spike 241 (shrink and wrap, the parent runs it), 238 fit long values (shrink, then wrap Description).
+  2. Then the chunk 3 summary for Aidan, then 194 onward. Putting 226 to 238 before 194 is the parent's Default.
+- Aidan's check of 222, 226, 237 passed 2026-11-23; templates committed, 187 done. Waiting on Aidan: spec 05 questions 32, 33 and spec 04 question 26 (Defaults in place); recheck the imperial period after 227 to 236.
 - State: last build 0 errors; Core tests 5340 passed with 1 to 2 known flaky failures per run.
 - Gotchas:
   - Flaky tests: RenamePlan, SaveAsCopyCreator, SaveAsReplacer, NewPartCreator, Numbering, RegisterStore probe timeouts; rerun.

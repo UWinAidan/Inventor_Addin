@@ -55,6 +55,8 @@ Confirmed so far: the window opens on an assembly, pre-fills Designer, Detailer 
 - [ ] With "Show developer tools" switched off and Inventor restarted: is the Developer panel gone, or does Inventor keep showing it? (open since task 007)
 
 
+**After 227 to 236:** recheck that an imperial print shows a period (the check of 226 could only make metric prints of an inch part).
+
 ## Waiting on Aidan: decisions
 
 Each spec lists its own open questions in full. These are the ones that block planning.
@@ -82,6 +84,8 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Question 20 in spec 04: Renumber on a re-opened table waits for Update to redraw (Default); or should it redraw at once?
 
 **Drawing tools (spec 05), blocks M5 tasks**
+- Spec 05 question 32: the smallest text height for a long title block value (Default 1.8 mm). Question 33: an off-units print's FINISH and WEIGHT are drawing properties written by Create Print (Default), or the part carries both units
+- Spec 04 question 26: the hole tag leader distance (Default 5 mm from the hole's edge, set on Update)
 - Last look at the title block mockup with the 2026-11-21 additions (`docs/ui-mockups/title-block.png`, blue numbers 18 to 25; the FINISH line is gone and 18 is now the finish notes on the sheet) before task 185 is built
 - Spec 05 questions 13 to 23: the M5 defaults (zones, Project property, notes rules, marking sizes and colour, Batch Print, REF dimensions, stock shapes, Make/Buy blanks and manufacturer properties, Create Print's sheet, template built from code, the Finish field's text and the finish notes' order). Each has a default the tasks build
 - M5 planning questions 14 to 17 (from an earlier session; their wording is not in the repo): ask again when those commands come up (Aidan, 2026-11-20). Question 18 is answered by the Make/Buy column (2026-11-21)
@@ -111,12 +115,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Follow-ups from finished tasks
 
-- Task 222, Mass property (check in Inventor):
-  - A property written in `OnSaveDocument` kBefore is saved with the file and is there after reopening.
-  - The event fires for Save As and for Mass Update's `Save()`. If it also fires for Save Copy As, the write lands on the open document, not the copy, and leaves it dirty (check the event's context map).
-  - Whether the save-time write adds an Undo step (the code comment says it does not; unconfirmed).
-  - Save time on a large assembly (reading the mass can force a full calculation).
-  - The custom "Mass" shares its name with Design Tracking's Mass; check the Custom tab accepts it.
+- Task 222, Mass property (Aidan's check passed 2026-11-23):
   - Later: remove the lb mass unit step from the template builder; an imperial sample value for the fit check; the backfill warnings in Create Print and Material and Finish do not mention Mass.
 
 - Task 237, values on one baseline:
@@ -124,8 +123,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
   - Hole table text (`HoleTableMarker`) still uses lower justification.
   - The row test in `PrintTemplateFitTests` recomputes the formula; a stronger one would check every field cell in a row gets the same origin.
 
-- Task 226, decimal period (check on the template rebuild):
-  - Imperial build: awbaddin.log must have no warning starting "Setting the linear units of feature control frame style" (inch units were not tried in spike 225).
+- Task 226, decimal period (Aidan's check passed 2026-11-23, 0 template warnings):
   - The frame style's alternate marker is not set (needs alternate units); only matters if alternate units are ever shown.
   - Core test runs often fail 1 to 3 timing-sensitive probe tests, a different one each run; worth making them deterministic.
 
@@ -140,11 +138,8 @@ Each spec lists its own open questions in full. These are the ones that block pl
   - Mass Update refreshes only files it opens to change (a ticked change, for example a rename), as in task 217.
   - Doc comments slightly stale: `MaterialFinishCommand.BackfillFinishSpecs` ("Fills in a missing Finish Spec") and the first sentence of `FinishSpecBackfill.For`.
 
-- Task 223, title block (check on Aidan's next rebuild, with a part of non-zero mass, metric and imperial):
-  - WEIGHT sitting higher than DATE is not explained by the layout (same size, same origin); likely how Inventor lays out the mass field. If still off after the rebuild, investigate on a real drawing.
-  - The decimal marker log line should list about 17 styles, ending "0 did not read back as a period"; a comma on the metric dimension means the style in use is not the one the object defaults reference.
+- Task 223, title block:
   - Field values are no longer checked for vertical overflow (only labels are); could be restored for the vertical edges.
-  - Task 218's shrinking must keep every value in a row the same size, or the baselines drift again (the 2.5 mm Status beside the 7 mm part number has the same dependence).
 
 - Task 193, Open Drawing:
   - When Create Print fails after Open Drawing's Yes, the message and log say "Open Drawing failed".

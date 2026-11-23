@@ -567,6 +567,9 @@ Aidan answered the planning questions and the title block questions on 2026-11-2
 | 219 | windows build | 217 | none |
 | 220 | windows build | none | any Core-only task |
 | 221 | windows build | 186 | any |
+| 239 | windows build | 187 | none |
+| 240 | windows build | none | none |
+| 241 | **windows** (spike, the parent) | 218, 237 | any |
 | 209 | **windows** (Aidan) | 183 to 208, 210 to 221 | none |
 
 The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their own files; 186, 196 and 205 all touch `AddinSettings`, `LibraryPaths` and the Settings window, so run those three one after another.
@@ -575,7 +578,7 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [x] 183 Spike: building the print template and placing views (Windows)
 - [x] 185 Print template layout (Core)
 - [x] 186 Print template paths in Settings
-- [ ] 187 Build Print Template command and the starter templates (Windows)
+- [x] 187 Build Print Template command and the starter templates (Windows)
 - [x] 188 Create Print uses the AWB template
 
 **Views and drawings**
@@ -630,7 +633,10 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [ ] 235 Create Print opens an existing print without asking (Aidan, 2026-11-23)
 - [ ] 236 Create Print replaces a Windows login Designer (Aidan, 2026-11-23)
 - [x] 237 Title block values sit on their baseline whatever the letters
-- [ ] 238 Fit long title block values to their cells
+- [ ] 238 Fit long title block values to their cells (shrink, then wrap Description; Aidan, 2026-11-23)
+- [ ] 239 A rebuilt template takes effect without a redeploy (Aidan's check, 2026-11-23)
+- [ ] 240 A hole tag moved away from its hole gets a leader (Aidan, 2026-11-23)
+- [ ] 241 Spike: smaller text and a two-line Description in the title block (Windows, the parent runs it)
 
 **Check**
 - [ ] 209 M5 combined Inventor check

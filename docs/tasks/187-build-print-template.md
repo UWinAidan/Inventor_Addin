@@ -2,7 +2,7 @@
 
 - **Milestone:** M5
 - **Feature spec:** `docs/features/05-drawing-tools.md` ("Decided for M5", "Added for M5: Template additions", open question 22)
-- **Status:** code done (`-p:DeployToInventor=false` build, reviewed); waiting for Aidan to run it in Inventor and for the two `.idw` files
+- **Status:** done (templates rebuilt and checked by Aidan 2026-11-23, committed)
 - **Depends on:** 183, 185, 186, 214
 - **Needs:** **windows** (drives Inventor; local session)
 - **Parallel-safe with:** none
