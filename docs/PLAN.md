@@ -617,6 +617,18 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [ ] 222 Imperial parts weigh in lb (Aidan, 2026-11-22; spec 05 question 28)
 - [x] 223 Title block fixes from the rebuild (Aidan, 2026-11-22)
 - [x] 224 Refresh an old Finish Spec (Aidan, 2026-11-22)
+- [ ] 225 Spike: view orientation, dimension styles and the lb unit text (Windows, with Aidan)
+- [ ] 226 Decimal period on every dimension style a print uses
+- [ ] 227 Initial Views fit check matches what is placed
+- [ ] 228 Every view black and white, and an iso on every print (Aidan, 2026-11-23)
+- [ ] 229 Sheet metal: front view on the base face, and bend notes
+- [ ] 230 Sheet metal Material Size: thickness x flat pattern size
+- [ ] 231 Assemblies: Rev, Status, and a dash for blank part fields
+- [ ] 232 Initial Views: Metric or Imperial, and the sheet size
+- [ ] 233 Initial Views: the Front view choice and Auto
+- [ ] 234 Initial Views: live sheet preview
+- [ ] 235 Create Print opens an existing print without asking (Aidan, 2026-11-23)
+- [ ] 236 Create Print replaces a Windows login Designer (Aidan, 2026-11-23)
 
 **Check**
 - [ ] 209 M5 combined Inventor check

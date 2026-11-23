@@ -13,6 +13,8 @@ Core picks the extreme edges of a view and where its overall REF dimensions go.
 
 ## Scope
 
+- REF text (Aidan, 2026-11-23): REF dimensions read "260 REF", the number and REF in bold, the text slightly larger than normal dimensions.
+
 - `src/InventorAddin.Core/Drawing/RefDimensionPlan.cs`: input the view's curves as 2D segments (sheet cm) and its rectangle; output the two pairs of extremes, the text point 10 mm outside, and the formatted text "<value> REF" bold.
 - Tests.
 

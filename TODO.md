@@ -85,7 +85,6 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Last look at the title block mockup with the 2026-11-21 additions (`docs/ui-mockups/title-block.png`, blue numbers 18 to 25; the FINISH line is gone and 18 is now the finish notes on the sheet) before task 185 is built
 - Spec 05 questions 13 to 23: the M5 defaults (zones, Project property, notes rules, marking sizes and colour, Batch Print, REF dimensions, stock shapes, Make/Buy blanks and manufacturer properties, Create Print's sheet, template built from code, the Finish field's text and the finish notes' order). Each has a default the tasks build
 - M5 planning questions 14 to 17 (from an earlier session; their wording is not in the repo): ask again when those commands come up (Aidan, 2026-11-20). Question 18 is answered by the Make/Buy column (2026-11-21)
-- Spec 05 question 29: the imperial WEIGHT prints "lbmass" (Inventor's unit text); is that acceptable, or should it read "LB"? Default: "lbmass" stays (task 222)
 
 **iLogic (spec 06), blocks M6**
 - Which rules, and whether they are internal or external
@@ -124,7 +123,6 @@ Each spec lists its own open questions in full. These are the ones that block pl
   - Task 218's shrinking must keep every value in a row the same size, or the baselines drift again (the 2.5 mm Status beside the 7 mm part number has the same dependence).
 
 - Task 193, Open Drawing:
-  - Create Print's "A print already exists. Open it?" now overlaps Open Drawing; Aidan may want Create Print to just open the print.
   - When Create Print fails after Open Drawing's Yes, the message and log say "Open Drawing failed".
   - The no-print question and the unsaved message say "part" on an assembly too (as Create Print's messages do).
   - Check in Inventor that `Documents.Open` on an already-open print returns that copy (checklist step 2).

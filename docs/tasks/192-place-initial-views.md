@@ -2,7 +2,7 @@
 
 - **Milestone:** M5
 - **Feature spec:** `docs/features/05-drawing-tools.md` ("Decided for M5: Place Initial Views")
-- **Status:** done (passed review round 2 after a parent fix; not run in Inventor)
+- **Status:** done (the parent's fix after round 2 passed its own review, 2026-11-23; checked in Inventor by Aidan, 2026-11-23)
 - **Depends on:** 183, 188, 189, 190, 191
 - **Needs:** windows build
 - **Parallel-safe with:** none

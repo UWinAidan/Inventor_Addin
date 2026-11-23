@@ -13,6 +13,8 @@ A drawing button that adds bold overall REF dimensions to the selected view (or 
 
 ## Scope
 
+- REF text (Aidan, 2026-11-23): REF dimensions read "260 REF", the number and REF in bold, the text slightly larger than normal dimensions.
+
 - `src/InventorAddin/Drawing/RefDimensionWriter.cs` (spike 184, question 5); `src/InventorAddin/Commands/RefDimensionsCommand.cs` + ribbon button.
 
 ## Acceptance criteria

@@ -3,7 +3,7 @@
 - **Milestone:** M5 (Aidan, 2026-11-22; spec 05 question 28, option (a))
 - **Feature spec:** `docs/features/05-drawing-tools.md` (open questions 28 and 29)
 - **Status:** todo
-- **Depends on:** 219
+- **Depends on:** 219, 225
 - **Needs:** windows build
 - **Parallel-safe with:** none (shares `FinishSpecBackfiller` and the three backfill call sites with 188)
 
@@ -20,11 +20,13 @@ The imperial print's WEIGHT field prints lb. The field follows the part's own ma
 - After the change set `Document.Dirty = true`: the unit change alone leaves the part unmodified, and `Save()` would skip it (spike 183 round 4).
 - The log line names the part and "mass unit set to lb".
 
-Out of scope: the "lbmass" text (question 29); assemblies; metric parts with lb.
+- **The unit text (Aidan, 2026-11-23, question 29):** "lbmass" is not acceptable. Use spike 225's finding: if the mass field can print "lb", do that. If not, use option (b): the add-in writes a "Mass" text property ("9.55 lb" / "4.33 kg", 2 decimals, in the part's mass unit), refreshed automatically when the part is saved (a document save event), and the templates' WEIGHT field prints that property; the template builder changes accordingly.
+
+Out of scope: assemblies; metric parts with lb.
 
 ## Acceptance criteria
 
-- [ ] An imperial part with kg mass: opening Material and Finish, Create Print or Mass Update sets it to lb, and Create Print's drawing shows "... lbmass".
+- [ ] An imperial part with kg mass: opening Material and Finish, Create Print or Mass Update sets it to lb, and Create Print's drawing shows "... lb".
 - [ ] New Part with the imperial template makes a part whose mass unit is lb.
 - [ ] A metric part's mass unit is never changed.
 - [ ] A part already in lb is not touched, and is not made dirty.
