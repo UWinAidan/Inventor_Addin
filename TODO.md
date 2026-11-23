@@ -111,6 +111,12 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Follow-ups from finished tasks
 
+- Spike 225, for the tasks that use it:
+  - 229 and 233: the base face edge's sign is arbitrary; choose the up vector so the view is not upside down.
+  - 229: an imperial bend note printed its radius in mm (try `BendNote.UsePartUnits`).
+  - A single ordinate dimension failed ("Value does not fall within the expected range"); `OrdinateDimensionSets.Add` works. Probably needs an origin indicator first (not tried).
+  - `HoleThreadNotes.Add` needs `LinearDiameterType = false`; with `Missing` it fails with E_FAIL.
+
 - Task 224, Finish Spec refresh:
   - A spec in task 211's first format ("(long name), 0.013-0.025 mm", written before task 213 the same day) is not recognised and is left as hand-written. Add that form if Aidan has such parts.
   - Mass Update refreshes only files it opens to change (a ticked change, for example a rename), as in task 217.

@@ -614,10 +614,10 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [x] 219 Revision and Status filled in automatically
 - [x] 220 Hole tables stay on the sheet
 - [x] 221 Settings template labels
-- [ ] 222 Imperial parts weigh in lb (Aidan, 2026-11-22; spec 05 question 28)
+- [ ] 222 Mass property in kg or lb, printed by the templates (Aidan, 2026-11-23; spec 05 questions 28, 29)
 - [x] 223 Title block fixes from the rebuild (Aidan, 2026-11-22)
 - [x] 224 Refresh an old Finish Spec (Aidan, 2026-11-22)
-- [ ] 225 Spike: view orientation, dimension styles and the lb unit text (Windows, with Aidan)
+- [x] 225 Spike: view orientation, dimension styles and the lb unit text (Windows, with Aidan)
 - [ ] 226 Decimal period on every dimension style a print uses
 - [ ] 227 Initial Views fit check matches what is placed
 - [ ] 228 Every view black and white, and an iso on every print (Aidan, 2026-11-23)

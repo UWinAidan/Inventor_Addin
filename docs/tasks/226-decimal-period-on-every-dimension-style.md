@@ -13,7 +13,8 @@ A Create Print drawing still shows "20,00", "120,00", "260,00" on ordinate and l
 
 ## Scope
 
-- `PrintTemplateBuilder` decimal marker step, using spike 225's findings.
+- `PrintTemplateBuilder` decimal marker step, using spike 225's findings: the drawing's dimensions all use 'Default (ISO)' (LeaderText 'Default - Method 1b (ISO)'), and Inventor replaces them with the style library's comma versions on `Documents.Add` because the names match. Copy each to an "AWB ..." name (`style.Copy`), set the period on the copy, and point every object-defaults member that named the original at the copy. The feature control frame style needs `LinearUnits` set to mm (inches on imperial) before its marker can be set; do not turn on alternate units. The imperial template already prints a period; only its frame style needs the fix.
+- Create Print: wrap `Documents.Add` in `Application.SilentOperation` (restored after) so the Style Conflict dialog cannot stop it.
 - The log line names the styles set.
 
 ## Acceptance criteria
