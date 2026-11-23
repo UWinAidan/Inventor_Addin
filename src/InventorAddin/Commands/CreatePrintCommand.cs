@@ -154,7 +154,17 @@ namespace InventorAddin.Commands
             try
             {
                 // Visible, so the new drawing opens and becomes the active document.
-                drawing = InventorHost.App.Documents.Add(DocumentTypeEnum.kDrawingDocumentObject, template, true);
+                // SilentOperation around the add only (spike 225): a "Style Conflict" dialog can otherwise stop it.
+                bool previousSilent = InventorHost.App.SilentOperation;
+                InventorHost.App.SilentOperation = true;
+                try
+                {
+                    drawing = InventorHost.App.Documents.Add(DocumentTypeEnum.kDrawingDocumentObject, template, true);
+                }
+                finally
+                {
+                    InventorHost.App.SilentOperation = previousSilent;
+                }
 
                 // The template's own first sheet is replaced by a sheet made from the units' format, as spike 183
                 // (round 2, B10) showed: the format brings the border, the title block and the triad. The model is

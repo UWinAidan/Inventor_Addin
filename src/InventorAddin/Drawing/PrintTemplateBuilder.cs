@@ -107,8 +107,8 @@ namespace InventorAddin.PrintTemplates
                 Step = "making the parts list and revision table styles";
                 ConfigureTableStyles(standard);
 
-                Step = "setting the period decimal marker on the standard's dimension styles";
-                SetStyleDecimalMarkers(standard.ActiveObjectDefaults);
+                Step = "copying the dimension styles to AWB styles with a period decimal marker";
+                SetStyleDecimalMarkers(standard.ActiveObjectDefaults, units);
 
                 Step = "drawing the title block";
                 TitleBlockDefinition titleBlock = DrawTitleBlock(doc, layout);
@@ -214,54 +214,102 @@ namespace InventorAddin.PrintTemplates
         }
 
         /// <summary>
-        /// Task 187 set only the standard's marker and a metric dimension still printed "260,00" (Aidan's check): the dimension styles
-        /// and feature control frame styles each carry their own marker (and an alternate-units one), so they are set to a period and
-        /// the result read back into the log. Task 223: only the styles the AWB standard's object defaults use are touched. The
-        /// drawing also holds the styles of the other standards (JIS, DIN, GOST ...) and Inventor refuses to change those (E_FAIL, about
-        /// 70 warnings); nothing uses them, so they are left alone and not logged. The parts list, revision table and hole table styles
-        /// have no marker member; their numbers follow the standard.
+        /// Tasks 187, 223 and 226. Spike 225: the drawing's dimensions all use one library style ('Default (ISO)', 'Default (ANSI)' on
+        /// imperial) and Inventor replaces a template's copy of a library style with the comma library version on every
+        /// <c>Documents.Add</c>. So on metric (the imperial ANSI styles already print a period) each distinct dimension style the object defaults name is copied to an "AWB ..." local style, the
+        /// copy gets the period, and every object defaults member that named the original is pointed at the copy. The feature control
+        /// frame style gets the same, with <c>LinearUnits</c> set first (a default unit made the marker write fail with E_FAIL) and no
+        /// alternate units. The parts list, revision table and hole table styles have no marker member. <paramref name="defaults"/> is
+        /// the standard's own (local) object defaults, so the members can be reassigned.
         /// </summary>
-        private void SetStyleDecimalMarkers(ObjectDefaultsStyle defaults)
+        private void SetStyleDecimalMarkers(ObjectDefaultsStyle defaults, PrintUnits units)
         {
             const DecimalMarkerTypeEnum period = DecimalMarkerTypeEnum.kPeriodDecimalMarker;
-            int dimensions = 0, frames = 0, notPeriod = 0;
+            var done = new List<string>();
+            int notPeriod = 0;
 
-            // Every DimensionStyle member of ObjectDefaultsStyle (confirmed by reflection on the interop DLL); a style two members share is set once.
-            var dimensionStyles = new List<Func<DimensionStyle>>
+            // Every DimensionStyle member of ObjectDefaultsStyle (confirmed by reflection on the interop DLL), with its setter.
+            var members = new List<(Func<DimensionStyle> Get, Action<DimensionStyle> Set)>
             {
-                () => defaults.AngularDimensionStyle, () => defaults.BaselineDimensionStyle, () => defaults.BendNoteStyle,
-                () => defaults.BendTagStyle, () => defaults.ChainDimensionStyle, () => defaults.ChamferNoteStyle,
-                () => defaults.DiameterDimensionStyle, () => defaults.HoleNoteStyle, () => defaults.HoleTagStyle,
-                () => defaults.LeaderTextStyle, () => defaults.LinearDimensionStyle, () => defaults.OrdinateDimensionStyle,
-                () => defaults.OrdinateSetDimensionStyle, () => defaults.PunchNoteStyle, () => defaults.RadialDimensionStyle,
-                () => defaults.ThreadNoteStyle,
+                (() => defaults.AngularDimensionStyle, v => defaults.AngularDimensionStyle = v),
+                (() => defaults.BaselineDimensionStyle, v => defaults.BaselineDimensionStyle = v),
+                (() => defaults.BendNoteStyle, v => defaults.BendNoteStyle = v),
+                (() => defaults.BendTagStyle, v => defaults.BendTagStyle = v),
+                (() => defaults.ChainDimensionStyle, v => defaults.ChainDimensionStyle = v),
+                (() => defaults.ChamferNoteStyle, v => defaults.ChamferNoteStyle = v),
+                (() => defaults.DiameterDimensionStyle, v => defaults.DiameterDimensionStyle = v),
+                (() => defaults.HoleNoteStyle, v => defaults.HoleNoteStyle = v),
+                (() => defaults.HoleTagStyle, v => defaults.HoleTagStyle = v),
+                (() => defaults.LeaderTextStyle, v => defaults.LeaderTextStyle = v),
+                (() => defaults.LinearDimensionStyle, v => defaults.LinearDimensionStyle = v),
+                (() => defaults.OrdinateDimensionStyle, v => defaults.OrdinateDimensionStyle = v),
+                (() => defaults.OrdinateSetDimensionStyle, v => defaults.OrdinateSetDimensionStyle = v),
+                (() => defaults.PunchNoteStyle, v => defaults.PunchNoteStyle = v),
+                (() => defaults.RadialDimensionStyle, v => defaults.RadialDimensionStyle = v),
+                (() => defaults.ThreadNoteStyle, v => defaults.ThreadNoteStyle = v),
             };
-            var seen = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var get in dimensionStyles)
+
+            var copies = new Dictionary<string, DimensionStyle?>(StringComparer.Ordinal);
+            // Imperial: 'Default (ANSI)' already prints a period (spike 225), so only metric copies the dimension styles.
+            foreach (var member in units == PrintUnits.Metric ? members : members.Take(0))
             {
-                DimensionStyle? s = ComSafe.Get(get);
-                string? name = s == null ? null : ComSafe.Get(() => s.Name);
-                if (s == null || name == null || !seen.Add(name))
+                DimensionStyle? original = ComSafe.Get(member.Get);
+                string? name = original == null ? null : ComSafe.Get(() => original.Name);
+                if (original == null || name == null)
                     continue;
-                ComSafe.Run(() => s.DecimalMarkerType = period, _warnings, $"Setting the decimal marker of dimension style '{name}'");
-                ComSafe.Run(() => s.AlternateDecimalMarkerType = period, _warnings, $"Setting the alternate decimal marker of dimension style '{name}'");
-                dimensions++;
-                if (ComSafe.Get(() => (DecimalMarkerTypeEnum?)s.DecimalMarkerType) != period)
-                    notPeriod++;
+
+                if (!copies.TryGetValue(name, out DimensionStyle? copy))
+                {
+                    string copyName = name.StartsWith("AWB ", StringComparison.Ordinal) ? name : "AWB " + name;
+                    copy = null;
+                    if (copyName != name)
+                    {
+                        copy = ComSafe.Get(() => (DimensionStyle)original.Copy(copyName));
+                        if (copy == null)
+                            _warnings.Add($"Dimension style '{name}' could not be copied to '{copyName}'; its decimal marker was set in place and Inventor may restore the library's comma on a new drawing.");
+                    }
+
+                    DimensionStyle target = copy ?? original;
+                    ComSafe.Run(() => target.DecimalMarkerType = period, _warnings, $"Setting the decimal marker of dimension style '{copyName}'");
+                    ComSafe.Run(() => target.AlternateDecimalMarkerType = period, _warnings, $"Setting the alternate decimal marker of dimension style '{copyName}'");
+                    if (ComSafe.Get(() => (DecimalMarkerTypeEnum?)target.DecimalMarkerType) != period)
+                        notPeriod++;
+                    copies[name] = copy;
+                    done.Add(copy != null ? copyName : name);
+                }
+
+                if (copy != null)
+                {
+                    DimensionStyle assign = copy;
+                    ComSafe.Run(() => member.Set(assign), _warnings, $"Pointing the object defaults at dimension style '{(name.StartsWith("AWB ", StringComparison.Ordinal) ? name : "AWB " + name)}'");
+                }
             }
 
             FeatureControlFrameStyle? frame = ComSafe.Get(() => defaults.FeatureControlFrameStyle);
             string? frameName = frame == null ? null : ComSafe.Get(() => frame.Name);
-            if (frame != null)
+            if (frame != null && frameName != null)
             {
-                ComSafe.Run(() => frame.DecimalMarkerType = period, _warnings, $"Setting the decimal marker of feature control frame style '{frameName}'");
-                ComSafe.Run(() => frame.AlternateDecimalMarkerType = period, _warnings, $"Setting the alternate decimal marker of feature control frame style '{frameName}'");
-                frames++;
-                if (ComSafe.Get(() => (DecimalMarkerTypeEnum?)frame.DecimalMarkerType) != period)
+                string copyName = frameName.StartsWith("AWB ", StringComparison.Ordinal) ? frameName : "AWB " + frameName;
+                FeatureControlFrameStyle? copy = copyName == frameName ? null : ComSafe.Get(() => (FeatureControlFrameStyle)frame.Copy(copyName));
+                if (copy == null && copyName != frameName)
+                    _warnings.Add($"Feature control frame style '{frameName}' could not be copied to '{copyName}'; its decimal marker was set in place.");
+
+                FeatureControlFrameStyle target = copy ?? frame;
+                UnitsTypeEnum linear = units == PrintUnits.Metric ? UnitsTypeEnum.kMillimeterLengthUnits : UnitsTypeEnum.kInchLengthUnits;
+                ComSafe.Run(() => target.LinearUnits = linear, _warnings, $"Setting the linear units of feature control frame style '{copyName}'");
+                ComSafe.Run(() => target.DecimalMarkerType = period, _warnings, $"Setting the decimal marker of feature control frame style '{copyName}'");
+                if (ComSafe.Get(() => (DecimalMarkerTypeEnum?)target.DecimalMarkerType) != period)
                     notPeriod++;
+                done.Add(copy != null ? copyName : frameName);
+
+                if (copy != null)
+                {
+                    FeatureControlFrameStyle assign = copy;
+                    ComSafe.Run(() => defaults.FeatureControlFrameStyle = assign, _warnings, $"Pointing the object defaults at feature control frame style '{copyName}'");
+                }
             }
 
-            _log.Info($"Build Print Template: decimal marker set to a period on {dimensions} dimension style(s) and {frames} feature control frame style(s) the standard uses; {notPeriod} did not read back as a period.");
+            _log.Info($"Build Print Template: period decimal marker set on {done.Count} style(s): {string.Join(", ", done)}; {notPeriod} did not read back as a period.");
             if (notPeriod > 0)
                 _warnings.Add($"{notPeriod} style(s) did not read back with a period decimal marker.");
         }

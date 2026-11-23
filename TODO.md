@@ -119,6 +119,11 @@ Each spec lists its own open questions in full. These are the ones that block pl
   - The custom "Mass" shares its name with Design Tracking's Mass; check the Custom tab accepts it.
   - Later: remove the lb mass unit step from the template builder; an imperial sample value for the fit check; the backfill warnings in Create Print and Material and Finish do not mention Mass.
 
+- Task 226, decimal period (check on the template rebuild):
+  - Imperial build: awbaddin.log must have no warning starting "Setting the linear units of feature control frame style" (inch units were not tried in spike 225).
+  - The frame style's alternate marker is not set (needs alternate units); only matters if alternate units are ever shown.
+  - Core test runs often fail 1 to 3 timing-sensitive probe tests, a different one each run; worth making them deterministic.
+
 - Spike 225, for the tasks that use it:
   - 229 and 233: the base face edge's sign is arbitrary; choose the up vector so the view is not upside down.
   - 229: an imperial bend note printed its radius in mm (try `BendNote.UsePartUnits`).
