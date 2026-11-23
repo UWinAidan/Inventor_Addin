@@ -13,7 +13,7 @@ A value longer than its cell is narrowed to fit on each drawing (Aidan's safety 
 
 ## Scope
 
-- Core: `TitleBlockFit` takes the cell width, size, bold flag and the resolved text, and returns `WidthScale = min(1, available / PrintTextFit.WidthMm(...))`, not below a floor (Default 0.6, spec 05 question 30); below the floor it returns the floor and a warning. Tests.
+- Core: `TitleBlockFit` takes the cell width, size, bold flag and the resolved text, and returns `WidthScale = min(1, available / PrintTextFit.WidthMm(...))`, not below a floor of 0.6 (Aidan, spec 05 question 30); below the floor it returns the floor and a warning that names the field and how much too long the value is, for example in mm or percent (Aidan, spec 05 question 31). Tests.
 - Add-in: a step at the end of Create Print and an "Update title block" step (find the right existing command or add one to the drawing ribbon; Default: run it in Create Print and in Place Initial Views), in one transaction: for each sheet with a view, read `TitleBlock.GetResultText` for each field, keep the smallest scale per field, then `Edit` the drawing's title block definition once, set `WidthScale` on those field boxes, `ExitEdit(true)`. One Undo reverts it.
 - Do not use prompted entry or write a shortened value into the part (spike 218).
 

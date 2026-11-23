@@ -82,7 +82,6 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Question 20 in spec 04: Renumber on a re-opened table waits for Update to redraw (Default); or should it redraw at once?
 
 **Drawing tools (spec 05), blocks M5 tasks**
-- Spec 05 questions 30 and 31: the narrowest text width scale for a long title block value (Default 0.6) and what happens below it (Default: warn only). Task 238
 - Last look at the title block mockup with the 2026-11-21 additions (`docs/ui-mockups/title-block.png`, blue numbers 18 to 25; the FINISH line is gone and 18 is now the finish notes on the sheet) before task 185 is built
 - Spec 05 questions 13 to 23: the M5 defaults (zones, Project property, notes rules, marking sizes and colour, Batch Print, REF dimensions, stock shapes, Make/Buy blanks and manufacturer properties, Create Print's sheet, template built from code, the Finish field's text and the finish notes' order). Each has a default the tasks build
 - M5 planning questions 14 to 17 (from an earlier session; their wording is not in the repo): ask again when those commands come up (Aidan, 2026-11-20). Question 18 is answered by the Make/Buy column (2026-11-21)
