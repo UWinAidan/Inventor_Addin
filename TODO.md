@@ -112,6 +112,12 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Follow-ups from finished tasks
 
+- Task 188, Create Print:
+  - `Documents.Add` fails while the template is open in Inventor, and the message does not say so; a hint could name the cause.
+  - The scale rule still sizes against the whole sheet; move it to the usable area when task 192 wires up the initial views.
+  - The sheet swap (`AddUsingSheetFormat`, deleting the template's sheet) runs outside the transaction; try it inside once the view work is checked.
+  - Not run in Inventor: `Sheet.Activate` then deleting the template's sheet leaves one sheet ("1 of 1").
+
 - Task 220 (done in round 3):
   - When Create Tables draws only one kind, an already placed table of the other kind that cannot fit is left where it is and not reported.
   - A hand-deleted middle part is not repaired until the next Create or Update.

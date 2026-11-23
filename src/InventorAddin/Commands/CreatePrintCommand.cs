@@ -1,9 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Inventor;
 using InventorAddin.Core.Drawing;
 using InventorAddin.Core.Models;
+using InventorAddin.Core.Materials;
 using InventorAddin.Core.PartProperties;
 using InventorAddin.Core.Ribbon;
 using InventorAddin.Core.Settings;
@@ -16,7 +17,9 @@ namespace InventorAddin.Commands
 {
     /// <summary>
     /// Create Print (spec 02, "Commands: Create Print"): makes an <c>.idw</c> drawing of the part or assembly being edited (also one edited in place) from
-    /// Inventor's <c>.idw</c> drawing template, with one front base view centred on the first sheet at a standard scale that fits, saves it
+    /// the AWB print template (<see cref="LibraryPaths.PrintTemplate"/>), on its A3 landscape (metric) or ANSI B landscape
+    /// (imperial) sheet format (<see cref="PrintPlan.SheetFormatName"/>), with one front base view centred on the sheet at a
+    /// standard scale that fits, saves it
     /// under the model's name in the <c>Prints</c> subfolder of the model's folder (created when missing), and leaves it
     /// open. The file name, the scale and the messages are decided
     /// in <see cref="PrintPlan"/> (Core); this class reads Inventor and applies the result, by the calls spike 032
@@ -61,7 +64,8 @@ namespace InventorAddin.Commands
             }
 
             UnitsSystem units = AddinServices.Settings.DefaultUnits;
-            string? template = Templates.DrawingFor(units);
+            string template = LibraryPaths.PrintTemplate(
+                AddinServices.Settings, PrintPlan.PrintUnitsFor(units), AddinServices.AddinFolder).Path;
 
             // An existing print, with either drawing extension, in Prints or (made before 2026-10-11) beside the model,
             // is offered instead of making a new one; an .idw is preferred when both exist.
@@ -72,9 +76,9 @@ namespace InventorAddin.Commands
                 return;
             }
 
-            if (template == null)
+            if (!IOFile.Exists(template))
             {
-                string message = PrintPlan.MissingTemplateMessage(units);
+                string message = PrintPlan.MissingTemplateMessage(template);
                 AddinServices.Log.Warn($"Create Print stopped: {message}");
                 Show(message, Forms.MessageBoxIcon.Warning);
                 return;
@@ -98,7 +102,7 @@ namespace InventorAddin.Commands
             Forms.Cursor.Current = Forms.Cursors.WaitCursor;
             try
             {
-                Create(model, template, printsFolder, drawingPath, viewWidthCm, viewHeightCm, partNumber);
+                Create(model, kind, template, PrintPlan.SheetFormatName(units), printsFolder, drawingPath, viewWidthCm, viewHeightCm, partNumber);
             }
             finally
             {
@@ -111,7 +115,7 @@ namespace InventorAddin.Commands
         /// step failed. The <paramref name="printsFolder"/> is created, when missing, just before saving.
         /// </summary>
         private void Create(
-            Document model, string template, string printsFolder, string drawingPath,
+            Document model, DocumentKind kind, string template, string sheetFormatName, string printsFolder, string drawingPath,
             double viewWidthCm, double viewHeightCm, string? partNumber)
         {
             string step = "creating the drawing from the template";
@@ -121,8 +125,19 @@ namespace InventorAddin.Commands
                 // Visible, so the new drawing opens and becomes the active document.
                 drawing = InventorHost.App.Documents.Add(DocumentTypeEnum.kDrawingDocumentObject, template, true);
 
-                step = "reading the first sheet";
-                Sheet sheet = ((DrawingDocument)drawing).ActiveSheet;
+                // The template's own first sheet is replaced by a sheet made from the units' format, as spike 183
+                // (round 2, B10) showed: the format brings the border, the title block and the triad. The model is
+                // not passed: spike 183 found AddUsingSheetFormat refuses it.
+                step = $"adding the sheet from the sheet format '{sheetFormatName}'";
+                var drawingDocument = (DrawingDocument)drawing;
+                Sheet sheet = AddSheetFromFormat(drawingDocument, sheetFormatName, template);
+
+                // The title block's weight reads "N/A" until the model's mass has been computed; reading it before the
+                // views go on, then updating the drawing, makes it print (spike 183, round 3).
+                step = "reading the model's mass";
+                ReadMass(model, kind);
+
+                step = "reading the sheet";
                 double scale = PrintPlan.ChooseScale(viewWidthCm, viewHeightCm, sheet.Width, sheet.Height);
 
                 step = "adding the front view";
@@ -140,6 +155,9 @@ namespace InventorAddin.Commands
                     }
                 });
 
+                step = "updating the drawing";
+                ComSafe.Run(() => drawingDocument.Update());
+
                 // Does nothing when the folder already exists.
                 step = $"creating the folder '{printsFolder}'";
                 IODirectory.CreateDirectory(printsFolder);
@@ -148,7 +166,7 @@ namespace InventorAddin.Commands
                 drawing.SaveAs(drawingPath, false);
 
                 AddinServices.Log.Info(
-                    $"Create Print: '{drawingPath}' created with a front view at scale {scale} " +
+                    $"Create Print: '{drawingPath}' created from '{template}' (sheet format '{sheetFormatName}') with a front view at scale {scale} " +
                     (partNumber != null ? $"and Part Number {partNumber}." : "and no Part Number (the model has no number)."));
             }
             catch (Exception ex)
@@ -173,6 +191,33 @@ namespace InventorAddin.Commands
 
                 Show(PrintPlan.FailedMessage(step, ex.Message, cleanup), Forms.MessageBoxIcon.Error);
             }
+        }
+
+        /// <summary>
+        /// Adds a sheet from the drawing's sheet format called <paramref name="formatName"/>, makes it the active sheet, and
+        /// deletes the sheets that were there (the template's own first sheet). Throws when the template has no such format.
+        /// </summary>
+        private static Sheet AddSheetFromFormat(DrawingDocument drawing, string formatName, string templatePath)
+        {
+            SheetFormat? format = drawing.SheetFormats.Cast<SheetFormat>().FirstOrDefault(f =>
+                string.Equals(ComSafe.Get(() => f.Name), formatName, StringComparison.Ordinal));
+            if (format == null)
+                throw new InvalidOperationException(PrintPlan.MissingSheetFormatMessage(formatName, templatePath));
+
+            List<Sheet> original = drawing.Sheets.Cast<Sheet>().ToList();
+            Sheet added = drawing.Sheets.AddUsingSheetFormat(format, Type.Missing, "Sheet", Type.Missing, Type.Missing, Type.Missing);
+            added.Activate();
+            foreach (Sheet old in original)
+                old.Delete();
+            return added;
+        }
+
+        /// <summary>Reads the model's mass so that the drawing's weight field can resolve (spike 183, round 3). The value is not used.</summary>
+        private static void ReadMass(Document model, DocumentKind kind)
+        {
+            ComSafe.Get(() => (double?)(kind.IsPart()
+                ? ((PartDocument)model).ComponentDefinition.MassProperties.Mass
+                : ((AssemblyDocument)model).ComponentDefinition.MassProperties.Mass));
         }
 
         /// <summary>

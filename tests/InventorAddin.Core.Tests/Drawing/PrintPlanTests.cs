@@ -266,100 +266,6 @@ public sealed class PrintPlanTests
         Assert.Equal(@"C:\Work\a.idw", PrintPlan.FindExistingPrint(@"C:\Work\a.ipt", PrintPlan.NewPrintExtension, onDisk.Contains));
     }
 
-    // IdwTemplate
-
-    private const string MetricDwg = @"C:\Users\Public\Documents\Autodesk\Inventor 2026\Templates\en-US\Metric\ANSI (mm).dwg";
-    private const string MetricIdw = @"C:\Users\Public\Documents\Autodesk\Inventor 2026\Templates\en-US\Metric\ANSI (mm).idw";
-    private const string StandardDwg = @"C:\Users\Public\Documents\Autodesk\Inventor 2026\Templates\en-US\standard.dwg";
-    private const string StandardIdw = @"C:\Users\Public\Documents\Autodesk\Inventor 2026\Templates\en-US\standard.idw";
-
-    [Fact]
-    public void IdwTemplate_TheIdwBesideTheAnsiDwg_WhenItExists()
-    {
-        var onDisk = new HashSet<string> { MetricIdw, StandardIdw };
-
-        Assert.Equal(MetricIdw, PrintPlan.IdwTemplate(new[] { MetricDwg, StandardDwg }, onDisk.Contains));
-    }
-
-    [Fact]
-    public void IdwTemplate_AMissingSibling_FallsThroughToTheNextLookup()
-    {
-        var onDisk = new HashSet<string> { StandardIdw };
-
-        Assert.Equal(StandardIdw, PrintPlan.IdwTemplate(new[] { MetricDwg, StandardDwg }, onDisk.Contains));
-    }
-
-    [Fact]
-    public void IdwTemplate_NoneExists_IsNull()
-    {
-        Assert.Null(PrintPlan.IdwTemplate(new[] { MetricDwg, StandardDwg }, _ => false));
-    }
-
-    [Fact]
-    public void IdwTemplate_NeverReturnsADwgTemplate()
-    {
-        // The .dwg templates exist, but only an .idw counts.
-        var onDisk = new HashSet<string> { MetricDwg, StandardDwg };
-
-        Assert.Null(PrintPlan.IdwTemplate(new[] { MetricDwg, StandardDwg }, onDisk.Contains));
-    }
-
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void IdwTemplate_SkipsBlankLookups(string? blank)
-    {
-        var onDisk = new HashSet<string> { StandardIdw };
-
-        Assert.Equal(StandardIdw, PrintPlan.IdwTemplate(new[] { blank, StandardDwg }, onDisk.Contains));
-    }
-
-    [Fact]
-    public void IdwTemplate_NoLookups_IsNull()
-    {
-        Assert.Null(PrintPlan.IdwTemplate(Array.Empty<string?>(), _ => true));
-    }
-
-    [Theory]
-    [InlineData(@"C:\T\Metric\ANSI (mm).idw")]
-    [InlineData(@"C:\T\Metric\ANSI (mm).IDW")]
-    [InlineData(@"C:\T\Metric\ANSI (mm).Idw")]
-    public void IdwTemplate_APathAlreadyIdw_IgnoringCase_IsUsedAsItIs(string path)
-    {
-        string? asked = null;
-
-        string? result = PrintPlan.IdwTemplate(new[] { path }, p => { asked = p; return true; });
-
-        Assert.Equal(path, result);
-        Assert.Equal(path, asked);
-    }
-
-    [Theory]
-    [InlineData(@"C:\T\Metric\ANSI (mm).DWG", @"C:\T\Metric\ANSI (mm).idw")]
-    [InlineData(@"C:\T.v2\Metric\standard", @"C:\T.v2\Metric\standard.idw")]
-    [InlineData(@"C:\T\a.b.dwg", @"C:\T\a.b.idw")]
-    [InlineData("/templates/standard.dwg", "/templates/standard.idw")]
-    [InlineData(@"  C:\T\standard.dwg  ", @"C:\T\standard.idw")]
-    public void IdwTemplate_ChangesOnlyTheFileNamesExtension(string lookedUp, string expected)
-    {
-        Assert.Equal(expected, PrintPlan.IdwTemplate(new[] { lookedUp }, _ => true));
-    }
-
-    [Fact]
-    public void IdwTemplate_StopsReadingLookupsOnceOneIsFound()
-    {
-        var onDisk = new HashSet<string> { MetricIdw };
-
-        Assert.Equal(MetricIdw, PrintPlan.IdwTemplate(Lookups(), onDisk.Contains));
-
-        static IEnumerable<string?> Lookups()
-        {
-            yield return MetricDwg;
-            throw new InvalidOperationException("The second lookup should not run.");
-        }
-    }
-
     // StandardScales
 
     [Fact]
@@ -445,19 +351,30 @@ public sealed class PrintPlanTests
         Assert.Equal("Save the part before creating its print.", PrintPlan.UnsavedMessage);
         Assert.Equal("A print for this part already exists. Open it?", PrintPlan.AlreadyExistsQuestion);
         Assert.Equal(
-            "Inventor has no .idw drawing template for metric units (ANSI (mm).idw). No print was created.",
-            PrintPlan.MissingTemplateMessage(UnitsSystem.Metric));
-        Assert.Equal(
-            "Inventor has no .idw drawing template for imperial units (ANSI (in).idw). No print was created.",
-            PrintPlan.MissingTemplateMessage(UnitsSystem.Imperial));
+            @"The AWB print template was not found at 'C:\Libs\AWB Metric.idw'. No print was created.",
+            PrintPlan.MissingTemplateMessage(@"C:\Libs\AWB Metric.idw"));
     }
 
     [Theory]
-    [InlineData(UnitsSystem.Metric, "ANSI (mm).idw")]
-    [InlineData(UnitsSystem.Imperial, "ANSI (in).idw")]
-    public void IdwTemplateName_IsTheAnsiTemplateInTheUnits(UnitsSystem units, string expected)
+    [InlineData(UnitsSystem.Metric, PrintUnits.Metric)]
+    [InlineData(UnitsSystem.Imperial, PrintUnits.Imperial)]
+    public void PrintUnitsFor_MapsTheDefaultUnits(UnitsSystem units, PrintUnits expected)
     {
-        Assert.Equal(expected, PrintPlan.IdwTemplateName(units));
+        Assert.Equal(expected, PrintPlan.PrintUnitsFor(units));
+    }
+
+    [Fact]
+    public void PrintUnitsFor_UnknownUnits_Throws()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => PrintPlan.PrintUnitsFor((UnitsSystem)99));
+    }
+
+    [Theory]
+    [InlineData(UnitsSystem.Metric, "AWB ISO A3")]
+    [InlineData(UnitsSystem.Imperial, "AWB ANSI B")]
+    public void SheetFormatName_IsTheDefaultLandscapeSheetOfTheTemplate(UnitsSystem units, string expected)
+    {
+        Assert.Equal(expected, PrintPlan.SheetFormatName(units));
     }
 
     [Theory]

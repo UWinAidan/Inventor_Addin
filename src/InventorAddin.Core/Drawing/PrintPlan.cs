@@ -135,53 +135,35 @@ public static class PrintPlan
         return StandardScales[^1];
     }
 
-    /// <summary>
-    /// The <see cref="NewPrintExtension"/> drawing template to make a print from, given the template paths Inventor's
-    /// lookups return, in order (spike 032: they return <c>.dwg</c> templates, and the <c>.idw</c> ones sit beside them).
-    /// For each path, blank ones skipped: the path itself when it already ends <c>.idw</c> (ignoring case), otherwise the
-    /// same path with its extension changed to <c>.idw</c>; the first of those that <paramref name="exists"/>, or null.
-    /// Never a <c>.dwg</c> template (Default, task 063). Works on Windows paths on any platform, so it does not use
-    /// <see cref="Path"/>.
-    /// </summary>
-    /// <param name="lookedUp">The paths Inventor's template lookups returned, most wanted first. Read lazily, so a
-    /// later lookup can run only when the earlier paths have no <c>.idw</c> template.</param>
-    /// <param name="exists">Whether a file exists.</param>
-    public static string? IdwTemplate(IEnumerable<string?> lookedUp, Func<string, bool> exists)
+    /// <summary>The template layout's units for the default units setting.</summary>
+    public static PrintUnits PrintUnitsFor(UnitsSystem units) => units switch
     {
-        ArgumentNullException.ThrowIfNull(lookedUp);
-        ArgumentNullException.ThrowIfNull(exists);
-
-        foreach (string? path in lookedUp)
-        {
-            if (string.IsNullOrWhiteSpace(path))
-                continue;
-
-            string candidate = WithExtension(path.Trim(), NewPrintExtension);
-            if (exists(candidate))
-                return candidate;
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// The file name of Inventor's default <c>.idw</c> template in <paramref name="units"/>:
-    /// <c>ANSI (mm).idw</c> or <c>ANSI (in).idw</c> (spike 032).
-    /// </summary>
-    public static string IdwTemplateName(UnitsSystem units) => units switch
-    {
-        UnitsSystem.Metric => "ANSI (mm)" + NewPrintExtension,
-        UnitsSystem.Imperial => "ANSI (in)" + NewPrintExtension,
+        UnitsSystem.Metric => PrintUnits.Metric,
+        UnitsSystem.Imperial => PrintUnits.Imperial,
         _ => throw new ArgumentOutOfRangeException(nameof(units), units, "Unknown units."),
     };
 
     /// <summary>
-    /// Names the template kind and the units, for example
-    /// <c>Inventor has no .idw drawing template for metric units (ANSI (mm).idw). No print was created.</c>
+    /// The name of the sheet format Create Print makes its drawing from: A3 landscape on the metric template
+    /// ("AWB ISO A3"), ANSI B landscape on the imperial one ("AWB ANSI B") (spec 05 question 21). Both are the layout's
+    /// default sheet, named the way <see cref="SheetSizeSpec.FormatName"/> names it in the template.
     /// </summary>
-    public static string MissingTemplateMessage(UnitsSystem units) =>
-        $"Inventor has no {NewPrintExtension} drawing template for {UnitsName(units)} units ({IdwTemplateName(units)}). " +
-        "No print was created.";
+    public static string SheetFormatName(UnitsSystem units)
+    {
+        PrintTemplateLayout layout = PrintTemplateLayout.For(PrintUnitsFor(units));
+        return layout.SheetSizes.First(s => s.Name == layout.DefaultSheetName).FormatName;
+    }
+
+    /// <summary>
+    /// Names the template path that was looked for, for example
+    /// <c>The AWB print template was not found at 'C:\Libs\AWB Metric.idw'. No print was created.</c>
+    /// </summary>
+    public static string MissingTemplateMessage(string templatePath) =>
+        $"The AWB print template was not found at '{templatePath}'. No print was created.";
+
+    /// <summary>The sheet format is missing from the template, so the template is not the AWB one (names the format and path).</summary>
+    public static string MissingSheetFormatMessage(string formatName, string templatePath) =>
+        $"The print template '{templatePath}' has no sheet format named '{formatName}'. No print was created.";
 
     /// <summary>
     /// Says which step failed and why, and what became of the drawing, for example
@@ -235,21 +217,6 @@ public static class PrintPlan
         public string InPrintsFolder() => Folder + PrintsFolderName + Separator + NameWithoutExtension;
     }
 
-    /// <summary>
-    /// <paramref name="path"/> with the extension of its file name replaced by <paramref name="extension"/>, or added
-    /// when it has none; returned as it is when it already ends in <paramref name="extension"/> (ignoring case). Dots in
-    /// the folder are left alone.
-    /// </summary>
-    private static string WithExtension(string path, string extension)
-    {
-        if (path.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
-            return path;
-
-        int nameStart = path.LastIndexOfAny(new[] { '\\', '/' }) + 1;
-        int dot = path.LastIndexOf('.');
-        return (dot >= nameStart ? path[..dot] : path) + extension;
-    }
-
     private static string NormaliseExtension(string extension)
     {
         if (string.IsNullOrWhiteSpace(extension))
@@ -257,13 +224,6 @@ public static class PrintPlan
         string trimmed = extension.Trim();
         return trimmed.StartsWith('.') ? trimmed : "." + trimmed;
     }
-
-    private static string UnitsName(UnitsSystem units) => units switch
-    {
-        UnitsSystem.Metric => "metric",
-        UnitsSystem.Imperial => "imperial",
-        _ => units.ToString().ToLowerInvariant(),
-    };
 }
 
 /// <summary>What became of the half-made drawing after Create Print failed.</summary>

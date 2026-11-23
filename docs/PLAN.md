@@ -576,7 +576,7 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [x] 185 Print template layout (Core)
 - [x] 186 Print template paths in Settings
 - [ ] 187 Build Print Template command and the starter templates (Windows)
-- [ ] 188 Create Print uses the AWB template
+- [x] 188 Create Print uses the AWB template
 
 **Views and drawings**
 - [x] 189 Initial views: which views and where (Core)
