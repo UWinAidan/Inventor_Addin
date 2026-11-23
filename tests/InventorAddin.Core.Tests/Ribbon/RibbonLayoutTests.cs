@@ -64,6 +64,7 @@ public sealed class RibbonLayoutTests
         Assert.Equal($"{Branding.IdPrefix}_MaterialFinish", CommandNames.MaterialFinish);
         Assert.Equal($"{Branding.IdPrefix}_AwbHole", CommandNames.AwbHole);
         Assert.Equal($"{Branding.IdPrefix}_HoleTable", CommandNames.HoleTable);
+        Assert.Equal($"{Branding.IdPrefix}_PlaceInitialViews", CommandNames.PlaceInitialViews);
     }
 
     public static TheoryData<RibbonEnvironment, bool> DocumentEnvironmentsAndSetting()
@@ -86,6 +87,7 @@ public sealed class RibbonLayoutTests
         new($"{Branding.IdPrefix}_{iconName}", ButtonSize.Large, iconName);
 
     private static readonly ButtonLayout HoleTableButton = Large("HoleTable");
+    private static readonly ButtonLayout PlaceInitialViewsButton = Large("PlaceInitialViews");
 
     private static PanelLayout Create(params ButtonLayout[] buttons) =>
         new($"id_Panel_{Branding.IdPrefix}_Create", "Create", buttons);
@@ -151,12 +153,12 @@ public sealed class RibbonLayoutTests
             },
             (RibbonEnvironment.Drawing, false) => new[]
             {
-                DrawingPanel(HoleTableButton),
+                DrawingPanel(PlaceInitialViewsButton, HoleTableButton),
                 Awb(),
             },
             (RibbonEnvironment.Drawing, true) => new[]
             {
-                DrawingPanel(HoleTableButton),
+                DrawingPanel(PlaceInitialViewsButton, HoleTableButton),
                 Developer(Small("ExportModelData"), Small("ExportLibraries"), Small("BuildPrintTemplate")),
                 Awb(),
             },
@@ -293,6 +295,7 @@ public sealed class RibbonLayoutTests
     [InlineData(CommandNames.MaterialFinish, IconNames.MaterialFinish)]
     [InlineData(CommandNames.AwbHole, IconNames.AwbHole)]
     [InlineData(CommandNames.HoleTable, IconNames.HoleTable)]
+    [InlineData(CommandNames.PlaceInitialViews, IconNames.PlaceInitialViews)]
     public void EachCommand_UsesItsIconName_InEveryEnvironment(string command, string iconName)
     {
         var buttons = RibbonEnvironments.All
@@ -320,6 +323,7 @@ public sealed class RibbonLayoutTests
     [InlineData(CommandNames.MaterialFinish, ButtonSize.Small)]
     [InlineData(CommandNames.AwbHole, ButtonSize.Large)]
     [InlineData(CommandNames.HoleTable, ButtonSize.Large)]
+    [InlineData(CommandNames.PlaceInitialViews, ButtonSize.Large)]
     [InlineData(CommandNames.ExportModelData, ButtonSize.Small)]
     [InlineData(CommandNames.ExportLibraries, ButtonSize.Small)]
     [InlineData(CommandNames.BuildPrintTemplate, ButtonSize.Small)]
@@ -350,7 +354,7 @@ public sealed class RibbonLayoutTests
             new[]
             {
                 CommandNames.About, CommandNames.AwbHole, CommandNames.BuildPrintTemplate, CommandNames.CreatePrint, CommandNames.ExportLibraries, CommandNames.ExportModelData, CommandNames.HoleTable,
-                CommandNames.MassUpdate, CommandNames.MaterialFinish, CommandNames.NewPart, CommandNames.PartProperties, CommandNames.SaveAsCopy,
+                CommandNames.MassUpdate, CommandNames.MaterialFinish, CommandNames.NewPart, CommandNames.PartProperties, CommandNames.PlaceInitialViews, CommandNames.SaveAsCopy,
                 CommandNames.SaveAsReplace, CommandNames.Settings,
             }.OrderBy(n => n, StringComparer.Ordinal),
             commands);
@@ -384,7 +388,7 @@ public sealed class RibbonLayoutTests
             .Select(g => g.First().IconName)
             .ToList();
 
-        Assert.Equal(14, iconNames.Count);
+        Assert.Equal(15, iconNames.Count);
         Assert.Equal(iconNames.Count, iconNames.Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
 

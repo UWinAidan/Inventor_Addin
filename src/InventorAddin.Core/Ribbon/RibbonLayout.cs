@@ -87,6 +87,8 @@ public static class RibbonLayout
         {
             // Spec 02, "Commands: Create Print": a drawing of the active part or assembly.
             new(CommandNames.CreatePrint, ButtonSize.Large, IconNames.CreatePrint, ModelEnvironments),
+            // Spec 05, "Decided for M5: Place Initial Views" (task 192): large, on the drawing ribbon only.
+            new(CommandNames.PlaceInitialViews, ButtonSize.Large, IconNames.PlaceInitialViews, DrawingEnvironments),
             // Spec 04, "Target dialog" (task 167): large, on the drawing ribbon only.
             new(CommandNames.HoleTable, ButtonSize.Large, IconNames.HoleTable, DrawingEnvironments),
         }),

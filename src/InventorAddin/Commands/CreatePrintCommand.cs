@@ -8,7 +8,10 @@ using InventorAddin.Core.Materials;
 using InventorAddin.Core.PartProperties;
 using InventorAddin.Core.Ribbon;
 using InventorAddin.Core.Settings;
+using InventorAddin.Core.ViewModels;
 using InventorAddin.Extraction;
+using InventorAddin.PrintViews;
+using InventorAddin.UI;
 using Forms = System.Windows.Forms;
 using IODirectory = System.IO.Directory;
 using IOFile = System.IO.File;
@@ -18,11 +21,11 @@ namespace InventorAddin.Commands
     /// <summary>
     /// Create Print (spec 02, "Commands: Create Print"): makes an <c>.idw</c> drawing of the part or assembly being edited (also one edited in place) from
     /// the AWB print template (<see cref="LibraryPaths.PrintTemplate"/>), on its A3 landscape (metric) or ANSI B landscape
-    /// (imperial) sheet format (<see cref="PrintPlan.SheetFormatName"/>), with one front base view centred on the sheet at a
-    /// standard scale that fits, saves it
+    /// (imperial) sheet format (<see cref="PrintPlan.SheetFormatName"/>), with the initial views the user confirmed in the Initial Views window first
+    /// (<see cref="InitialViewsPlan"/>: a part gets front, top, right and iso), saves it
     /// under the model's name in the <c>Prints</c> subfolder of the model's folder (created when missing), and leaves it
-    /// open. The file name, the scale and the messages are decided
-    /// in <see cref="PrintPlan"/> (Core); this class reads Inventor and applies the result, by the calls spike 032
+    /// open. The file name and the messages are decided in <see cref="PrintPlan"/> and the views, their positions and the scale in
+    /// <see cref="InitialViewsPlan"/> (both Core); this class reads Inventor and applies the result, by the calls spike 032
     /// confirmed.
     /// </summary>
     /// <remarks>
@@ -34,7 +37,7 @@ namespace InventorAddin.Commands
         public override string InternalName => CommandNames.CreatePrint;
         public override string DisplayName => "Create Print";
         public override string Description =>
-            "Create a drawing of this part or assembly, with a front view, saved in its folder's Prints folder.";
+            "Create a drawing of this part or assembly with the initial views you choose, saved in its folder's Prints folder.";
 
         protected override CommandTypesEnum CommandType => CommandTypesEnum.kFileOperationsCmdType;
 
@@ -84,11 +87,23 @@ namespace InventorAddin.Commands
                 return;
             }
 
-            // The front view's size at scale 1 is the range box's X and Y extents (spike 032).
-            if (!TryReadFrontViewSize(model, kind, out double viewWidthCm, out double viewHeightCm))
+            // The range box (X across, Y up, Z deep: spike 032) and, for sheet metal, the flat pattern's size.
+            InitialViewsModelInfo? info = InitialViewsPlacer.Read(model, kind);
+            if (info == null)
             {
                 AddinServices.Log.Warn($"Create Print stopped: no geometry to show in '{modelPath}'.");
                 Show(PrintPlan.NoGeometryMessage, Forms.MessageBoxIcon.Warning);
+                return;
+            }
+
+            // The user confirms or changes the views before anything is made (task 192); Cancel creates nothing. The views are laid out on
+            // the template's default sheet, the one Create Print makes.
+            var viewModel = new InitialViewsViewModel(
+                info.Kind, info.Box, info.FlatPattern, InitialViewsSetup.DefaultSheet(PrintPlan.PrintUnitsFor(units)));
+            InitialViewsResult? plan = InitialViewsWindow.Ask(viewModel);
+            if (plan == null)
+            {
+                AddinServices.Log.Info("Create Print: cancelled in the Initial Views window; nothing was created.");
                 return;
             }
 
@@ -102,7 +117,7 @@ namespace InventorAddin.Commands
             Forms.Cursor.Current = Forms.Cursors.WaitCursor;
             try
             {
-                Create(model, kind, template, PrintPlan.SheetFormatName(units), printsFolder, drawingPath, viewWidthCm, viewHeightCm, partNumber);
+                Create(model, kind, template, PrintPlan.SheetFormatName(units), printsFolder, drawingPath, plan, partNumber);
             }
             finally
             {
@@ -116,7 +131,7 @@ namespace InventorAddin.Commands
         /// </summary>
         private void Create(
             Document model, DocumentKind kind, string template, string sheetFormatName, string printsFolder, string drawingPath,
-            double viewWidthCm, double viewHeightCm, string? partNumber)
+            InitialViewsResult plan, string? partNumber)
         {
             string step = "creating the drawing from the template";
             Document? drawing = null;
@@ -135,18 +150,16 @@ namespace InventorAddin.Commands
                 // The title block's weight reads "N/A" until the model's mass has been computed; reading it before the
                 // views go on, then updating the drawing, makes it print (spike 183, round 3).
                 step = "reading the model's mass";
-                ReadMass(model, kind);
+                InitialViewsPlacer.ReadMass(model, kind);
 
-                step = "reading the sheet";
-                double scale = PrintPlan.ChooseScale(viewWidthCm, viewHeightCm, sheet.Width, sheet.Height);
-
-                step = "adding the front view";
+                // The views, their positions and the scale come from the confirmed plan (task 192): the scale rule is now Initial Views'
+                // (the share of the usable area, task 189), not the share of the whole sheet.
+                step = "adding the views";
                 Document drawingDoc = drawing;
+                IReadOnlyList<string> placed = Array.Empty<string>();
                 RunInTransaction(drawingDoc, () =>
                 {
-                    var centre = InventorHost.App.TransientGeometry.CreatePoint2d(sheet.Width / 2, sheet.Height / 2);
-                    sheet.DrawingViews.AddBaseView((_Document)model, centre, scale,
-                        ViewOrientationTypeEnum.kFrontViewOrientation, DrawingViewStyleEnum.kHiddenLineDrawingViewStyle);
+                    placed = InitialViewsPlacer.Place(sheet, model, plan);
 
                     if (partNumber != null)
                     {
@@ -166,7 +179,7 @@ namespace InventorAddin.Commands
                 drawing.SaveAs(drawingPath, false);
 
                 AddinServices.Log.Info(
-                    $"Create Print: '{drawingPath}' created from '{template}' (sheet format '{sheetFormatName}') with a front view at scale {scale} " +
+                    $"Create Print: '{drawingPath}' created from '{template}' (sheet format '{sheetFormatName}') with {placed.Count} view(s) ({string.Join("; ", placed)}) at scale {plan.Scale} " +
                     (partNumber != null ? $"and Part Number {partNumber}." : "and no Part Number (the model has no number)."));
             }
             catch (Exception ex)
@@ -210,14 +223,6 @@ namespace InventorAddin.Commands
             foreach (Sheet old in original)
                 old.Delete();
             return added;
-        }
-
-        /// <summary>Reads the model's mass so that the drawing's weight field can resolve (spike 183, round 3). The value is not used.</summary>
-        private static void ReadMass(Document model, DocumentKind kind)
-        {
-            ComSafe.Get(() => (double?)(kind.IsPart()
-                ? ((PartDocument)model).ComponentDefinition.MassProperties.Mass
-                : ((AssemblyDocument)model).ComponentDefinition.MassProperties.Mass));
         }
 
         /// <summary>
@@ -280,29 +285,6 @@ namespace InventorAddin.Commands
             if (!AddinServices.RegisterStore.HasNumber(value))
                 return null;
             return Core.Numbering.PartNumber.Parse(value!).ToString();
-        }
-
-        /// <summary>The X and Y extents of the model's range box in cm; false when it cannot be read or is flat.</summary>
-        private static bool TryReadFrontViewSize(Document model, DocumentKind kind, out double widthCm, out double heightCm)
-        {
-            widthCm = 0;
-            heightCm = 0;
-
-            Box? box = ComSafe.Get(() => kind.IsPart()
-                ? ((PartDocument)model).ComponentDefinition.RangeBox
-                : ((AssemblyDocument)model).ComponentDefinition.RangeBox);
-            if (box == null)
-                return false;
-
-            double? width = ComSafe.Get(() => (double?)(box.MaxPoint.X - box.MinPoint.X));
-            double? height = ComSafe.Get(() => (double?)(box.MaxPoint.Y - box.MinPoint.Y));
-            // A lifted comparison is false for null and NaN.
-            if (!(width > 0) || !(height > 0) || double.IsInfinity(width!.Value) || double.IsInfinity(height!.Value))
-                return false;
-
-            widthCm = width.Value;
-            heightCm = height.Value;
-            return true;
         }
 
         private void OfferToOpen(string drawingPath)

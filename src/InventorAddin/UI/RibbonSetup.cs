@@ -71,6 +71,7 @@ namespace InventorAddin.UI
             yield return new MaterialFinishCommand();
             yield return new AwbHoleCommand();
             yield return new HoleTableCommand();
+            yield return new PlaceInitialViewsCommand();
             yield return new HoleEditFeatureCommand();
             yield return new InventorHoleCommand();
             yield return new UseInventorHoleByDefaultCommand();

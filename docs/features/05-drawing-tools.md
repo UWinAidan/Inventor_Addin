@@ -14,7 +14,7 @@ The reference tool's drawing ribbon has the buttons below. Only the button names
 
 | Command | Where | Behaviour | Confidence |
 |---|---|---|---|
-| Create Drawing | part or assembly | Moved to spec 02 as **Create Print** (Aidan, 2026-10-10): a drawing from the default template with one base view, named and numbered like the model. Placing a full set of initial views stays here | decided |
+| Create Drawing | part or assembly | Moved to spec 02 as **Create Print** (Aidan, 2026-10-10): a drawing from the AWB template with the initial views chosen in the Initial Views window (task 192), named and numbered like the model. Place Initial Views on an existing drawing is also here | decided |
 | Open Drawing | part or assembly | Find and open the drawing that belongs to the active model | likely |
 | Place Initial Views | drawing | Place a standard set of views of the referenced model at a sensible scale | likely |
 | Change Title Block | drawing | Swap the sheet's title block for another from the template's drawing resources | likely |

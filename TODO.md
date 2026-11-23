@@ -112,6 +112,13 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Follow-ups from finished tasks
 
+- Task 192, Place Initial Views:
+  - `PrintPlan.ChooseScale` and its tests are unused now; remove them unless another command wants a single-view scale.
+  - Placed view sizes are not read back, so an iso estimated too small (or an assembly whose range box is much larger than its geometry) can overlap a neighbour.
+  - Only the drawing's first referenced model is used; a non-AWB sheet's border and title block are assumed, not read.
+  - Check on the first prints: the front view is now hidden-line-removed (was hidden lines shown), and the flat pattern lies Length across, Width up.
+  - Spec 02 still says Create Print uses Inventor's `ANSI (mm).idw` / `ANSI (in).idw`; it uses the AWB template since task 188.
+
 - Task 188, Create Print:
   - `Documents.Add` fails while the template is open in Inventor, and the message does not say so; a hint could name the cause.
   - The scale rule still sizes against the whole sheet; move it to the usable area when task 192 wires up the initial views.
