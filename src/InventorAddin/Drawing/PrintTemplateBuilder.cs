@@ -107,6 +107,9 @@ namespace InventorAddin.PrintTemplates
                 Step = "making the parts list and revision table styles";
                 ConfigureTableStyles(standard);
 
+                Step = "setting the period decimal marker on the standard's dimension styles";
+                SetStyleDecimalMarkers(standard.ActiveObjectDefaults);
+
                 Step = "drawing the title block";
                 TitleBlockDefinition titleBlock = DrawTitleBlock(doc, layout);
 
@@ -207,25 +210,39 @@ namespace InventorAddin.PrintTemplates
             copy.FirstAngleProjection = false;
             ComSafe.Run(() => copy.DecimalMarkerType = DecimalMarkerTypeEnum.kPeriodDecimalMarker, _warnings, "Setting the period decimal marker");
             styles.ActiveStandardStyle = copy;
-            SetStyleDecimalMarkers(styles);
             return copy;
         }
 
         /// <summary>
         /// Task 187 set only the standard's marker and a metric dimension still printed "260,00" (Aidan's check): the dimension styles
-        /// and feature control frame styles each carry their own marker (and an alternate-units one), so every one in the drawing is set
-        /// to a period and the result read back into the log. The parts list, revision table and hole table styles have no marker
-        /// member; their numbers follow the standard.
+        /// and feature control frame styles each carry their own marker (and an alternate-units one), so they are set to a period and
+        /// the result read back into the log. Task 223: only the styles the AWB standard's object defaults use are touched. The
+        /// drawing also holds the styles of the other standards (JIS, DIN, GOST ...) and Inventor refuses to change those (E_FAIL, about
+        /// 70 warnings); nothing uses them, so they are left alone and not logged. The parts list, revision table and hole table styles
+        /// have no marker member; their numbers follow the standard.
         /// </summary>
-        private void SetStyleDecimalMarkers(DrawingStylesManager styles)
+        private void SetStyleDecimalMarkers(ObjectDefaultsStyle defaults)
         {
             const DecimalMarkerTypeEnum period = DecimalMarkerTypeEnum.kPeriodDecimalMarker;
             int dimensions = 0, frames = 0, notPeriod = 0;
 
-            foreach (DimensionStyle style in styles.DimensionStyles.Cast<DimensionStyle>().ToList())
+            // Every DimensionStyle member of ObjectDefaultsStyle (confirmed by reflection on the interop DLL); a style two members share is set once.
+            var dimensionStyles = new List<Func<DimensionStyle>>
             {
-                DimensionStyle s = style;
-                string? name = ComSafe.Get(() => s.Name);
+                () => defaults.AngularDimensionStyle, () => defaults.BaselineDimensionStyle, () => defaults.BendNoteStyle,
+                () => defaults.BendTagStyle, () => defaults.ChainDimensionStyle, () => defaults.ChamferNoteStyle,
+                () => defaults.DiameterDimensionStyle, () => defaults.HoleNoteStyle, () => defaults.HoleTagStyle,
+                () => defaults.LeaderTextStyle, () => defaults.LinearDimensionStyle, () => defaults.OrdinateDimensionStyle,
+                () => defaults.OrdinateSetDimensionStyle, () => defaults.PunchNoteStyle, () => defaults.RadialDimensionStyle,
+                () => defaults.ThreadNoteStyle,
+            };
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var get in dimensionStyles)
+            {
+                DimensionStyle? s = ComSafe.Get(get);
+                string? name = s == null ? null : ComSafe.Get(() => s.Name);
+                if (s == null || name == null || !seen.Add(name))
+                    continue;
                 ComSafe.Run(() => s.DecimalMarkerType = period, _warnings, $"Setting the decimal marker of dimension style '{name}'");
                 ComSafe.Run(() => s.AlternateDecimalMarkerType = period, _warnings, $"Setting the alternate decimal marker of dimension style '{name}'");
                 dimensions++;
@@ -233,18 +250,18 @@ namespace InventorAddin.PrintTemplates
                     notPeriod++;
             }
 
-            foreach (FeatureControlFrameStyle style in styles.FeatureControlFrameStyles.Cast<FeatureControlFrameStyle>().ToList())
+            FeatureControlFrameStyle? frame = ComSafe.Get(() => defaults.FeatureControlFrameStyle);
+            string? frameName = frame == null ? null : ComSafe.Get(() => frame.Name);
+            if (frame != null)
             {
-                FeatureControlFrameStyle s = style;
-                string? name = ComSafe.Get(() => s.Name);
-                ComSafe.Run(() => s.DecimalMarkerType = period, _warnings, $"Setting the decimal marker of feature control frame style '{name}'");
-                ComSafe.Run(() => s.AlternateDecimalMarkerType = period, _warnings, $"Setting the alternate decimal marker of feature control frame style '{name}'");
+                ComSafe.Run(() => frame.DecimalMarkerType = period, _warnings, $"Setting the decimal marker of feature control frame style '{frameName}'");
+                ComSafe.Run(() => frame.AlternateDecimalMarkerType = period, _warnings, $"Setting the alternate decimal marker of feature control frame style '{frameName}'");
                 frames++;
-                if (ComSafe.Get(() => (DecimalMarkerTypeEnum?)s.DecimalMarkerType) != period)
+                if (ComSafe.Get(() => (DecimalMarkerTypeEnum?)frame.DecimalMarkerType) != period)
                     notPeriod++;
             }
 
-            _log.Info($"Build Print Template: decimal marker set to a period on {dimensions} dimension style(s) and {frames} feature control frame style(s); {notPeriod} did not read back as a period.");
+            _log.Info($"Build Print Template: decimal marker set to a period on {dimensions} dimension style(s) and {frames} feature control frame style(s) the standard uses; {notPeriod} did not read back as a period.");
             if (notPeriod > 0)
                 _warnings.Add($"{notPeriod} style(s) did not read back with a period decimal marker.");
         }
@@ -395,7 +412,13 @@ namespace InventorAddin.PrintTemplates
             // placeholder keeps the centring close to the real value's.
             string placeholder = centre ? "A" : (cell.Label ?? cell.Name);
             string content = FieldContent(cell.Field!.Value, layout, placeholder);
-            AddText(sketch, content, cell.ValueSizeMm, cell.Bold, cell.ValueXMm, cell.ValueBaselineYMm, centre, false, $"value of '{cell.Name}'", cell, null, placeholder);
+            // The range box of a field's text measures the property's name (REV: "REVISION NUMBER", 80 mm; SHEET: "Sheet Number OF
+            // Number of sheets"), not what prints, so it says nothing about the cell (task 223). The cell is checked against a typical
+            // value in Core instead.
+            AddText(sketch, content, cell.ValueSizeMm, cell.Bold, cell.ValueXMm, cell.ValueBaselineYMm, centre, false, $"value of '{cell.Name}'");
+            double over = PrintTemplateLayout.SampleOverflowMm(cell);
+            if (over > 0.1)
+                _warnings.Add($"A typical value ('{PrintTemplateLayout.SampleValue(cell.Field!.Value)}') of '{cell.Name}' extends past its cell by {over:0.##} mm.");
         }
 
         /// <summary>
@@ -447,7 +470,7 @@ namespace InventorAddin.PrintTemplates
         /// </summary>
         private TextBox AddText(
             DrawingSketch sketch, string content, double sizeMm, bool bold, double xMm, double yMm, bool centre, bool rotated, string what,
-            TitleBlockCell? bounds = null, string? exactText = null, string? placeholderText = null)
+            TitleBlockCell? bounds = null, string? exactText = null)
         {
             // The layout's size is the em (the mockup's font-size); Inventor's FontSize override is the cap height (task 215), so convert.
             double fontSizeCm = Cm(sizeMm * PrintTextFit.CapHeightEm);
@@ -472,7 +495,7 @@ namespace InventorAddin.PrintTemplates
             }, _warnings, $"Placing {what}");
 
             if (!rotated)
-                MeasureText(box, what, sizeMm, bold, bounds, exactText, placeholderText);
+                MeasureText(box, what, sizeMm, bold, bounds, exactText);
             return box;
         }
 
@@ -481,7 +504,7 @@ namespace InventorAddin.PrintTemplates
         /// coordinates), and for text whose content is plain (labels, fixed text) records the width against <see cref="PrintTextFit.WidthMm"/>
         /// so the log shows whether FontSize really is the cap height (ratio near 1).
         /// </summary>
-        private void MeasureText(TextBox box, string what, double sizeMm, bool bold, TitleBlockCell? cell, string? exactText, string? placeholderText)
+        private void MeasureText(TextBox box, string what, double sizeMm, bool bold, TitleBlockCell? cell, string? exactText)
         {
             Box2d? range = ComSafe.Get(() => box.RangeBox);
             if (range == null)
@@ -507,8 +530,7 @@ namespace InventorAddin.PrintTemplates
             if (maxY > cell.TopMm + tolerance) past.Add($"top by {maxY - cell.TopMm:0.##}");
             if (past.Count > 0)
             {
-                string note = placeholderText != null ? $" (measured with the placeholder '{placeholderText}'; a longer real value may reach further)" : string.Empty;
-                _warnings.Add($"The {what} extends past its cell '{cell.Name}' {string.Join(", ", past)} mm{note}.");
+                _warnings.Add($"The {what} extends past its cell '{cell.Name}' {string.Join(", ", past)} mm.");
             }
         }
 

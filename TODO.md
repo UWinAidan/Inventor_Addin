@@ -112,6 +112,12 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Follow-ups from finished tasks
 
+- Task 223, title block (check on Aidan's next rebuild, with a part of non-zero mass, metric and imperial):
+  - WEIGHT sitting higher than DATE is not explained by the layout (same size, same origin); likely how Inventor lays out the mass field. If still off after the rebuild, investigate on a real drawing.
+  - The decimal marker log line should list about 17 styles, ending "0 did not read back as a period"; a comma on the metric dimension means the style in use is not the one the object defaults reference.
+  - Field values are no longer checked for vertical overflow (only labels are); could be restored for the vertical edges.
+  - Task 218's shrinking must keep every value in a row the same size, or the baselines drift again (the 2.5 mm Status beside the 7 mm part number has the same dependence).
+
 - Task 193, Open Drawing:
   - Create Print's "A print already exists. Open it?" now overlaps Open Drawing; Aidan may want Create Print to just open the print.
   - When Create Print fails after Open Drawing's Yes, the message and log say "Open Drawing failed".

@@ -277,6 +277,10 @@ public sealed class PrintTemplateLayout
     public const double ToleranceDividerGapMm = 2;
     /// <summary>Distance between the edge note's baselines when it wraps.</summary>
     public const double EdgeNoteLineSpacingMm = 2;
+    /// <summary>The edge note's first baseline, measured down from the top of the tolerance box (the box is 22 mm high). Task 223: the 19.0 mm of task 215 left about 1 mm above the note's capitals, and Inventor's text sits higher than the nominal baseline, so the last tolerance line touched it.</summary>
+    public const double EdgeNoteBaselineDownMm = 20.4;
+    /// <summary>The least clear space between the last tolerance line's baseline and the top of the edge note's capitals.</summary>
+    public const double ToleranceEdgeNoteMinGapMm = 2;
 
     /// <summary>Outline weight as drawn in the mockup (0.7). A reviewer remembered 0.35; task 187 confirms the real weight against the mockup.</summary>
     public const double OutlineWeightMm = 0.7;
@@ -338,6 +342,42 @@ public sealed class PrintTemplateLayout
 
     private static readonly string[] AllToleranceClasses = { "X", "X.X", "X.XX", ".X", ".XX", ".XXX" };
     private static readonly string[] AllToleranceValues = { "±0.5", "±0.2", "±0.05", "±.03", "±.01", "±.005" };
+
+    /// <summary>
+    /// A typical printed value for a field cell (invented, not real data): what the cell has to hold. The builder cannot measure the
+    /// printed value (a field's text box measures its property name, not its result), so it checks this against the cell instead.
+    /// </summary>
+    public static string SampleValue(PrintField field) => field switch
+    {
+        PrintField.PartNumber => "AWB-12345",
+        PrintField.Description => "BRACKET, MOUNTING, LEFT",
+        PrintField.Revision => "A",
+        PrintField.Status => "Work in Process",
+        PrintField.Material => "Steel, Mild",
+        PrintField.MaterialSize => "50 x 50 x 300",
+        PrintField.FinishSpec => "Zinc plated",
+        PrintField.Designer => "A. SMITH",
+        PrintField.DrawingAuthor => "A. SMITH",
+        PrintField.DrawingCreationDate => "2026-11-22",
+        PrintField.Mass => "123.45 kg",
+        PrintField.Scale => "1:10",
+        PrintField.SheetNumberOfCount => "10 OF 10",
+        PrintField.Units => "MM",
+        PrintField.SheetSize => "A3",
+        PrintField.Project => "PROJECT-0001",
+        PrintField.FileName => "AWB-12345.ipt",
+        _ => "",
+    };
+
+    /// <summary>How far the sample value of a field cell reaches past its cell, in millimetres (0 when it fits, with no padding).</summary>
+    public static double SampleOverflowMm(TitleBlockCell cell)
+    {
+        if (cell.Field is not { } field)
+            return 0;
+        double w = PrintTextFit.WidthMm(SampleValue(field), cell.ValueSizeMm, cell.Bold);
+        double left = cell.ValueAnchor == TextAnchor.Centre ? cell.ValueXMm - w / 2 : cell.ValueXMm;
+        return Math.Max(0, Math.Max(cell.XMm - left, left + w - cell.RightMm));
+    }
 
     public static TriadSpec Triad { get; } = new(5, 5, 11, 13, 1, 3);
 
@@ -413,7 +453,7 @@ public sealed class PrintTemplateLayout
 
         // Field cells: the mockup's x, y (down from the top of the block), w, h.
         void Field(string name, double x, double yDown, double w, double h, string label, PrintField field, double size,
-            bool bold = false, bool centre = false, bool inline = false, double? baselineSize = null)
+            bool bold = false, bool centre = false, bool inline = false)
         {
             double labelX = x + 1, labelBase, valueX, valueBase;
             if (inline)
@@ -424,12 +464,12 @@ public sealed class PrintTemplateLayout
             }
             else
             {
-                // Values in one row of cells share a baseline: baselineSize names the row's size (the Material row is 2.8 mm
-                // whatever its Material Size cell's own size).
-                double rowSize = baselineSize ?? size;
+                // Values in one row of cells share a baseline. Inventor sets the text's bottom edge at the point and the baseline
+                // sits a font-size-dependent distance above it, so values of different sizes do not share a baseline however
+                // equal their y. Every value in an 8 mm row is therefore the same size (task 223).
                 labelBase = Baseline(yDown + 2.4);
                 valueX = centre ? x + w / 2 : x + 1.5;
-                valueBase = Baseline(yDown + h - (h - 2.6 - rowSize) / 2 - 0.6);
+                valueBase = Baseline(yDown + h - (h - 2.6 - size) / 2 - 0.6);
             }
             cells.Add(new TitleBlockCell(name, x, FromTop(yDown, h), w, h, label, field, null, size, bold,
                 centre ? TextAnchor.Centre : TextAnchor.Start, inline, labelX, labelBase, valueX, valueBase));
@@ -442,7 +482,7 @@ public sealed class PrintTemplateLayout
         Field("Revision", 136, 17, 16, 14, "REV", PrintField.Revision, PartNumberSizeMm, bold: true, centre: true);
         Field("Status", 152, 17, 28, 14, "STATUS", PrintField.Status, SmallFieldSizeMm);
         Field("Material", 65, 31, 40, 8, "MATERIAL", PrintField.Material, ValueSizeMm);
-        Field("MaterialSize", 105, 31, 30, 8, "MATERIAL SIZE", PrintField.MaterialSize, SmallFieldSizeMm, baselineSize: ValueSizeMm);
+        Field("MaterialSize", 105, 31, 30, 8, "MATERIAL SIZE", PrintField.MaterialSize, ValueSizeMm);
         Field("Finish", 135, 31, 45, 8, "FINISH", PrintField.FinishSpec, ValueSizeMm);
         Field("Designer", 65, 39, 28.75, 8, "DESIGNER", PrintField.Designer, ValueSizeMm);
         Field("Detailer", 93.75, 39, 28.75, 8, "DETAILER", PrintField.DrawingAuthor, ValueSizeMm);
@@ -492,7 +532,7 @@ public sealed class PrintTemplateLayout
         double noteWidth = LeftSectionWidthMm - boxX - ToleranceBoxPaddingMm;
         var noteLines = PrintTextFit.Wrap(EdgeNote, LabelSizeMm, noteWidth);
         for (int i = 0; i < noteLines.Count; i++)
-            texts.Add(T(noteLines[i], boxX, 19.0 + i * EdgeNoteLineSpacingMm, LabelSizeMm));
+            texts.Add(T(noteLines[i], boxX, EdgeNoteBaselineDownMm + i * EdgeNoteLineSpacingMm, LabelSizeMm));
         // Projection and URL cells.
         texts.Add(new TitleBlockText(ProjectionCellName, ThirdAngleText, 1, Baseline(TopRowHeightMm + 24.4), LabelSizeMm, false, true, TextAnchor.Start));
         texts.Add(new TitleBlockText(UrlCellName, Branding.WebsiteUrl, LeftSectionWidthMm / 2, Baseline(TopRowHeightMm + 47), ValueSizeMm, false, false, TextAnchor.Centre));

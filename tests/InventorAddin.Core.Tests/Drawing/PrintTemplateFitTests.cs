@@ -15,7 +15,7 @@ public sealed class PrintTemplateFitTests
     [Fact]
     public void TextSizesAreTheMockups()
     {
-        // docs/ui-mockups/title-block.html: labels 1.8, values 2.8 (project, file name, status, material size 2.5),
+        // docs/ui-mockups/title-block.html: labels 1.8, values 2.8 (project, file name, status 2.5; material size 2.8 since task 223),
         // description 4, part number and revision 7 bold; tolerance heading and note 1.8, units line 2.5 bold, columns 2.4.
         Assert.Equal(1.8, PrintTemplateLayout.LabelSizeMm);
         Assert.Equal(2.8, PrintTemplateLayout.ValueSizeMm);
@@ -23,7 +23,7 @@ public sealed class PrintTemplateFitTests
         Assert.Equal(4, PrintTemplateLayout.DescriptionSizeMm);
         Assert.Equal(7, PrintTemplateLayout.PartNumberSizeMm);
         var cells = PrintTemplateLayout.Metric.Cells.Where(c => c.Field != null).ToDictionary(c => c.Name);
-        foreach (var name in new[] { "Material", "Finish", "Designer", "Detailer", "Date", "Weight", "Scale", "Sheet", "Units", "Size" })
+        foreach (var name in new[] { "Material", "MaterialSize", "Finish", "Designer", "Detailer", "Date", "Weight", "Scale", "Sheet", "Units", "Size" })
             Assert.Equal(2.8, cells[name].ValueSizeMm);
         foreach (var layout in Both())
         {
@@ -103,7 +103,7 @@ public sealed class PrintTemplateFitTests
         var fields = PrintTemplateLayout.For(units).Cells.Where(c => c.Field != null && !c.Inline).ToList();
         foreach (var row in fields.GroupBy(c => Math.Round(c.YMm, 6)))
             Assert.Single(row.Select(c => Math.Round(c.LabelBaselineYMm, 6)).Distinct());
-        // The 2.5 mm Material Size shares the Material row's baseline. (The tall part number row keeps the mockup's lower 2.5 mm status.)
+        // (The tall part number row keeps the mockup's lower 2.5 mm status.)
         foreach (var row in fields.Where(c => c.HeightMm == 8).GroupBy(c => Math.Round(c.YMm, 6)))
             Assert.Single(row.Select(c => Math.Round(c.ValueBaselineYMm, 6)).Distinct());
     }
@@ -179,5 +179,55 @@ public sealed class PrintTemplateFitTests
         Assert.All(lines, l => Assert.True(PrintTextFit.WidthMm(l, 1.8) <= half || !l.Contains(' ')));
         Assert.Equal(new[] { "ABCDEFGH" }, PrintTextFit.Wrap("ABCDEFGH", 2, 1));
         Assert.Empty(PrintTextFit.Wrap(string.Empty, 2, 10));
+    }
+
+    [Theory]
+    [MemberData(nameof(BothUnits))]
+    public void EveryValueInAnEightMmRowHasTheSameSizeAndBaseline(PrintUnits units)
+    {
+        // Inventor puts a text's bottom edge at its point; the baseline sits a size-dependent distance above that, so values of
+        // different sizes in one row would print on different baselines (task 223: Material Size sat lower than Material).
+        var rows = PrintTemplateLayout.For(units).Cells
+            .Where(c => c.Field != null && !c.Inline && c.HeightMm == 8)
+            .GroupBy(c => Math.Round(c.YMm, 6)).ToList();
+        Assert.Equal(3, rows.Count);
+        foreach (var row in rows)
+        {
+            Assert.Single(row.Select(c => Math.Round(c.ValueSizeMm, 6)).Distinct());
+            Assert.Single(row.Select(c => Math.Round(c.ValueBaselineYMm, 6)).Distinct());
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(BothUnits))]
+    public void TheLastToleranceLineClearsTheEdgeNote(PrintUnits units)
+    {
+        var tol = PrintTemplateLayout.For(units).Texts.Where(t => t.CellName == Tol).ToList();
+        var note = tol.Where(t => t.SizeMm == PrintTemplateLayout.LabelSizeMm && PrintTemplateLayout.EdgeNote.Contains(t.Text)).ToList();
+        var lastLine = tol.Where(t => t.SizeMm == PrintTemplateLayout.ToleranceTextSizeMm).Min(t => t.BaselineYMm);
+        double noteTop = note.Max(t => t.BaselineYMm) + PrintTextFit.CapHeightMm(PrintTemplateLayout.LabelSizeMm);
+        Assert.True(lastLine - noteTop >= PrintTemplateLayout.ToleranceEdgeNoteMinGapMm - Eps,
+            $"gap {lastLine - noteTop:0.00} mm");
+        // Nothing leaves the box.
+        var box = PrintTemplateLayout.For(units).Cells.Single(c => c.Name == Tol);
+        Assert.All(tol, t => Assert.True(t.BaselineYMm >= box.YMm + 0.5 - Eps, t.Text));
+    }
+
+    [Theory]
+    [MemberData(nameof(BothUnits))]
+    public void ASampleValueFitsEveryFieldCell(PrintUnits units)
+    {
+        foreach (var cell in PrintTemplateLayout.For(units).Cells.Where(c => c.Field != null))
+        {
+            Assert.NotEmpty(PrintTemplateLayout.SampleValue(cell.Field!.Value));
+            Assert.Equal(0, PrintTemplateLayout.SampleOverflowMm(cell));
+        }
+    }
+
+    [Fact]
+    public void SampleOverflowSeesAValueTooWideForItsCell()
+    {
+        var narrow = PrintTemplateLayout.Metric.Cells.Single(c => c.Name == "Description") with { WidthMm = 20 };
+        Assert.True(PrintTemplateLayout.SampleOverflowMm(narrow) > 5);
     }
 }

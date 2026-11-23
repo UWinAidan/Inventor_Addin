@@ -238,7 +238,7 @@ public sealed class PrintTemplateLayoutTests
         Assert.Equal(2.5, cells["Status"].ValueSizeMm);
         Assert.Equal(2.5, cells["Project"].ValueSizeMm);
         Assert.Equal(2.5, cells["FileName"].ValueSizeMm);
-        Assert.Equal(2.5, cells["MaterialSize"].ValueSizeMm);
+        Assert.Equal(2.8, cells["MaterialSize"].ValueSizeMm); // task 223: same size as the row, so the baseline matches
         Assert.Equal(2.8, cells["Material"].ValueSizeMm);
         Assert.Equal("MATERIAL SIZE", cells["MaterialSize"].Label);
         Assert.Equal(1.8, PrintTemplateLayout.LabelSizeMm);
