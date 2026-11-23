@@ -610,7 +610,7 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [x] 215 Print template layout fixes from the first build
 - [x] 216 Print template builder fixes and rebuild (Windows, Aidan runs it)
 - [x] 217 Finish print name and Finish Spec backfill
-- [ ] 218 Spike: fitting long title block values (Windows)
+- [x] 218 Spike: fitting long title block values (Windows)
 - [x] 219 Revision and Status filled in automatically
 - [x] 220 Hole tables stay on the sheet
 - [x] 221 Settings template labels
@@ -629,6 +629,8 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [ ] 234 Initial Views: live sheet preview
 - [ ] 235 Create Print opens an existing print without asking (Aidan, 2026-11-23)
 - [ ] 236 Create Print replaces a Windows login Designer (Aidan, 2026-11-23)
+- [ ] 237 Title block values sit on their baseline whatever the letters
+- [ ] 238 Fit long title block values to their cells
 
 **Check**
 - [ ] 209 M5 combined Inventor check

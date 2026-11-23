@@ -116,3 +116,5 @@ Each command is a thin read, call Core, apply. Creating drawings and placing vie
     Spike 183 round 4 (2026-11-22): (a) works, so (a) is built (task 222).
 29. The lb mass prints as "9.55 lbmass" (Inventor's own unit text, spike 183 round 4). Is that acceptable, or should the imperial print show "LB"? Getting "LB" needs another way, for example a Mass text property as in question 28 (b) for imperial parts only. Default until answered: "lbmass" stays.
     Answered by Aidan 2026-11-23: "lbmass" is not acceptable. First try making the mass field print "lb" (spike 225); if Inventor cannot, use option (b): a "Mass" text property ("9.55 lb" / "4.33 kg", 2 decimals) refreshed automatically when the part is saved, printed by the template (task 222).
+30. Long title block values (spike 218): a value longer than its cell is narrowed with Inventor's text width scale on each drawing (task 238). What is the narrowest you accept? Default: 0.6 of normal width.
+31. Below that floor: only warn, or also wrap Description onto two lines? Default: warn only.
