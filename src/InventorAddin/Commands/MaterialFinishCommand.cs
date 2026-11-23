@@ -243,7 +243,7 @@ namespace InventorAddin.Commands
 
                 // Names only: a value is not logged.
                 foreach (var (part, writes) in pending)
-                    log.Info($"{MaterialFinishTargeting.LogPrefix}Filled in {string.Join(", ", writes.Select(w => w.Location.PropertyName))} on {part.Name}.");
+                    log.Info($"{MaterialFinishTargeting.LogPrefix}{PrintPropertyBackfill.Describe(writes)} on {part.Name}.");
             }
             catch (Exception ex)
             {

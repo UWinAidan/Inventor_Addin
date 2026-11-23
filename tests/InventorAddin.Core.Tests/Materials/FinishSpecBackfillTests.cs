@@ -89,6 +89,67 @@ public sealed class FinishSpecBackfillTests
         Assert.Null(FinishSpecBackfill.For("Test finish", "0.013-0.025 mm", "MY OWN SPEC", [Finish()], PrintUnits.Metric));
     }
 
+    private static Finish Long() => Finish("Test finish, long wording", "TEST, MID");
+
+    [Theory]
+    [InlineData("Test finish, long wording, 13-25 µm", PrintUnits.Metric, "TEST, MID, 13-25 µm")]
+    [InlineData("Test finish, long wording, .0005-.0010 IN", PrintUnits.Metric, "TEST, MID, 13-25 µm")]
+    [InlineData("Test finish, long wording, 13-25 µm", PrintUnits.Imperial, "TEST, MID, .0005-.0010 IN")]
+    [InlineData("Test finish, long wording", PrintUnits.Metric, "TEST, MID, 13-25 µm")]
+    public void OldLongNameSpec_IsRefreshed(string stored, PrintUnits units, string expected)
+    {
+        var write = FinishSpecBackfill.For("Test finish, long wording", null, stored, [Long()], units);
+
+        Assert.NotNull(write);
+        Assert.Equal(expected, write!.TextValue);
+        Assert.True(write.IsRefresh);
+    }
+
+    [Fact]
+    public void OldLongNameSpec_NoThickness_IsRefreshedToPrintNameAlone()
+    {
+        var finish = Finish("Test finish, long wording", "TEST, MID", min: "0", max: "0");
+
+        var write = FinishSpecBackfill.For("Test finish, long wording", null, "Test finish, long wording", [finish], PrintUnits.Metric);
+
+        Assert.Equal("TEST, MID", write!.TextValue);
+    }
+
+    [Fact]
+    public void CurrentSpec_IsLeft()
+    {
+        Assert.Null(FinishSpecBackfill.For("Test finish, long wording", null, "TEST, MID, 13-25 µm", [Long()], PrintUnits.Metric));
+    }
+
+    [Fact]
+    public void HandWrittenSpec_IsLeft()
+    {
+        Assert.Null(FinishSpecBackfill.For("Test finish, long wording", null, "Test finish, long wording, ZINC", [Long()], PrintUnits.Metric));
+    }
+
+    [Fact]
+    public void FinishWithNoPrintName_LongSpecIsLeft()
+    {
+        Assert.Null(FinishSpecBackfill.For("Test finish", null, "Test finish, 13-25 µm", [Finish()], PrintUnits.Metric));
+    }
+
+    [Fact]
+    public void OldLongNameSpec_FinishNotInList_IsLeft()
+    {
+        Assert.Null(FinishSpecBackfill.For("Other coat", null, "Test finish, long wording, 13-25 µm", [Long()], PrintUnits.Metric));
+    }
+
+    [Fact]
+    public void Describe_SaysFilledAndRefreshed()
+    {
+        var fill = PropertyWrite.SetText(PartPropertyStorage.RevisionNumber, "A");
+        var refresh = Spec("X") with { IsRefresh = true };
+
+        Assert.Equal("Filled in Revision Number; Finish Spec refreshed",
+            InventorAddin.Core.Materials.PrintPropertyBackfill.Describe([refresh, fill]));
+        Assert.Equal("Finish Spec refreshed", InventorAddin.Core.Materials.PrintPropertyBackfill.Describe([refresh]));
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]

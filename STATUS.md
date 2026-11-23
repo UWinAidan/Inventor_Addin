@@ -6,27 +6,28 @@ Last updated: 2026-11-22
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-22 19:21. Branch `claude/m5-drawing-tools`, latest commit `65b3d4b` (pushed).
+- Updated: 2026-11-23 08:56. Branch `claude/m5-drawing-tools`, latest commit `4f276cf` (pushed).
 - Goal: M5 tasks in chunks: implementer, then reviewer, one commit per task, push. Stop after each chunk with a summary, Defaults and an Inventor checklist. Nothing from work prints goes in the repo (ADDIN_PICS is gitignored).
-- Done this session:
-  - Property names New Part writes confirmed in Inventor ("Design Status" id 40 int, "User Status" 17, "Revision Number" 9). Spike 183 round 4: an imperial part's own lb mass unit prints "9.55 lbmass" (`383420f`); task 222 planned; spec 05 question 29 ("lbmass" vs "LB") added with a Default.
-  - 188 Create Print uses the AWB template (`5ed3772`). 192 Place Initial Views (`79b8dde`; round 2's one fix was made by the parent, not re-reviewed).
-  - Aidan's template rebuild check: width ratio 1.00, FILE NAME, STATUS and metric period pass; 216 done. Tasks 223 (title block fixes) and 224 (refresh an old Finish Spec) planned (`65b3d4b`).
-- In progress: task 193 (Open Drawing) is with an implementer agent; its uncommitted changes are in the working tree (PrintPlan, Ribbon files, CreatePrintCommand, RibbonSetup, tests). If the agent is gone, review the diff against `docs/tasks/193-open-drawing.md` with a reviewer, then commit.
-- State: last build 0 errors; Core tests 5305 passed (after 192). `libraries/Templates/*.idw` untracked: commit only after the rebuild after 223 passes, then mark 187 done.
+- Done (chunk 2 so far): spike 183 round 4 and task 222 planned (`383420f`); 188 Create Print uses the AWB template (`5ed3772`); 192 Place Initial Views (`79b8dde`); 216 done and tasks 223, 224 planned (`65b3d4b`); 193 Open Drawing (`9d9a79c`); 223 title block fixes (`4f276cf`). Each task's Defaults are in DECISIONS.md (2026-11-22/23) and its follow-ups in TODO.md.
+- In progress: task 224 (refresh an old Finish Spec) is implemented, uncommitted in the tree (FinishSpecBackfill, PropertyWrite.IsRefresh, PrintPropertyBackfill.Describe, MaterialFinishCommand, CreatePrintCommand, InventorNewDocument, FinishSpecBackfillTests, task file). A reviewer agent was checking it. If it is gone, review the diff against `docs/tasks/224-refresh-an-old-finish-spec.md`, then commit. Implementer Defaults to log: print name equal to name never refreshed; exact match; Mass Update shows the refresh in the log only (its plan has no backfill lines).
+- State: last build 0 errors; Core tests 5325 passed (with 224). Nothing from 188, 192, 193, 223 or 224 has been run in Inventor.
+- Waiting on Aidan:
+  1. Rebuild both templates (developer button) and check task 223's checklist: decimal marker log line (about 17 styles, "0 did not read back as a period"), no REV/SHEET overflow warnings, tolerance gap, MATERIAL SIZE level with MATERIAL, WEIGHT vs DATE (not fixed; layout does not explain it). On a pass, commit `libraries/Templates/*.idw` and mark 187 done.
+  2. Answers: spec 05 question 29 ("lbmass" or "LB"); whether Create Print should just open an existing print (overlaps Open Drawing, task 193 follow-up).
+  3. OK to run spike 218 (long title block values) in Inventor.
 - Next:
-  1. Review and commit 193.
-  2. 223 (Windows build; then Aidan rebuilds both templates), 224 (Core backfill).
-  3. Chunk 2 summary: Defaults logged since 188 (DECISIONS 2026-11-22 rows for 188, 192, 222, 224) and an Inventor checklist from the 188, 192, 193 task files.
-  4. Then 222; spike 218 needs Aidan's OK and Inventor; later 194 to 208, 212.
+  1. Finish 224 (review, commit, push).
+  2. Chunk 2 summary for Aidan: tasks 188, 192, 193, 223, 224; their Defaults; an Inventor checklist from those task files' Verification sections.
+  3. Then 222 (lb mass), spike 218 with OK, later 194 to 208, 212.
 - Gotchas:
   - Flaky tests: NewPartCreator, Numbering, RegisterStore, RenamePlan probe timeout; rerun.
   - Build with `-p:DeployToInventor=false` while Inventor is open.
-  - Write .py helper files with the Write tool into the job tmp folder; bash heredocs with quotes fail.
+  - Write .py helpers with the Write tool into the job tmp folder; bash heredocs with quotes fail.
   - A mass unit change does not set `Document.Dirty`; set it before `Save()`.
   - `Documents.Add` fails while the template .idw is open in Inventor.
-  - Commit only your own paths while an agent has uncommitted work in the tree.
-- Read first: `docs/WORKFLOW.md`, `docs/PLAN.md` M5, tasks 193, 223, 224, 222, DECISIONS rows dated 2026-11-22, TODO.md follow-ups.
+  - A field text box's range box measures the property name, not the printed value (task 223).
+  - Agents can stop at the session limit; resume them with SendMessage.
+- Read first: `docs/WORKFLOW.md`, `docs/PLAN.md` M5, tasks 224, 223, 222, DECISIONS rows dated 2026-11-22/23, TODO.md follow-ups.
 
 ## Big items
 

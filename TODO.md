@@ -112,6 +112,11 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Follow-ups from finished tasks
 
+- Task 224, Finish Spec refresh:
+  - A spec in task 211's first format ("(long name), 0.013-0.025 mm", written before task 213 the same day) is not recognised and is left as hand-written. Add that form if Aidan has such parts.
+  - Mass Update refreshes only files it opens to change (a ticked change, for example a rename), as in task 217.
+  - Doc comments slightly stale: `MaterialFinishCommand.BackfillFinishSpecs` ("Fills in a missing Finish Spec") and the first sentence of `FinishSpecBackfill.For`.
+
 - Task 223, title block (check on Aidan's next rebuild, with a part of non-zero mass, metric and imperial):
   - WEIGHT sitting higher than DATE is not explained by the layout (same size, same origin); likely how Inventor lays out the mass field. If still off after the rebuild, investigate on a real drawing.
   - The decimal marker log line should list about 17 styles, ending "0 did not read back as a period"; a comma on the metric dimension means the style in use is not the one the object defaults reference.

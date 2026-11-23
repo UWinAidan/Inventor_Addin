@@ -257,8 +257,7 @@ namespace InventorAddin.Commands
                 RunInTransaction(model, () => PropertyWriter.Apply(model, writes));
 
                 // Names only: a value is not logged.
-                string names = string.Join(", ", writes.Select(w => w.Location.PropertyName));
-                AddinServices.Log.Info($"Create Print: filled in {names} on '{ComSafe.Get(() => model.DisplayName)}'.");
+                AddinServices.Log.Info($"Create Print: {PrintPropertyBackfill.Describe(writes)} on '{ComSafe.Get(() => model.DisplayName)}'.");
             }
             catch (Exception ex)
             {

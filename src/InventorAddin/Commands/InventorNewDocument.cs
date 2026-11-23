@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Inventor;
+using InventorAddin.Core.Materials;
 using InventorAddin.Core.Numbering;
 using InventorAddin.Core.Numbering.MassUpdate;
 using InventorAddin.Core.PartProperties;
@@ -49,7 +50,7 @@ namespace InventorAddin.Commands
                     all.AddRange(extra);
                     writes = all;
                     AddinServices.Log.Info(
-                        $"{_commandName}: filled in {string.Join(", ", System.Linq.Enumerable.Select(extra, w => w.Location.PropertyName))} on '{ComSafe.Get(() => _doc.DisplayName)}'.");
+                        $"{_commandName}: {PrintPropertyBackfill.Describe(extra)} on '{ComSafe.Get(() => _doc.DisplayName)}'.");
                 }
 
                 PropertyWriter.Apply(_doc, writes);

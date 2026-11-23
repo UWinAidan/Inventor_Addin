@@ -11,6 +11,26 @@ namespace InventorAddin.Core.Materials;
 public static class PrintPropertyBackfill
 {
     /// <summary>
+    /// The log wording for backfill writes, property names only (a value is never logged): <c>Filled in Revision Number,
+    /// Status</c>, <c>Finish Spec refreshed</c>, or both joined with <c>; </c>, filled first (task 224).
+    /// </summary>
+    public static string Describe(IEnumerable<PropertyWrite> writes)
+    {
+        ArgumentNullException.ThrowIfNull(writes);
+
+        var list = writes.ToList();
+        var parts = new List<string>();
+        var filled = list.Where(w => !w.IsRefresh).Select(w => w.Location.PropertyName).ToList();
+        if (filled.Count > 0)
+        {
+            parts.Add("Filled in " + string.Join(", ", filled));
+        }
+
+        parts.AddRange(list.Where(w => w.IsRefresh).Select(w => w.Location.PropertyName + " refreshed"));
+        return string.Join("; ", parts);
+    }
+
+    /// <summary>
     /// The writes a part needs, in this order, each left out when its value is already set: Finish Spec (see
     /// <see cref="FinishSpecBackfill.For"/>); Revision Number "A" when blank; then Status. A Design Status of 0 (not
     /// set) is written as Work In Progress. A blank User Status is written as the words for the part's Design Status

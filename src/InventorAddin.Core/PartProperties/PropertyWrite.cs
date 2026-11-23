@@ -26,6 +26,12 @@ public sealed record PropertyWrite
         IntegerValue = integerValue;
     }
 
+    /// <summary>
+    /// True when this write replaces text the add-in wrote earlier (a refreshed Finish Spec, task 224) rather than
+    /// filling a blank. Only the logs read it.
+    /// </summary>
+    public bool IsRefresh { get; init; }
+
     /// <summary>The value to write, for a Set of an Integer property; null otherwise.</summary>
     public int? IntegerValue { get; }
 
