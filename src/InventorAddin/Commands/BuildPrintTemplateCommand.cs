@@ -109,7 +109,33 @@ namespace InventorAddin.Commands
             }
 
             if (!failed)
+            {
+                // Create Print reads the starter copy beside the add-in, so put the new templates there too (task 239).
+                string? target = PrintTemplatePublish.CopyTarget(folder, AddinServices.AddinFolder);
+                var copyFailures = new List<string>();
+                if (target != null)
+                {
+                    foreach (PrintUnits unit in units)
+                    {
+                        string name = PrintTemplateBuilder.FileNameFor(unit);
+                        try
+                        {
+                            IODirectory.CreateDirectory(target);
+                            IOFile.Copy(IOPath.Combine(folder, name), IOPath.Combine(target, name), overwrite: true);
+                        }
+                        catch (Exception ex)
+                        {
+                            AddinServices.Log.Warn($"Build Print Template could not copy {name} to {target}: {ex.Message}");
+                            copyFailures.Add($"{name}: {ex.Message}");
+                        }
+                    }
+                }
+
+                IReadOnlyList<string> lines = PrintTemplatePublish.Report(folder, target, copyFailures, AddinServices.Settings);
+                AddinServices.Log.Info("Build Print Template: " + string.Join(" ", lines));
+                report.AddRange(lines);
                 report.Add("Open each one in Inventor and check it against the checklist before committing.");
+            }
             else if (AddinServices.LogFilePath != null)
                 report.Add("The log has the details: " + AddinServices.LogFilePath);
 
