@@ -111,13 +111,12 @@ namespace InventorAddin.PrintViews
                 switch (planned.Kind)
                 {
                     case InitialViewKind.FoldedFront:
-                        view = AddFoldedFront(views, modelDocument, model, centre, plan.Scale);
+                        view = AddFoldedFront(views, modelDocument, model, centre, plan.Scale, plan.FrontOrientation);
                         front = view;
                         break;
 
                     case InitialViewKind.Front:
-                        view = views.AddBaseView(modelDocument, centre, plan.Scale,
-                            ViewOrientationTypeEnum.kFrontViewOrientation, DrawingViewStyleEnum.kHiddenLineRemovedDrawingViewStyle);
+                        view = AddFront(views, modelDocument, model, centre, plan.Scale, plan.FrontOrientation);
                         front = view;
                         break;
 
@@ -164,8 +163,13 @@ namespace InventorAddin.PrintViews
         /// horizontal (task 229, the rule is <see cref="FaceViewRule"/>). Falls back to the standard front view, logged, when the face
         /// or its edges cannot be read.
         /// </summary>
-        private static DrawingView AddFoldedFront(DrawingViews views, _Document modelDocument, Document model, Point2d centre, double scale)
+        private static DrawingView AddFoldedFront(
+            DrawingViews views, _Document modelDocument, Document model, Point2d centre, double scale, FaceViewOrientation? chosen)
         {
+            // A direction chosen in the window (anything but Auto) wins over the base face (task 233).
+            if (chosen != null)
+                return AddFront(views, modelDocument, model, centre, scale, chosen);
+
             var warnings = new List<string>();
             Camera? camera = BuildBaseFaceCamera(model, warnings);
             if (camera == null)
@@ -179,6 +183,55 @@ namespace InventorAddin.PrintViews
             return views.AddBaseView(modelDocument, centre, scale,
                 ViewOrientationTypeEnum.kArbitraryViewOrientation, DrawingViewStyleEnum.kHiddenLineRemovedDrawingViewStyle,
                 "", camera, Type.Missing);
+        }
+
+        /// <summary>
+        /// The front view of a part or assembly (task 233): the standard front view when the direction is the standard front or none was
+        /// chosen, otherwise an arbitrary orientation from a camera looking along the chosen direction (spike 225, question 1). Falls back
+        /// to the standard front, logged, when the camera cannot be built.
+        /// </summary>
+        private static DrawingView AddFront(
+            DrawingViews views, _Document modelDocument, Document model, Point2d centre, double scale, FaceViewOrientation? orientation)
+        {
+            if (orientation != null && !FrontViewRule.IsStandardFront(orientation))
+            {
+                var warnings = new List<string>();
+                Camera? camera = null;
+                ComSafe.Run(() => camera = BuildCamera(model, orientation), warnings, "front view camera");
+                if (camera != null)
+                {
+                    return views.AddBaseView(modelDocument, centre, scale,
+                        ViewOrientationTypeEnum.kArbitraryViewOrientation, DrawingViewStyleEnum.kHiddenLineRemovedDrawingViewStyle,
+                        "", camera, Type.Missing);
+                }
+
+                AddinServices.Log.Warn("Place Initial Views: the front view's camera could not be built, so the standard front is used. " +
+                    (warnings.Count == 0 ? "Reason unknown." : string.Join(" ", warnings)));
+            }
+
+            return views.AddBaseView(modelDocument, centre, scale,
+                ViewOrientationTypeEnum.kFrontViewOrientation, DrawingViewStyleEnum.kHiddenLineRemovedDrawingViewStyle);
+        }
+
+        /// <summary>
+        /// A camera looking at the middle of the model's range box from <paramref name="orientation"/>'s direction with its up
+        /// direction up the sheet: the eye is 100 cm from the target along the direction, as spike 225 made it.
+        /// </summary>
+        private static Camera BuildCamera(Document model, FaceViewOrientation orientation)
+        {
+            Box box = model is PartDocument part
+                ? part.ComponentDefinition.RangeBox
+                : ((AssemblyDocument)model).ComponentDefinition.RangeBox;
+            TransientGeometry geometry = InventorHost.App.TransientGeometry;
+            Point target = geometry.CreatePoint(
+                (box.MinPoint.X + box.MaxPoint.X) / 2, (box.MinPoint.Y + box.MaxPoint.Y) / 2, (box.MinPoint.Z + box.MaxPoint.Z) / 2);
+
+            Camera camera = InventorHost.App.TransientObjects.CreateCamera();
+            camera.Target = target;
+            camera.Eye = geometry.CreatePoint(
+                target.X + orientation.NormalX * 100, target.Y + orientation.NormalY * 100, target.Z + orientation.NormalZ * 100);
+            camera.UpVector = geometry.CreateUnitVector(orientation.UpX, orientation.UpY, orientation.UpZ);
+            return camera;
         }
 
         /// <summary>
@@ -224,17 +277,7 @@ namespace InventorAddin.PrintViews
                     return;
                 }
 
-                Box box = definition.RangeBox;
-                TransientGeometry geometry = InventorHost.App.TransientGeometry;
-                Point target = geometry.CreatePoint(
-                    (box.MinPoint.X + box.MaxPoint.X) / 2, (box.MinPoint.Y + box.MaxPoint.Y) / 2, (box.MinPoint.Z + box.MaxPoint.Z) / 2);
-
-                Camera built = InventorHost.App.TransientObjects.CreateCamera();
-                built.Target = target;
-                built.Eye = geometry.CreatePoint(
-                    target.X + orientation.NormalX * 100, target.Y + orientation.NormalY * 100, target.Z + orientation.NormalZ * 100);
-                built.UpVector = geometry.CreateUnitVector(orientation.UpX, orientation.UpY, orientation.UpZ);
-                camera = built;
+                camera = BuildCamera(model, orientation);
             }, warnings, "base face camera");
             return camera;
         }
@@ -304,13 +347,13 @@ namespace InventorAddin.PrintViews
 
         /// <summary><see cref="Measure"/> with the wait cursor showing, as the measuring takes a moment on a large model.</summary>
         public static IReadOnlyDictionary<InitialViewKind, ViewSizeCm>? MeasureWithWaitCursor(
-            Document model, InitialViewsModelInfo info, string template, PrintUnits units)
+            Document model, InitialViewsModelInfo info, string template, PrintUnits units, FrontViewChoice front = FrontViewChoice.Auto)
         {
             System.Windows.Forms.Cursor previous = System.Windows.Forms.Cursor.Current;
             System.Windows.Forms.Cursor.Current = System.Windows.Forms.Cursors.WaitCursor;
             try
             {
-                return Measure(model, info, template, units);
+                return Measure(model, info, template, units, front);
             }
             finally
             {
@@ -325,7 +368,7 @@ namespace InventorAddin.PrintViews
         /// reason (logged), so the caller keeps the estimate.
         /// </summary>
         public static IReadOnlyDictionary<InitialViewKind, ViewSizeCm>? Measure(
-            Document model, InitialViewsModelInfo info, string template, PrintUnits units)
+            Document model, InitialViewsModelInfo info, string template, PrintUnits units, FrontViewChoice front = FrontViewChoice.Auto)
         {
             Document? scratch = null;
             bool previousSilent = InventorHost.App.SilentOperation;
@@ -346,8 +389,11 @@ namespace InventorAddin.PrintViews
                 // At the estimate's own scale on the usable area of the units' default sheet (A3 or ANSI B), so a big assembly stays near the
                 // sheet. The template's own first sheet is the one measured on. Only each view's own size is read (placed size divided by its
                 // scale), so overlap and the sheet size do not matter (task 232).
+                // The views follow the chosen Front view, so the measured sizes are those of the print (task 233).
+                FrontViewSelection selection = FrontViewRule.Select(front, info.Kind, info.Box);
                 InitialViewsResult plan = InitialViewsPlan.Plan(
-                    info.Kind, info.Box, info.FlatPattern, InitialViewsPlan.UsableArea(InitialViewsSetup.DefaultSheet(units)));
+                    info.Kind, selection.Box, info.FlatPattern, InitialViewsPlan.UsableArea(InitialViewsSetup.DefaultSheet(units)))
+                    with { FrontOrientation = selection.Orientation };
 
                 var sizes = new Dictionary<InitialViewKind, ViewSizeCm>();
                 foreach ((PlannedView planned, DrawingView view) in PlaceViews(sheet, model, plan, scratch: true))
@@ -359,7 +405,7 @@ namespace InventorAddin.PrintViews
                         sizes[planned.Kind] = new ViewSizeCm(width!.Value, height!.Value);
                 }
 
-                AddinServices.Log.Info("Initial Views: measured (per view, at scale 1): " + string.Join("; ",
+                AddinServices.Log.Info($"Initial Views: front view {front}; measured (per view, at scale 1): " + string.Join("; ",
                     sizes.Select(s => $"{s.Key} {s.Value.WidthCm:0.##} x {s.Value.HeightCm:0.##} cm")) +
                     $" (estimated from the range box, at scale 1: {string.Join("; ", plan.Views.Select(v => $"{v.Kind} {v.WidthCm / plan.Scale:0.##} x {v.HeightCm / plan.Scale:0.##}"))}).");
                 return sizes.Count == 0 ? null : sizes;

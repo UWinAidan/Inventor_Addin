@@ -108,10 +108,10 @@ namespace InventorAddin.Commands
             // range box estimate is used.
             // The sheet is given, so no units or sheet choice is offered here (task 232, Default); the template of the sheet's units measures.
             string template = LibraryPaths.PrintTemplate(AddinServices.Settings, spec.Units, AddinServices.AddinFolder).Path;
-            IReadOnlyDictionary<InitialViewKind, ViewSizeCm>? measured =
-                System.IO.File.Exists(template) ? InitialViewsPlacer.MeasureWithWaitCursor(model, info, template, spec.Units) : null;
-
-            var viewModel = new InitialViewsViewModel(info.Kind, info.Box, info.FlatPattern, spec, measured);
+            // The measuring follows the Front view choice (task 233), so the window asks for it, once per choice.
+            bool haveTemplate = System.IO.File.Exists(template);
+            var viewModel = new InitialViewsViewModel(info.Kind, info.Box, info.FlatPattern, spec, null,
+                front => haveTemplate ? InitialViewsPlacer.MeasureWithWaitCursor(model, info, template, spec.Units, front) : null);
             _plan = InitialViewsWindow.Ask(viewModel);
             if (_plan == null)
             {

@@ -118,6 +118,12 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Task 222, Mass property (Aidan's check passed 2026-11-23):
   - Later: remove the lb mass unit step from the template builder; an imperial sample value for the fit check; the backfill warnings in Create Print and Material and Finish do not mention Mass.
 
+- Task 233, front view choice:
+  - Back, Bottom and Left cameras are worked out, not yet seen in Inventor.
+  - The iso stays the standard top-right iso whatever the front choice; its fallback size estimate now uses the chosen front's box. Ask Aidan whether the iso should follow the chosen front.
+  - The Top and Right tick boxes mean "above" and "beside" the chosen front; their labels mislead after choosing, say, Left.
+  - Auto uses the axis-aligned range box, not `OrientedMinimumRangeBox` (a part lying at an angle gets a looser view). Auto equal to a named view is measured twice (cache key); `SelectedFront` reads `_sheet.Units` rather than the selected units.
+
 - Task 232, units and sheet size:
   - Unconfirmed in Inventor: writing FormattedText and Edit/ExitEdit on a drawing's own title block definition; `Document='drawing'` resolving custom properties; custom property writes to a drawing; scratch measuring run from inside the open modal window. All best effort, with a notice.
   - An off-units print's Finish Spec and Mass refresh on Create Print only (question 33); Mass Update could refresh drawings if Aidan wants it.

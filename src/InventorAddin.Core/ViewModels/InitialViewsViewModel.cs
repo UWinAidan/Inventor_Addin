@@ -85,6 +85,20 @@ public sealed class InitialViewSheetChoice
     public override string ToString() => Label;
 }
 
+/// <summary>One entry of the Front view list (task 233).</summary>
+public sealed class InitialViewFrontChoice
+{
+    internal InitialViewFrontChoice(FrontViewChoice choice)
+    {
+        Choice = choice;
+        Label = FrontViewRule.LabelFor(choice);
+    }
+
+    public FrontViewChoice Choice { get; }
+    public string Label { get; }
+    public override string ToString() => Label;
+}
+
 /// <summary>
 /// View-model for the Initial Views window that Create Print and Place Initial Views show (spec 05, "Decided for M5: Place
 /// Initial Views"; task 190). It starts with the model kind's views ticked and the suggested scale selected, re-runs
@@ -104,7 +118,12 @@ public sealed class InitialViewsViewModel : ObservableObject
     public const string SuggestedLabelPrefix = "Suggested";
 
     private readonly InitialViewModelKind _model;
+    // The model's range box: width is X, height is Y, depth is Z. The front view's own box follows the Front view choice (task 233).
     private readonly InitialViewsBoxCm _box;
+    private readonly IReadOnlyDictionary<InitialViewKind, ViewSizeCm>? _givenMeasured;
+    private readonly InitialViewFrontChoice[] _frontOptions = Enum.GetValues<FrontViewChoice>().Select(c => new InitialViewFrontChoice(c)).ToArray();
+    private InitialViewFrontChoice _selectedFront;
+    private FrontViewSelection _frontSelection;
     private readonly FlatPatternSizeCm? _flatPattern;
     private IReadOnlyDictionary<InitialViewKind, ViewSizeCm>? _measured;
     private SheetSizeSpec _sheet;
@@ -117,8 +136,8 @@ public sealed class InitialViewsViewModel : ObservableObject
 
     // Units and sheet choice (task 232): only when the window was made with the units constructor (Create Print).
     private readonly bool _canChoose;
-    private readonly Func<PrintUnits, IReadOnlyDictionary<InitialViewKind, ViewSizeCm>?>? _measureFor;
-    private readonly Dictionary<PrintUnits, IReadOnlyDictionary<InitialViewKind, ViewSizeCm>?> _measuredByUnits = new();
+    private readonly Func<PrintUnits, FrontViewChoice, IReadOnlyDictionary<InitialViewKind, ViewSizeCm>?>? _measureFor;
+    private readonly Dictionary<(PrintUnits, FrontViewChoice), IReadOnlyDictionary<InitialViewKind, ViewSizeCm>?> _measuredByUnits = new();
     private readonly InitialViewUnitsChoice[] _unitsOptions =
     {
         new(PrintUnits.Metric, "Metric"),
@@ -130,14 +149,20 @@ public sealed class InitialViewsViewModel : ObservableObject
     private bool _sheetChosen;
     private SheetSizeSpec? _nextSheet;
 
-    /// <summary>A window for a fixed sheet (Place Initial Views): no units or sheet choice.</summary>
+    /// <summary>
+    /// A window for a fixed sheet (Place Initial Views): no units or sheet choice. <paramref name="measured"/> is the measuring for the
+    /// Auto front view; <paramref name="measureFront"/>, when given, measures for each Front view choice (called once per choice) and
+    /// replaces it. A choice with neither is planned from the range box.
+    /// </summary>
     public InitialViewsViewModel(
         InitialViewModelKind model,
         InitialViewsBoxCm box,
         FlatPatternSizeCm? flatPattern,
         SheetSizeSpec sheet,
-        IReadOnlyDictionary<InitialViewKind, ViewSizeCm>? measured = null)
-        : this(model, box, flatPattern, sheet, measured, canChoose: false, measureFor: null, partUnits: sheet?.Units ?? PrintUnits.Metric)
+        IReadOnlyDictionary<InitialViewKind, ViewSizeCm>? measured = null,
+        Func<FrontViewChoice, IReadOnlyDictionary<InitialViewKind, ViewSizeCm>?>? measureFront = null)
+        : this(model, box, flatPattern, sheet, measured, canChoose: false,
+            measureFor: measureFront is null ? null : (_, front) => measureFront(front), partUnits: sheet?.Units ?? PrintUnits.Metric)
     {
     }
 
@@ -153,6 +178,21 @@ public sealed class InitialViewsViewModel : ObservableObject
         FlatPatternSizeCm? flatPattern,
         PrintUnits partUnits,
         Func<PrintUnits, IReadOnlyDictionary<InitialViewKind, ViewSizeCm>?>? measureFor)
+        : this(model, box, flatPattern, InitialViewsSetup.DefaultSheet(partUnits), null, canChoose: true,
+            measureFor is null ? null : (units, _) => measureFor(units), partUnits)
+    {
+    }
+
+    /// <summary>
+    /// As above, with the measuring told which Front view is chosen (task 233): the views are measured again, once per units and Front view,
+    /// when the user changes it.
+    /// </summary>
+    public InitialViewsViewModel(
+        InitialViewModelKind model,
+        InitialViewsBoxCm box,
+        FlatPatternSizeCm? flatPattern,
+        PrintUnits partUnits,
+        Func<PrintUnits, FrontViewChoice, IReadOnlyDictionary<InitialViewKind, ViewSizeCm>?>? measureFor)
         : this(model, box, flatPattern, InitialViewsSetup.DefaultSheet(partUnits), null, canChoose: true, measureFor, partUnits)
     {
     }
@@ -164,7 +204,7 @@ public sealed class InitialViewsViewModel : ObservableObject
         SheetSizeSpec sheet,
         IReadOnlyDictionary<InitialViewKind, ViewSizeCm>? measured,
         bool canChoose,
-        Func<PrintUnits, IReadOnlyDictionary<InitialViewKind, ViewSizeCm>?>? measureFor,
+        Func<PrintUnits, FrontViewChoice, IReadOnlyDictionary<InitialViewKind, ViewSizeCm>?>? measureFor,
         PrintUnits partUnits)
     {
         ArgumentNullException.ThrowIfNull(box);
@@ -173,6 +213,9 @@ public sealed class InitialViewsViewModel : ObservableObject
         _box = box;
         _flatPattern = flatPattern;
         _measured = measured;
+        _givenMeasured = measured;
+        _selectedFront = _frontOptions.First(o => o.Choice == FrontViewChoice.Auto);
+        _frontSelection = FrontViewRule.Select(FrontViewChoice.Auto, model, box);
         _sheet = sheet;
         _area = InitialViewsPlan.UsableArea(sheet);
         _canChoose = canChoose;
@@ -182,6 +225,10 @@ public sealed class InitialViewsViewModel : ObservableObject
         {
             _selectedUnits = _unitsOptions.First(u => u.Units == partUnits);
             LoadUnits(partUnits);
+        }
+        else if (measureFor is not null)
+        {
+            LoadMeasured(sheet.Units);
         }
 
         Views = new ObservableCollection<InitialViewChoice>(
@@ -223,6 +270,26 @@ public sealed class InitialViewsViewModel : ObservableObject
         {
             if (value is null || !SetProperty(ref _selectedScale, value))
                 return;
+            Replan();
+        }
+    }
+
+    /// <summary>Auto, Front, Back, Top, Bottom, Left, Right (task 233).</summary>
+    public IReadOnlyList<InitialViewFrontChoice> FrontOptions => _frontOptions;
+
+    /// <summary>
+    /// Which way the front view looks. Auto (the start) is the direction with the largest projected area, longest side horizontal, or the
+    /// base face for a sheet metal part. The other views are projected from it, and the views are measured again for the new direction.
+    /// </summary>
+    public InitialViewFrontChoice SelectedFront
+    {
+        get => _selectedFront;
+        set
+        {
+            if (value is null || !SetProperty(ref _selectedFront, value))
+                return;
+            _frontSelection = FrontViewRule.Select(value.Choice, _model, _box);
+            LoadMeasured(_sheet.Units);
             Replan();
         }
     }
@@ -358,17 +425,31 @@ public sealed class InitialViewsViewModel : ObservableObject
     private void LoadUnits(PrintUnits units)
     {
         _sheetOptions = InitialViewsSheetRule.SheetsFor(units).Select(s => new InitialViewSheetChoice(s, FormatSheet(s))).ToList();
-        if (!_measuredByUnits.TryGetValue(units, out var measured))
+        LoadMeasured(units);
+    }
+
+    // The measured view sizes for these units and the chosen Front view, measured once each. Without a measuring function the Auto
+    // front view keeps the sizes the window was given and any other choice is planned from the range box.
+    private void LoadMeasured(PrintUnits units)
+    {
+        FrontViewChoice front = _selectedFront.Choice;
+        if (_measureFor is null)
         {
-            measured = _measureFor?.Invoke(units);
-            _measuredByUnits[units] = measured;
+            _measured = front == FrontViewChoice.Auto ? _givenMeasured : null;
+            return;
+        }
+
+        if (!_measuredByUnits.TryGetValue((units, front), out var measured))
+        {
+            measured = _measureFor(units, front);
+            _measuredByUnits[(units, front)] = measured;
         }
 
         _measured = measured;
     }
 
     private InitialViewsResult PlanOn(SheetSizeSpec sheet, double? scale) =>
-        InitialViewsPlan.Plan(_model, _box, _flatPattern, InitialViewsPlan.UsableArea(sheet), Ticked(), scale, _measured);
+        InitialViewsPlan.Plan(_model, _frontSelection.Box, _flatPattern, InitialViewsPlan.UsableArea(sheet), Ticked(), scale, _measured);
 
     // The smallest sheet that fits the ticked views at the selected scale; set without marking it as the user's choice.
     private void ApplyAutoSheet()
@@ -406,14 +487,15 @@ public sealed class InitialViewsViewModel : ObservableObject
     private List<InitialViewKind> Ticked() => Views.Where(v => v.IsChecked).Select(v => v.Kind).ToList();
 
     private InitialViewsResult RunPlan() =>
-        InitialViewsPlan.Plan(_model, _box, _flatPattern, _area, Ticked(), _selectedScale.Scale, _measured);
+        InitialViewsPlan.Plan(_model, _frontSelection.Box, _flatPattern, _area, Ticked(), _selectedScale.Scale, _measured)
+            with { FrontOrientation = _frontSelection.Orientation };
 
     // The suggested scale is the one the plan picks for the ticked views, whatever scale is selected now.
     private void UpdateSuggestedLabel()
     {
         InitialViewsResult auto = _selectedScale.Scale is null
             ? _plan
-            : InitialViewsPlan.Plan(_model, _box, _flatPattern, _area, Ticked(), null, _measured);
+            : InitialViewsPlan.Plan(_model, _frontSelection.Box, _flatPattern, _area, Ticked(), null, _measured);
         _suggested.Label = auto.Views.Count == 0
             ? SuggestedLabelPrefix
             : $"{SuggestedLabelPrefix} ({FormatScale(auto.Scale)})";

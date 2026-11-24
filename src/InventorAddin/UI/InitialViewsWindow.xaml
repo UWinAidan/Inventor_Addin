@@ -19,7 +19,9 @@
         template) and the sheet size, and offers the next larger sheet when the views do not fit; Place Initial Views works on
         the sheet it is given, so that section is hidden there.
 
-        Access keys: U units, Z sheet size, S scale, O OK.
+        Task 233: a Front view list (Auto, Front, Back, Top, Bottom, Left, Right) sits under the views; the other views are projected from it.
+
+        Access keys: F front view, U units, Z sheet size, S scale, O OK.
     -->
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="VisibleWhenTrue" />
@@ -49,6 +51,15 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+                </controls:FormSection>
+
+                <controls:FormSection Heading="Front view">
+                    <controls:FieldRow Label="_Front view" Target="{Binding ElementName=FrontBox}">
+                        <ComboBox x:Name="FrontBox"
+                                  ItemsSource="{Binding FrontOptions, Mode=OneTime}"
+                                  DisplayMemberPath="Label"
+                                  SelectedItem="{Binding SelectedFront, Mode=TwoWay}" />
+                    </controls:FieldRow>
                 </controls:FormSection>
 
                 <controls:FormSection Heading="Sheet"

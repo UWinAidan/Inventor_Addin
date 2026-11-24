@@ -94,10 +94,10 @@ namespace InventorAddin.Commands
             // units, so the suggested scale and sheet match what is placed.
             var viewModel = new InitialViewsViewModel(
                 info.Kind, info.Box, info.FlatPattern, partUnits,
-                u =>
+                (u, front) =>
                 {
                     string t = TemplateFor(u);
-                    return IOFile.Exists(t) ? InitialViewsPlacer.MeasureWithWaitCursor(model, info, t, u) : null;
+                    return IOFile.Exists(t) ? InitialViewsPlacer.MeasureWithWaitCursor(model, info, t, u, front) : null;
                 });
             InitialViewsResult? plan = InitialViewsWindow.Ask(viewModel);
             if (plan == null)

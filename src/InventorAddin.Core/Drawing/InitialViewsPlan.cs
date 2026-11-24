@@ -47,11 +47,16 @@ public sealed record PlannedView(InitialViewKind Kind, double CentreXCm, double 
 /// <param name="Scale">A standard scale (1.0 is 1:1, 0.5 is 1:2).</param>
 /// <param name="Fits">False when even the smallest standard scale leaves the views larger than the share of the area Create Print's rule allows.</param>
 /// <param name="Messages">What the window shows the user: a flat pattern left out, no views chosen, views that do not fit.</param>
+/// <param name="FrontOrientation">
+/// The direction the front view looks (task 233), or null to use the base face for a sheet metal part's folded front.
+/// <see cref="InitialViewsPlan.Plan"/> leaves it null; the Initial Views window sets it from the Front view choice.
+/// </param>
 public sealed record InitialViewsResult(
     IReadOnlyList<PlannedView> Views,
     double Scale,
     bool Fits,
-    IReadOnlyList<string> Messages);
+    IReadOnlyList<string> Messages,
+    FaceViewOrientation? FrontOrientation = null);
 
 /// <summary>
 /// Which initial views a model gets and where they go (spec 05, "Decided for M5: Place Initial Views"; spike 183 round 3).
