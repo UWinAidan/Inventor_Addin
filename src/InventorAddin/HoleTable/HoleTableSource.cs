@@ -356,9 +356,46 @@ namespace InventorAddin.HoleTables
                 ? MarkHoles(sheet, view, sheetKey, viewKey, plan, live, sync.Place.ToHashSet(StringComparer.Ordinal), sync.Remove.Count)
                 : HoleTableMarkSync.Summary(0, 0, sync.Remove.Count);
 
+            // Leaders (task 240): a tag moved away from its hole shows one, a tag back beside it does not.
+            string leaders = UpdateLeaders(sheet, view, sheetKey, viewKey, wanted.Select(w => (w.HoleId, w.Tag)).ToList());
+
             // Also when both tables are gone: the sheet's record keeps the view's tags, notes and edits.
             store.Write(sheet, sheetKey, viewKey, state);
-            return HoleTableDrawResult.Done((message + " " + marks).Trim());
+            return HoleTableDrawResult.Done((message + " " + marks + " " + leaders).Trim());
+        }
+
+        // Sets each tag's leader from its distance to its hole (task 240). The view is analysed again for the holes' centres
+        // and curves. A failure here is logged and leaves the leaders as they were; it never undoes the update.
+        private string UpdateLeaders(Sheet sheet, DrawingView view, string sheetKey, string viewKey, IReadOnlyList<(string Id, string Tag)> holes)
+        {
+            if (holes.Count == 0)
+                return "";
+            try
+            {
+                HoleTableViewAnalysis fresh = Analyze(sheetKey, viewKey);
+                if (fresh.FailureMessage != null)
+                {
+                    _log.Warn(LogPrefix + "tag leaders not updated: " + fresh.FailureMessage);
+                    return "";
+                }
+
+                var centres = fresh.Holes.ToDictionary(h => h.Id, h => new SheetPoint(h.SheetXCm, h.SheetYCm), StringComparer.Ordinal);
+                var targets = new List<HoleLeaderTarget>();
+                foreach ((string id, string tag) in holes)
+                {
+                    HoleTableHoleRef? found = FindHole(sheetKey, viewKey, id);
+                    if (found != null && centres.TryGetValue(id, out SheetPoint centre))
+                        targets.Add(new HoleLeaderTarget(id, tag, centre, found));
+                }
+
+                int shown = new HoleTableMarker(_drawing, _log).SetLeaders(sheet, view, viewKey, targets);
+                return shown == 0 ? "" : shown == 1 ? "1 tag shows a leader to its hole." : $"{shown} tags show a leader to their holes.";
+            }
+            catch (Exception ex)
+            {
+                _log.Warn(LogPrefix + "tag leaders not updated: " + ex.Message);
+                return "";
+            }
         }
 
         private static IReadOnlyList<HoleTableGroup> GroupsOf(HoleTablePlan plan, HoleTableKind kind) =>

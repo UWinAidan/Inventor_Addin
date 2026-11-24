@@ -117,6 +117,24 @@ public static class HoleTableMarks
         return new SheetPoint(centre.XCm + d + tagWidthCm / 2, centre.YCm + d + textHeightCm / 2);
     }
 
+    /// <summary>The gap on paper, tag box to hole edge, beyond which a tag shows its leader: 5 mm (Default, spec 04 question 26, task 240).</summary>
+    public const double TagLeaderDistanceCm = 0.5;
+
+    /// <summary>
+    /// The shortest distance on paper from the tag's box to the hole's edge: the distance from the hole's centre to the box
+    /// (0 when the centre is inside it) minus the drawn radius. Negative when the box overlaps the circle.
+    /// </summary>
+    public static double TagGapCm(SheetPoint boxMin, SheetPoint boxMax, SheetPoint centre, double radiusCm)
+    {
+        var dx = Math.Max(Math.Max(boxMin.XCm - centre.XCm, centre.XCm - boxMax.XCm), 0);
+        var dy = Math.Max(Math.Max(boxMin.YCm - centre.YCm, centre.YCm - boxMax.YCm), 0);
+        return Math.Sqrt(dx * dx + dy * dy) - radiusCm;
+    }
+
+    /// <summary>Whether the tag shows its leader: its gap to the hole is more than <see cref="TagLeaderDistanceCm"/>. A tag exactly at the distance has none.</summary>
+    public static bool TagLeaderVisible(SheetPoint boxMin, SheetPoint boxMax, SheetPoint centre, double radiusCm) =>
+        TagGapCm(boxMin, boxMax, centre, radiusCm) > TagLeaderDistanceCm + 1e-9;
+
     /// <summary>The marks line of the status message; empty when nothing was marked and nothing failed.</summary>
     public static string Summary(int holesMarked, int holesSkipped)
     {

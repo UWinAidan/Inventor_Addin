@@ -118,6 +118,11 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Task 222, Mass property (Aidan's check passed 2026-11-23):
   - Later: remove the lb mass unit step from the template builder; an imperial sample value for the fit check; the backfill warnings in Create Print and Material and Finish do not mention Mass.
 
+- Task 240, tag leaders:
+  - `LeaderVisible = true` on a leader placed hidden has never been seen; check it runs to the hole centre with a sensible arrow. `Position` as the tag centre after a drag is unmeasured.
+  - The gap is measured from the hole's outermost drawn circle (seat or thread), not the drill circle (Default).
+  - Every Update makes and deletes a temporary hole table and note to read the tag style and width; check one Ctrl+Z still reverts it. `ReadMark` duplicates `Collect`'s lambda.
+
 - Task 236, Designer:
   - Mass Update keeps its ticked Replace names and does not replace the login automatically (Default); ask Aidan if he wants it automatic.
   - DETAILER on a new print is the drawing's own Author; check it does not show the Windows login.

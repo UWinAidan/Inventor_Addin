@@ -98,4 +98,43 @@ public class HoleTableMarksTests
         Assert.Contains("2 holes could not be marked", HoleTableMarks.Summary(3, 2));
         Assert.Contains("1 hole could not be marked", HoleTableMarks.Summary(0, 1));
     }
+
+    private static readonly SheetPoint Origin = new(0, 0);
+
+    [Fact]
+    public void The_tag_gap_is_the_distance_from_the_box_to_the_hole_edge()
+    {
+        // Box 1 cm to the right of a hole of radius 0.25 cm: gap 0.75.
+        Assert.Equal(0.75, HoleTableMarks.TagGapCm(new SheetPoint(1, -0.2), new SheetPoint(2, 0.2), Origin, 0.25), 9);
+        // Diagonal: the corner (0.6, 0.8) is 1 cm from the centre.
+        Assert.Equal(0.75, HoleTableMarks.TagGapCm(new SheetPoint(0.6, 0.8), new SheetPoint(2, 2), Origin, 0.25), 9);
+    }
+
+    [Fact]
+    public void A_tag_beside_its_hole_has_no_leader()
+    {
+        Assert.False(HoleTableMarks.TagLeaderVisible(new SheetPoint(0.3, 0.3), new SheetPoint(0.8, 0.5), Origin, 0.25));
+    }
+
+    [Fact]
+    public void A_tag_exactly_at_the_distance_has_no_leader_and_just_past_it_has()
+    {
+        // Radius 0.25 and box edge at 0.75: the gap is exactly 0.5 cm (5 mm).
+        Assert.False(HoleTableMarks.TagLeaderVisible(new SheetPoint(0.75, 0), new SheetPoint(1.5, 0.4), Origin, 0.25));
+        Assert.True(HoleTableMarks.TagLeaderVisible(new SheetPoint(0.76, 0), new SheetPoint(1.5, 0.4), Origin, 0.25));
+    }
+
+    [Fact]
+    public void A_tag_twenty_millimetres_away_has_a_leader()
+    {
+        Assert.True(HoleTableMarks.TagLeaderVisible(new SheetPoint(2.2, 0), new SheetPoint(2.8, 0.4), Origin, 0.25));
+    }
+
+    [Fact]
+    public void A_tag_over_its_hole_has_no_leader_and_a_negative_gap()
+    {
+        Assert.False(HoleTableMarks.TagLeaderVisible(new SheetPoint(-0.1, -0.1), new SheetPoint(0.4, 0.2), Origin, 0.25));
+        Assert.True(HoleTableMarks.TagGapCm(new SheetPoint(0.1, 0.1), new SheetPoint(0.4, 0.2), Origin, 0.25) < 0);
+        Assert.Equal(-0.25, HoleTableMarks.TagGapCm(new SheetPoint(-1, -1), new SheetPoint(1, 1), Origin, 0.25), 9);
+    }
 }

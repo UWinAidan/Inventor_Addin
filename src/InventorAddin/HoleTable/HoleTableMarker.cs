@@ -10,6 +10,9 @@ namespace InventorAddin.HoleTables
     /// <summary>One hole to mark on the view: its id and tag, whether it gets the precision mark, its centre on the sheet and what the add-in kept of it.</summary>
     internal sealed record HoleMarkTarget(string HoleId, string Tag, bool PrecisionMark, SheetPoint Centre, HoleTableHoleRef Ref);
 
+    /// <summary>One hole whose tag's leader Update sets: its id, its tag text, its centre on the sheet and what the add-in kept of it.</summary>
+    internal sealed record HoleLeaderTarget(string HoleId, string Tag, SheetPoint Centre, HoleTableHoleRef Ref);
+
     /// <summary>What a marker call did: holes marked, and holes left alone because they could not be marked.</summary>
     internal sealed record HoleMarkResult(int Marked, int Skipped);
 
@@ -164,6 +167,87 @@ namespace InventorAddin.HoleTables
                 Collect(() => centre.AttributeSets, viewKey, found);
             return found.ToDictionary(p => p.Key, p => (IReadOnlySet<string>)p.Value, StringComparer.Ordinal);
         }
+
+        /// <summary>
+        /// Shows each tag's leader when the tag sits more than <see cref="HoleTableMarks.TagLeaderDistanceCm"/> from its hole
+        /// and hides it otherwise (task 240). The tag's box is its position and the text's size, so a leader that is showing
+        /// never counts as part of it. Moving a tag changes no stored state, so it never makes the tables out of date.
+        /// Returns how many tags now show a leader. The caller holds the transaction.
+        /// </summary>
+        public int SetLeaders(Sheet sheet, DrawingView view, string viewKey, IReadOnlyList<HoleLeaderTarget> targets)
+        {
+            if (targets.Count == 0)
+                return 0;
+            var byId = targets.ToDictionary(t => t.HoleId, StringComparer.Ordinal);
+            TextStyle tagText = ReadTagTextStyle(sheet, view);
+            var widths = new Dictionary<string, double>();
+            var radii = new Dictionary<string, double>(StringComparer.Ordinal);
+            int shown = 0;
+            foreach (SketchedSymbol symbol in sheet.SketchedSymbols)
+            {
+                (string Id, string Role)? mark = ReadMark(() => symbol.AttributeSets, viewKey);
+                if (mark is not { } m || m.Role != HoleTableMarks.TagRole || !byId.TryGetValue(m.Id, out HoleLeaderTarget? target))
+                    continue;
+                try
+                {
+                    if (!radii.TryGetValue(m.Id, out double radius))
+                    {
+                        double? read = OutermostRadius(target.Ref);
+                        if (read == null)
+                        {
+                            _log.Warn(LogPrefix + $"hole '{m.Id}' has no circle in the view; its tag's leader is left as it is.");
+                            continue;
+                        }
+
+                        radii[m.Id] = radius = read.Value;
+                    }
+
+                    // The tag is centred on the symbol's position (spike 160 round 7); its size is the text's, as at placement.
+                    Point2d at = symbol.Position;
+                    double halfWidth = TextWidth(sheet, tagText, target.Tag, widths) / 2;
+                    double halfHeight = tagText.FontSize / 2;
+                    bool visible = HoleTableMarks.TagLeaderVisible(
+                        new SheetPoint(at.X - halfWidth, at.Y - halfHeight), new SheetPoint(at.X + halfWidth, at.Y + halfHeight), target.Centre, radius);
+                    symbol.LeaderVisible = visible;
+                    if (visible)
+                        shown++;
+                }
+                catch (Exception ex)
+                {
+                    _log.Warn(LogPrefix + $"the leader of hole '{m.Id}' could not be set: {ex.Message}");
+                }
+            }
+
+            return shown;
+        }
+
+        private static double? OutermostRadius(HoleTableHoleRef hole)
+        {
+            var circles = new List<HoleCircle>();
+            foreach (DrawingCurve curve in hole.Curves)
+            {
+                double? radius = ReadRadius(curve);
+                if (radius == null)
+                    continue;
+                circles.Add(new HoleCircle(radius.Value, ComSafe.Get(() => curve.EdgeType == DrawingEdgeTypeEnum.kThreadEdge)));
+            }
+
+            int index = HoleTableMarks.OutermostIndex(circles);
+            return index < 0 ? null : circles[index].RadiusCm;
+        }
+
+        private static (string Id, string Role)? ReadMark(Func<AttributeSets> sets, string viewKey) =>
+            ComSafe.Get(() =>
+            {
+                AttributeSets all = sets();
+                if (!all.NameIsUsed[HoleTableMarks.AttributeSetName])
+                    return ((string, string)?)null;
+                AttributeSet set = all[HoleTableMarks.AttributeSetName];
+                string? view = set.NameIsUsed[HoleTableMarks.ViewKeyAttributeName] ? set[HoleTableMarks.ViewKeyAttributeName].Value as string : null;
+                string? id = set.NameIsUsed[HoleTableMarks.HoleIdAttributeName] ? set[HoleTableMarks.HoleIdAttributeName].Value as string : null;
+                string? role = set.NameIsUsed[HoleTableMarks.RoleAttributeName] ? set[HoleTableMarks.RoleAttributeName].Value as string : null;
+                return view == viewKey && id != null && role != null ? (id, role) : ((string, string)?)null;
+            });
 
         /// <summary>Deletes every tag, precision mark and centre mark of the given holes on this view (Update, for holes that are gone).</summary>
         public void Remove(Sheet sheet, string viewKey, IReadOnlyCollection<string> holeIds)
