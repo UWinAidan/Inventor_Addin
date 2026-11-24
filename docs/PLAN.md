@@ -636,7 +636,7 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [ ] 238 Fit long title block values to their cells (shrink, then wrap Description; Aidan, 2026-11-23)
 - [x] 239 A rebuilt template takes effect without a redeploy (Aidan's check, 2026-11-23)
 - [ ] 240 A hole tag moved away from its hole gets a leader (Aidan, 2026-11-23)
-- [ ] 241 Spike: smaller text and a two-line Description in the title block (Windows, the parent runs it)
+- [x] 241 Spike: smaller text and a two-line Description in the title block (Windows, the parent runs it)
 
 **Check**
 - [ ] 209 M5 combined Inventor check
