@@ -118,6 +118,10 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Task 222, Mass property (Aidan's check passed 2026-11-23):
   - Later: remove the lb mass unit step from the template builder; an imperial sample value for the fit check; the backfill warnings in Create Print and Material and Finish do not mention Mass.
 
+- Task 236, Designer:
+  - Mass Update keeps its ticked Replace names and does not replace the login automatically (Default); ask Aidan if he wants it automatic.
+  - DETAILER on a new print is the drawing's own Author; check it does not show the Windows login.
+
 - Task 234, live preview:
   - Views are labelled boxes, not the model's outline; the title block is a plain band. A label that does not fit its box is skipped. Check light and dark themes and 150% scale.
 

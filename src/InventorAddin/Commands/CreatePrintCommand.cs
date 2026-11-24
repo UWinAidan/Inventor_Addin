@@ -15,6 +15,7 @@ using InventorAddin.UI;
 using Forms = System.Windows.Forms;
 using IODirectory = System.IO.Directory;
 using IOFile = System.IO.File;
+using SysEnvironment = System.Environment;
 
 namespace InventorAddin.Commands
 {
@@ -324,7 +325,7 @@ namespace InventorAddin.Commands
         }
 
         /// <summary>
-        /// Fills in a missing Finish Spec, Revision and Status on the model before the drawing is made, so the title block
+        /// Fills in a missing Finish Spec, Revision and Status, and replaces a Windows-login Designer and Author (task 236), on the model before the drawing is made, so the title block
         /// prints them (tasks 217 and 219). One transaction on the model, nothing saved. A model that cannot be changed
         /// (read-only, say) is logged and does not stop the print.
         /// </summary>
@@ -332,7 +333,14 @@ namespace InventorAddin.Commands
         {
             try
             {
-                IReadOnlyList<PropertyWrite> writes = FinishSpecBackfiller.WritesFor(model, FinishSpecBackfiller.LoadFinishList());
+                var writes = new List<PropertyWrite>(FinishSpecBackfiller.WritesFor(model, FinishSpecBackfiller.LoadFinishList()));
+
+                // A Designer that is the Windows login becomes the Settings name; any other name stays (task 236).
+                writes.AddRange(DesignerBackfill.For(
+                    PropertyReader.GetString(model, PartPropertyStorage.Designer.SetName, PartPropertyStorage.Designer.PropertyName),
+                    PropertyReader.GetString(model, PartPropertyStorage.Author.SetName, PartPropertyStorage.Author.PropertyName),
+                    SysEnvironment.UserName,
+                    AddinServices.Settings.DefaultDesigner));
                 if (writes.Count == 0)
                     return;
 
@@ -343,7 +351,7 @@ namespace InventorAddin.Commands
             }
             catch (Exception ex)
             {
-                AddinServices.Log.Warn($"Create Print: Finish Spec, Revision and Status could not be filled in on the model. {ex.Message}");
+                AddinServices.Log.Warn($"Create Print: Finish Spec, Revision, Status and Designer could not be filled in on the model. {ex.Message}");
             }
         }
 

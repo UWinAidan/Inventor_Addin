@@ -19,15 +19,14 @@ Last updated: 2026-11-22
 - 239 (`9df967d`), 227 (`9d9b3e4`, views measured in a hidden scratch drawing) and 228 (`5b15a9d`) done and reviewed; not run in Inventor.
 - 229 (`e9c93dc`), 230 (`d36d649`) and 231 (`d512626`) done and reviewed; not run in Inventor.
 - 232 (`01e8642`), 233 (`f73c9d5`) and 234 (`1de776e`) done and reviewed; not run in Inventor.
-- 235 done and reviewed (committed with this handoff). Next: 236.
+- 235 (`87c0129`) and 236 done and reviewed. Next: 240, then spike 241 (the parent runs it in Inventor), then 238.
 - An implementer can stall ("no progress for 600s"); check `git status` and restart it if nothing was written.
 - Next, in order:
-  1. 236 Designer.
-  2. 240 hole tag leaders.
-  3. Spike 241, run by the parent over COM like 218 and 225. Fill in its Results, then adjust 238's scope.
-  4. 238: narrow to 0.6, then reduce height to the floor, Description wraps to two lines, single-line fields warn only at the floor.
-  5. Chunk 3 summary and a condensed Inventor checklist for Aidan. Include the recheck of the imperial period after 227 to 236 (in TODO).
-- State: last builds 0 errors. Core tests 5459; each run 0 to 3 timing-flaky failures, which pass on rerun.
+  1. 240 hole tag leaders.
+  2. Spike 241, run by the parent over COM like 218 and 225. Fill in its Results, then adjust 238's scope.
+  3. 238: narrow to 0.6, then reduce height to the floor, Description wraps to two lines, single-line fields warn only at the floor.
+  4. Chunk 3 summary and a condensed Inventor checklist for Aidan. Include the recheck of the imperial period after 227 to 236 (in TODO).
+- State: last builds 0 errors. Core tests 5470; each run 0 to 3 timing-flaky failures, which pass on rerun.
 - Aidan's check notes: an inch part printed on AWB Metric showed mm dimensions (expected until 232). Before a redeploy, Create Print read the stale deployed template (the 239 bug).
 - Gotchas:
   - Flaky tests: RenamePlan, SaveAsCopyCreator, SaveAsReplacer, NewPartCreator, Numbering, RegisterStore probe timeouts. Rerun them.
