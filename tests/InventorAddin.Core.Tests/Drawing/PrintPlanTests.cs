@@ -349,7 +349,6 @@ public sealed class PrintPlanTests
     public void Messages()
     {
         Assert.Equal("Save the part before creating its print.", PrintPlan.UnsavedMessage);
-        Assert.Equal("A print for this part already exists. Open it?", PrintPlan.AlreadyExistsQuestion);
         Assert.Equal("This part has no print. Create one now?", PrintPlan.NoPrintQuestion);
         Assert.Equal("Save the part before opening its print.", PrintPlan.OpenUnsavedMessage);
         Assert.Equal("Open Drawing works on parts and assemblies.", PrintPlan.OpenWrongDocumentMessage);

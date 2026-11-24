@@ -28,8 +28,6 @@ public static class PrintPlan
 
     public const string UnsavedMessage = "Save the part before creating its print.";
 
-    public const string AlreadyExistsQuestion = "A print for this part already exists. Open it?";
-
     public const string WrongDocumentMessage = "Create Print works on parts and assemblies.";
 
     /// <summary>Open Drawing, when the model is unsaved (task 193): it has no folder to look in.</summary>

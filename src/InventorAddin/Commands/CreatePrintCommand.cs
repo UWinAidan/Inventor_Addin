@@ -64,11 +64,12 @@ namespace InventorAddin.Commands
             string template = TemplateFor(partUnits);
 
             // An existing print, with either drawing extension, in Prints or (made before 2026-10-11) beside the model,
-            // is offered instead of making a new one; an .idw is preferred when both exist.
+            // is opened instead of making a new one, with no question (task 235); an .idw is preferred when both exist.
             string? existing = PrintPlan.FindExistingPrint(modelPath, PrintPlan.NewPrintExtension, IOFile.Exists);
             if (existing != null)
             {
-                OfferToOpen(existing);
+                AddinServices.Log.Info($"Create Print: a print already exists at '{existing}'; opening it.");
+                OpenPrint(existing);
                 return;
             }
 
@@ -381,18 +382,6 @@ namespace InventorAddin.Commands
             if (!AddinServices.RegisterStore.HasNumber(value))
                 return null;
             return Core.Numbering.PartNumber.Parse(value!).ToString();
-        }
-
-        private void OfferToOpen(string drawingPath)
-        {
-            AddinServices.Log.Info($"Create Print: a print already exists at '{drawingPath}'.");
-
-            Forms.DialogResult answer = Forms.MessageBox.Show(
-                PrintPlan.AlreadyExistsQuestion, DisplayName, Forms.MessageBoxButtons.YesNo, Forms.MessageBoxIcon.Question);
-            if (answer != Forms.DialogResult.Yes)
-                return;
-
-            OpenPrint(drawingPath);
         }
 
         /// <summary>Opens the drawing visibly, or finds it when already open, and makes it the active document (shared with Open Drawing, task 193).</summary>

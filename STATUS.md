@@ -6,7 +6,7 @@ Last updated: 2026-11-22
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-23 18:42. Branch `claude/m5-drawing-tools`, latest commit `d512626` (task 231, pushed).
+- Updated: 2026-11-23 19:08. Branch `claude/m5-drawing-tools`, latest commit `1de776e` (task 234, pushed).
 - Goal: M5 chunk 3: the chunk 2 fixes (226 to 241), each implementer, then reviewer, one commit per task, push; then the chunk 3 summary for Aidan, then 194 onward.
 - Done this session:
   - Spec 05 Q30 and Q31 answered (`44d09ed`). Aidan then overturned Q31: see 238 and 241 below.
@@ -18,15 +18,16 @@ Last updated: 2026-11-22
     - Task 232 gained "FINISH and WEIGHT follow the print's units"; task 238 now depends on 241.
 - 239 (`9df967d`), 227 (`9d9b3e4`, views measured in a hidden scratch drawing) and 228 (`5b15a9d`) done and reviewed; not run in Inventor.
 - 229 (`e9c93dc`), 230 (`d36d649`) and 231 (`d512626`) done and reviewed; not run in Inventor.
-- 232 (`01e8642`), 233 (`f73c9d5`) and 234 done and reviewed. Next: 235.
+- 232 (`01e8642`), 233 (`f73c9d5`) and 234 (`1de776e`) done and reviewed; not run in Inventor.
+- 235 done and reviewed (committed with this handoff). Next: 236.
 - An implementer can stall ("no progress for 600s"); check `git status` and restart it if nothing was written.
 - Next, in order:
-  1. 235 open existing print, 236 Designer.
+  1. 236 Designer.
   2. 240 hole tag leaders.
   3. Spike 241, run by the parent over COM like 218 and 225. Fill in its Results, then adjust 238's scope.
   4. 238: narrow to 0.6, then reduce height to the floor, Description wraps to two lines, single-line fields warn only at the floor.
   5. Chunk 3 summary and a condensed Inventor checklist for Aidan. Include the recheck of the imperial period after 227 to 236 (in TODO).
-- State: last builds 0 errors. Core tests 5395; each run 0 to 3 timing-flaky failures, which pass on rerun.
+- State: last builds 0 errors. Core tests 5459; each run 0 to 3 timing-flaky failures, which pass on rerun.
 - Aidan's check notes: an inch part printed on AWB Metric showed mm dimensions (expected until 232). Before a redeploy, Create Print read the stale deployed template (the 239 bug).
 - Gotchas:
   - Flaky tests: RenamePlan, SaveAsCopyCreator, SaveAsReplacer, NewPartCreator, Numbering, RegisterStore probe timeouts. Rerun them.
