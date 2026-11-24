@@ -41,6 +41,11 @@
 
         <ScrollViewer Grid.Row="1" Style="{DynamicResource DialogBody}">
             <StackPanel Style="{DynamicResource DialogBodyContent}">
+                <!-- Task 234: a live sheet preview (border, title block, view boxes), drawn from the view-model's Preview. -->
+                <controls:FormSection Heading="Preview">
+                    <controls:SheetPreviewView Preview="{Binding Preview, Mode=OneWay}" />
+                </controls:FormSection>
+
                 <controls:FormSection Heading="Views">
                     <ItemsControl Focusable="False" ItemsSource="{Binding Views, Mode=OneWay}">
                         <ItemsControl.ItemTemplate>

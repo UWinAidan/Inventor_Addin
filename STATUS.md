@@ -18,10 +18,10 @@ Last updated: 2026-11-22
     - Task 232 gained "FINISH and WEIGHT follow the print's units"; task 238 now depends on 241.
 - 239 (`9df967d`), 227 (`9d9b3e4`, views measured in a hidden scratch drawing) and 228 (`5b15a9d`) done and reviewed; not run in Inventor.
 - 229 (`e9c93dc`), 230 (`d36d649`) and 231 (`d512626`) done and reviewed; not run in Inventor.
-- 232 (`01e8642`) and 233 done and reviewed. Next: 234.
+- 232 (`01e8642`), 233 (`f73c9d5`) and 234 done and reviewed. Next: 235.
 - An implementer can stall ("no progress for 600s"); check `git status` and restart it if nothing was written.
 - Next, in order:
-  1. 234 preview, 235 open existing print, 236 Designer.
+  1. 235 open existing print, 236 Designer.
   2. 240 hole tag leaders.
   3. Spike 241, run by the parent over COM like 218 and 225. Fill in its Results, then adjust 238's scope.
   4. 238: narrow to 0.6, then reduce height to the floor, Description wraps to two lines, single-line fields warn only at the floor.

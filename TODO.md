@@ -118,6 +118,9 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Task 222, Mass property (Aidan's check passed 2026-11-23):
   - Later: remove the lb mass unit step from the template builder; an imperial sample value for the fit check; the backfill warnings in Create Print and Material and Finish do not mention Mass.
 
+- Task 234, live preview:
+  - Views are labelled boxes, not the model's outline; the title block is a plain band. A label that does not fit its box is skipped. Check light and dark themes and 150% scale.
+
 - Task 233, front view choice:
   - Back, Bottom and Left cameras are worked out, not yet seen in Inventor.
   - The iso stays the standard top-right iso whatever the front choice; its fallback size estimate now uses the chosen front's box. Ask Aidan whether the iso should follow the chosen front.

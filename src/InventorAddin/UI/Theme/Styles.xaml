@@ -1758,6 +1758,25 @@
     </Style>
 
     <!--
+        The Initial Views sheet preview (UI/Controls/SheetPreviewView; task 234): 300 by 200. Sheet in the input background, the border
+        in the input border colour, the title block in the divider colour, the view boxes in the icon tile colour with a muted outline, or the error colour
+        when the views do not fit. Labels are Segoe UI 10 in the muted text colour.
+    -->
+    <Style TargetType="{x:Type controls:SheetPreviewView}">
+        <Setter Property="Width" Value="300" />
+        <Setter Property="Height" Value="200" />
+        <Setter Property="FontSize" Value="10" />
+        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+        <Setter Property="SheetBrush" Value="{DynamicResource InputBackgroundBrush}" />
+        <Setter Property="LineBrush" Value="{DynamicResource InputBorderBrush}" />
+        <Setter Property="TitleBlockBrush" Value="{DynamicResource DividerBrush}" />
+        <Setter Property="ViewBrush" Value="{DynamicResource IconTileBrush}" />
+        <Setter Property="ViewLineBrush" Value="{DynamicResource TextMutedBrush}" />
+        <Setter Property="ErrorBrush" Value="{DynamicResource ErrorBrush}" />
+        <Setter Property="SnapsToDevicePixels" Value="False" />
+    </Style>
+
+    <!--
         The diagram's frame (mockup choice 12): a CollapsibleSection in a 1 px divider frame, radius 4, 4 below as after a
         row in this window (task 118). Its 22-high header (24 until task 118) is the button, as a collapsible section's heading is: the chevron, "DIAGRAM" and, while
         collapsed, the summary in muted text cut short with an ellipsis (its tooltip has it all). Collapsed, only the

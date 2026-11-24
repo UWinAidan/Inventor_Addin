@@ -357,6 +357,9 @@ public sealed class InitialViewsViewModel : ObservableObject
 
     public string ScaleText => FormatScale(_plan.Scale);
 
+    /// <summary>The sheet, border, title block and view boxes the window draws; changes with every plan (task 234).</summary>
+    public InitialViewsSheetPreview Preview => InitialViewsSheetPreview.Build(_sheet, _plan, ScaleText, _selectedFront.Label);
+
     public IReadOnlyList<string> Messages => _plan.Messages;
 
     /// <summary>The plan's messages, one per line; empty when there is nothing to warn about.</summary>
@@ -413,6 +416,7 @@ public sealed class InitialViewsViewModel : ObservableObject
         RefreshNextSheet();
         OnPropertyChanged(nameof(SheetSizeText));
         OnPropertyChanged(nameof(Plan));
+        OnPropertyChanged(nameof(Preview));
         OnPropertyChanged(nameof(ScaleText));
         OnPropertyChanged(nameof(Messages));
         OnPropertyChanged(nameof(Warning));
