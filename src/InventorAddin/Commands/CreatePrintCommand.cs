@@ -260,6 +260,26 @@ namespace InventorAddin.Commands
                         (fieldWarnings.Count == 0 ? string.Empty : " Problems: " + string.Join(" ", fieldWarnings)));
                 }
 
+                // Long title block values are narrowed, shrunk or (Description) wrapped to fit their cells (task 238). Best effort: a
+                // failure is logged and the print goes on. After the repointing above, so the values read are the ones that print.
+                // Updated first, so the values read are current (WEIGHT reads "N/A" until then, and so does the repointed FINISH).
+                step = "fitting long title block values";
+                ComSafe.Run(() => drawingDocument.Update());
+                var fitWarnings = new List<string>();
+                int fitted = 0;
+                try
+                {
+                    RunInTransaction(drawingDoc, () => fitted = TitleBlockFitter.Apply(drawingDocument, fitWarnings));
+                }
+                catch (Exception ex)
+                {
+                    fitWarnings.Add(ex.Message);
+                }
+
+                AddinServices.Log.Info(
+                    $"Create Print: {fitted} title block field(s) fitted to their cells." +
+                    (fitWarnings.Count == 0 ? string.Empty : " Warnings: " + string.Join(" ", fitWarnings)));
+
                 step = "updating the drawing";
                 ComSafe.Run(() => drawingDocument.Update());
 
@@ -269,6 +289,14 @@ namespace InventorAddin.Commands
 
                 step = $"saving it as '{drawingPath}'";
                 drawing.SaveAs(drawingPath, false);
+
+                if (fitWarnings.Count > 0)
+                {
+                    Show(
+                        "The print was made, but some title block values do not fit their cells even at the smallest text, or could not be fitted:\n\n"
+                        + string.Join("\n", fitWarnings.Select(w => "- " + w)),
+                        Forms.MessageBoxIcon.Warning);
+                }
 
                 if (unitProblems.Count > 0)
                 {

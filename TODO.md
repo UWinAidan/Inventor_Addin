@@ -55,7 +55,7 @@ Confirmed so far: the window opens on an assembly, pre-fills Designer, Detailer 
 - [ ] With "Show developer tools" switched off and Inventor restarted: is the Developer panel gone, or does Inventor keep showing it? (open since task 007)
 
 
-**After 227 to 236:** recheck that an imperial print shows a period (the check of 226 could only make metric prints of an inch part).
+**M5 chunk 3** (227 to 240, built and reviewed 2026-11-23): Aidan's check is `docs/checklists/m5-chunk3.md` (includes the imperial period recheck from 226).
 
 ## Waiting on Aidan: decisions
 
@@ -117,6 +117,11 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 - Task 222, Mass property (Aidan's check passed 2026-11-23):
   - Later: remove the lb mass unit step from the template builder; an imperial sample value for the fit check; the backfill warnings in Create Print and Material and Finish do not mention Mass.
+
+- Task 238, long title block values:
+  - No stand-alone Update Title Block button: a value changed after the print is not refitted until Create Print or Place Initial Views runs again (a small task: a drawing button calling `TitleBlockFitter.Apply`).
+  - An off-units print edits the definition twice (repoint, then fit); could be one Edit.
+  - A hand-edited template with a renamed property is skipped silently; whether Inventor flags the edited definition as different from the template is untried; imperial geometry assumed equal to metric.
 
 - Task 240, tag leaders:
   - `LeaderVisible = true` on a leader placed hidden has never been seen; check it runs to the hole centre with a sensible arrow. `Position` as the tag centre after a drag is unmeasured.

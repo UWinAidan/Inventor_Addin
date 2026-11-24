@@ -6,7 +6,7 @@ Last updated: 2026-11-22
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-23 19:08. Branch `claude/m5-drawing-tools`, latest commit `1de776e` (task 234, pushed).
+- Updated: 2026-11-23 19:24. Branch `claude/m5-drawing-tools`, latest commit `b484e98` (task 240, pushed).
 - Goal: M5 chunk 3: the chunk 2 fixes (226 to 241), each implementer, then reviewer, one commit per task, push; then the chunk 3 summary for Aidan, then 194 onward.
 - Done this session:
   - Spec 05 Q30 and Q31 answered (`44d09ed`). Aidan then overturned Q31: see 238 and 241 below.
@@ -19,12 +19,14 @@ Last updated: 2026-11-22
 - 239 (`9df967d`), 227 (`9d9b3e4`, views measured in a hidden scratch drawing) and 228 (`5b15a9d`) done and reviewed; not run in Inventor.
 - 229 (`e9c93dc`), 230 (`d36d649`) and 231 (`d512626`) done and reviewed; not run in Inventor.
 - 232 (`01e8642`), 233 (`f73c9d5`) and 234 (`1de776e`) done and reviewed; not run in Inventor.
-- 235 (`87c0129`), 236 (`a1676e6`), spike 241 (`34d2612`, agent drove Inventor) and 240 done and reviewed. Next: 238 (brief updated from spike 241).
+- 235 (`87c0129`), 236 (`a1676e6`), spike 241 (`34d2612`, agent drove Inventor) and 240 (`b484e98`) done and reviewed.
+- 238 done and reviewed. **Chunk 3 is finished; stopped for Aidan's check (`docs/checklists/m5-chunk3.md`).**
+- Spikes can be delegated to a general-purpose agent that drives Inventor over PowerShell COM on copies in `C:\AwbSpike\NNN\` (241 did); scripts in the job tmp folder.
 - An implementer can stall ("no progress for 600s"); check `git status` and restart it if nothing was written.
 - Next, in order:
-  1. 238: narrow to 0.6, then reduce height to the floor, Description wraps to two lines, single-line fields warn only at the floor.
-  2. Chunk 3 summary and a condensed Inventor checklist for Aidan. Include the recheck of the imperial period after 227 to 236 (in TODO).
-- State: last builds 0 errors. Core tests 5475; each run 0 to 3 timing-flaky failures, which pass on rerun.
+  1. Wait for Aidan's chunk 3 check; turn failures into fix tasks.
+  2. Then 194 onward (PLAN M5), after the spec 05 questions 32 to 36 and spec 04 question 26 if Aidan answers them.
+- State: last builds 0 errors. Core tests 5510; each run 0 to 3 timing-flaky failures, which pass on rerun.
 - Aidan's check notes: an inch part printed on AWB Metric showed mm dimensions (expected until 232). Before a redeploy, Create Print read the stale deployed template (the 239 bug).
 - Gotchas:
   - Flaky tests: RenamePlan, SaveAsCopyCreator, SaveAsReplacer, NewPartCreator, Numbering, RegisterStore probe timeouts. Rerun them.

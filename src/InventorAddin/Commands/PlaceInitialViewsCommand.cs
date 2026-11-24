@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Inventor;
 using InventorAddin.Core.Drawing;
 using InventorAddin.Core.Materials;
@@ -49,6 +50,9 @@ namespace InventorAddin.Commands
 
         // The model the command opened itself (from the file picker); closed again when nothing is placed. Never a document the user had open.
         private Document? _openedByUs;
+
+        // Set by Execute: values too long for their cells at the smallest text, shown once the command has finished.
+        private List<string> _fitWarnings = new List<string>();
 
         protected override bool GatherInput(Document doc)
         {
@@ -131,9 +135,17 @@ namespace InventorAddin.Commands
         /// </summary>
         protected override void Run(Document doc)
         {
+            _fitWarnings = new List<string>();
             try
             {
                 base.Run(doc);
+                if (_fitWarnings.Count > 0)
+                {
+                    Forms.MessageBox.Show(
+                        "The views were placed, but some title block values do not fit their cells even at the smallest text, or could not be fitted:\n\n"
+                        + string.Join("\n", _fitWarnings.Select(w => "- " + w)),
+                        DisplayName, Forms.MessageBoxButtons.OK, Forms.MessageBoxIcon.Warning);
+                }
             }
             catch (Exception)
             {
@@ -155,6 +167,13 @@ namespace InventorAddin.Commands
 
             IReadOnlyList<string> placed = InitialViewsPlacer.Place(sheet, _model, _plan);
             ComSafe.Run(() => drawing.Update());
+
+            // Long title block values are fitted to their cells (task 238); best effort, inside this command's transaction.
+            _fitWarnings = new List<string>();
+            int fitted = TitleBlockFitter.Apply(drawing, _fitWarnings);
+            AddinServices.Log.Info(
+                $"Place Initial Views: {fitted} title block field(s) fitted to their cells." +
+                (_fitWarnings.Count == 0 ? string.Empty : " Warnings: " + string.Join(" ", _fitWarnings)));
 
             AddinServices.Log.Info(
                 $"Place Initial Views: {placed.Count} view(s) ({string.Join("; ", placed)}) at scale {_plan.Scale} on sheet '{ComSafe.Get(() => sheet.Name)}'.");

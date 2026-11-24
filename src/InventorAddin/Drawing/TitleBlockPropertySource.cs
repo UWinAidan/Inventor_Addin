@@ -62,7 +62,7 @@ namespace InventorAddin.PrintViews
         }
 
         // Edit takes the sketch by reference; the typed call first, then the by-ref IDispatch call the template builder falls back to.
-        private static DrawingSketch Edit(TitleBlockDefinition def)
+        internal static DrawingSketch Edit(TitleBlockDefinition def)
         {
             try
             {
