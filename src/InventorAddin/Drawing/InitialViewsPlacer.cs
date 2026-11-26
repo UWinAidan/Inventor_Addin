@@ -148,10 +148,6 @@ namespace InventorAddin.PrintViews
                     if (!scratch && planned.Kind is not (InitialViewKind.Top or InitialViewKind.Right))
                         EnsureScale(view, plan.Scale, planned.Kind);
                     placed.Add((planned, view));
-
-                    // The flat pattern view gets bend notes if it has none (task 229). The scratch drawing is only measured.
-                    if (!scratch && planned.Kind == InitialViewKind.FlatPattern)
-                        AddBendNotes(sheet, view);
                 }
             }
 
@@ -159,9 +155,9 @@ namespace InventorAddin.PrintViews
         }
 
         /// <summary>
-        /// The sheet metal part's folded front view: looking straight at the flat pattern's base face with its longest straight edge
-        /// horizontal (task 229, the rule is <see cref="FaceViewRule"/>). Falls back to the standard front view, logged, when the face
-        /// or its edges cannot be read.
+        /// The sheet metal part's folded front view: looking along the bend lines with the base face's normal up the sheet (task 242, the
+        /// rule is <see cref="FoldedViewRule"/>; a part with no usable bend falls back to <see cref="FaceViewRule"/>, task 229). Falls back
+        /// to the standard front view, logged, when the face or its edges cannot be read.
         /// </summary>
         private static DrawingView AddFoldedFront(
             DrawingViews views, _Document modelDocument, Document model, Point2d centre, double scale, FaceViewOrientation? chosen)
@@ -235,8 +231,8 @@ namespace InventorAddin.PrintViews
         }
 
         /// <summary>
-        /// A camera looking at the sheet metal part's base face (spike 225, question 1): the outward normal is the face's plane normal,
-        /// negated when <c>IsParamReversed</c>; the horizontal is its longest line segment edge. Null when any step fails.
+        /// A camera for the sheet metal part's folded view (spike 225, question 1; task 242): the base face's outward normal is its plane
+        /// normal, negated when <c>IsParamReversed</c>; the bends' axes are their front faces' cylinder axes. Null when any step fails.
         /// </summary>
         private static Camera? BuildBaseFaceCamera(Document model, List<string> warnings)
         {
@@ -270,7 +266,8 @@ namespace InventorAddin.PrintViews
                     edges.Add(new FaceEdgeCm(stop.X - start.X, stop.Y - start.Y, stop.Z - start.Z, start.DistanceTo(stop)));
                 }
 
-                FaceViewOrientation? orientation = FaceViewRule.Choose(sign * normal.X, sign * normal.Y, sign * normal.Z, edges);
+                var bends = ReadBendAxes(definition, warnings);
+                FaceViewOrientation? orientation = FoldedViewRule.Choose(sign * normal.X, sign * normal.Y, sign * normal.Z, bends, edges);
                 if (orientation == null)
                 {
                     warnings.Add($"No usable straight edge on the base face ({edges.Count} found).");
@@ -283,38 +280,40 @@ namespace InventorAddin.PrintViews
         }
 
         /// <summary>
-        /// Adds a bend note to each bend centreline of the flat pattern view when the sheet has none (spike 225, question 3: notes are
-        /// not added automatically, the view's curves with <c>kBendUpEdge</c> and <c>kBendDownEdge</c> are the centrelines). A note reads
-        /// direction, angle and radius. Bend notes use the part's units by default, which printed millimetres on an imperial drawing, so
-        /// each note is set to the drawing's units.
+        /// Each bend's axis (its front face's cylinder <c>AxisVector</c>) and length (the longest straight edge of that face, else its
+        /// radius). A bend that cannot be read is skipped with a warning.
         /// </summary>
-        private static void AddBendNotes(Sheet sheet, DrawingView view)
+        private static List<BendAxisCm> ReadBendAxes(SheetMetalComponentDefinition definition, List<string> warnings)
         {
-            int added = 0;
-            var warnings = new List<string>();
+            var axes = new List<BendAxisCm>();
             ComSafe.Run(() =>
             {
-                BendNotes notes = sheet.DrawingNotes.BendNotes;
-                if (notes.Count > 0)
-                    return;
-
-                foreach (DrawingCurve curve in view.DrawingCurves)
+                foreach (Bend bend in definition.Bends)
                 {
-                    DrawingEdgeTypeEnum type = curve.EdgeType;
-                    if (type != DrawingEdgeTypeEnum.kBendUpEdge && type != DrawingEdgeTypeEnum.kBendDownEdge)
-                        continue;
-
-                    DrawingCurve bend = curve;
+                    Bend current = bend;
                     ComSafe.Run(() =>
                     {
-                        BendNote note = notes.Add(bend);
-                        added++;
-                        ComSafe.Run(() => note.UsePartUnits = false);
-                    }, warnings, "bend note");
+                        foreach (Face face in current.FrontFaces)
+                        {
+                            if (face.Geometry is not Cylinder cylinder)
+                                continue;
+
+                            UnitVector axis = cylinder.AxisVector;
+                            double length = 0;
+                            foreach (Edge edge in face.Edges)
+                            {
+                                if (edge.GeometryType != CurveTypeEnum.kLineSegmentCurve)
+                                    continue;
+                                length = Math.Max(length, edge.StartVertex.Point.DistanceTo(edge.StopVertex.Point));
+                            }
+
+                            axes.Add(new BendAxisCm(axis.X, axis.Y, axis.Z, length > 0 ? length : cylinder.Radius));
+                            break;
+                        }
+                    }, warnings, "bend");
                 }
-            }, warnings, "bend notes");
-            AddinServices.Log.Info($"Place Initial Views: {added} bend note(s) added to the flat pattern view." +
-                (warnings.Count == 0 ? "" : " Problems: " + string.Join(" ", warnings)));
+            }, warnings, "bends");
+            return axes;
         }
 
         private static void EnsureScale(DrawingView view, double scale, InitialViewKind kind)

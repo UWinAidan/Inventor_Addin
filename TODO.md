@@ -145,6 +145,10 @@ Each spec lists its own open questions in full. These are the ones that block pl
   - When the Stock Size command is built (205, 206), make its number format agree with this one (spec 05 shows "PL 12 x 65 x 130", no suffix) and decide whether it skips sheet metal parts.
   - A flat pattern out of date after a thickness edit may give the old flat size; watch on Aidan's check.
 
+- Task 242, folded view along the bends:
+  - The eye side (+Z, else -Y, else +X) and up = base normal are Defaults; if the Z prints mirrored or upside down, flip them in `FoldedViewRule` (check first that `FlatPattern.BaseFace`'s normal is in folded-model space).
+  - The bend length that breaks ties is the longest straight edge of the bend face, else its radius; not seen on a real part.
+
 - Task 228, black and white and iso everywhere:
   - The sheet metal iso sits above the folded front; check it shows the folded part (no folded-model option is passed) and does not overlap a tall flat pattern. Its position may change after Aidan's check.
 

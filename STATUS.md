@@ -6,13 +6,15 @@ Last updated: 2026-11-22
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-26. Branch `claude/m5-drawing-tools`.
+- Updated: 2026-11-26 12:47. Branch `claude/m5-drawing-tools`, latest commit `eb8b91f` (plan for 242 to 245, pushed).
 - Goal: Aidan's chunk 3 check (2026-11-26) passed except the sheet metal folded view (8, 9) and off-units FINISH and WEIGHT (12). Fixes are tasks 242 to 245, then 194 onward (PLAN M5), each implementer, then reviewer, one commit per task, push. At the end, ONE checklist for Aidan covering 242 to 245 and everything from 194 on that can be checked in Inventor (`docs/checklists/m5-chunk4.md`).
 - Decisions 2026-11-26 are in `DECISIONS.md` (Q32, Q34, Q36, spec 04 Q26 accepted; Q33 and Q35 overturned; iso follows front; no bend notes).
 - Cause of step 12 (found with a COM probe): the field tag says `PropertySet='User Defined Properties'`, the repoint looked for `Inventor User Defined Properties`. Details in task 244.
 - Bend axes read fine with `SheetMetalComponentDefinition.Bends` -> `Bend.FrontFaces` -> `Cylinder.AxisVector` (probe on a copy of the test part).
 - COM probes: copies in `C:\AwbSpike\NNN\`; if Inventor is not running, `New-Object -ComObject Inventor.Application` and `Quit()` in the same script (an un-quit hidden instance lingers; kill it by PID).
-- Done this run: (none yet)
+- Done this run: decisions, spec 05 Q32 to Q36 and spec 04 Q26 closed, briefs 242 to 245, PLAN rows (`eb8b91f`).
+- 242 done and reviewed. Next: 243, 244, 245, then 194, 195, 196, ..., 208, 212 in order (all unblocked; run one at a time, parallel builds clash in `obj/`).
+- Last observed: build 0 errors, Core tests 5510 (before this run).
 - Gotchas:
   - Flaky tests: RenamePlan, SaveAsCopyCreator, SaveAsReplacer, NewPartCreator, Numbering, RegisterStore probe timeouts. Rerun them.
   - Build with `-p:DeployToInventor=false` while Inventor is open.

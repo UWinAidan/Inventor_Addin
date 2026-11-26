@@ -2,7 +2,7 @@
 
 - **Milestone:** M5 (from Aidan's chunk 3 check, 2026-11-26)
 - **Feature spec:** `docs/features/05-drawing-tools.md`
-- **Status:** todo
+- **Status:** done (built on Windows; not run in Inventor)
 - **Depends on:** 229, 233
 - **Needs:** windows build
 - **Parallel-safe with:** none (243 touches the same placer)
@@ -44,12 +44,19 @@ Out of scope: the iso (task 243), the flat pattern view, explicit Front view cho
 
 Filled in by the implementer.
 
-- **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):**
-- **Inventor API members not confirmed:**
+- **Ran:** `dotnet build InventorAddin.slnx -p:DeployToInventor=false`: 0 errors (13 existing warnings). `dotnet test tests/InventorAddin.Core.Tests`: 5520 passed, 0 failed (includes 10 new `FoldedViewRuleTests`). No COM probe was run; the bend reads follow the members the brief confirmed.
+- **Not compiled (changed under `src/InventorAddin`):** none; `InitialViewsPlacer.cs` built on Windows. Not run in Inventor.
+- **Inventor API members not confirmed:** `SheetMetalComponentDefinition.Bends` (enumerated as `Bend`) and `Bend.FrontFaces` are as the brief confirmed; they compile. `Cylinder.AxisVector` and `Cylinder.Radius` compile and the brief confirmed `AxisVector`. The bend length (longest line segment edge of the front face, else the radius) is only used to break a tie and has not been seen on a real part.
 - **Manual checklist for Inventor:**
-  1. …
+  1. Open the Z-shaped sheet metal test part and run Create Print (or Place Initial Views) with Front view Auto.
+  2. The folded view should show the Z profile with the base flange horizontal and not upside down.
+  3. The flat pattern view has no bend notes; nothing else about it changed.
+  4. Open a flat plate (sheet metal, no bends) and repeat: the plate shows face on, as before.
+  5. Choose an explicit Front view (for example Top): the folded view follows that choice, as in task 233.
+  6. Check `awbaddin.log` for "bend" warnings.
 
 ## Follow-ups
 
 Things noticed but not done.
+
+- The eye side (+Z, else -Y, else +X) and "up is the base normal" are Defaults from the brief; if the Z part prints mirrored or upside down, flip them in `FoldedViewRule`.
