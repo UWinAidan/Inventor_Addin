@@ -90,6 +90,9 @@ public sealed class PartMarkingViewModel : ObservableObject
     /// <summary>The note text as it will be placed.</summary>
     public string NoteText => PartMarking.NoteText(Options);
 
+    /// <summary>What the window previews: the note text, and for a leader the "&lt;part number&gt;" line where the note will have the number.</summary>
+    public string PreviewText => Target == PartMarkingTarget.Leader ? PartMarking.LeaderPreviewText(Options) : NoteText;
+
     /// <summary>The options the window currently describes.</summary>
     public PartMarkingOptions Options => new()
     {
@@ -110,6 +113,7 @@ public sealed class PartMarkingViewModel : ObservableObject
     private void RaiseResultChanged()
     {
         OnPropertyChanged(nameof(NoteText));
+        OnPropertyChanged(nameof(PreviewText));
         OnPropertyChanged(nameof(IsZone));
         OnPropertyChanged(nameof(ProblemText));
         OnPropertyChanged(nameof(CanApply));

@@ -47,6 +47,9 @@ public sealed record PartMarkingOptions
     public string HighlightColour { get; init; } = PartMarking.DefaultHighlightColour;
 }
 
+/// <summary>One line of the leader note: either text, or the place for the model's part number (then <see cref="Text"/> is empty).</summary>
+public sealed record LeaderNoteLine(string Text, bool IsPartNumber);
+
 /// <summary>The sizes, words and note text of part marking (spec 05, question 16 defaults).</summary>
 public static class PartMarking
 {
@@ -145,6 +148,34 @@ public static class PartMarking
 
         return lines;
     }
+
+    /// <summary>
+    /// The leader note's lines: <see cref="NoteLines"/> with the part number line after the method line. The part number line is
+    /// marked by <see cref="LeaderNoteLine.IsPartNumber"/>; there is none when the method is None.
+    /// </summary>
+    public static IReadOnlyList<LeaderNoteLine> LeaderNoteLines(PartMarkingOptions options)
+    {
+        IReadOnlyList<string> lines = NoteLines(options);
+        bool hasMethodLine = MethodPhrase(options.Method) is not null;
+        var result = new List<LeaderNoteLine>();
+        for (int i = 0; i < lines.Count; i++)
+        {
+            result.Add(new LeaderNoteLine(lines[i], false));
+
+            // The first line is the method line unless the method is None; the number follows it.
+            if (i == 0 && hasMethodLine)
+                result.Add(new LeaderNoteLine(string.Empty, true));
+        }
+
+        return result;
+    }
+
+    /// <summary>The leader note as the window previews it: the part number line reads <see cref="PartNumberPlaceholder"/>.</summary>
+    public static string LeaderPreviewText(PartMarkingOptions options) =>
+        string.Join("\n", LeaderNoteLines(options).Select(l => l.IsPartNumber ? PartNumberPlaceholder : l.Text));
+
+    /// <summary>The preview's stand-in for the model's part number.</summary>
+    public const string PartNumberPlaceholder = "<part number>";
 
     /// <summary>The note text, the lines joined with <c>\n</c>. Empty when there is nothing to say.</summary>
     public static string NoteText(PartMarkingOptions options) => string.Join("\n", NoteLines(options));

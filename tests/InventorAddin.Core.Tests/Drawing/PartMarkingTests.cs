@@ -149,4 +149,56 @@ public sealed class PartMarkingTests
         Assert.Equal(PartMarkingTarget.Zone, vm.Options.Target);
         Assert.Equal("#112233", vm.Options.HighlightColour);
     }
+
+    [Theory]
+    [InlineData(PartMarkingMethod.LaserEngrave, "LASER ENGRAVE PART NUMBER, 3 mm CHARACTERS")]
+    [InlineData(PartMarkingMethod.Stamp, "STAMP PART NUMBER, 3 mm CHARACTERS")]
+    [InlineData(PartMarkingMethod.Etch, "ETCH PART NUMBER, 3 mm CHARACTERS")]
+    [InlineData(PartMarkingMethod.Ink, "INK MARK PART NUMBER, 3 mm CHARACTERS")]
+    public void LeaderNoteLines_puts_the_part_number_after_the_method_line(PartMarkingMethod method, string methodLine)
+    {
+        var options = new PartMarkingOptions { Method = method, ExtraLines = ["DO NOT STAMP", "  ", "KEEP CLEAN"] };
+        var lines = PartMarking.LeaderNoteLines(options);
+        Assert.Equal(
+            [new LeaderNoteLine(methodLine, false), new LeaderNoteLine(string.Empty, true), new LeaderNoteLine("DO NOT STAMP", false), new LeaderNoteLine("KEEP CLEAN", false)],
+            lines);
+    }
+
+    [Fact]
+    public void LeaderNoteLines_method_none_has_no_part_number_line()
+    {
+        var options = new PartMarkingOptions { Method = PartMarkingMethod.None, ExtraLines = ["DO NOT STAMP", "KEEP CLEAN"] };
+        Assert.Equal([new LeaderNoteLine("DO NOT STAMP", false), new LeaderNoteLine("KEEP CLEAN", false)], PartMarking.LeaderNoteLines(options));
+    }
+
+    [Fact]
+    public void LeaderNoteLines_method_none_without_lines_is_empty()
+    {
+        Assert.Empty(PartMarking.LeaderNoteLines(new PartMarkingOptions { Method = PartMarkingMethod.None }));
+    }
+
+    [Fact]
+    public void LeaderNoteLines_a_typed_placeholder_is_not_the_part_number_line()
+    {
+        var options = new PartMarkingOptions { Method = PartMarkingMethod.None, ExtraLines = [PartMarking.PartNumberPlaceholder] };
+        Assert.All(PartMarking.LeaderNoteLines(options), l => Assert.False(l.IsPartNumber));
+    }
+
+    [Fact]
+    public void ViewModel_preview_shows_the_part_number_line_for_a_leader_only()
+    {
+        var vm = new PartMarkingViewModel(UnitsSystem.Metric, false) { ExtraLinesText = "DO NOT STAMP" };
+        Assert.Equal("LASER ENGRAVE PART NUMBER, 3 mm CHARACTERS\n<part number>\nDO NOT STAMP", vm.PreviewText);
+        Assert.DoesNotContain("<part number>", vm.NoteText);
+
+        var changed = new List<string?>();
+        vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        vm.Target = PartMarkingTarget.Zone;
+        Assert.Contains(nameof(PartMarkingViewModel.PreviewText), changed);
+        Assert.Equal(vm.NoteText, vm.PreviewText);
+
+        vm.Target = PartMarkingTarget.Leader;
+        vm.Method = PartMarkingMethod.None;
+        Assert.Equal("DO NOT STAMP", vm.PreviewText);
+    }
 }

@@ -89,6 +89,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Spec 05 question 37: Check Out of Bounds defaults (no border means the sheet edge, symbols are a point, modal list, unreadable items skipped and counted). Default: as built
 - Aidan: open libraries/AWB_Notes.xlsx in Excel and confirm there is no repair prompt (task 196)
 - Spec 05 question 38: automatic notes placement (NOTES: list above the title block, bottom line 30 mm in and 3 mm up, default text size, first sheet only). Default: as built
+- Spec 05 question 16 (extended by task 199): in zone mode should the method and extra lines go inside the zone rather than under it, and should the zone pick a view by clicking the view instead of an edge?
 - M5 planning questions 14 to 17 (from an earlier session; their wording is not in the repo): ask again when those commands come up (Aidan, 2026-11-20). Question 18 is answered by the Make/Buy column (2026-11-21)
 
 **iLogic (spec 06), blocks M6**
@@ -115,6 +116,11 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - **Part name editable in the properties window.** Aidan asked on 2026-10-06 whether the name can be edited. It stays display-only, linked to the file name; the Rename button beside it is now planned (task 047). Waiting on Aidan only if he wants the name to differ from the file name.
 
 ## Follow-ups from finished tasks
+
+- Task 199, Part Marking on the drawing:
+  - The zone (dashed sketch rectangle and sketch text) has never been run in Inventor; the zone text size at a view scale other than 1:1 is unknown (sketch text may be in model or sheet units).
+  - Unknown whether LeaderNote.Color also colours the leader line, and whether a <StyleOverride FontSize> around the Part Number field resolves in a leader note.
+  - The leader note sits 15 mm above the view's top-right corner; a view near the top of the sheet may push it off the sheet.
 
 - Task 198, part marking (Core):
   - The Settings window has no field for the marking colour (PartMarkingColour, default #0070C0); set it in settings.json until one is added.

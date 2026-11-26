@@ -117,6 +117,9 @@ public static class CommandNames
     /// <summary>Update Notes (spec 05; task 197), on the drawing ribbon.</summary>
     public const string UpdateNotes = Prefix + "UpdateNotes";
 
+    /// <summary>Part Marking (spec 05; task 199), on the drawing ribbon.</summary>
+    public const string PartMarking = Prefix + "PartMarking";
+
     /// <summary>
     /// Our Edit Feature for holes (task 092): put in place of Inventor's on the browser menu and the mini toolbar, with
     /// Inventor's icon. It has no ribbon button.

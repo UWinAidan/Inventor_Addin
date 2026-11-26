@@ -597,3 +597,8 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-26 | Notes workbook: blank Placement is List; blank Note is a bad row; blank name matches nothing; Finish Note keeps its place and an equal rule note is dropped; blank rows skipped; missing tab is a problem (spec 05 question 15) | Default | task 196 |
 | 2026-11-26 | Automatic notes: bold NOTES: list left-aligned with the title block, 2 mm above it; bold bottom line 30 mm from the border's left, at most 150 mm wide, 3 mm up; default note size; first sheet only; Create Print writes silently; an unreadable workbook leaves the notes as they were (spec 05 question 38) | Default | task 197 |
 | 2026-11-26 | Part marking: other methods read STAMP / ETCH / INK MARK PART NUMBER; engrave feature offered for any method but None, never for an assembly; nothing to apply with None and no extra lines; an invalid colour falls back to #0070C0 (spec 05 question 16) | Default | task 198 |
+| 2026-11-26 | Part Marking: the zone also asks for an edge pick and goes on that edge's view | Default | task 199 |
+| 2026-11-26 | Part Marking leader note: method line, then the model's Part Number field, then extra lines; with method None only the extra lines | Default | task 199 |
+| 2026-11-26 | Part Marking zone: the zone holds only the zone text; method and extra lines go in a second text box under it in the same sketch | Default | task 199 |
+| 2026-11-26 | Part Marking sizes: zone text 2.5 mm in the sketch, leader note text 3 mm, note 15 mm above the view's top-right corner | Default | task 199 |
+| 2026-11-26 | Part Marking window units come from the model's length units, or the drawing's when it references no model | Default | task 199 |

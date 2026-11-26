@@ -6,20 +6,22 @@ Last updated: 2026-11-22
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-26 12:47. Branch `claude/m5-drawing-tools`, latest commit `eb8b91f` (plan for 242 to 245, pushed).
-- Goal: Aidan's chunk 3 check (2026-11-26) passed except the sheet metal folded view (8, 9) and off-units FINISH and WEIGHT (12). Fixes are tasks 242 to 245, then 194 onward (PLAN M5), each implementer, then reviewer, one commit per task, push. At the end, ONE checklist for Aidan covering 242 to 245 and everything from 194 on that can be checked in Inventor (`docs/checklists/m5-chunk4.md`).
-- Decisions 2026-11-26 are in `DECISIONS.md` (Q32, Q34, Q36, spec 04 Q26 accepted; Q33 and Q35 overturned; iso follows front; no bend notes).
-- Cause of step 12 (found with a COM probe): the field tag says `PropertySet='User Defined Properties'`, the repoint looked for `Inventor User Defined Properties`. Details in task 244.
-- Bend axes read fine with `SheetMetalComponentDefinition.Bends` -> `Bend.FrontFaces` -> `Cylinder.AxisVector` (probe on a copy of the test part).
-- COM probes: copies in `C:\AwbSpike\NNN\`; if Inventor is not running, `New-Object -ComObject Inventor.Application` and `Quit()` in the same script (an un-quit hidden instance lingers; kill it by PID).
-- Done this run: decisions, spec 05 Q32 to Q36 and spec 04 Q26 closed, briefs 242 to 245, PLAN rows (`eb8b91f`). 242 `de8c57b`, 243 `5f545f2`, 244 `e81b048`, 245 `efcf8ac`, 194 `53738c4`, 195 committed, 196 committed, 197 committed, 198 committed
-- Next: see PLAN M5 (194 to 208, 212 in order, one at a time). Then the chunk 4 checklist.
-- Last observed: build 0 errors, Core tests 5510 (before this run).
+- Updated: 2026-11-26 (end of session; Aidan paused the run after 199). Branch `claude/m5-drawing-tools`, latest commit is task 199, pushed.
+- Goal: Aidan's chunk 3 check fixes (242 to 245), then 194 onward (PLAN M5) in order, each implementer, then reviewer, one commit per task, push. At the end ONE checklist `docs/checklists/m5-chunk4.md` covering 242 to 245 and everything from 194 on checkable in Inventor (condense each task file's manual checklist, like `docs/checklists/m5-chunk3.md`), then the line "All tasks in this run are finished".
+- Done this run: 242 `de8c57b`, 243 `5f545f2`, 244 `e81b048`, 245 `efcf8ac`, 194 `53738c4`, 195 `f54ad84`, 196 `778e088`, 197 `6cd2ffd`, 198 `3f86bd6`, 199 (the commit after 198).
+- Next (do not start until Aidan says so):
+  1. 200, 201, 202, 203, 204, 205, 206, 207, 208, 212 in order, one at a time. 200 adds the engrave tick box to `PartMarkingWindow.xaml` (the view-model already has `EngraveFeature`, `CanEngraveFeature`). 205 and 206 should match 230's Material Size number format.
+  2. Write `docs/checklists/m5-chunk4.md` (include: Excel opens `AWB_Notes.xlsx` with no repair prompt; clear 231's dashes from test assemblies first; assembly Material filled by hand; watch for a false "could not all be pointed" warning), update STATUS, push, end with "All tasks in this run are finished".
+  - Commit helpers `todo.py`, `ctask.py` were in the job tmp folder and may be gone; recreate if needed (tick PLAN, append Default rows to DECISIONS, add TODO follow-ups and spec questions).
+- Current state: build 0 errors, Core tests 5699 at 199. Nothing from this run has been run in Inventor.
+- Spec 05 open questions added this run: 37 (Check Out of Bounds), 38 (notes placement); 15 and 16 extended. All in TODO "Waiting on Aidan: decisions".
 - Gotchas:
   - Flaky tests: RenamePlan, SaveAsCopyCreator, SaveAsReplacer, NewPartCreator, Numbering, RegisterStore probe timeouts. Rerun them.
-  - Build with `-p:DeployToInventor=false` while Inventor is open.
-  - Multi-line edits are easiest as a .py script in the job tmp folder; bash heredocs with apostrophes can break, use the Write tool.
-  - An implementer can stall ("no progress for 600s"); check `git status` and restart it if nothing was written. Agents can stop at the session limit; resume them with SendMessage.
+  - Build with `-p:DeployToInventor=false` while Inventor is open. Run one implementer at a time (parallel builds clash in `obj/`).
+  - COM probes: copies in `C:\AwbSpike\NNN\`; if Inventor is not running, `New-Object -ComObject Inventor.Application` and `Quit()` in the same script. The 199 probe left Inventor (PID 91812) running with no documents open; Aidan can close it.
+  - Multi-line edits are easiest as a .py script in the job tmp folder; bash heredocs with apostrophes can break.
+  - Reviewers often find real must-fixes (194, 195, 197); send them back to the same implementer with SendMessage.
+- Key files: `docs/PLAN.md` (M5 list), `docs/tasks/199-*.md` onward, `docs/features/05-drawing-tools.md`, `DECISIONS.md` (2026-11-21 and 2026-11-26 rows).
 
 ## Big items
 
