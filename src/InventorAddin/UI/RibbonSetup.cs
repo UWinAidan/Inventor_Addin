@@ -74,6 +74,7 @@ namespace InventorAddin.UI
             yield return new HoleTableCommand();
             yield return new PlaceInitialViewsCommand();
             yield return new CheckOutOfBoundsCommand();
+            yield return new UpdateNotesCommand();
             yield return new HoleEditFeatureCommand();
             yield return new InventorHoleCommand();
             yield return new UseInventorHoleByDefaultCommand();

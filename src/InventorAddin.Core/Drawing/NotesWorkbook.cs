@@ -34,4 +34,10 @@ public sealed record NotesWorkbook(IReadOnlyList<NoteRule> MaterialRules, IReadO
 public sealed record NotesWorkbookReadResult(NotesWorkbook Workbook, IReadOnlyList<NotesWorkbookProblem> Problems)
 {
     public bool HasProblems => Problems.Count > 0;
+
+    /// <summary>
+    /// Whether the workbook as a whole could not be used: a problem that names no tab and no row (the file is missing or unreadable, or a
+    /// tab is absent). A bad row is not this; the rest of the rules still load.
+    /// </summary>
+    public bool CouldNotRead => Problems.Any(p => p.Tab == null && p.Row == null);
 }

@@ -252,6 +252,25 @@ namespace InventorAddin.Commands
                     AddinServices.Log.Warn($"Create Print: setting FINISH and WEIGHT for the print's units failed; the print goes on. {ex.Message}");
                 }
 
+                // The automatic notes (task 197): the same writer as Update Notes, once, on the first sheet. Best effort: a failure aborts only
+                // its own transaction, is logged and reported, and the print goes on.
+                step = "writing the notes";
+                var noteProblems = new List<string>();
+                try
+                {
+                    RunInTransaction(drawingDoc, () =>
+                    {
+                        NotesWriteResult notes = NotesWriter.Update(drawingDocument, model);
+                        if (notes.HasProblems)
+                            noteProblems.Add(notes.ProblemsText());
+                    });
+                }
+                catch (Exception ex)
+                {
+                    noteProblems.Add("The notes could not be written. " + ex.Message);
+                    AddinServices.Log.Warn($"Create Print: writing the notes failed; the print goes on. {ex.Message}");
+                }
+
                 // Long title block values are narrowed, shrunk or (Description) wrapped to fit their cells (task 238). Best effort: a
                 // failure is logged and the print goes on. After the repointing above, so the values read are the ones that print.
                 // Updated first, so the values read are current (WEIGHT reads "N/A" until then, and so does the repointed FINISH).
@@ -287,6 +306,13 @@ namespace InventorAddin.Commands
                     Show(
                         "The print was made, but some title block values do not fit their cells even at the smallest text, or could not be fitted:\n\n"
                         + string.Join("\n", fitWarnings.Select(w => "- " + w)),
+                        Forms.MessageBoxIcon.Warning);
+                }
+
+                if (noteProblems.Count > 0)
+                {
+                    Show(
+                        "The print was made, but there was a problem with its notes:\n\n" + string.Join("\n\n", noteProblems),
                         Forms.MessageBoxIcon.Warning);
                 }
 

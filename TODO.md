@@ -88,6 +88,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Spec 05 questions 13 to 23: the M5 defaults (zones, Project property, notes rules, marking sizes and colour, Batch Print, REF dimensions, stock shapes, Make/Buy blanks and manufacturer properties, Create Print's sheet, template built from code, the Finish field's text and the finish notes' order). Each has a default the tasks build
 - Spec 05 question 37: Check Out of Bounds defaults (no border means the sheet edge, symbols are a point, modal list, unreadable items skipped and counted). Default: as built
 - Aidan: open libraries/AWB_Notes.xlsx in Excel and confirm there is no repair prompt (task 196)
+- Spec 05 question 38: automatic notes placement (NOTES: list above the title block, bottom line 30 mm in and 3 mm up, default text size, first sheet only). Default: as built
 - M5 planning questions 14 to 17 (from an earlier session; their wording is not in the repo): ask again when those commands come up (Aidan, 2026-11-20). Question 18 is answered by the Make/Buy column (2026-11-21)
 
 **iLogic (spec 06), blocks M6**
@@ -114,6 +115,11 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - **Part name editable in the properties window.** Aidan asked on 2026-10-06 whether the name can be edited. It stays display-only, linked to the file name; the Rename button beside it is now planned (task 047). Waiting on Aidan only if he wants the name to differ from the file name.
 
 ## Follow-ups from finished tasks
+
+- Task 197, Update Notes:
+  - The NOTES list and bottom line can grow into the views on a crowded sheet; Check Out of Bounds does not report overlap with views.
+  - Only the first sheet gets notes; note text size is the style default (3.5 mm).
+  - Unconfirmed in Inventor: enumerating FindObjects in C#, GeneralNote.Parent as Sheet, AddFitted with Type.Missing.
 
 - Task 195, Check Out of Bounds:
   - Modal list may cover the picked item; consider modeless after Aidan tries it.

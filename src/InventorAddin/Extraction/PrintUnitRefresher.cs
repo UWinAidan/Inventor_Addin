@@ -136,7 +136,7 @@ namespace InventorAddin.Extraction
         }
 
         /// <summary>The first part or assembly the drawing references (as Place Initial Views finds it), or null.</summary>
-        private static Document? FindModel(DrawingDocument drawing)
+        internal static Document? FindModel(DrawingDocument drawing)
         {
             foreach (Document referenced in drawing.ReferencedDocuments)
             {

@@ -72,6 +72,10 @@ namespace InventorAddin.PrintViews
             return new SheetExtents(sheet, sheetName, border, titleBlock, c.Items, c.Skipped);
         }
 
+        /// <summary>The sheet's border and title block in millimetres (the border is the sheet's edge when it has none), for placing notes (task 197).</summary>
+        public static (SheetRect Border, SheetRect? TitleBlock) ReadFrame(Sheet sheet) =>
+            (ReadBox(ComSafe.Get(() => sheet.Border.RangeBox)) ?? SheetEdge(sheet), ReadBox(ComSafe.Get(() => sheet.TitleBlock.RangeBox)));
+
         private static SheetRect SheetEdge(Sheet sheet)
         {
             double w = ComSafe.Get(() => (double?)sheet.Width) ?? 0;

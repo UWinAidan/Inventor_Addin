@@ -597,7 +597,7 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 **Tools**
 - [x] 184 Spike: Inventor calls for the M5 drawing tools (Windows)
 - [x] 196 Automatic notes: workbook and rules (Core)
-- [ ] 197 Update Notes command; Create Print runs it
+- [x] 197 Update Notes command; Create Print runs it
 - [ ] 198 Part marking: options, note text and window model (Core)
 - [ ] 199 Part Marking window and marking on the drawing
 - [ ] 200 Engraved part number feature in the model
