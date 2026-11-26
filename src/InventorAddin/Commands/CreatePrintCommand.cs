@@ -209,27 +209,10 @@ namespace InventorAddin.Commands
                 step = "adding the views";
                 Document drawingDoc = drawing;
                 IReadOnlyList<string> placed = Array.Empty<string>();
-                IReadOnlyList<PropertyWrite> unitWrites = Array.Empty<PropertyWrite>();
                 var unitProblems = new List<string>();
                 RunInTransaction(drawingDoc, () =>
                 {
                     placed = InitialViewsPlacer.Place(sheet, model, plan);
-
-                    // FINISH and WEIGHT follow the print's units (task 232): when they differ from the model's, the print-units values go on the
-                    // drawing itself, made by the same Core formatting as the model's own.
-                    // Best effort: a refusal is logged and reported, and the views still go on.
-                    try
-                    {
-                        unitWrites = FinishSpecBackfiller.PrintUnitWritesFor(model, printUnits, FinishSpecBackfiller.LoadFinishList());
-                        if (unitWrites.Count > 0)
-                            PropertyWriter.Apply(drawingDoc, unitWrites);
-                    }
-                    catch (Exception ex)
-                    {
-                        unitWrites = Array.Empty<PropertyWrite>();
-                        unitProblems.Add("the Finish Spec and Mass could not be written on the drawing");
-                        AddinServices.Log.Warn($"Create Print: writing the Finish Spec and Mass in the print's units failed; the views were placed anyway. {ex.Message}");
-                    }
 
                     if (partNumber != null)
                     {
@@ -238,26 +221,35 @@ namespace InventorAddin.Commands
                     }
                 });
 
-                if (unitWrites.Count > 0)
+                // FINISH and WEIGHT follow the print's units (tasks 232 and 244): the one refresher, shared with opening and saving a print,
+                // writes the print-units Finish Spec and Mass on the drawing and points the fields at them when the units differ.
+                // Best effort: a refusal is logged and reported, and the print goes on.
+                step = "setting FINISH and WEIGHT for the print's units";
+                try
                 {
-                    step = "pointing FINISH and WEIGHT at the drawing's own values";
-                    var fieldWarnings = new List<string>();
-                    int changed = 0;
-                    try
+                    PrintUnitRefresh unitRefresh = PrintUnitRefresher.Refresh(drawingDocument, model, printUnits);
+                    if (unitRefresh.Applicable)
                     {
-                        changed = TitleBlockPropertySource.PointAtDrawing(
-                            sheet, unitWrites.Select(w => w.Location.PropertyName).ToList(), fieldWarnings);
+                        if (unitRefresh.Warnings.Count > 0)
+                            unitProblems.Add("FINISH and WEIGHT could not all be set for the print's units");
+                        if (unitRefresh.ReadsDrawing.Count > 0 && unitRefresh.FieldsChanged < unitRefresh.ReadsDrawing.Count)
+                            unitProblems.Add("FINISH and WEIGHT could not all be pointed at the drawing's own values");
+                        AddinServices.Log.Info(
+                            unitRefresh.ReadsDrawing.Count == 0
+                                ? $"Create Print: the print and the model are both in {unitRefresh.PrintUnits} units; FINISH and WEIGHT read the model."
+                                : $"Create Print: the print is in {unitRefresh.PrintUnits} units, the model is in {unitRefresh.ModelUnits}; {unitRefresh.FieldsChanged} title block field(s) now read the drawing's {string.Join(", ", unitRefresh.ReadsDrawing)}." +
+                                  (unitRefresh.Warnings.Count == 0 ? string.Empty : " Problems: " + string.Join(" ", unitRefresh.Warnings)));
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        fieldWarnings.Add(ex.Message);
+                        unitProblems.Add("FINISH and WEIGHT could not be set for the print's units");
+                        AddinServices.Log.Warn("Create Print: the new print has no FINISH and WEIGHT fields to set. " + string.Join(" ", unitRefresh.Warnings));
                     }
-
-                    if (fieldWarnings.Count > 0 || changed < unitWrites.Count)
-                        unitProblems.Add("FINISH and WEIGHT could not all be pointed at the drawing's own values");
-                    AddinServices.Log.Info(
-                        $"Create Print: the print is in {printUnits} units, the model is not; {changed} title block field(s) now read the drawing's {string.Join(", ", unitWrites.Select(w => w.Location.PropertyName))}." +
-                        (fieldWarnings.Count == 0 ? string.Empty : " Problems: " + string.Join(" ", fieldWarnings)));
+                }
+                catch (Exception ex)
+                {
+                    unitProblems.Add("FINISH and WEIGHT could not be set for the print's units");
+                    AddinServices.Log.Warn($"Create Print: setting FINISH and WEIGHT for the print's units failed; the print goes on. {ex.Message}");
                 }
 
                 // Long title block values are narrowed, shrunk or (Description) wrapped to fit their cells (task 238). Best effort: a

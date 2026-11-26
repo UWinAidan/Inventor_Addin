@@ -590,3 +590,4 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-26 | The iso follows the chosen front view: the front-top-right corner relative to whatever is picked as Front | Aidan | task 243 |
 | 2026-11-26 | Iso details: standard Front keeps `kIsoTopRightViewOrientation`; sheet metal on Auto keeps today's iso; an explicit choice on sheet metal makes the iso follow it | Default | task 243 |
 | 2026-11-26 | Order: fixes 242 to 245, then 194 onward; one checklist at the end for the fixes and everything checkable from 194 on | Aidan | PLAN |
+| 2026-11-26 | Off-units refresh skips drawings Inventor has open without a window (Mass Update scans, Rename); a model value that cannot be read leaves the drawing's stored copy in place | Default | task 244 |

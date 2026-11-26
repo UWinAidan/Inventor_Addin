@@ -2,7 +2,7 @@
 
 - **Milestone:** M5 (from Aidan's chunk 3 check, 2026-11-26)
 - **Feature spec:** `docs/features/05-drawing-tools.md` (question 33)
-- **Status:** todo
+- **Status:** done (built on Windows; not run in Inventor)
 - **Depends on:** 232
 - **Needs:** windows build
 - **Parallel-safe with:** none (245 builds on it)
@@ -42,14 +42,33 @@ Each sits inside a `<StyleOverride FontSize='0.2036'>`. Identify a custom proper
 
 ## Verification
 
-Filled in by the implementer.
-
 - **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):**
-- **Inventor API members not confirmed:**
+  - `dotnet build InventorAddin.slnx -p:DeployToInventor=false`: 0 errors, build succeeded.
+  - `dotnet test tests/InventorAddin.Core.Tests`: 5547 passed, 0 failed (24 in `PrintUnitValuesTests`, including the real template field text as a fixture, both directions, up-to-date and changed-mass plans).
+  - After review: `PrintUnitEvents` skips documents with no views (`Document` has no `Visible`; probe p5: `Views.Count` is 0 for a drawing opened with `Open(path, false)` and 1 when shown), on open and save, logging nothing. `PlanFor` keeps a field on the drawing when the model value cannot be read and the drawing stores its own copy (units differ only; an assembly's Finish Spec still reads the model). 4 tests added.
+  - COM probes (PowerShell late-bound, copies in `C:\AwbSpike\244\`, scripts in the job tmp folder `p1` to `p4`; Inventor was started with New-Object and Quit in each script):
+    - p1: `UnitsOfMeasure.LengthUnits` is `kMillimeterLengthUnits` (11269) on the copy of the failed print and on a copy of AWB Metric, and `kInchLengthUnits` (11272) on a copy of AWB Imperial. So the drawing's own length units are a reliable signal for the print's units; no fallback needed.
+    - p2/p3: the drawing's own `Mass` ("0.07 kg") and `Finish Spec` (µm spec) were present. `TitleBlockDefinition.Sketch.TextBoxes` can be read without `Edit`, and reading leaves `Dirty = False`. The field text is `PropertySet='User Defined Properties'` with FormatID `{D5CDD505-...}` as the brief said.
+    - p4 (the repoint): before, the fields printed `.0005-.0010 IN` and `0.16 lb`. After `Edit`, rewriting `Document='model'` to `'drawing'` on the two fields (matched by FormatID), and `ExitEdit(true)`, they printed `13-25 µm` and `0.07 kg` (read with `TitleBlock.GetResultText`). Pointing back to `'model'` printed the inch values again. The drawing became dirty only because of the edit, which is why the add-in reads first and edits only when a field must change.
+  - `TitleBlockFit.FieldOf` matches on the property name only, not the set name, so it did not have the same mistake. `PrintTemplateBuilder` still writes the long set name when it builds templates; Core now accepts either name or the FormatID.
+- **Not compiled (changed under `src/InventorAddin`):** none; all of it built on Windows (not run in Inventor): `Extraction/PrintUnitRefresher.cs` (new), `Extraction/PrintUnitEvents.cs` (new), `Drawing/TitleBlockPropertySource.cs`, `Commands/CreatePrintCommand.cs`, `StandardAddInServer.cs`.
+- **Inventor API members not confirmed:** all compile. Confirmed by probe: `TitleBlockDefinition.Sketch` read without Edit, `Edit` by-ref (the existing fallback), `ExitEdit(true)`, `TitleBlock.GetResultText`, `UnitsOfMeasure.LengthUnits`. Not exercised in a real session: `ApplicationEvents.OnOpenDocument` (signature checked by reflection on the interop) and writing properties and editing the title block from inside `OnOpenDocument` (after) and `OnSaveDocument` (before).
 - **Manual checklist for Inventor:**
-  1. …
+  1. Close Inventor, build with deploy (`dotnet build InventorAddin.slnx`), start Inventor.
+  2. Open an inch part (own copy), click Create Print, choose Metric in Initial Views. Expect FINISH in µm and WEIGHT in kg. The log says `the print is in Metric units, the model is in Imperial; 2 title block field(s) now read the drawing's Mass, Finish Spec.`
+  3. Repeat with a metric part on an Imperial print. Expect lb and the inch spec.
+  4. Close the print, change the part's finish and some geometry (mass), save the part, open the print. FINISH and WEIGHT should update (a log line `Print units: on opening ...`). Change the part again with the print open, save the print: they update before the save.
+  5. Open a print in the part's own units, and an up-to-date off-units print: nothing is logged and the drawing is not marked as modified (no `*` on the tab).
+  6. Open a drawing that is not an AWB print: nothing changes.
+
+## Defaults
+
+- A document with no views is treated as not visible (Default; no `Document.Visible` exists), so hidden opens are never refreshed.
+- A field whose model value is unreadable keeps reading the drawing's stored copy rather than the model (Default, from review).
 
 ## Follow-ups
 
-Things noticed but not done.
+- When a refresh on open or save changes the FINISH or WEIGHT text, the title block fit (task 238) is not re-run, so a longer value may not be re-fitted to its cell until Place Initial Views or a new print. Run `TitleBlockFitter.Apply` after a change if this shows.
+- `FinishSpecBackfiller.PrintUnitWritesFor` is no longer used by anything (Create Print now goes through `PrintUnitRefresher`); remove it.
+- `PrintTemplateBuilder` writes `PropertySet='Inventor User Defined Properties'` into new templates, while Inventor stores `User Defined Properties`; harmless now (Core accepts both), but worth aligning.
+- Task 245 builds on this; the refresher is `PrintUnitRefresher.Refresh(drawing, model?, printUnits?)`.

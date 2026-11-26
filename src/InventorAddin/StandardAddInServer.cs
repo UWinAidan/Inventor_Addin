@@ -22,6 +22,7 @@ namespace InventorAddin
         private StartupTab? _startupTab;
         private HoleTableAutoChecker? _holeTableChecker;
         private MassOnSave? _massOnSave;
+        private PrintUnitEvents? _printUnitEvents;
 
         public void Activate(ApplicationAddInSite addInSiteObject, bool firstTime)
         {
@@ -49,12 +50,18 @@ namespace InventorAddin
 
             _massOnSave = new MassOnSave(InventorHost.App, AddinServices.Log);
             _massOnSave.Start();
+
+            _printUnitEvents = new PrintUnitEvents(InventorHost.App, AddinServices.Log);
+            _printUnitEvents.Start();
         }
 
         public void Deactivate()
         {
             // An open AWB Hole session is cancelled, so the part is left as it was (task 089).
             AwbHoleWindowLauncher.Shutdown();
+
+            _printUnitEvents?.Dispose();
+            _printUnitEvents = null;
 
             _massOnSave?.Dispose();
             _massOnSave = null;

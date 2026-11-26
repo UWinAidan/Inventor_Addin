@@ -145,6 +145,12 @@ Each spec lists its own open questions in full. These are the ones that block pl
   - When the Stock Size command is built (205, 206), make its number format agree with this one (spec 05 shows "PL 12 x 65 x 130", no suffix) and decide whether it skips sheet metal parts.
   - A flat pattern out of date after a thickness edit may give the old flat size; watch on Aidan's check.
 
+- Task 244, off-units refresh:
+  - A refresh on open or save does not re-run the title block fit (238), so a longer new value is not re-fitted.
+  - `FinishSpecBackfiller.PrintUnitWritesFor` is unused now; remove it. `PrintTemplateBuilder` still writes the long set name in new templates (harmless; Core accepts both).
+  - Watch: a print already open is not refreshed by Create Print until it is saved; reading the part's mass on open may make the part ask to be saved.
+  - Unconfirmed: editing the title block and writing properties from inside OnOpenDocument (after) and OnSaveDocument (before).
+
 - Task 243, iso follows the front:
   - That `kIsoTopRightViewOrientation` looks from (+X, +Y, +Z) is assumed; a non-standard iso uses the arbitrary camera, so its label and scale may differ slightly from the built-in iso. Watch on Aidan's check.
 

@@ -13,7 +13,7 @@ Last updated: 2026-11-22
 - Bend axes read fine with `SheetMetalComponentDefinition.Bends` -> `Bend.FrontFaces` -> `Cylinder.AxisVector` (probe on a copy of the test part).
 - COM probes: copies in `C:\AwbSpike\NNN\`; if Inventor is not running, `New-Object -ComObject Inventor.Application` and `Quit()` in the same script (an un-quit hidden instance lingers; kill it by PID).
 - Done this run: decisions, spec 05 Q32 to Q36 and spec 04 Q26 closed, briefs 242 to 245, PLAN rows (`eb8b91f`).
-- 242 (`de8c57b`) and 243 done and reviewed. Next: 244, 245, then 194, 195, 196, ..., 208, 212 in order (all unblocked; run one at a time, parallel builds clash in `obj/`).
+- 242 (`de8c57b`), 243 (`5f545f2`) and 244 done and reviewed. Next: 245, 245, then 194, 195, 196, ..., 208, 212 in order (all unblocked; run one at a time, parallel builds clash in `obj/`).
 - Last observed: build 0 errors, Core tests 5510 (before this run).
 - Gotchas:
   - Flaky tests: RenamePlan, SaveAsCopyCreator, SaveAsReplacer, NewPartCreator, Numbering, RegisterStore probe timeouts. Rerun them.
