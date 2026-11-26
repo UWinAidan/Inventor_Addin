@@ -2,7 +2,7 @@
 
 - **Milestone:** M5
 - **Feature spec:** `docs/features/05-drawing-tools.md` ("Added for M5: New tools", item 3; open question 17)
-- **Status:** todo
+- **Status:** done
 - **Depends on:** none
 - **Needs:** cloud
 - **Parallel-safe with:** 198
@@ -18,9 +18,9 @@ Core orders the drawings for one PDF: the assembly's own first, then each compon
 
 ## Acceptance criteria
 
-- [ ] Order and de-duplication as above; a sub-assembly's print comes before its children's.
-- [ ] Library and Content Center parts are skipped and counted; models with no print are listed.
-- [ ] `dotnet test tests/InventorAddin.Core.Tests` passes
+- [x] Order and de-duplication as above; a sub-assembly's print comes before its children's.
+- [x] Library and Content Center parts are skipped and counted; models with no print are listed.
+- [x] `dotnet test tests/InventorAddin.Core.Tests` passes
 
 ## Notes for the implementer
 
@@ -28,14 +28,19 @@ Core orders the drawings for one PDF: the assembly's own first, then each compon
 
 ## Verification
 
-Filled in by the implementer.
-
-- **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):**
-- **Inventor API members not confirmed:**
+- **Ran:** `dotnet test tests/InventorAddin.Core.Tests`: 5717 passed, 0 failed (includes 10 new BatchPrintPlanTests cases). Core only; no add-in changes.
+- **Not compiled (changed under `src/InventorAddin`):** none changed.
+- **Inventor API members not confirmed:** none used.
 - **Manual checklist for Inventor:** (copied into `docs/checklists/m5.md` by the parent for the combined check, task 209)
-  1. …
+  Nothing checkable in Inventor until the Batch Print command (a later task) uses this plan.
+
+## Defaults
+
+- Added `BatchPrintComponent` (path, IsLibrary, children) and `BatchPrintPlan.Create(root, findPrint)`; `findPrint` is a delegate so the add-in passes `PrintPlan.FindExistingPrint` with a file-exists check.
+- A file is keyed by path ignoring case and slash direction; the first occurrence wins and a repeated sub-assembly is not walked again.
+- A model with no print is listed but its children are still walked. A library part's subtree is not walked.
+- Report lists models with no drawing by file name only (no folders), and the library skip count.
 
 ## Follow-ups
 
-Things noticed but not done.
+- The add-in command (read the component tree, merge PDFs with PDFsharp, ask before replacing the PDF) is a later task.

@@ -605,3 +605,4 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-26 | Engraved part number: on the largest planar face of the first body at Face.PointOnFace, no face pick; 3 mm (0.12 in) text, 0.2 mm (0.008 in) deep | Default | task 200 |
 | 2026-11-26 | Engraved part number: negative direction first, then positive if the volume does not drop by more than 1e-9 cm3; a failure aborts the part transaction and warns, the drawing marking stays | Default | task 200 |
 | 2026-11-26 | Part Marking with engraving: drawing transaction then a separate part transaction, two Undo steps; the tick box is hidden for assemblies and method None; the part is left modified and unsaved | Default | task 200 |
+| 2026-11-26 | Batch print plan: children of a model with no drawing are still walked; a library or Content Center part's subtree is not walked | Default | task 201 |
