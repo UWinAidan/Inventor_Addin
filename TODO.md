@@ -116,6 +116,10 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Follow-ups from finished tasks
 
+- Task 198, part marking (Core):
+  - The Settings window has no field for the marking colour (PartMarkingColour, default #0070C0); set it in settings.json until one is added.
+  - PartMarkingOptions.HighlightColour is not normalised on init; the add-in should build options through the view-model.
+
 - Task 197, Update Notes:
   - The NOTES list and bottom line can grow into the views on a crowded sheet; Check Out of Bounds does not report overlap with views.
   - Only the first sheet gets notes; note text size is the style default (3.5 mm).

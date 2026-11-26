@@ -373,6 +373,7 @@ public sealed class SettingsStoreTests : IDisposable
             s => s with { FinishListPath = @"D:\finishes.csv" },
             s => s with { HoleWorkbookPath = @"D:\AWB_Holes.xlsx" },
             s => s with { NotesWorkbookPath = @"D:\AWB_Notes.xlsx" },
+            s => s with { PartMarkingColour = "#112233" },
             s => s with { PrintTemplateMetricPath = @"D:\Metric.idw" },
             s => s with { PrintTemplateImperialPath = @"D:\Imperial.idw" },
             s => s with { UseInventorHoleCommand = true },

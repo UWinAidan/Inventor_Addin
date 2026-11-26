@@ -159,6 +159,18 @@ public sealed record AddinSettings
     private string _notesWorkbookPath = string.Empty;
 
     /// <summary>
+    /// The highlight colour of part marking's leader and zone (<c>#RRGGBB</c>; spec 05, question 16). Blue
+    /// <c>#0070C0</c> by default. Text that is not a 6-digit hex colour is stored as the default.
+    /// </summary>
+    public string PartMarkingColour
+    {
+        get => _partMarkingColour;
+        set => _partMarkingColour = Drawing.PartMarking.NormaliseColour(value);
+    }
+
+    private string _partMarkingColour = Drawing.PartMarking.DefaultHighlightColour;
+
+    /// <summary>
     /// The metric print template (<c>.idw</c>) Create Print copies (spec 05, "Decided for M5"). <c>""</c> by default,
     /// which means the starter template shipped with the add-in (<see cref="Materials.LibraryPaths.PrintTemplate"/>).
     /// A null is stored as <c>""</c>.
@@ -389,6 +401,7 @@ public sealed record AddinSettings
         && FinishListPath == other.FinishListPath
         && HoleWorkbookPath == other.HoleWorkbookPath
         && NotesWorkbookPath == other.NotesWorkbookPath
+        && PartMarkingColour == other.PartMarkingColour
         && PrintTemplateMetricPath == other.PrintTemplateMetricPath
         && PrintTemplateImperialPath == other.PrintTemplateImperialPath
         && UseInventorHoleCommand == other.UseInventorHoleCommand
@@ -426,6 +439,7 @@ public sealed record AddinSettings
         hash.Add(FinishListPath, StringComparer.Ordinal);
         hash.Add(HoleWorkbookPath, StringComparer.Ordinal);
         hash.Add(NotesWorkbookPath, StringComparer.Ordinal);
+        hash.Add(PartMarkingColour, StringComparer.Ordinal);
         hash.Add(PrintTemplateMetricPath, StringComparer.Ordinal);
         hash.Add(PrintTemplateImperialPath, StringComparer.Ordinal);
         hash.Add(UseInventorHoleCommand);
