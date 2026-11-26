@@ -91,6 +91,8 @@ public static class RibbonLayout
             new(CommandNames.OpenDrawing, ButtonSize.Large, IconNames.OpenDrawing, ModelEnvironments),
             // Spec 05, "Decided for M5: Place Initial Views" (task 192): large, on the drawing ribbon only.
             new(CommandNames.PlaceInitialViews, ButtonSize.Large, IconNames.PlaceInitialViews, DrawingEnvironments),
+            // Spec 05, "Commands: Check Out of Bounds" (task 195): large, on the drawing ribbon only.
+            new(CommandNames.CheckOutOfBounds, ButtonSize.Large, IconNames.CheckOutOfBounds, DrawingEnvironments),
             // Spec 04, "Target dialog" (task 167): large, on the drawing ribbon only.
             new(CommandNames.HoleTable, ButtonSize.Large, IconNames.HoleTable, DrawingEnvironments),
         }),

@@ -111,6 +111,9 @@ public static class CommandNames
     /// <summary>Place Initial Views (spec 05; task 192), on the drawing ribbon.</summary>
     public const string PlaceInitialViews = Prefix + "PlaceInitialViews";
 
+    /// <summary>Check Out of Bounds (spec 05; task 195), on the drawing ribbon.</summary>
+    public const string CheckOutOfBounds = Prefix + "CheckOutOfBounds";
+
     /// <summary>
     /// Our Edit Feature for holes (task 092): put in place of Inventor's on the browser menu and the mini toolbar, with
     /// Inventor's icon. It has no ribbon button.

@@ -592,7 +592,7 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [x] 192 Place Initial Views window and command; Create Print shows it
 - [x] 193 Open Drawing
 - [x] 194 Out-of-bounds check (Core)
-- [ ] 195 Check Out of Bounds command
+- [x] 195 Check Out of Bounds command
 
 **Tools**
 - [x] 184 Spike: Inventor calls for the M5 drawing tools (Windows)

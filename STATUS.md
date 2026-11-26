@@ -12,7 +12,7 @@ Last updated: 2026-11-22
 - Cause of step 12 (found with a COM probe): the field tag says `PropertySet='User Defined Properties'`, the repoint looked for `Inventor User Defined Properties`. Details in task 244.
 - Bend axes read fine with `SheetMetalComponentDefinition.Bends` -> `Bend.FrontFaces` -> `Cylinder.AxisVector` (probe on a copy of the test part).
 - COM probes: copies in `C:\AwbSpike\NNN\`; if Inventor is not running, `New-Object -ComObject Inventor.Application` and `Quit()` in the same script (an un-quit hidden instance lingers; kill it by PID).
-- Done this run: decisions, spec 05 Q32 to Q36 and spec 04 Q26 closed, briefs 242 to 245, PLAN rows (`eb8b91f`). 242 `de8c57b`, 243 `5f545f2`, 244 `e81b048`, 245 committed., 194 committed
+- Done this run: decisions, spec 05 Q32 to Q36 and spec 04 Q26 closed, briefs 242 to 245, PLAN rows (`eb8b91f`). 242 `de8c57b`, 243 `5f545f2`, 244 `e81b048`, 245 `efcf8ac`, 194 `53738c4`, 195 committed
 - Next: see PLAN M5 (194 to 208, 212 in order, one at a time). Then the chunk 4 checklist.
 - Last observed: build 0 errors, Core tests 5510 (before this run).
 - Gotchas:

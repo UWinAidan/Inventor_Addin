@@ -1,0 +1,45 @@
+<Window x:Class="InventorAddin.UI.OutOfBoundsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:InventorAddin.UI.Controls"
+        SizeToContent="WidthAndHeight"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False">
+    <!--
+        Task 195: the list Check Out of Bounds shows. The heading and the lines are set by the constructor; picking a line calls
+        the callback it was given, which selects that item in the drawing. Layout only: the look comes from UI/Theme, applied by
+        WindowHost after the window is built, so shared styles are referred to with DynamicResource.
+    -->
+    <Grid Style="{DynamicResource DialogContent}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <controls:DialogHeader Grid.Row="0"
+                               Icon="{DynamicResource HeaderIcon}"
+                               Title="Check Out of Bounds"
+                               Subline="Items outside the border or over the title block" />
+
+        <ScrollViewer Grid.Row="1" Style="{DynamicResource DialogBody}">
+            <StackPanel Style="{DynamicResource DialogBodyContent}">
+                <TextBlock x:Name="HeadingText" Style="{DynamicResource ValueText}" TextWrapping="Wrap" />
+                <ListBox x:Name="FindingsList" Style="{DynamicResource WideList}"
+                         ItemContainerStyle="{DynamicResource PickListItem}"
+                         SelectionChanged="FindingsList_SelectionChanged"
+                         PreviewMouseLeftButtonUp="FindingsList_PreviewMouseLeftButtonUp">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Style="{DynamicResource ValueText}" TextWrapping="Wrap" Text="{Binding Mode=OneWay}" />
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </StackPanel>
+        </ScrollViewer>
+
+        <controls:DialogFooter Grid.Row="2">
+            <Button Style="{DynamicResource PrimaryButton}" Content="Close" IsDefault="True" IsCancel="True" />
+        </controls:DialogFooter>
+    </Grid>
+</Window>

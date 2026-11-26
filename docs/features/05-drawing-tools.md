@@ -126,3 +126,4 @@ Each command is a thin read, call Core, apply. Creating drawings and placing vie
 34. Answered by Aidan 2026-11-26: a hand-typed sheet metal Material Size is replaced by the computed one, and Material Size stays in the part's units on an off-units print.
 35. Answered by Aidan 2026-11-26: nothing is written into the assembly; the print shows "—" for a blank Material, Material Size or Finish and the model stays untouched (task 245).
 36. Answered by Aidan 2026-11-26: the first sheet whose scale is at least 1:2, else the largest.
+37. Check Out of Bounds (task 195): defaults picked. A sheet with no border is checked against the sheet edge; sketched symbols count as a point (their centre); the list is a modal window that selects the picked item on its sheet; items whose extent cannot be read are skipped and logged. Is that right, or should the list be modeless, or views be measured by their drawn lines? Default until answered: as built.
