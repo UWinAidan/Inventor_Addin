@@ -575,3 +575,18 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-23 | Long title block values (spike 241): every field narrows to 0.6 then shrinks to 1.8 mm on one line; Description wraps onto two lines at about 3.4 mm (live, via `TextBox.Width`) before shrinking further; one size per field for the whole drawing | Default | task 238 |
 | 2026-11-23 | Tag leader gap is measured from the hole's outermost drawn circle (a seat or thread circle counts); the leader is set on every Update of the tables (window and automatic check); a failure only logs | Default | task 240 |
 | 2026-11-23 | Title block fit details: available width is the cell's right edge minus the value's x minus 1.5 mm (Description 112 mm); centred fields (REV) are not fitted; sizes step 0.05 mm and the width scale rounds down to 3 decimals; Description's box width is not reset when it fits one line again; the fit runs in Create Print (its own transaction and Edit after the FINISH/WEIGHT repoint, so an off-units print gets two Edits) and Place Initial Views; no separate Update Title Block button yet; only sheets with the same title block definition feed the fit | Default | task 238 |
+| 2026-11-26 | Chunk 3 check: everything passed but the sheet metal folded view (steps 8, 9) and the off-units FINISH and WEIGHT (step 12) | Aidan | tasks 227 to 240 |
+| 2026-11-26 | The sheet metal folded view looks along the bend lines so the bend profile shows (overturns task 229's base face rule); flat pattern and iso unchanged | Aidan | task 242 |
+| 2026-11-26 | No bend notes on the flat pattern, and no bend radius units work; Aidan adds bend information himself when a print needs it | Aidan | task 242 |
+| 2026-11-26 | Folded view details: the bend direction shared by most bends (tie: longest total), up is the base face normal, eye toward +Z else -Y else +X; no bends falls back to the base face rule | Default | task 242 |
+| 2026-11-26 | Smallest text height for a long title block value: 1.8 mm (spec 05 question 32) | Aidan | task 238 |
+| 2026-11-26 | Sheet metal Material Size: a hand-typed value is replaced, and it stays in the part's units on an off-units print (spec 05 question 34) | Aidan | task 230 |
+| 2026-11-26 | Suggested sheet: the first giving 1:2 or larger, else the largest (spec 05 question 36) | Aidan | task 232 |
+| 2026-11-26 | Hole tag leader distance 5 mm from the hole's edge, set on Update (spec 04 question 26) | Aidan | task 240 |
+| 2026-11-26 | Spec 05 question 33 overturned: off-units FINISH and WEIGHT refresh whenever the drawing is opened or saved, not only on Create Print | Aidan | task 244 |
+| 2026-11-26 | Off-units refresh: the print's units are the drawing's own length units; up-to-date prints are not written; open and save writes are outside a transaction and never block | Default | task 244 |
+| 2026-11-26 | Spec 05 question 35 overturned: no "—" is written into an assembly; the print shows "—" for a blank Material, Material Size or Finish and the model stays untouched | Aidan | task 245 |
+| 2026-11-26 | The assembly dash is a drawing property the field reads while the model value is blank (MATERIAL swapped to a custom property tag on the drawing), refreshed with 244's refresher | Default | task 245 |
+| 2026-11-26 | The iso follows the chosen front view: the front-top-right corner relative to whatever is picked as Front | Aidan | task 243 |
+| 2026-11-26 | Iso details: standard Front keeps `kIsoTopRightViewOrientation`; sheet metal on Auto keeps today's iso; an explicit choice on sheet metal makes the iso follow it | Default | task 243 |
+| 2026-11-26 | Order: fixes 242 to 245, then 194 onward; one checklist at the end for the fixes and everything checkable from 194 on | Aidan | PLAN |

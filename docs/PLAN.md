@@ -570,6 +570,10 @@ Aidan answered the planning questions and the title block questions on 2026-11-2
 | 239 | windows build | 187 | none |
 | 240 | windows build | none | none |
 | 241 | **windows** (spike, the parent) | 218, 237 | any |
+| 242 | windows build | 229, 233 | none |
+| 243 | windows build | 233, 242 | none |
+| 244 | windows build | 232 | none |
+| 245 | windows build | 231, 244 | none |
 | 209 | **windows** (Aidan) | 183 to 208, 210 to 221 | none |
 
 The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their own files; 186, 196 and 205 all touch `AddinSettings`, `LibraryPaths` and the Settings window, so run those three one after another.
@@ -637,6 +641,10 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [x] 239 A rebuilt template takes effect without a redeploy (Aidan's check, 2026-11-23)
 - [x] 240 A hole tag moved away from its hole gets a leader (Aidan, 2026-11-23)
 - [x] 241 Spike: smaller text and a two-line Description in the title block (Windows, the parent runs it)
+- [ ] 242 Sheet metal: the folded view looks along the bend lines; no bend notes (Aidan's chunk 3 check, 2026-11-26)
+- [ ] 243 The iso follows the chosen front view (Aidan, 2026-11-26)
+- [ ] 244 Off-units FINISH and WEIGHT: fix the repoint, and refresh on open and save (Aidan's chunk 3 check, 2026-11-26)
+- [ ] 245 Assemblies: the dash is on the print, not in the model (Aidan, 2026-11-26)
 
 **Check**
 - [ ] 209 M5 combined Inventor check

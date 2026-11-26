@@ -6,37 +6,18 @@ Last updated: 2026-11-22
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-23 19:24. Branch `claude/m5-drawing-tools`, latest commit `b484e98` (task 240, pushed).
-- Goal: M5 chunk 3: the chunk 2 fixes (226 to 241), each implementer, then reviewer, one commit per task, push; then the chunk 3 summary for Aidan, then 194 onward.
-- Done this session:
-  - Spec 05 Q30 and Q31 answered (`44d09ed`). Aidan then overturned Q31: see 238 and 241 below.
-  - 226 decimal period (`7c5e241`) and 237 one baseline (`21a3ba1`), both reviewed.
-  - Aidan checked 222, 226 and 237 and all passed. Rebuilt `libraries/Templates/*.idw` committed and 187 marked done (`f46395b`).
-  - In `f46395b`:
-    - Planned tasks 239 (template without a redeploy), 240 (hole tag leader) and spike 241 (shrink and wrap).
-    - Spec 05 Q31 overturned, new Q32 (height floor, Default 1.8 mm) and Q33 (off-units FINISH and WEIGHT); spec 04 Q26 (tag leader, Default 5 mm).
-    - Task 232 gained "FINISH and WEIGHT follow the print's units"; task 238 now depends on 241.
-- 239 (`9df967d`), 227 (`9d9b3e4`, views measured in a hidden scratch drawing) and 228 (`5b15a9d`) done and reviewed; not run in Inventor.
-- 229 (`e9c93dc`), 230 (`d36d649`) and 231 (`d512626`) done and reviewed; not run in Inventor.
-- 232 (`01e8642`), 233 (`f73c9d5`) and 234 (`1de776e`) done and reviewed; not run in Inventor.
-- 235 (`87c0129`), 236 (`a1676e6`), spike 241 (`34d2612`, agent drove Inventor) and 240 (`b484e98`) done and reviewed.
-- 238 done and reviewed. **Chunk 3 is finished; stopped for Aidan's check (`docs/checklists/m5-chunk3.md`).**
-- Spikes can be delegated to a general-purpose agent that drives Inventor over PowerShell COM on copies in `C:\AwbSpike\NNN\` (241 did); scripts in the job tmp folder.
-- An implementer can stall ("no progress for 600s"); check `git status` and restart it if nothing was written.
-- Next, in order:
-  1. Wait for Aidan's chunk 3 check; turn failures into fix tasks.
-  2. Then 194 onward (PLAN M5), after the spec 05 questions 32 to 36 and spec 04 question 26 if Aidan answers them.
-- State: last builds 0 errors. Core tests 5510; each run 0 to 3 timing-flaky failures, which pass on rerun.
-- Aidan's check notes: an inch part printed on AWB Metric showed mm dimensions (expected until 232). Before a redeploy, Create Print read the stale deployed template (the 239 bug).
+- Updated: 2026-11-26. Branch `claude/m5-drawing-tools`.
+- Goal: Aidan's chunk 3 check (2026-11-26) passed except the sheet metal folded view (8, 9) and off-units FINISH and WEIGHT (12). Fixes are tasks 242 to 245, then 194 onward (PLAN M5), each implementer, then reviewer, one commit per task, push. At the end, ONE checklist for Aidan covering 242 to 245 and everything from 194 on that can be checked in Inventor (`docs/checklists/m5-chunk4.md`).
+- Decisions 2026-11-26 are in `DECISIONS.md` (Q32, Q34, Q36, spec 04 Q26 accepted; Q33 and Q35 overturned; iso follows front; no bend notes).
+- Cause of step 12 (found with a COM probe): the field tag says `PropertySet='User Defined Properties'`, the repoint looked for `Inventor User Defined Properties`. Details in task 244.
+- Bend axes read fine with `SheetMetalComponentDefinition.Bends` -> `Bend.FrontFaces` -> `Cylinder.AxisVector` (probe on a copy of the test part).
+- COM probes: copies in `C:\AwbSpike\NNN\`; if Inventor is not running, `New-Object -ComObject Inventor.Application` and `Quit()` in the same script (an un-quit hidden instance lingers; kill it by PID).
+- Done this run: (none yet)
 - Gotchas:
   - Flaky tests: RenamePlan, SaveAsCopyCreator, SaveAsReplacer, NewPartCreator, Numbering, RegisterStore probe timeouts. Rerun them.
-  - Build with `-p:DeployToInventor=false` while Inventor is open. Aidan must do a full build and deploy before checking.
-  - The deployed starter templates live in `%APPDATA%\Autodesk\Inventor 2026\Addins\InventorAddin\libraries\Templates`.
-  - Python heredocs in Bash worked this session. Multi-line edits are easiest as a .py script in the job tmp folder.
-  - Documents.Add from an AWB template can open a modal Style Conflict dialog. Create Print now sets SilentOperation; a spike script must set it too.
-  - `TextBox.WidthScale` only works inside `TitleBlockDefinition.Edit`. `kAlignTextBaseline` is refused. A field's range box measures the property name unless the sheet has a view.
-  - Agents can stop at the session limit; resume them with SendMessage.
-- Read first: `docs/WORKFLOW.md`, `docs/PLAN.md` M5, tasks 239, 241, 238 and 232, spike 218 Results, DECISIONS rows dated 2026-11-23, TODO follow-ups.
+  - Build with `-p:DeployToInventor=false` while Inventor is open.
+  - Multi-line edits are easiest as a .py script in the job tmp folder; bash heredocs with apostrophes can break, use the Write tool.
+  - An implementer can stall ("no progress for 600s"); check `git status` and restart it if nothing was written. Agents can stop at the session limit; resume them with SendMessage.
 
 ## Big items
 
