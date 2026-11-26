@@ -137,6 +137,18 @@ namespace InventorAddin.UI
                 _viewModel.PrintTemplateImperialPath = chosen;
         }
 
+        /// <summary>Browse beside the notes data: as <see cref="OnBrowseHoleWorkbook"/>, for the notes workbook.</summary>
+        private void OnBrowseNotesWorkbook(object sender, RoutedEventArgs e)
+        {
+            var chosen = PickFile(
+                "Choose the notes workbook",
+                "Excel workbooks (*.xlsx)|*.xlsx",
+                _viewModel.NotesWorkbookPath,
+                SettingsViewModel.ValidateNotesWorkbookPath);
+            if (chosen is not null)
+                _viewModel.NotesWorkbookPath = chosen;
+        }
+
         /// <summary>Browse beside the hole data: as <see cref="OnBrowseMaterialLibrary"/>, for an .xlsx file.</summary>
         private void OnBrowseHoleWorkbook(object sender, RoutedEventArgs e)
         {

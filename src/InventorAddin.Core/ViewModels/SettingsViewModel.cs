@@ -75,6 +75,12 @@ public sealed class SettingsViewModel : ObservableObject
     /// <summary>The one-line explanation shown under the hole data box.</summary>
     public const string HoleWorkbookHelpText = "The hole workbook (.xlsx). Blank uses the starter workbook shipped with the add-in.";
 
+    /// <summary>The notes workbook row's label, and the name its messages use (spec 05, "Added for M5").</summary>
+    public const string NotesWorkbookFieldName = "Notes data";
+
+    /// <summary>The one-line explanation shown under the notes data box.</summary>
+    public const string NotesWorkbookHelpText = "The notes workbook (.xlsx). Blank uses the starter workbook shipped with the add-in.";
+
     /// <summary>The metric print template row's label, and the name its messages use.</summary>
     public const string PrintTemplateMetricFieldName = "Metric template";
 
@@ -130,6 +136,7 @@ public sealed class SettingsViewModel : ObservableObject
     private string _materialLibraryText;
     private string _finishListText;
     private string _holeWorkbookText;
+    private string _notesWorkbookText;
     private string _printTemplateMetricText;
     private string _printTemplateImperialText;
 
@@ -153,6 +160,7 @@ public sealed class SettingsViewModel : ObservableObject
         _materialLibraryText = settings.MaterialLibraryPath;
         _finishListText = settings.FinishListPath;
         _holeWorkbookText = settings.HoleWorkbookPath;
+        _notesWorkbookText = settings.NotesWorkbookPath;
         _printTemplateMetricText = settings.PrintTemplateMetricPath;
         _printTemplateImperialText = settings.PrintTemplateImperialPath;
         _saved = Normalise(settings);
@@ -328,6 +336,24 @@ public sealed class SettingsViewModel : ObservableObject
         }
     }
 
+    /// <summary>The notes workbook path as typed. As <see cref="HoleWorkbookPath"/>, for the notes workbook.</summary>
+    public string NotesWorkbookPath
+    {
+        get => _notesWorkbookText;
+        set
+        {
+            value ??= string.Empty;
+            if (_notesWorkbookText == value)
+                return;
+
+            _notesWorkbookText = value;
+            _edited.NotesWorkbookPath = PropertyValues.NormaliseText(value);
+            OnPropertyChanged();
+            SetValidationError(Validate());
+            OnEditChanged();
+        }
+    }
+
     /// <summary>The hole workbook path as typed. As <see cref="MaterialLibraryPath"/>, for a <c>.xlsx</c> file.</summary>
     public string HoleWorkbookPath
     {
@@ -457,7 +483,7 @@ public sealed class SettingsViewModel : ObservableObject
     public string FoldersSummary => SettingsSummaries.Folders(_edited.WorkFolder, _edited.OtherCadFolders);
 
     public string MaterialFinishSummary => SettingsSummaries.MaterialFinish(
-        _edited.MaterialLibraryPath, _edited.FinishListPath, _edited.PrintTemplateMetricPath, _edited.PrintTemplateImperialPath);
+        _edited.MaterialLibraryPath, _edited.FinishListPath, _edited.PrintTemplateMetricPath, _edited.PrintTemplateImperialPath, _edited.NotesWorkbookPath);
 
     public string HolesSummary => SettingsSummaries.Holes(_edited.HoleWorkbookPath, _edited.UseInventorHoleCommand, _edited.CheckHoleTablesAutomatically);
 
@@ -478,6 +504,8 @@ public sealed class SettingsViewModel : ObservableObject
     public string FinishListHelp => FinishListHelpText;
 
     public string HoleWorkbookHelp => HoleWorkbookHelpText;
+
+    public string NotesWorkbookHelp => NotesWorkbookHelpText;
 
     public string PrintTemplateMetricHelp => PrintTemplateMetricHelpText;
 
@@ -558,6 +586,10 @@ public sealed class SettingsViewModel : ObservableObject
     public static string? ValidateHoleWorkbookPath(string? path) =>
         ValidateLibraryFile(path, HoleWorkbookFieldName, LibraryPaths.HoleWorkbookExtension, @"D:\Libraries\AWB_Holes.xlsx");
 
+    /// <summary>As <see cref="ValidateMaterialLibraryPath"/>, for the notes workbook, which must end in <c>.xlsx</c>.</summary>
+    public static string? ValidateNotesWorkbookPath(string? path) =>
+        ValidateLibraryFile(path, NotesWorkbookFieldName, LibraryPaths.NotesWorkbookExtension, @"D:\Libraries\AWB_Notes.xlsx");
+
     /// <summary>As <see cref="ValidateMaterialLibraryPath"/>, for the metric print template, which must end in <c>.idw</c>.</summary>
     public static string? ValidatePrintTemplateMetricPath(string? path) =>
         ValidateLibraryFile(path, PrintTemplateMetricFieldName, LibraryPaths.PrintTemplateExtension, @"D:\Templates\Metric.idw");
@@ -629,6 +661,7 @@ public sealed class SettingsViewModel : ObservableObject
             MaterialLibraryPath = PropertyValues.NormaliseText(settings.MaterialLibraryPath),
             FinishListPath = PropertyValues.NormaliseText(settings.FinishListPath),
             HoleWorkbookPath = PropertyValues.NormaliseText(settings.HoleWorkbookPath),
+            NotesWorkbookPath = PropertyValues.NormaliseText(settings.NotesWorkbookPath),
             PrintTemplateMetricPath = PropertyValues.NormaliseText(settings.PrintTemplateMetricPath),
             PrintTemplateImperialPath = PropertyValues.NormaliseText(settings.PrintTemplateImperialPath),
         };
@@ -646,6 +679,7 @@ public sealed class SettingsViewModel : ObservableObject
         ?? ValidateFinishListPath(_finishListText)
         ?? ValidatePrintTemplateMetricPath(_printTemplateMetricText)
         ?? ValidatePrintTemplateImperialPath(_printTemplateImperialText)
+        ?? ValidateNotesWorkbookPath(_notesWorkbookText)
         ?? ValidateHoleWorkbookPath(_holeWorkbookText);
 
     // Whether the library files exist is checked only on save, and only for a path that changed: a check per
@@ -656,6 +690,7 @@ public sealed class SettingsViewModel : ObservableObject
         ?? CheckFileExists(FinishListFieldName, _edited.FinishListPath, _saved.FinishListPath)
         ?? CheckFileExists(PrintTemplateMetricFieldName, _edited.PrintTemplateMetricPath, _saved.PrintTemplateMetricPath)
         ?? CheckFileExists(PrintTemplateImperialFieldName, _edited.PrintTemplateImperialPath, _saved.PrintTemplateImperialPath)
+        ?? CheckFileExists(NotesWorkbookFieldName, _edited.NotesWorkbookPath, _saved.NotesWorkbookPath)
         ?? CheckFileExists(HoleWorkbookFieldName, _edited.HoleWorkbookPath, _saved.HoleWorkbookPath);
 
     private string? CheckFileExists(string fieldName, string path, string savedPath)
@@ -760,6 +795,12 @@ public sealed class SettingsViewModel : ObservableObject
         {
             _printTemplateImperialText = toWrite.PrintTemplateImperialPath;
             OnPropertyChanged(nameof(PrintTemplateImperialPath));
+        }
+
+        if (_notesWorkbookText != toWrite.NotesWorkbookPath)
+        {
+            _notesWorkbookText = toWrite.NotesWorkbookPath;
+            OnPropertyChanged(nameof(NotesWorkbookPath));
         }
 
         if (_holeWorkbookText != toWrite.HoleWorkbookPath)

@@ -28,6 +28,9 @@ public static class LibraryPaths
     /// <summary>The starter hole workbook's file name (spec 09, "The workbook").</summary>
     public const string StarterHoleWorkbookFileName = "AWB_Holes.xlsx";
 
+    /// <summary>The starter notes workbook's file name (spec 05, "Added for M5").</summary>
+    public const string StarterNotesWorkbookFileName = "AWB_Notes.xlsx";
+
     /// <summary>The folder inside <see cref="StarterFolderName"/> that holds the starter print templates.</summary>
     public const string PrintTemplateFolderName = "Templates";
 
@@ -45,6 +48,9 @@ public static class LibraryPaths
 
     /// <summary>The hole workbook's file extension, compared ignoring case.</summary>
     public const string HoleWorkbookExtension = ".xlsx";
+
+    /// <summary>The notes workbook's file extension, compared ignoring case.</summary>
+    public const string NotesWorkbookExtension = ".xlsx";
 
     /// <summary>The print templates' file extension, compared ignoring case.</summary>
     public const string PrintTemplateExtension = ".idw";
@@ -72,6 +78,14 @@ public static class LibraryPaths
     /// <param name="addinFolder">The folder <c>InventorAddin.dll</c> runs from.</param>
     public static LibraryPath HoleWorkbook(AddinSettings settings, string addinFolder) =>
         Resolve((settings ?? throw new ArgumentNullException(nameof(settings))).HoleWorkbookPath, addinFolder, StarterHoleWorkbookFileName);
+
+    /// <summary>
+    /// The notes workbook to read: <see cref="AddinSettings.NotesWorkbookPath"/> trimmed when it is not blank, otherwise
+    /// the starter workbook in <paramref name="addinFolder"/>. Whether the file exists is not checked.
+    /// </summary>
+    /// <param name="addinFolder">The folder <c>InventorAddin.dll</c> runs from.</param>
+    public static LibraryPath NotesWorkbook(AddinSettings settings, string addinFolder) =>
+        Resolve((settings ?? throw new ArgumentNullException(nameof(settings))).NotesWorkbookPath, addinFolder, StarterNotesWorkbookFileName);
 
     /// <summary>
     /// The print template to copy for <paramref name="units"/>: <see cref="AddinSettings.PrintTemplateMetricPath"/> or

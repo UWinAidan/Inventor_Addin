@@ -146,6 +146,19 @@ public sealed record AddinSettings
     private string _holeWorkbookPath = string.Empty;
 
     /// <summary>
+    /// The notes workbook (<c>.xlsx</c>) Update Notes reads (spec 05, "Added for M5"). <c>""</c> by default, which means
+    /// the starter workbook shipped with the add-in (<see cref="Materials.LibraryPaths.NotesWorkbook"/>). A null is
+    /// stored as <c>""</c>.
+    /// </summary>
+    public string NotesWorkbookPath
+    {
+        get => _notesWorkbookPath;
+        set => _notesWorkbookPath = value ?? string.Empty;
+    }
+
+    private string _notesWorkbookPath = string.Empty;
+
+    /// <summary>
     /// The metric print template (<c>.idw</c>) Create Print copies (spec 05, "Decided for M5"). <c>""</c> by default,
     /// which means the starter template shipped with the add-in (<see cref="Materials.LibraryPaths.PrintTemplate"/>).
     /// A null is stored as <c>""</c>.
@@ -375,6 +388,7 @@ public sealed record AddinSettings
         && MaterialLibraryPath == other.MaterialLibraryPath
         && FinishListPath == other.FinishListPath
         && HoleWorkbookPath == other.HoleWorkbookPath
+        && NotesWorkbookPath == other.NotesWorkbookPath
         && PrintTemplateMetricPath == other.PrintTemplateMetricPath
         && PrintTemplateImperialPath == other.PrintTemplateImperialPath
         && UseInventorHoleCommand == other.UseInventorHoleCommand
@@ -411,6 +425,7 @@ public sealed record AddinSettings
         hash.Add(MaterialLibraryPath, StringComparer.Ordinal);
         hash.Add(FinishListPath, StringComparer.Ordinal);
         hash.Add(HoleWorkbookPath, StringComparer.Ordinal);
+        hash.Add(NotesWorkbookPath, StringComparer.Ordinal);
         hash.Add(PrintTemplateMetricPath, StringComparer.Ordinal);
         hash.Add(PrintTemplateImperialPath, StringComparer.Ordinal);
         hash.Add(UseInventorHoleCommand);

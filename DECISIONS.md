@@ -594,3 +594,4 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-26 | Parts never get their MATERIAL tag swapped; a print whose model is a part is never swapped back | Default | task 245 |
 | 2026-11-26 | Out-of-bounds check: 0.5 mm tolerance; wholly outside only when past an edge and nothing inside; a line across the title block counts; rectangles in mm, Y up | Default | task 194 |
 | 2026-11-26 | Check Out of Bounds: no border means the sheet edge; symbols are their centre; modal list that selects the picked item; unreadable items skipped, logged and counted (spec 05 question 37) | Default | task 195 |
+| 2026-11-26 | Notes workbook: blank Placement is List; blank Note is a bad row; blank name matches nothing; Finish Note keeps its place and an equal rule note is dropped; blank rows skipped; missing tab is a problem (spec 05 question 15) | Default | task 196 |

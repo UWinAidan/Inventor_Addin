@@ -41,6 +41,13 @@ public sealed class SettingsSummariesTests
         Assert.Equal(expected, SettingsSummaries.MaterialFinish(library, finishList));
     }
 
+    [Fact]
+    public void MaterialFinish_NamesAChosenNotesWorkbook_AndNotABlankOne()
+    {
+        Assert.Equal("starter library, starter finish list, AWB_Notes.xlsx", SettingsSummaries.MaterialFinish("", "", null, null, @"D:\Libs\AWB_Notes.xlsx"));
+        Assert.Equal("starter library, starter finish list", SettingsSummaries.MaterialFinish("", "", null, null, "  "));
+    }
+
     [Theory]
     [InlineData("", false, "starter hole data, AWB Hole")]
     [InlineData(null, true, "starter hole data, Inventor's Hole")]

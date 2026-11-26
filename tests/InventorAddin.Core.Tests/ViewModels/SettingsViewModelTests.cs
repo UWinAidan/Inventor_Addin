@@ -1900,6 +1900,99 @@ public sealed class SettingsViewModelTests : IDisposable
         Assert.Empty(asked);
     }
 
+    private const string NotesFile = @"B:\Data\AWB_Notes.xlsx";
+
+    [Fact]
+    public void NotesWorkbookPath_Changing_MakesDirty_RaisesValueAndIsDirty()
+    {
+        var vm = CreateWithFiles(null, new List<string>(), NotesFile);
+        var changed = RecordPropertyChanges(vm);
+
+        vm.NotesWorkbookPath = NotesFile;
+
+        Assert.True(vm.IsDirty);
+        Assert.Equal(new[] { nameof(SettingsViewModel.NotesWorkbookPath), nameof(SettingsViewModel.IsDirty) }, changed);
+    }
+
+    [Fact]
+    public void NotesWorkbookPath_OnlySpaces_IsNotAChange()
+    {
+        var vm = Create();
+
+        vm.NotesWorkbookPath = "  ";
+
+        Assert.False(vm.IsDirty);
+        Assert.Null(vm.ErrorText);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(@"D:\Libs\AWB_Notes.xlsx")]
+    public void ValidateNotesWorkbookPath_BlankOrFullXlsxPath_IsValid(string? path) =>
+        Assert.Null(SettingsViewModel.ValidateNotesWorkbookPath(path));
+
+    [Theory]
+    [InlineData("AWB_Notes.xlsx")]
+    [InlineData(@"D:\Libs\notes.csv")]
+    [InlineData(@"D:\Li<bs\AWB_Notes.xlsx")]
+    public void ValidateNotesWorkbookPath_Bad_NamesTheSetting(string path) =>
+        Assert.StartsWith("Notes data", SettingsViewModel.ValidateNotesWorkbookPath(path));
+
+    [Fact]
+    public void Save_MissingNotesWorkbook_IsRefused()
+    {
+        var asked = new List<string>();
+        var vm = CreateWithFiles(null, asked);
+        vm.NotesWorkbookPath = $" {NotesFile} ";
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.Equal(SettingsViewModel.LibraryFileNotFoundError("Notes data", NotesFile), vm.ErrorText);
+        Assert.Equal(new[] { NotesFile }, asked);
+        Assert.False(File.Exists(SettingsPath));
+    }
+
+    [Fact]
+    public void Save_ExistingNotesWorkbook_IsSavedTrimmed_AndRoundTrips()
+    {
+        var vm = CreateWithFiles(null, new List<string>(), NotesFile);
+        vm.NotesWorkbookPath = $"	{NotesFile} ";
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.Null(vm.ErrorText);
+        Assert.Equal(NotesFile, new SettingsStore(_folder).Load().Settings.NotesWorkbookPath);
+        Assert.Equal(NotesFile, vm.NotesWorkbookPath);
+    }
+
+    [Fact]
+    public void Save_BlankOrUnchangedNotesWorkbook_IsNotCheckedOnDisk()
+    {
+        var asked = new List<string>();
+        var unchanged = CreateWithFiles(new AddinSettings { NotesWorkbookPath = NotesFile }, asked);
+        unchanged.UseInventorHoleCommand = true;
+        unchanged.SaveCommand.Execute(null);
+        Assert.Null(unchanged.ErrorText);
+
+        var blank = CreateWithFiles(new AddinSettings { NotesWorkbookPath = NotesFile }, asked);
+        blank.NotesWorkbookPath = "";
+        blank.SaveCommand.Execute(null);
+
+        Assert.Null(blank.ErrorText);
+        Assert.Equal("", blank.SavedSettings!.NotesWorkbookPath);
+        Assert.Empty(asked);
+    }
+
+    [Fact]
+    public void NotesHelp_AndSummary()
+    {
+        var vm = Create(new AddinSettings { NotesWorkbookPath = NotesFile });
+
+        Assert.Equal("The notes workbook (.xlsx). Blank uses the starter workbook shipped with the add-in.", vm.NotesWorkbookHelp);
+        Assert.EndsWith("AWB_Notes.xlsx", vm.MaterialFinishSummary);
+    }
+
     [Fact]
     public void HoleHelp_AndNote()
     {

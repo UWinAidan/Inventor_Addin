@@ -176,6 +176,20 @@
                     <controls:FieldRow>
                         <TextBlock Style="{DynamicResource MutedText}" Text="{Binding PrintTemplateImperialHelp, Mode=OneTime}" />
                     </controls:FieldRow>
+                    <controls:FieldRow Label="_Notes data" Target="{Binding ElementName=NotesWorkbookBox}">
+                        <DockPanel>
+                            <!-- Opens a file picker for an .xlsx and puts the chosen file in the box beside it (code-behind). -->
+                            <Button DockPanel.Dock="Right"
+                                    Style="{DynamicResource SideButton}"
+                                    Content="Browse..."
+                                    Click="OnBrowseNotesWorkbook" />
+                            <TextBox x:Name="NotesWorkbookBox"
+                                     Text="{Binding NotesWorkbookPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </DockPanel>
+                    </controls:FieldRow>
+                    <controls:FieldRow>
+                        <TextBlock Style="{DynamicResource MutedText}" Text="{Binding NotesWorkbookHelp, Mode=OneTime}" />
+                    </controls:FieldRow>
                 </controls:CollapsibleSection>
                 <controls:CollapsibleSection x:Name="HolesSection"
                                              Heading="Holes"
