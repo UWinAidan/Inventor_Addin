@@ -128,8 +128,7 @@ namespace InventorAddin.PrintViews
                         break;
 
                     case InitialViewKind.Iso:
-                        view = views.AddBaseView(modelDocument, centre, plan.Scale,
-                            ViewOrientationTypeEnum.kIsoTopRightViewOrientation, DrawingViewStyleEnum.kHiddenLineRemovedDrawingViewStyle);
+                        view = AddIso(views, modelDocument, model, centre, plan.Scale, plan.FrontOrientation);
                         break;
 
                     case InitialViewKind.FlatPattern:
@@ -207,6 +206,34 @@ namespace InventorAddin.PrintViews
 
             return views.AddBaseView(modelDocument, centre, scale,
                 ViewOrientationTypeEnum.kFrontViewOrientation, DrawingViewStyleEnum.kHiddenLineRemovedDrawingViewStyle);
+        }
+
+        /// <summary>
+        /// The iso view (task 243): Inventor's top-right iso when the front is the standard front or none was chosen (a sheet metal part on
+        /// Auto), otherwise an arbitrary orientation looking at the front-top-right corner of the chosen front (<see cref="IsoViewRule"/>).
+        /// Falls back to the standard iso, logged, when the camera cannot be built.
+        /// </summary>
+        private static DrawingView AddIso(
+            DrawingViews views, _Document modelDocument, Document model, Point2d centre, double scale, FaceViewOrientation? front)
+        {
+            if (!IsoViewRule.IsStandardIso(front))
+            {
+                var warnings = new List<string>();
+                Camera? camera = null;
+                ComSafe.Run(() => camera = BuildCamera(model, IsoViewRule.Choose(front!)), warnings, "iso view camera");
+                if (camera != null)
+                {
+                    return views.AddBaseView(modelDocument, centre, scale,
+                        ViewOrientationTypeEnum.kArbitraryViewOrientation, DrawingViewStyleEnum.kHiddenLineRemovedDrawingViewStyle,
+                        "", camera, Type.Missing);
+                }
+
+                AddinServices.Log.Warn("Place Initial Views: the iso view's camera could not be built, so the standard iso is used. " +
+                    (warnings.Count == 0 ? "Reason unknown." : string.Join(" ", warnings)));
+            }
+
+            return views.AddBaseView(modelDocument, centre, scale,
+                ViewOrientationTypeEnum.kIsoTopRightViewOrientation, DrawingViewStyleEnum.kHiddenLineRemovedDrawingViewStyle);
         }
 
         /// <summary>

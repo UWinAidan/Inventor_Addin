@@ -145,6 +145,9 @@ Each spec lists its own open questions in full. These are the ones that block pl
   - When the Stock Size command is built (205, 206), make its number format agree with this one (spec 05 shows "PL 12 x 65 x 130", no suffix) and decide whether it skips sheet metal parts.
   - A flat pattern out of date after a thickness edit may give the old flat size; watch on Aidan's check.
 
+- Task 243, iso follows the front:
+  - That `kIsoTopRightViewOrientation` looks from (+X, +Y, +Z) is assumed; a non-standard iso uses the arbitrary camera, so its label and scale may differ slightly from the built-in iso. Watch on Aidan's check.
+
 - Task 242, folded view along the bends:
   - The eye side (+Z, else -Y, else +X) and up = base normal are Defaults; if the Z prints mirrored or upside down, flip them in `FoldedViewRule` (check first that `FlatPattern.BaseFace`'s normal is in folded-model space).
   - The bend length that breaks ties is the longest straight edge of the bend face, else its radius; not seen on a real part.
