@@ -591,7 +591,7 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [x] 191 Ribbon icons for the M5 commands
 - [x] 192 Place Initial Views window and command; Create Print shows it
 - [x] 193 Open Drawing
-- [ ] 194 Out-of-bounds check (Core)
+- [x] 194 Out-of-bounds check (Core)
 - [ ] 195 Check Out of Bounds command
 
 **Tools**

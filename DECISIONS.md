@@ -592,3 +592,4 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-26 | Order: fixes 242 to 245, then 194 onward; one checklist at the end for the fixes and everything checkable from 194 on | Aidan | PLAN |
 | 2026-11-26 | Off-units refresh skips drawings Inventor has open without a window (Mass Update scans, Rename); a model value that cannot be read leaves the drawing's stored copy in place | Default | task 244 |
 | 2026-11-26 | Parts never get their MATERIAL tag swapped; a print whose model is a part is never swapped back | Default | task 245 |
+| 2026-11-26 | Out-of-bounds check: 0.5 mm tolerance; wholly outside only when past an edge and nothing inside; a line across the title block counts; rectangles in mm, Y up | Default | task 194 |
