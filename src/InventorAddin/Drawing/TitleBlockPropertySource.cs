@@ -31,12 +31,14 @@ namespace InventorAddin.PrintViews
 
         /// <summary>
         /// Points the fields in <paramref name="readsDrawing"/> at the drawing and those in <paramref name="readsModel"/> at the model.
+        /// <paramref name="materialOnDrawing"/> does the same for MATERIAL, a Design Tracking field whose tag is swapped for a custom one
+        /// (task 245); null leaves it alone.
         /// The title block is read first without editing it (spike 244: reading <c>Definition.Sketch</c> leaves the drawing clean), and
         /// the editor is entered only when a text box has to change, so a print that is already right is not marked dirty. A drawing whose
         /// title block has none of these fields reports 0 fields and is not edited. Failures are added to <paramref name="warnings"/> and never thrown.
         /// </summary>
         public static RepointResult Repoint(
-            Sheet sheet, IReadOnlyCollection<string> readsDrawing, IReadOnlyCollection<string> readsModel, List<string> warnings)
+            Sheet sheet, IReadOnlyCollection<string> readsDrawing, IReadOnlyCollection<string> readsModel, bool? materialOnDrawing, List<string> warnings)
         {
             TitleBlockDefinition? definition = ComSafe.Get(() => sheet.TitleBlock?.Definition, warnings, "The sheet's title block definition");
             if (definition == null)
@@ -58,7 +60,9 @@ namespace InventorAddin.PrintViews
                         continue;
 
                     fields += PrintUnitValues.CountFields(formatted, all);
-                    if (!string.Equals(Updated(formatted, readsDrawing, readsModel), formatted, StringComparison.Ordinal))
+                    if (AssemblyDashFields.HasMaterialField(formatted))
+                        fields++;
+                    if (!string.Equals(Updated(formatted, readsDrawing, readsModel, materialOnDrawing), formatted, StringComparison.Ordinal))
                         needsEdit = true;
                 }
             }
@@ -82,7 +86,7 @@ namespace InventorAddin.PrintViews
                     if (string.IsNullOrEmpty(formatted))
                         continue;
 
-                    string updated = Updated(formatted, readsDrawing, readsModel);
+                    string updated = Updated(formatted, readsDrawing, readsModel, materialOnDrawing);
                     if (string.Equals(updated, formatted, StringComparison.Ordinal))
                         continue;
 
@@ -122,10 +126,12 @@ namespace InventorAddin.PrintViews
             return fields;
         }
 
-        private static string Updated(string formatted, IReadOnlyCollection<string> readsDrawing, IReadOnlyCollection<string> readsModel)
+        private static string Updated(
+            string formatted, IReadOnlyCollection<string> readsDrawing, IReadOnlyCollection<string> readsModel, bool? materialOnDrawing)
         {
             string text = readsDrawing.Count == 0 ? formatted : PrintUnitValues.PointAtDrawing(formatted, readsDrawing);
-            return readsModel.Count == 0 ? text : PrintUnitValues.PointAtModel(text, readsModel);
+            text = readsModel.Count == 0 ? text : PrintUnitValues.PointAtModel(text, readsModel);
+            return materialOnDrawing is { } onDrawing ? AssemblyDashFields.PointMaterial(text, onDrawing) : text;
         }
 
         // Edit takes the sketch by reference; the typed call first, then the by-ref IDispatch call the template builder falls back to.

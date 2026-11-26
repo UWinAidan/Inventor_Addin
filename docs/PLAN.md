@@ -644,7 +644,7 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [x] 242 Sheet metal: the folded view looks along the bend lines; no bend notes (Aidan's chunk 3 check, 2026-11-26)
 - [x] 243 The iso follows the chosen front view (Aidan, 2026-11-26)
 - [x] 244 Off-units FINISH and WEIGHT: fix the repoint, and refresh on open and save (Aidan's chunk 3 check, 2026-11-26)
-- [ ] 245 Assemblies: the dash is on the print, not in the model (Aidan, 2026-11-26)
+- [x] 245 Assemblies: the dash is on the print, not in the model (Aidan, 2026-11-26)
 
 **Check**
 - [ ] 209 M5 combined Inventor check

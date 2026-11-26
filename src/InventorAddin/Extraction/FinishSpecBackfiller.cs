@@ -38,7 +38,7 @@ namespace InventorAddin.Extraction
 
         /// <summary>
         /// Every missing print property of <paramref name="doc"/> as writes (Mass; for a part Finish Spec, Revision Number, Design Status,
-        /// User Status, and a sheet metal Material Size; for an assembly Revision Number, Design Status, User Status and a dash in a blank Material, Material Size and Finish Spec; tasks 219, 222, 230 and 231). The assembly Material write is best effort in <see cref="PropertyWriter"/>. Empty when nothing is missing. Never throws for a property that
+        /// User Status, and a sheet metal Material Size; for an assembly Revision Number, Design Status, User Status; tasks 219, 222, 230 and 245). Empty when nothing is missing. Never throws for a property that
         /// cannot be read.
         /// </summary>
         public static IReadOnlyList<PropertyWrite> WritesFor(Document doc, IReadOnlyList<Finish> finishList)
@@ -47,14 +47,11 @@ namespace InventorAddin.Extraction
             PropertyWrite? mass = MassPropertyReader.WriteFor(doc);
             if (kind.IsAssembly())
             {
-                // Rev A, Status and a dash in the part-only fields (task 231); Material Size is not read from a flat pattern here.
+                // Rev A and Status only: the dash for Material, Material Size and Finish Spec is on the print, not in the model (task 245).
                 var assemblyWrites = new List<PropertyWrite>(PrintPropertyBackfill.ForAssembly(
                     Read(doc, PartPropertyStorage.RevisionNumber),
                     ReadDesignStatus(doc),
-                    Read(doc, PartPropertyStorage.UserStatus),
-                    Read(doc, PartPropertyStorage.Material),
-                    Read(doc, PartPropertyStorage.MaterialSize),
-                    Read(doc, PartPropertyStorage.FinishSpec)));
+                    Read(doc, PartPropertyStorage.UserStatus)));
                 if (mass != null)
                     assemblyWrites.Add(mass);
                 return assemblyWrites;

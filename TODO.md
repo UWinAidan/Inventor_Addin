@@ -145,6 +145,12 @@ Each spec lists its own open questions in full. These are the ones that block pl
   - When the Stock Size command is built (205, 206), make its number format agree with this one (spec 05 shows "PL 12 x 65 x 130", no suffix) and decide whether it skips sheet metal parts.
   - A flat pattern out of date after a thickness edit may give the old flat size; watch on Aidan's check.
 
+- Task 245, assembly dashes on the print:
+  - Setting an assembly's Material from code fails (E_FAIL), so "Material filled, the print reads the model" was not run in a probe; check by hand.
+  - Create Print may report "could not all be pointed" falsely on an assembly print: it compares text boxes changed with fields that read the drawing, which now include Material, Material Size and Finish Spec. Compare against fields found instead. The log and warning texts still name only FINISH and WEIGHT; stale comments in `PrintUnitValues.cs` (lines 22, 91) describe 231.
+  - `PropertyWriter.Apply`'s best-effort branch for `PartPropertyStorage.Material` is dead now; remove it.
+  - The dash only appears when the title block also has a FINISH or WEIGHT field (fine for the AWB template).
+
 - Task 244, off-units refresh:
   - A refresh on open or save does not re-run the title block fit (238), so a longer new value is not re-fitted.
   - `FinishSpecBackfiller.PrintUnitWritesFor` is unused now; remove it. `PrintTemplateBuilder` still writes the long set name in new templates (harmless; Core accepts both).

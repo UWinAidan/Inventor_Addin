@@ -2,7 +2,7 @@
 
 - **Milestone:** M5 (Aidan, 2026-11-26)
 - **Feature spec:** `docs/features/05-drawing-tools.md` (question 35)
-- **Status:** todo
+- **Status:** done (built on Windows; not run in Inventor)
 - **Depends on:** 231, 244
 - **Needs:** windows build
 - **Parallel-safe with:** none
@@ -31,14 +31,31 @@ Task 231 writes "—" into an assembly's blank Material, Material Size and Finis
 
 ## Verification
 
-Filled in by the implementer.
-
 - **Ran:**
-- **Not compiled (changed under `src/InventorAddin`):**
-- **Inventor API members not confirmed:**
+  - `dotnet build InventorAddin.slnx -p:DeployToInventor=false`: 0 errors (13 existing warnings).
+  - `dotnet test tests/InventorAddin.Core.Tests`: 5564 passed, 0 failed (new `AssemblyDashFieldsTests`, 13 tests; `PrintPropertyBackfillTests` assembly tests rewritten: Rev and Status only, no Material, Material Size or Finish Spec write).
+  - COM probes (PowerShell late-bound, copies in `C:\AwbSpike\245\`: a new part `p.ipt`, assembly `a.iam` holding it, a copy of the AWB template as `tpl.idw`, and the print `d.idw`; Inventor started with New-Object and Quit in each script; scripts `p2` to `p4` in the job tmp folder):
+    - The assembly's Material, Material Size and Finish Spec are blank, and the print shows blank for all three.
+    - The MATERIAL tag `<Property Document='model' PropertySet='Design Tracking Properties' Property='Material' FormatID='{32853F0F-...}' PropertyID='20'>` was rewritten inside `TitleBlockDefinition.Edit` / `ExitEdit(true)` to `<Property Document='drawing' PropertySet='User Defined Properties' Property='Material' FormatID='{D5CDD505-...}'>` with a drawing custom property `Material` = "—": the field printed "—" (`GetResultText`). Inventor stores it back with `PropertyID='3'` added, so the way back finds the tag by FormatID and name, not by exact text.
+    - Rewriting that custom tag (matched by regex) back to the Design Tracking tag worked: the field read the model again (blank). Both directions work; Inventor did not refuse. The drawing is dirty after the edit, as in 244, so the add-in edits only when a tag has to change.
+  - Core's regex swap was not run against Inventor; the probe used the same patterns and the Core tests use the real tag text.
+- **Not compiled (changed under `src/InventorAddin`):** none; all built on Windows (not run in Inventor): `Extraction/PrintUnitRefresher.cs`, `Drawing/TitleBlockPropertySource.cs` (`Repoint` takes `bool? materialOnDrawing`), `Extraction/FinishSpecBackfiller.cs`.
+- **Inventor API members not confirmed:** none new; every member was already used by 244 or confirmed by the probes above (`TitleBlockDefinition.Edit`/`ExitEdit`, `TextBox.FormattedText`, `TitleBlock.GetResultText`, `PropertySets` and `Item`/`Add` on the drawing's `Inventor User Defined Properties`).
 - **Manual checklist for Inventor:**
-  1. …
+  1. Use an assembly of your own with blank Material, Material Size and Finish Spec. If an earlier build (task 231) wrote dashes into them, clear those three iProperties by hand and save. Close Inventor, `dotnet build InventorAddin.slnx`, start Inventor.
+  2. Open the assembly, click Create Print. Expect "—" in MATERIAL, MATERIAL SIZE and FINISH on the print. In the assembly's iProperties, Material, Material Size and Finish Spec are still blank (Project tab Material and the Physical tab show no "—"); only Revision Number and Status are filled in.
+  3. Run Mass Update on the assembly: the three stay blank.
+  4. Close the print. In the assembly set Material Size (a custom iProperty, for example `1 x 2 x 3 mm`), save, open the print: MATERIAL SIZE shows the value, MATERIAL and FINISH still show "—". Clear it, save, open the print: "—" is back.
+  5. Open a print of a part: nothing changes; MATERIAL still reads the part's material.
+  6. Open the print again with nothing changed: no `*` on the tab.
+
+## Defaults
+
+- Parts leave MATERIAL's tag alone (the swap is only for an assembly). A print whose model is a part is never swapped back, even if it was an assembly print earlier.
 
 ## Follow-ups
 
-Things noticed but not done.
+- Setting an assembly's Material from code fails (`E_FAIL` on `PropertySets("Design Tracking Properties").Item("Material").Value`, probe p3/p4), so in the probe the "model value set" case for MATERIAL could only be argued from the tag, not run. Check by hand that filling Material in an assembly's iProperties shows on the print (checklist step 4 uses Material Size).
+- `PropertyWriter.Apply` still has a best-effort branch for `PartPropertyStorage.Material` (task 231); nothing writes it now. Remove it, and `PartPropertyStorage.Material`'s "written only for an assembly" note, when convenient.
+- A refresh on open or save that changes a dash to a value (or back) does not re-run the title block fit (task 238), as noted in 244.
+- Dashes already written by 231 into test assemblies stay in the model; clear them by hand (checklist step 1).

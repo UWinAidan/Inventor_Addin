@@ -75,7 +75,7 @@ namespace InventorAddin.Extraction
             DocumentKind kind = ComSafe.Get(() => DocumentKinds.Of(model));
 
             // The mass, the finish and the finish list are read only when the units differ; a print in the part's own units needs none of them.
-            PrintUnitValues.Plan plan = PrintUnitValues.PlanFor(
+            PrintUnitValues.Plan unitsPlan = PrintUnitValues.PlanFor(
                 part,
                 print,
                 kind.IsAssembly(),
@@ -86,6 +86,21 @@ namespace InventorAddin.Extraction
                 differs ? FinishSpecBackfiller.LoadFinishList() : Array.Empty<Core.Materials.Finish>(),
                 Read(drawingDoc, PartPropertyStorage.Mass),
                 Read(drawingDoc, PartPropertyStorage.FinishSpec));
+
+            // An assembly has no material, material size or finish: where its value is blank the print reads a dash held on the drawing
+            // (task 245). The model is never written. A part keeps the units plan as it is.
+            AssemblyDashFields.Plan? dash = kind.IsAssembly()
+                ? AssemblyDashFields.PlanFor(
+                    Read(model, PartPropertyStorage.Material),
+                    Read(model, PartPropertyStorage.MaterialSize),
+                    Read(model, PartPropertyStorage.FinishSpec),
+                    Read(drawingDoc, AssemblyDashFields.DrawingMaterial),
+                    Read(drawingDoc, PartPropertyStorage.MaterialSize),
+                    Read(drawingDoc, PartPropertyStorage.FinishSpec))
+                : null;
+            PrintUnitValues.Plan plan = AssemblyDashFields.Combine(unitsPlan, dash);
+            bool? materialOnDrawing = dash?.MaterialReadsDrawing;
+            var readsDrawing = materialOnDrawing == true ? plan.ReadsDrawing.Append("Material").ToList() : plan.ReadsDrawing.ToList();
 
             var written = new List<string>();
             if (plan.Writes.Count > 0)
@@ -103,7 +118,7 @@ namespace InventorAddin.Extraction
 
             int changed = 0;
             foreach (Sheet sheet in drawing.Sheets)
-                changed += TitleBlockPropertySource.Repoint(sheet, plan.ReadsDrawing, plan.ReadsModel, warnings).Changed;
+                changed += TitleBlockPropertySource.Repoint(sheet, plan.ReadsDrawing, plan.ReadsModel, materialOnDrawing, warnings).Changed;
 
             if (written.Count > 0 || changed > 0)
                 ComSafe.Run(() => drawing.Update());
@@ -115,7 +130,7 @@ namespace InventorAddin.Extraction
                 ModelUnits = part,
                 Written = written,
                 FieldsChanged = changed,
-                ReadsDrawing = plan.ReadsDrawing,
+                ReadsDrawing = readsDrawing,
                 Warnings = warnings,
             };
         }
