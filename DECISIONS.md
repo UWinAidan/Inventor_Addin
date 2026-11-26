@@ -602,3 +602,6 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-26 | Part Marking zone: the zone holds only the zone text; method and extra lines go in a second text box under it in the same sketch | Default | task 199 |
 | 2026-11-26 | Part Marking sizes: zone text 2.5 mm in the sketch, leader note text 3 mm, note 15 mm above the view's top-right corner | Default | task 199 |
 | 2026-11-26 | Part Marking window units come from the model's length units, or the drawing's when it references no model | Default | task 199 |
+| 2026-11-26 | Engraved part number: on the largest planar face of the first body at Face.PointOnFace, no face pick; 3 mm (0.12 in) text, 0.2 mm (0.008 in) deep | Default | task 200 |
+| 2026-11-26 | Engraved part number: negative direction first, then positive if the volume does not drop by more than 1e-9 cm3; a failure aborts the part transaction and warns, the drawing marking stays | Default | task 200 |
+| 2026-11-26 | Part Marking with engraving: drawing transaction then a separate part transaction, two Undo steps; the tick box is hidden for assemblies and method None; the part is left modified and unsaved | Default | task 200 |

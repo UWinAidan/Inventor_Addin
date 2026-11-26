@@ -600,7 +600,7 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [x] 197 Update Notes command; Create Print runs it
 - [x] 198 Part marking: options, note text and window model (Core)
 - [x] 199 Part Marking window and marking on the drawing
-- [ ] 200 Engraved part number feature in the model
+- [x] 200 Engraved part number feature in the model
 - [ ] 201 Batch Print plan (Core)
 - [ ] 202 Batch Print command
 - [ ] 203 Overall REF dimensions plan (Core)

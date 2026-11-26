@@ -195,6 +195,46 @@ public static class PartMarking
         return !options.IsAssembly && options.Method != PartMarkingMethod.None;
     }
 
+    /// <summary>The engraved feature's feature name, so it can be found in the browser.</summary>
+    public const string EngraveFeatureName = "AWB Part Number";
+
+    /// <summary>
+    /// The formatted text of the engraved part number (spike 184, round 2): the Design Tracking Part Number as a property field of
+    /// the model, in a font size equal to the character height in centimetres, so a changed Part Number changes the text on update.
+    /// </summary>
+    public static string EngraveFormattedText(UnitsSystem units) =>
+        "<StyleOverride FontSize='" + CharacterHeightCm(units).ToString("0.###", CultureInfo.InvariantCulture) + "'>" +
+        "<Property Document='model' PropertySet='Design Tracking Properties' Property='Part Number' " +
+        "FormatID='{32853F0F-3444-11D1-9E93-0060B03C1CA6}' PropertyID='5'>PART NUMBER</Property></StyleOverride>";
+
+    /// <summary>
+    /// The index of the largest area (the first of equal ones), or -1 for an empty list or when no area is above zero. Picks the face
+    /// the engraving goes on: the largest planar face.
+    /// </summary>
+    public static int LargestAreaIndex(IReadOnlyList<double> areas)
+    {
+        ArgumentNullException.ThrowIfNull(areas);
+        int best = -1;
+        double bestArea = 0;
+        for (int i = 0; i < areas.Count; i++)
+        {
+            if (areas[i] > bestArea)
+            {
+                best = i;
+                bestArea = areas[i];
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>Volume drop (cm3) below which a cut counts as having removed nothing.</summary>
+    public const double EngraveVolumeToleranceCm3 = 1e-9;
+
+    /// <summary>Whether the engrave cut removed material: the volume dropped by more than <see cref="EngraveVolumeToleranceCm3"/>.</summary>
+    public static bool EngraveRemovedMaterial(double volumeBeforeCm3, double volumeAfterCm3) =>
+        volumeBeforeCm3 - volumeAfterCm3 > EngraveVolumeToleranceCm3;
+
     /// <summary>Whether the engrave feature will be added: asked for and allowed.</summary>
     public static bool WillEngraveFeature(PartMarkingOptions options) =>
         options.EngraveFeature && CanEngraveFeature(options);

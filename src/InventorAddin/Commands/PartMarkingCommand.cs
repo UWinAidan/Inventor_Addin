@@ -18,10 +18,10 @@ namespace InventorAddin.Commands
     /// the target; after OK the user picks an edge in a view, and the command places either a leader note to that edge or a dashed marking
     /// zone with its text on that edge's view, in the highlight colour from Settings. The words and sizes are Core's
     /// (<see cref="PartMarking"/>, <see cref="PartMarkingViewModel"/>); the placing is <see cref="PartMarkingWriter"/>'s. The whole
-    /// placing is one transaction, so one Undo removes the marking. The engraved feature is task 200.
+    /// placing is one transaction, so one Undo removes the marking. With the tick box on, the part number is also engraved on the drawing's part (task 200, <see cref="EngravedPartNumberWriter"/>), in its own transaction on the part, so one Undo in the part removes it.
     /// </summary>
     /// <remarks>
-    /// Adds drawing notes and a sketch, which are not geometry, so its command type is <c>kNonShapeEditCmdType</c>. The window and the pick
+    /// Adds drawing notes and a sketch, which are not geometry, so its command type is <c>kNonShapeEditCmdType</c>. The engraving adds a cut feature to the part, but it is a separate transaction on the part; the command type is kept as kNonShapeEditCmdType because the command's own document is the drawing, whose edits are not geometry. Whether kShapeEditCmdType suits the part edit better is not known. The window and the pick
     /// run in <see cref="GatherInput"/>, outside the transaction.
     /// </remarks>
     public sealed class PartMarkingCommand : DocumentEditCommand
@@ -93,31 +93,76 @@ namespace InventorAddin.Commands
             return true;
         }
 
+        private readonly List<string> _warnings = new List<string>();
+
+        /// <summary>
+        /// The window and pick, then the drawing marking in one transaction on the drawing, and only after that has ended the engraving in
+        /// its own transaction on the part. Two transactions on two documents, never nested, so each document has one "Part Marking" Undo.
+        /// </summary>
+        protected override void Run(Document doc)
+        {
+            _warnings.Clear();
+            if (!GatherInput(doc) || _options == null)
+                return;
+
+            RunInTransaction(doc, () => Execute(doc));
+
+            if (PartMarking.WillEngraveFeature(_options))
+                EngraveOnPart((DrawingDocument)doc, _options, _warnings);
+
+            foreach (string warning in _warnings)
+                AddinServices.Log.Warn($"Part Marking: {warning}");
+            AddinServices.Log.Info(
+                $"Part Marking: {_options.Target} placed on view '{ComSafe.Get(() => _view!.Name)}', method {_options.Method}, colour {_options.HighlightColour}.");
+
+            if (_warnings.Count > 0)
+            {
+                Forms.MessageBox.Show(
+                    "The marking was placed, but some of it could not be set:" + SysEnvironment.NewLine + SysEnvironment.NewLine +
+                    string.Join(SysEnvironment.NewLine, _warnings),
+                    DisplayName, Forms.MessageBoxButtons.OK, Forms.MessageBoxIcon.Warning);
+            }
+        }
+
+        /// <summary>The drawing's marking only; the engraving is done after this transaction ends (see <see cref="Run"/>).</summary>
         protected override void Execute(Document doc)
         {
             if (_options == null || _curve == null || _view == null)
                 return;
 
-            var warnings = new List<string>();
             if (_options.Target == PartMarkingTarget.Leader)
-                PartMarkingWriter.AddLeader(_curve, _view, _options, warnings);
+                PartMarkingWriter.AddLeader(_curve, _view, _options, _warnings);
             else
-                PartMarkingWriter.AddZone(_view, _options, warnings);
+                PartMarkingWriter.AddZone(_view, _options, _warnings);
 
-            ComSafe.Run(() => ((DrawingDocument)doc).Update(), warnings, "drawing update");
+            ComSafe.Run(() => ((DrawingDocument)doc).Update(), _warnings, "drawing update");
+        }
 
-            foreach (string warning in warnings)
-                AddinServices.Log.Warn($"Part Marking: {warning}");
-            AddinServices.Log.Info(
-                $"Part Marking: {_options.Target} placed on view '{ComSafe.Get(() => _view.Name)}', method {_options.Method}, colour {_options.HighlightColour}.");
-
-            if (warnings.Count > 0)
+        /// <summary>
+        /// Engraves the part number on the drawing's part, in its own transaction on the part so one Undo in the part removes it. A failure
+        /// aborts that transaction (the part is left as it was) and becomes a warning: the drawing marking stays.
+        /// </summary>
+        private void EngraveOnPart(DrawingDocument drawing, PartMarkingOptions options, List<string> warnings)
+        {
+            Document? model = PrintUnitRefresher.FindModel(drawing);
+            if (model is not PartDocument part)
             {
-                Forms.MessageBox.Show(
-                    "The marking was placed, but some of it could not be set:" + SysEnvironment.NewLine + SysEnvironment.NewLine +
-                    string.Join(SysEnvironment.NewLine, warnings),
-                    DisplayName, Forms.MessageBoxButtons.OK, Forms.MessageBoxIcon.Warning);
+                warnings.Add("The drawing's model is not a part, so the part number was not engraved.");
+                return;
             }
+
+            try
+            {
+                RunInTransaction(model, () => EngravedPartNumberWriter.Add(part, options, warnings));
+            }
+            catch (Exception ex)
+            {
+                warnings.Add("The part number could not be engraved: " + ex.Message);
+                return;
+            }
+
+            ComSafe.Run(() => part.Update(), warnings, "part update");
+            AddinServices.Log.Info($"Part Marking: part number engraved on '{ComSafe.Get(() => part.DisplayName)}'.");
         }
     }
 }

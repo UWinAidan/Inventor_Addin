@@ -117,6 +117,11 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Follow-ups from finished tasks
 
+- Task 200, engraved part number:
+  - The engraving goes at Face.PointOnFace on the largest planar face, not centred; on a narrow face the text could run off it.
+  - Part Marking with engraving makes two Undo steps (drawing, part); StartGlobalTransaction exists in the interop but is untried.
+  - Unconfirmed in Inventor: EmbossFeature.Name set, EmbossFeature.Delete(true,false,false) keeping the sketch, a fresh profile on the same sketch after a delete, MassProperties.Volume updating straight after the feature.
+
 - Task 199, Part Marking on the drawing:
   - The zone (dashed sketch rectangle and sketch text) has never been run in Inventor; the zone text size at a view scale other than 1:1 is unknown (sketch text may be in model or sheet units).
   - Unknown whether LeaderNote.Color also colours the leader line, and whether a <StyleOverride FontSize> around the Part Number field resolves in a leader note.

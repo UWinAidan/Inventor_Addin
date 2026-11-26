@@ -13,9 +13,9 @@
 
         Spec 05, "Added for M5", item 2 (task 199). The method and the target are dropdowns (their lists are set by the
         constructor; the selection is a value of the view-model's enum). The extra lines are typed one per line. The note
-        text is shown as it will be placed. The engraved feature is task 200, so the window has no tick box for it yet.
+        text is shown as it will be placed. The engrave tick box (task 200) is offered only for a part with a method; the view-model switches it off otherwise.
 
-        Access keys: M method, T target, E extra lines, O OK.
+        Access keys: M method, T target, E extra lines, N engrave, S show as, O OK.
     -->
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="VisibleWhenTrue" />
@@ -51,6 +51,13 @@
                                  Style="{DynamicResource MultiLineTextBox}"
                                  AcceptsReturn="True"
                                  Text="{Binding ExtraLinesText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </controls:FieldRow>
+                    <!-- Task 200: also engrave the part number in the part. Offered for a part with a method; hidden for an assembly or method None. -->
+                    <controls:FieldRow Target="{Binding ElementName=EngraveBox}"
+                                       Visibility="{Binding CanEngraveFeature, Mode=OneWay, Converter={StaticResource VisibleWhenTrue}}">
+                        <CheckBox x:Name="EngraveBox"
+                                  Content="Engrave part _number in the part"
+                                  IsChecked="{Binding EngraveFeature, Mode=TwoWay}" />
                     </controls:FieldRow>
                 </controls:FormSection>
 

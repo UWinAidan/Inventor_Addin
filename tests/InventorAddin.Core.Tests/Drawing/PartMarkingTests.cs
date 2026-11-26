@@ -201,4 +201,47 @@ public sealed class PartMarkingTests
         vm.Method = PartMarkingMethod.None;
         Assert.Equal("DO NOT STAMP", vm.PreviewText);
     }
+
+    [Fact]
+    public void Engrave_text_is_the_part_number_field_at_the_character_height()
+    {
+        string metric = PartMarking.EngraveFormattedText(UnitsSystem.Metric);
+        Assert.StartsWith("<StyleOverride FontSize='0.3'>", metric);
+        Assert.Contains("Property='Part Number'", metric);
+        Assert.Contains("PropertyID='5'", metric);
+        Assert.Contains("Document='model'", metric);
+        Assert.StartsWith("<StyleOverride FontSize='0.305'>", PartMarking.EngraveFormattedText(UnitsSystem.Imperial));
+    }
+
+    [Fact]
+    public void Engrave_feature_is_named_so_it_can_be_found() =>
+        Assert.Equal("AWB Part Number", PartMarking.EngraveFeatureName);
+
+    [Fact]
+    public void Largest_area_picks_the_biggest_first_and_handles_none()
+    {
+        Assert.Equal(2, PartMarking.LargestAreaIndex([1.0, 4.5, 9.0, 3.0]));
+        Assert.Equal(0, PartMarking.LargestAreaIndex([5.0, 5.0]));
+        Assert.Equal(-1, PartMarking.LargestAreaIndex([]));
+        Assert.Equal(-1, PartMarking.LargestAreaIndex([0.0]));
+    }
+
+    [Fact]
+    public void View_model_offers_the_engrave_tick_only_for_a_part_with_a_method()
+    {
+        var vm = new PartMarkingViewModel(UnitsSystem.Metric, false, "#0070C0") { EngraveFeature = true };
+        Assert.True(vm.Options.EngraveFeature);
+        vm.Method = PartMarkingMethod.None;
+        Assert.False(vm.CanEngraveFeature);
+        Assert.False(vm.Options.EngraveFeature);
+        Assert.False(new PartMarkingViewModel(UnitsSystem.Metric, true, "#0070C0") { EngraveFeature = true }.Options.EngraveFeature);
+    }
+
+    [Theory]
+    [InlineData(10.0, 9.99, true)]
+    [InlineData(10.0, 10.0, false)]
+    [InlineData(10.0, 10.0 - 1e-12, false)]
+    [InlineData(10.0, 10.5, false)]
+    public void Engrave_removed_material_needs_a_real_volume_drop(double before, double after, bool expected) =>
+        Assert.Equal(expected, PartMarking.EngraveRemovedMaterial(before, after));
 }
