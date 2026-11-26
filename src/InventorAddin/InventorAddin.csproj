@@ -87,6 +87,9 @@
     <None Include="..\..\libraries\Templates\*.idw" Link="libraries\Templates\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\libraries\StarterMaterials.adsklib" Link="libraries\StarterMaterials.adsklib" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\..\libraries\StarterMaterials.adsklib')" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="PDFsharp" Version="6.1.1" />
+  </ItemGroup>
 
   <!--
     Deploy layout:

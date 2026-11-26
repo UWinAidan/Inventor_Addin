@@ -19,6 +19,9 @@ public sealed record BatchPrintComponent(
 /// <summary>A model and the drawing that prints it.</summary>
 public sealed record BatchPrintDrawing(string ModelFullFileName, string DrawingFullFileName);
 
+/// <summary>A planned drawing that could not be opened or exported, and why.</summary>
+public sealed record BatchPrintFailure(string DrawingFullFileName, string Reason);
+
 /// <summary>
 /// The plan for Batch Print (spec 05, "Added for M5", item 3, question 17): the assembly's own drawing first, then each
 /// component's, depth first in browser order, each file once (Default). A sub-assembly's drawing comes before its
@@ -114,15 +117,56 @@ public sealed class BatchPrintPlan
         return folder + name + ".pdf";
     }
 
-    /// <summary>The report shown after printing: counts, then the models with no drawing by file name.</summary>
-    public string ReportText()
+    /// <summary>Shown when the active document is not an assembly.</summary>
+    public const string WrongDocumentMessage = "Batch Print works on assemblies. Open an assembly first.";
+
+    /// <summary>Shown when the assembly has never been saved, so it has no folder to put the PDF in.</summary>
+    public const string UnsavedMessage = "Save the assembly first. Batch Print saves the PDF next to it.";
+
+    /// <summary>Shown when the assembly itself is a Content Center or library file (Default: refused up front).</summary>
+    public const string LibraryRootMessage =
+        "This assembly is a Content Center or library file, which Batch Print skips, so there is nothing to print.";
+
+    /// <summary>Shown when no model under the assembly has a drawing.</summary>
+    public const string NothingToPrintMessage = "No drawings were found for this assembly, so no PDF was made.";
+
+    /// <summary>The question asked before an existing PDF is replaced.</summary>
+    public static string ReplaceQuestion(string pdfFullFileName) =>
+        $"{FileNameOnly(pdfFullFileName)} already exists in this folder. Replace it?";
+
+    /// <summary>
+    /// The report shown after printing, from what actually happened: <paramref name="failures"/> are planned drawings that
+    /// could not be opened or exported (a failure for a drawing not in the plan is ignored, and a drawing counts once). The
+    /// "Printed" count is the planned drawings less the failed ones. Then the failures, the skipped library parts and the
+    /// models with no drawing, by file name.
+    /// </summary>
+    public string ReportText(IReadOnlyCollection<BatchPrintFailure>? failures = null)
     {
-        var lines = new List<string>
+        var planned = new HashSet<string>(Drawings.Select(d => Key(d.DrawingFullFileName)), StringComparer.OrdinalIgnoreCase);
+        var failed = new List<BatchPrintFailure>();
+        var seenFailed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (BatchPrintFailure f in failures ?? Array.Empty<BatchPrintFailure>())
+            if (planned.Contains(Key(f.DrawingFullFileName)) && seenFailed.Add(Key(f.DrawingFullFileName)))
+                failed.Add(f);
+
+        int printed = Drawings.Count - failed.Count;
+        var lines = new List<string>();
+        if (Drawings.Count == 0)
+            lines.Add("No drawings were found, so no PDF was made.");
+        else if (printed == 0)
+            lines.Add(Drawings.Count == 1
+                ? "No PDF was made: the drawing could not be printed."
+                : $"No PDF was made: none of the {Drawings.Count} drawings could be printed.");
+        else if (failed.Count == 0)
+            lines.Add($"Printed {printed} {(printed == 1 ? "drawing" : "drawings")} to {PdfFullFileName}.");
+        else
+            lines.Add($"Printed {printed} of {Drawings.Count} drawings to {PdfFullFileName}.");
+
+        if (failed.Count > 0)
         {
-            Drawings.Count == 0
-                ? "No drawings were found, so no PDF was made."
-                : $"Printed {Drawings.Count} {(Drawings.Count == 1 ? "drawing" : "drawings")} to {PdfFullFileName}."
-        };
+            lines.Add($"{failed.Count} {(failed.Count == 1 ? "drawing" : "drawings")} could not be printed:");
+            lines.AddRange(failed.Select(f => "  " + FileNameOnly(f.DrawingFullFileName) + ": " + f.Reason));
+        }
 
         if (SkippedLibraryCount > 0)
             lines.Add($"Skipped {SkippedLibraryCount} library {(SkippedLibraryCount == 1 ? "part" : "parts")} (Content Center and library).");
@@ -135,6 +179,77 @@ public sealed class BatchPrintPlan
 
         return string.Join(Environment.NewLine, lines);
     }
+
+    /// <summary>Shown when the PDF cannot be written, usually because a viewer has it open.</summary>
+    public static string PdfNotWrittenMessage(string pdfFullFileName) =>
+        $"Could not write {pdfFullFileName}. If it is open in a PDF viewer, close it and try again.";
+
+    /// <summary>
+    /// True when <paramref name="path"/> is inside one of <paramref name="folders"/> (the project's library paths), ignoring
+    /// case and slash direction. Blank folders are ignored. Used for the assembly itself, whose own library state Inventor
+    /// does not report.
+    /// </summary>
+    public static bool IsUnderAnyFolder(string path, IEnumerable<string> folders)
+    {
+        ArgumentNullException.ThrowIfNull(folders);
+        string p = Key(path);
+        foreach (string folder in folders)
+        {
+            if (string.IsNullOrWhiteSpace(folder))
+                continue;
+            string f = Key(folder).TrimEnd('\\') + "\\";
+            if (p.StartsWith(f, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// A project path as an absolute folder: a rooted path (drive letter, UNC or leading slash) is kept; a relative one is taken
+    /// from the folder of <paramref name="projectFileFullName"/> (the .ipj), with "." and ".." segments resolved. Works on Windows
+    /// paths on any platform.
+    /// </summary>
+    public static string ResolveProjectFolder(string projectFileFullName, string folder) =>
+        ResolveProjectFolderCore(projectFileFullName, folder);
+
+    private const char Bs = '\\';
+    private const char Slash = '/';
+    private const char Colon = ':';
+
+    private static string ResolveProjectFolderCore(string projectFileFullName, string folder)
+    {
+        string f = (folder ?? string.Empty).Trim().Replace(Slash, Bs);
+        if (f.Length == 0)
+            return string.Empty;
+        bool rooted = f.StartsWith(Bs) || (f.Length >= 2 && f[1] == Colon);
+        string combined = f;
+        if (!rooted)
+        {
+            string project = (projectFileFullName ?? string.Empty).Trim().Replace(Slash, Bs);
+            int slash = project.LastIndexOf(Bs);
+            combined = (slash >= 0 ? project[..(slash + 1)] : string.Empty) + f;
+        }
+
+        string prefix = combined.StartsWith(@"\\") ? @"\\" : string.Empty;
+        var parts = new List<string>();
+        foreach (string part in combined[prefix.Length..].Split(Bs, StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (part == ".")
+                continue;
+            if (part == ".." && parts.Count > 0 && !parts[^1].EndsWith(Colon))
+                parts.RemoveAt(parts.Count - 1);
+            else if (part != "..")
+                parts.Add(part);
+        }
+
+        string joined = string.Join(Bs, parts);
+        return combined.StartsWith(Bs) && prefix.Length == 0 ? "\\" + joined : prefix + joined;
+    }
+
+    /// <summary>Shown when the PDFs could not be joined or written for a reason other than a locked file.</summary>
+    public static string PdfMergeFailedMessage(string pdfFullFileName) =>
+        $"Could not make {pdfFullFileName}. An existing PDF was left as it was. See the log for details.";
 
     private static string Key(string path) => path.Trim().Replace('/', '\\');
 

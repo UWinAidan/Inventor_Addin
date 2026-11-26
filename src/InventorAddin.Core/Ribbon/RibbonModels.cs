@@ -120,6 +120,9 @@ public static class CommandNames
     /// <summary>Part Marking (spec 05; task 199), on the drawing ribbon.</summary>
     public const string PartMarking = Prefix + "PartMarking";
 
+    /// <summary>Batch Print (spec 05; task 202), on the assembly ribbon.</summary>
+    public const string BatchPrint = Prefix + "BatchPrint";
+
     /// <summary>
     /// Our Edit Feature for holes (task 092): put in place of Inventor's on the browser menu and the mini toolbar, with
     /// Inventor's icon. It has no ribbon button.

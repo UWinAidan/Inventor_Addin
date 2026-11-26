@@ -43,6 +43,7 @@ public static class CommandDocuments
         [CommandNames.CheckOutOfBounds] = CommandDocument.Edited,
         [CommandNames.UpdateNotes] = CommandDocument.Edited,
         [CommandNames.PartMarking] = CommandDocument.Edited,
+        [CommandNames.BatchPrint] = CommandDocument.Edited,
 
         // The selection is held by the top-level assembly, also while a sub-assembly is edited in place (task 060,
         // spike 052).

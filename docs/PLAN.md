@@ -602,7 +602,7 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [x] 199 Part Marking window and marking on the drawing
 - [x] 200 Engraved part number feature in the model
 - [x] 201 Batch Print plan (Core)
-- [ ] 202 Batch Print command
+- [x] 202 Batch Print command
 - [ ] 203 Overall REF dimensions plan (Core)
 - [ ] 204 Overall REF Dimensions command
 - [ ] 205 Stock size: workbook, calculation and window model (Core)

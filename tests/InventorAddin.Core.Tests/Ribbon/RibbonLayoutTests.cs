@@ -144,14 +144,14 @@ public sealed class RibbonLayoutTests
             {
                 Create(Large("NewPart"), Small("SaveAsCopy"), Small("SaveAsReplace")),
                 Properties(Large("PartProperties"), Small("MassUpdate"), Small("MaterialFinish")),
-                DrawingPanel(Large("CreatePrint"), Large("OpenDrawing")),
+                DrawingPanel(Large("CreatePrint"), Large("OpenDrawing"), Large("BatchPrint")),
                 Awb(),
             },
             (RibbonEnvironment.Assembly, true) => new[]
             {
                 Create(Large("NewPart"), Small("SaveAsCopy"), Small("SaveAsReplace")),
                 Properties(Large("PartProperties"), Small("MassUpdate"), Small("MaterialFinish")),
-                DrawingPanel(Large("CreatePrint"), Large("OpenDrawing")),
+                DrawingPanel(Large("CreatePrint"), Large("OpenDrawing"), Large("BatchPrint")),
                 Developer(Small("ExportModelData"), Small("ExportLibraries"), Small("BuildPrintTemplate")),
                 Awb(),
             },
@@ -304,6 +304,7 @@ public sealed class RibbonLayoutTests
     [InlineData(CommandNames.CheckOutOfBounds, IconNames.CheckOutOfBounds)]
     [InlineData(CommandNames.UpdateNotes, IconNames.UpdateNotes)]
     [InlineData(CommandNames.PartMarking, IconNames.PartMarking)]
+    [InlineData(CommandNames.BatchPrint, IconNames.BatchPrint)]
     public void EachCommand_UsesItsIconName_InEveryEnvironment(string command, string iconName)
     {
         var buttons = RibbonEnvironments.All
@@ -336,6 +337,7 @@ public sealed class RibbonLayoutTests
     [InlineData(CommandNames.CheckOutOfBounds, ButtonSize.Large)]
     [InlineData(CommandNames.UpdateNotes, ButtonSize.Large)]
     [InlineData(CommandNames.PartMarking, ButtonSize.Large)]
+    [InlineData(CommandNames.BatchPrint, ButtonSize.Large)]
     [InlineData(CommandNames.ExportModelData, ButtonSize.Small)]
     [InlineData(CommandNames.ExportLibraries, ButtonSize.Small)]
     [InlineData(CommandNames.BuildPrintTemplate, ButtonSize.Small)]
@@ -365,7 +367,7 @@ public sealed class RibbonLayoutTests
         Assert.Equal(
             new[]
             {
-                CommandNames.About, CommandNames.AwbHole, CommandNames.BuildPrintTemplate, CommandNames.CheckOutOfBounds, CommandNames.CreatePrint, CommandNames.ExportLibraries, CommandNames.ExportModelData, CommandNames.HoleTable,
+                CommandNames.About, CommandNames.AwbHole, CommandNames.BatchPrint, CommandNames.BuildPrintTemplate, CommandNames.CheckOutOfBounds, CommandNames.CreatePrint, CommandNames.ExportLibraries, CommandNames.ExportModelData, CommandNames.HoleTable,
                 CommandNames.MassUpdate, CommandNames.MaterialFinish, CommandNames.NewPart, CommandNames.OpenDrawing, CommandNames.PartMarking, CommandNames.PartProperties, CommandNames.PlaceInitialViews, CommandNames.SaveAsCopy,
                 CommandNames.SaveAsReplace, CommandNames.Settings, CommandNames.UpdateNotes,
             }.OrderBy(n => n, StringComparer.Ordinal),
@@ -400,7 +402,7 @@ public sealed class RibbonLayoutTests
             .Select(g => g.First().IconName)
             .ToList();
 
-        Assert.Equal(19, iconNames.Count);
+        Assert.Equal(20, iconNames.Count);
         Assert.Equal(iconNames.Count, iconNames.Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
 

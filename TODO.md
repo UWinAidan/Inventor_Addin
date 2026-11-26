@@ -117,6 +117,11 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Follow-ups from finished tasks
 
+- Task 202, Batch Print:
+  - PDFsharp 6.1.1 (MIT) is a new dependency; name its licence in the PR. It is pinned below 6.2.0 because 6.2.0 needs Microsoft.Extensions.* 8.0, which clashes with Inventor 2026's 6.0.0.0 copies; whether the merge loads inside Inventor is the first thing to check.
+  - No cancel button or progress bar for Batch Print; add a cancel if a big assembly feels slow.
+  - Unrun in the add-in: the PDF export calls (HasSaveCopyAsOptions indexer, Sheet_Range as an enum value, DataMedium.FileName without MediumType) and ComponentOccurrence.SubOccurrences.
+
 - Task 200, engraved part number:
   - The engraving goes at Face.PointOnFace on the largest planar face, not centred; on a narrow face the text could run off it.
   - Part Marking with engraving makes two Undo steps (drawing, part); StartGlobalTransaction exists in the interop but is untried.

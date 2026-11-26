@@ -105,4 +105,125 @@ public sealed class BatchPrintPlanTests
         Assert.Throws<ArgumentNullException>(() => BatchPrintPlan.Create(null!, Finder()));
         Assert.Throws<ArgumentNullException>(() => BatchPrintPlan.Create(C("t.iam"), null!));
     }
+
+    [Fact]
+    public void TwoModelsWithTheSameDrawing_PrintItOnce()
+    {
+        var tree = C("top.iam", C("a.ipt"), C("b.ipt"));
+        Func<string, string?> shared = m => m.EndsWith("top.iam") ? @"C:\W\Prints\top.idw" : @"C:\W\Prints\shared.idw";
+
+        var plan = BatchPrintPlan.Create(tree, shared);
+
+        Assert.Equal(new[] { "top.idw", "shared.idw" }, plan.Drawings.Select(d => LastPart(d.DrawingFullFileName)));
+        Assert.Empty(plan.ModelsWithoutDrawing);
+        Assert.Contains("Printed 2 drawings", plan.ReportText());
+    }
+
+    [Fact]
+    public void ALibrarySubAssembly_IsSkippedWithItsChildren()
+    {
+        var lib = new BatchPrintComponent(@"C:\CC\kit.iam", true, new[] { C("inner.ipt") });
+        var plan = BatchPrintPlan.Create(C("top.iam", lib, C("a.ipt")), Finder());
+
+        Assert.Equal(new[] { "top.iam", "a.ipt" }, plan.Drawings.Select(d => LastPart(d.ModelFullFileName)));
+        Assert.Equal(1, plan.SkippedLibraryCount);
+        Assert.Empty(plan.ModelsWithoutDrawing);
+    }
+
+    [Fact]
+    public void Report_SingularLibraryAndMissingWording()
+    {
+        var plan = BatchPrintPlan.Create(C("top.iam", Lib("bolt.ipt"), C("a.ipt")), Finder("a.ipt"));
+        string report = plan.ReportText();
+
+        Assert.Contains("Skipped 1 library part (", report);
+        Assert.Contains("1 model has no drawing:", report);
+        Assert.DoesNotContain("library parts", report);
+    }
+
+    private static BatchPrintPlan ThreeDrawings() =>
+        BatchPrintPlan.Create(C("top.iam", C("a.ipt"), C("b.ipt")), Finder());
+
+    [Fact]
+    public void Report_SomeFailed_CountsWhatWasPrinted_AndNamesTheFailures()
+    {
+        var failures = new[] { new BatchPrintFailure(@"C:\W\Prints\a.idw", "could not be opened") };
+
+        string report = ThreeDrawings().ReportText(failures);
+
+        Assert.Contains(@"Printed 2 of 3 drawings to C:\W\top.pdf.", report);
+        Assert.Contains("1 drawing could not be printed:", report);
+        Assert.Contains("  a.idw: could not be opened", report);
+    }
+
+    [Fact]
+    public void Report_FailuresAreMatchedLoosely_CountOnce_AndUnplannedOnesAreIgnored()
+    {
+        var failures = new[]
+        {
+            new BatchPrintFailure("c:/w/prints/A.idw", "x"),
+            new BatchPrintFailure(@"C:\W\Prints\a.idw", "y"),
+            new BatchPrintFailure(@"C:\W\Prints\other.idw", "z"),
+        };
+
+        string report = ThreeDrawings().ReportText(failures);
+
+        Assert.Contains("Printed 2 of 3 drawings", report);
+        Assert.DoesNotContain("other.idw", report);
+    }
+
+    [Fact]
+    public void Report_AllFailed_SaysNoPdfWasMade()
+    {
+        var failures = new[]
+        {
+            new BatchPrintFailure(@"C:\W\Prints\top.idw", "x"), new BatchPrintFailure(@"C:\W\Prints\a.idw", "x"),
+            new BatchPrintFailure(@"C:\W\Prints\b.idw", "x"),
+        };
+
+        string report = ThreeDrawings().ReportText(failures);
+
+        Assert.Contains("No PDF was made: none of the 3 drawings could be printed.", report);
+        Assert.DoesNotContain("Printed", report);
+    }
+
+    [Fact]
+    public void Report_OnlyDrawingFailed_UsesSingularWording()
+    {
+        var plan = BatchPrintPlan.Create(C("top.iam"), Finder());
+
+        string report = plan.ReportText(new[] { new BatchPrintFailure(@"C:\W\Prints\top.idw", "x") });
+
+        Assert.Contains("No PDF was made: the drawing could not be printed.", report);
+    }
+
+    [Fact]
+    public void ReplaceQuestion_NamesTheFile()
+    {
+        Assert.Equal("top.pdf already exists in this folder. Replace it?", BatchPrintPlan.ReplaceQuestion(@"C:\W\top.pdf"));
+    }
+
+    [Theory]
+    [InlineData(@"C:\Lib\Std\bolt.ipt", @"C:\Lib", true)]
+    [InlineData("c:/lib/std/bolt.ipt", @"C:\LIB\", true)]
+    [InlineData(@"C:\Library2\bolt.ipt", @"C:\Lib", false)]
+    [InlineData(@"C:\Lib", @"C:\Lib", false)]
+    [InlineData(@"C:\W\top.iam", "", false)]
+    public void IsUnderAnyFolder_MatchesWholeFolders(string path, string folder, bool expected)
+    {
+        Assert.Equal(expected, BatchPrintPlan.IsUnderAnyFolder(path, new[] { folder }));
+    }
+
+    [Theory]
+    [InlineData(@"C:\Proj\a.ipj", @"Libs\Std", @"C:\Proj\Libs\Std")]
+    [InlineData(@"C:\Proj\a.ipj", @"..\Shared\Lib", @"C:\Shared\Lib")]
+    [InlineData(@"C:\Proj\a.ipj", @".\Lib", @"C:\Proj\Lib")]
+    [InlineData(@"C:\Proj\a.ipj", @"D:\Lib", @"D:\Lib")]
+    [InlineData(@"C:\Proj\a.ipj", @"\srv\share\Lib", @"\srv\share\Lib")]
+    [InlineData(@"C:\Proj\a.ipj", "Libs/Std", @"C:\Proj\Libs\Std")]
+    [InlineData(@"C:\Proj\a.ipj", "", "")]
+    public void ResolveProjectFolder_TakesRelativePathsFromTheProjectFolder(string project, string folder, string expected)
+    {
+        Assert.Equal(expected, BatchPrintPlan.ResolveProjectFolder(project, folder));
+    }
 }
