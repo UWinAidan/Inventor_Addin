@@ -32,6 +32,7 @@ A drawing button that adds bold overall REF dimensions to the selected view (or 
   - Text: `Text.FormattedText = "<StyleOverride Bold='True'><DimensionValue/> REF</StyleOverride>"` prints bold "<value> REF". `ModelValue` is in cm.
   - Not tried: a view with only arcs at the extremes. Fall back to the curves' `Evaluator2D` range, and list it under Verification.
 
+- Core (task 203): pass an Inventor arc's start angle and signed sweep straight into `RefCurve.Arc` (negative sweeps are accepted). Confirm the Arc2d member names against the Inventor API reference and list them under Verification. `NeedsExtentFallback` is true for arcs, sloped lines and lines along the axis; do not assume an arc.
 - Read spec 05's "Added for M5" section and the 2026-11-21 rows of `DECISIONS.md` first. Defaults are marked there; do not change them.
 
 ## Verification

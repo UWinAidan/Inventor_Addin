@@ -610,3 +610,5 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-26 | Batch Print: suppressed occurrences and virtual components are left out; the replace question comes before any drawing opens; failed drawings are reported and the rest still print; no PDF if all fail | Default | task 202 |
 | 2026-11-26 | Batch Print: drawings not already open are opened hidden and closed without saving; the merge goes to a temp file moved over the target; button on the assembly ribbon next to Open Drawing, kFileOperationsCmdType | Default | task 202 |
 | 2026-11-26 | Batch Print merges with PDFsharp 6.1.1 (MIT), pinned below 6.2.0 to match Inventor 2026's Microsoft.Extensions 6.0.0.0 assemblies | Default | task 202 |
+| 2026-11-27 | REF dimension text is 1.25 times the normal dimension text height (spec 05 question 39) | Default | task 203 |
+| 2026-11-27 | REF dimensions: width text 10 mm below the view, height text 10 mm right of it; at an extreme a straight line beats an arc; other extremes need the extent fallback | Default | task 203 |

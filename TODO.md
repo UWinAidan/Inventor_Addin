@@ -90,6 +90,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Aidan: open libraries/AWB_Notes.xlsx in Excel and confirm there is no repair prompt (task 196)
 - Spec 05 question 38: automatic notes placement (NOTES: list above the title block, bottom line 30 mm in and 3 mm up, default text size, first sheet only). Default: as built
 - Spec 05 question 16 (extended by task 199): in zone mode should the method and extra lines go inside the zone rather than under it, and should the zone pick a view by clicking the view instead of an edge?
+- Spec 05 question 39: how much larger should the REF dimension text be? Default 1.25 times the normal dimension text height (task 203).
 - M5 planning questions 14 to 17 (from an earlier session; their wording is not in the repo): ask again when those commands come up (Aidan, 2026-11-20). Question 18 is answered by the Make/Buy column (2026-11-21)
 
 **iLogic (spec 06), blocks M6**
