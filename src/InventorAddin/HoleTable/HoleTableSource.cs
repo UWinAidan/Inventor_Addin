@@ -51,6 +51,7 @@ namespace InventorAddin.HoleTables
         private static readonly HashSet<string> TapDrillWarned = new();
         private readonly Dictionary<string, IReadOnlyDictionary<string, HoleTableHoleRef>> _holeRefs = new();
         private HoleWorkbook? _workbook;
+        private bool _workbookLoadFailed;
 
         public HoleTableSource(DrawingDocument drawing, AddinSettings settings, ILog log)
         {
@@ -820,7 +821,7 @@ namespace InventorAddin.HoleTables
 
         private HoleWorkbook? LoadWorkbook()
         {
-            if (_workbook != null)
+            if (_workbook != null || _workbookLoadFailed)
                 return _workbook;
             try
             {
@@ -828,7 +829,9 @@ namespace InventorAddin.HoleTables
             }
             catch (Exception ex)
             {
-                _log.Warn(LogPrefix + "the hole workbook could not be read; taper tap drills come from Inventor: " + ex.Message);
+                // Remembered, so the load and its warning happen once per source, not once per tapped hole.
+                _workbookLoadFailed = true;
+                _log.Warn(LogPrefix + "the hole workbook could not be read; tapped holes use Inventor's or AWB's stored drill, taper tapped holes Inventor's: " + ex.Message);
             }
 
             return _workbook;

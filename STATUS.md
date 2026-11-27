@@ -6,16 +6,11 @@ Last updated: 2026-11-22
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-27 09:33. Branch `claude/m5-drawing-tools`, latest commit `1eb4e80` (task 207), pushed.
-- Goal: Aidan's chunk 3 check fixes (242 to 245), then 194 onward (PLAN M5) in order, each implementer, then reviewer, one commit per task, push. At the end ONE checklist `docs/checklists/m5-chunk4.md` covering 242 to 245 and everything from 194 on checkable in Inventor (condense each task file's manual checklist, like `docs/checklists/m5-chunk3.md`), then the line "All tasks in this run are finished".
-- Done this run: 242 `de8c57b`, 243 `5f545f2`, 244 `e81b048`, 245 `efcf8ac`, 194 `53738c4`, 195 `f54ad84`, 196 `778e088`, 197 `6cd2ffd`, 198 `3f86bd6`, 199 `382989f`, 200 `2c987c4`, 201 `1626972`, 202 `ea5818a` (adds PDFsharp 6.1.1, MIT; name it in the PR), 203 `b35cec9`, 204 `08cbcb7`, 205 `45efa41`, 206 `ca7bc05`, 207 `1eb4e80`, 208.
-- In progress: 212 (hole workbook warning) if started; check `git status`. Checklist also: open `AWB_Stock.xlsx` in Excel (no repair prompt).
-- Next:
-  1. Finish the current task (review, commit with `python $CLAUDE_JOB_DIR/tmp/todo.py` and `ctask.py`; recreate if gone: tick PLAN, append Default rows dated today to DECISIONS, add TODO follow-ups and "Q:" spec questions).
-  2. 212.
-  3. Write `docs/checklists/m5-chunk4.md` (include: Excel opens `AWB_Notes.xlsx` with no repair prompt; clear 231's dashes from test assemblies first; assembly Material filled by hand; watch for a false "could not all be pointed" warning; Batch Print merge must show no FileLoadException for Microsoft.Extensions/PdfSharp; no hidden drawing left open after a failed Batch Print; REF on a slot part warns instead of placing). Update STATUS, push, end with "All tasks in this run are finished".
-- Current state: build 0 errors at 207; Core tests 5841 (only known flaky failures). Nothing from this run has been run in Inventor.
-- Spec 05 open questions added this run: 37, 38, 39 (REF text size), 40 (REF to arc extremes), 41 (stock size format), 42 (Stock Size on sheet metal); 15 and 16 extended. All in TODO "Waiting on Aidan: decisions".
+- Updated: 2026-11-27. Branch `claude/m5-drawing-tools`, pushed. The run is finished.
+- Goal (done): Aidan's chunk 3 check fixes (242 to 245), then 194 to 208 and 212 (PLAN M5), each implementer then reviewer, one commit per task. Aidan's single checklist is `docs/checklists/m5-chunk4.md`.
+- Done this run: 242 `de8c57b`, 243 `5f545f2`, 244 `e81b048`, 245 `efcf8ac`, 194 `53738c4`, 195 `f54ad84`, 196 `778e088`, 197 `6cd2ffd`, 198 `3f86bd6`, 199 `382989f`, 200 `2c987c4`, 201 `1626972`, 202 `ea5818a` (adds PDFsharp 6.1.1, MIT; name it in the PR), 203 `b35cec9`, 204 `08cbcb7`, 205 `45efa41`, 206 `ca7bc05`, 207 `1eb4e80`, 208 `9ee5863`, 212 (last commit).
+- Current state: build 0 errors; Core tests about 5867 (only known flaky failures). Nothing from this run has been run in Inventor.
+- Next: Aidan runs `docs/checklists/m5-chunk4.md` and answers spec 05 questions 37 to 42 (and 16 extensions). Then fix what fails; task 209 (combined M5 check) and anything left in PLAN M5.
 - Gotchas:
   - Flaky tests: RenamePlan, SaveAsCopyCreator, SaveAsReplacer, NewPartCreator, Numbering, RegisterStore probe timeouts. Rerun them.
   - Build with `-p:DeployToInventor=false` while Inventor is open. Run one implementer at a time (parallel builds clash in `obj/`).

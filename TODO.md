@@ -121,6 +121,9 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Follow-ups from finished tasks
 
+- Task 212, hole workbook warning:
+  - With a missing hole workbook the log shows only the loader's generic problem line, not a fallback summary; a one-line 'taper tapped holes will have no drill' warning after an empty load would need a scope decision.
+
 - Task 208, Update Parts List:
   - Only the active sheet's parts lists are updated; a row merging several files uses the first file only.
   - Unconfirmed in Inventor: PartsListColumns.Add(kCustomProperty, "Make/Buy") appends a working column; ReferencedFileDescriptor.ReferencedDocument for unopened files; writing "" to a cell clears it.
