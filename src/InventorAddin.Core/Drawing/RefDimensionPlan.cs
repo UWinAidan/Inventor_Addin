@@ -103,6 +103,35 @@ public static class RefDimensionPlan
     /// <summary>Inventor formatted text for a REF dimension: the dimension value then " REF", all bold.</summary>
     public const string FormattedText = "<StyleOverride Bold='True'><DimensionValue/> REF</StyleOverride>";
 
+    /// <summary>
+    /// Formatted text for a REF dimension with its characters <see cref="TextHeightScale"/> times the style's normal text height
+    /// (<c>FontSize</c> is in centimetres; spike 204 read 0.35 from the style and 0.4375 printed bold).
+    /// </summary>
+    public static string FormattedTextFor(double normalTextHeightCm) =>
+        "<StyleOverride Bold='True' FontSize='" +
+        (normalTextHeightCm * TextHeightScale).ToString("0.####", CultureInfo.InvariantCulture) +
+        "'><DimensionValue/> REF</StyleOverride>";
+
+    /// <summary>
+    /// True when a dimension Inventor made reads the planned size: <paramref name="modelValueCm"/> against the sheet span divided by
+    /// the view scale. Inventor dimensions an arc to its centre, so a dimension that fails this is not an overall size.
+    /// </summary>
+    public static bool ValueMatchesPlan(double modelValueCm, double sheetSpanCm, double viewScale)
+    {
+        if (viewScale <= 0) return false;
+        double expected = sheetSpanCm / viewScale;
+        return Math.Abs(modelValueCm - expected) <= Math.Max(1e-4, expected * 1e-4);
+    }
+
+    /// <summary>The note shown when an overall dimension could not be placed because an end is not a straight edge.</summary>
+    public static string NotPlacedWarning(bool isHorizontal) =>
+        (isHorizontal ? "The overall width" : "The overall height") +
+        " was not placed: its end is an arc, a circle or a sloped edge, and Inventor dimensions those to their centre or end, not their extent.";
+
+    /// <summary>The note shown when a wrong-valued dimension could not be removed again.</summary>
+    public static string WrongDimensionMayRemainWarning(bool isHorizontal) =>
+        "A wrong " + (isHorizontal ? "width" : "height") + " REF dimension may remain on the sheet; delete it.";
+
     /// <summary>The plain text a REF dimension prints for a value, for display and tests: "260 REF".</summary>
     public static string PlainText(double value, int decimals = 0) =>
         value.ToString("F" + Math.Max(0, decimals), CultureInfo.InvariantCulture) + " REF";

@@ -8,7 +8,7 @@ Last updated: 2026-11-22
 
 - Updated: 2026-11-26 (end of session; Aidan paused the run after 199). Branch `claude/m5-drawing-tools`, latest commit is task 199, pushed.
 - Goal: Aidan's chunk 3 check fixes (242 to 245), then 194 onward (PLAN M5) in order, each implementer, then reviewer, one commit per task, push. At the end ONE checklist `docs/checklists/m5-chunk4.md` covering 242 to 245 and everything from 194 on checkable in Inventor (condense each task file's manual checklist, like `docs/checklists/m5-chunk3.md`), then the line "All tasks in this run are finished".
-- Done this run: 242 `de8c57b`, 243 `5f545f2`, 244 `e81b048`, 245 `efcf8ac`, 194 `53738c4`, 195 `f54ad84`, 196 `778e088`, 197 `6cd2ffd`, 198 `3f86bd6`, 199 (the commit after 198)., 200 (engraved part number), 201, 202, 203
+- Done this run: 242 `de8c57b`, 243 `5f545f2`, 244 `e81b048`, 245 `efcf8ac`, 194 `53738c4`, 195 `f54ad84`, 196 `778e088`, 197 `6cd2ffd`, 198 `3f86bd6`, 199 (the commit after 198)., 200 (engraved part number), 201, 202, 203, 204
 - Next (do not start until Aidan says so):
   1. 200, 201, 202, 203, 204, 205, 206, 207, 208, 212 in order, one at a time. 200 adds the engrave tick box to `PartMarkingWindow.xaml` (the view-model already has `EngraveFeature`, `CanEngraveFeature`). 205 and 206 should match 230's Material Size number format.
   2. Write `docs/checklists/m5-chunk4.md` (include: Excel opens `AWB_Notes.xlsx` with no repair prompt; clear 231's dashes from test assemblies first; assembly Material filled by hand; watch for a false "could not all be pointed" warning), update STATUS, push, end with "All tasks in this run are finished".

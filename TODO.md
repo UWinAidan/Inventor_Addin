@@ -91,6 +91,7 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - Spec 05 question 38: automatic notes placement (NOTES: list above the title block, bottom line 30 mm in and 3 mm up, default text size, first sheet only). Default: as built
 - Spec 05 question 16 (extended by task 199): in zone mode should the method and extra lines go inside the zone rather than under it, and should the zone pick a view by clicking the view instead of an edge?
 - Spec 05 question 39: how much larger should the REF dimension text be? Default 1.25 times the normal dimension text height (task 203).
+- Spec 05 question 40: REF width or height when the view's extreme is an arc, circle or sloped line (Inventor measures to the arc centre): centre to centre plus radii, a helper sketch line, or leave it manual? Default: not placed, with a warning (task 204).
 - M5 planning questions 14 to 17 (from an earlier session; their wording is not in the repo): ask again when those commands come up (Aidan, 2026-11-20). Question 18 is answered by the Make/Buy column (2026-11-21)
 
 **iLogic (spec 06), blocks M6**
@@ -117,6 +118,9 @@ Each spec lists its own open questions in full. These are the ones that block pl
 - **Part name editable in the properties window.** Aidan asked on 2026-10-06 whether the name can be edited. It stays display-only, linked to the file name; the Rename button beside it is now planned (task 047). Waiting on Aidan only if he wants the name to differ from the file name.
 
 ## Follow-ups from finished tasks
+
+- Task 204, REF dimensions:
+  - Unconfirmed in Inventor: SelectSet yielding a DrawingView when a view is selected; arc-to-centre behaviour for circles and splines; only Segments[1] of an arc is read.
 
 - Task 202, Batch Print:
   - PDFsharp 6.1.1 (MIT) is a new dependency; name its licence in the PR. It is pinned below 6.2.0 because 6.2.0 needs Microsoft.Extensions.* 8.0, which clashes with Inventor 2026's 6.0.0.0 copies; whether the merge loads inside Inventor is the first thing to check.

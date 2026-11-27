@@ -99,6 +99,8 @@ public static class RibbonLayout
             new(CommandNames.PartMarking, ButtonSize.Large, IconNames.PartMarking, DrawingEnvironments),
             // Spec 05, "Added for M5", item 3 (task 202): large, on the assembly ribbon only.
             new(CommandNames.BatchPrint, ButtonSize.Large, IconNames.BatchPrint, AssemblyEnvironments),
+            // Spec 05, "Added for M5", item 4 (task 204): large, on the drawing ribbon only.
+            new(CommandNames.OverallRefDimensions, ButtonSize.Large, IconNames.OverallRefDimensions, DrawingEnvironments),
             // Spec 04, "Target dialog" (task 167): large, on the drawing ribbon only.
             new(CommandNames.HoleTable, ButtonSize.Large, IconNames.HoleTable, DrawingEnvironments),
         }),

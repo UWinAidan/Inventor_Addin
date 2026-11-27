@@ -14,6 +14,7 @@ public sealed class CommandDocumentsTests
     [InlineData(CommandNames.UpdateNotes, CommandDocument.Edited)]
     [InlineData(CommandNames.PartMarking, CommandDocument.Edited)]
     [InlineData(CommandNames.BatchPrint, CommandDocument.Edited)]
+    [InlineData(CommandNames.OverallRefDimensions, CommandDocument.Edited)]
     [InlineData(CommandNames.SaveAsCopy, CommandDocument.Edited)]
     [InlineData(CommandNames.ExportModelData, CommandDocument.Edited)]
     [InlineData(CommandNames.AwbHole, CommandDocument.Edited)]

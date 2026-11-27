@@ -123,6 +123,9 @@ public static class CommandNames
     /// <summary>Batch Print (spec 05; task 202), on the assembly ribbon.</summary>
     public const string BatchPrint = Prefix + "BatchPrint";
 
+    /// <summary>Overall REF Dimensions (spec 05; task 204), on the drawing ribbon.</summary>
+    public const string OverallRefDimensions = Prefix + "OverallRefDimensions";
+
     /// <summary>
     /// Our Edit Feature for holes (task 092): put in place of Inventor's on the browser menu and the mini toolbar, with
     /// Inventor's icon. It has no ribbon button.

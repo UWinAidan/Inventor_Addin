@@ -612,3 +612,5 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-26 | Batch Print merges with PDFsharp 6.1.1 (MIT), pinned below 6.2.0 to match Inventor 2026's Microsoft.Extensions 6.0.0.0 assemblies | Default | task 202 |
 | 2026-11-27 | REF dimension text is 1.25 times the normal dimension text height (spec 05 question 39) | Default | task 203 |
 | 2026-11-27 | REF dimensions: width text 10 mm below the view, height text 10 mm right of it; at an extreme a straight line beats an arc; other extremes need the extent fallback | Default | task 203 |
+| 2026-11-27 | REF dimensions: a dimension whose extreme is an arc, circle or sloped line is placed, checked against the planned span, and removed with a warning if it differs (spec 05 question 40) | Default | task 204 |
+| 2026-11-27 | REF dimensions view choice: the selected view, else the sheet's first base view, else its first view; REF text bold at 1.25 times the style's text height | Default | task 204 |

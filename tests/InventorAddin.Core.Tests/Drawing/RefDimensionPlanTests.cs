@@ -206,4 +206,36 @@ public class RefDimensionPlanTests
         Assert.Equal(31, r.Height.TextPoint.XCm, 6);
         Assert.Equal(5, r.Height.TextPoint.YCm, 6);
     }
+
+    [Fact]
+    public void FormattedTextFor_ScalesTheStyleHeight_AndIsBold()
+    {
+        Assert.Equal("<StyleOverride Bold='True' FontSize='0.4375'><DimensionValue/> REF</StyleOverride>", RefDimensionPlan.FormattedTextFor(0.35));
+    }
+
+    [Theory]
+    [InlineData(6, 6, 1, true)]
+    [InlineData(6, 9, 1, false)]       // arc dimensioned to its centre: 6 instead of 9
+    [InlineData(3, 6, 2, true)]        // sheet span 6 at scale 2 is 3 in the model
+    [InlineData(3, 6, 0, false)]
+    [InlineData(9.0005, 9, 1, true)]
+    [InlineData(9.01, 9, 1, false)]
+    public void ValueMatchesPlan_ComparesModelValueToSpanOverScale(double model, double span, double scale, bool expected)
+    {
+        Assert.Equal(expected, RefDimensionPlan.ValueMatchesPlan(model, span, scale));
+    }
+
+    [Fact]
+    public void WrongDimensionMayRemainWarning_NamesTheDimension()
+    {
+        Assert.Equal("A wrong width REF dimension may remain on the sheet; delete it.", RefDimensionPlan.WrongDimensionMayRemainWarning(true));
+        Assert.Contains("height", RefDimensionPlan.WrongDimensionMayRemainWarning(false));
+    }
+
+    [Fact]
+    public void NotPlacedWarning_NamesTheDimension()
+    {
+        Assert.StartsWith("The overall width", RefDimensionPlan.NotPlacedWarning(true));
+        Assert.StartsWith("The overall height", RefDimensionPlan.NotPlacedWarning(false));
+    }
 }
