@@ -82,6 +82,8 @@ public static class RibbonLayout
             new(CommandNames.MassUpdate, ButtonSize.Small, IconNames.MassUpdate, NewFileEnvironments),
             // Spec 03, question 17 (Default; task 075): the active part, or the selected parts of an assembly.
             new(CommandNames.MaterialFinish, ButtonSize.Small, IconNames.MaterialFinish, ModelEnvironments),
+            // Spec 05, "Added for M5", item 5 (task 206): small, after the other small buttons so they stay stacked; part ribbon only.
+            new(CommandNames.StockSize, ButtonSize.Small, IconNames.StockSize, PartEnvironments),
         }),
         new(RibbonIds.DrawingPanelId, RibbonIds.DrawingPanelName, DeveloperOnly: false, new ButtonDefinition[]
         {

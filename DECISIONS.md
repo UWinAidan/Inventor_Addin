@@ -617,3 +617,5 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-27 | Stock size uses task 230's Material Size number format with no unit suffix (spec 05 question 41) | Default | task 205 |
 | 2026-11-27 | Stock workbook: one allowance and one rounding step per units system; starter 1 mm and 5 mm, 0.04 in and 0.25 in; a result is at least one step | Default | task 205 |
 | 2026-11-27 | Round bar diameter: the larger of the two smaller sides plus the allowance, up to the next listed diameter; too big for the list gives no text and a message, and the user may type one | Default | task 205 |
+| 2026-11-27 | Stock Size declines sheet metal parts with a message and writes nothing (with no flat pattern, it says to create one) (spec 05 question 42) | Default | task 206 |
+| 2026-11-27 | Stock Size: small button on the part ribbon's Properties panel after Material Finish; shape is a Plate or Round bar dropdown; kFilePropertyEditCmdType; cancel or no change opens no transaction | Default | task 206 |

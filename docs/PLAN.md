@@ -606,7 +606,7 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [x] 203 Overall REF dimensions plan (Core)
 - [x] 204 Overall REF Dimensions command
 - [x] 205 Stock size: workbook, calculation and window model (Core)
-- [ ] 206 Stock Size command
+- [x] 206 Stock Size command
 - [ ] 207 Parts list Make/Buy rule (Core)
 - [ ] 208 Update Parts List command
 - [x] 210 Part Properties: Status dropdown and Revise (Aidan, 2026-11-22)

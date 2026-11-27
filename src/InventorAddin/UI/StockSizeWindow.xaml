@@ -1,0 +1,69 @@
+<Window x:Class="InventorAddin.UI.StockSizeWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:InventorAddin.UI.Controls"
+        SizeToContent="WidthAndHeight"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False">
+    <!--
+        DataContext is a StockSizeViewModel (InventorAddin.Core.ViewModels), set in the constructor.
+        Layout and bindings only: the look comes from UI/Theme, applied by WindowHost after the window is built,
+        so shared styles are referred to with DynamicResource. SizeToContent and ResizeMode are repeated from the
+        DialogWindow style so the window still sizes to its content if the shared styles fail to load.
+
+        Spec 05, "Added for M5", item 5 (task 206). The shape is a dropdown (its list is set by the constructor; the selection is a
+        StockShape); choosing the other shape works the size out again. The text can be edited before OK writes it to Material Size.
+
+        Access keys: S shape, M material size, O OK.
+    -->
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="VisibleWhenTrue" />
+    </Window.Resources>
+    <Grid Style="{DynamicResource DialogContent}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- The header icon is put in the window's resources by WindowHost (HeaderIcon), in the window's theme. -->
+        <controls:DialogHeader Grid.Row="0"
+                               Icon="{DynamicResource HeaderIcon}"
+                               Title="Stock Size"
+                               Subline="Raw stock size for the Material Size property" />
+
+        <ScrollViewer Grid.Row="1" Style="{DynamicResource DialogBody}">
+            <StackPanel Style="{DynamicResource DialogBodyContent}">
+                <controls:FormSection Heading="Stock">
+                    <controls:FieldRow Label="_Shape" Target="{Binding ElementName=ShapeBox}">
+                        <ComboBox x:Name="ShapeBox"
+                                  DisplayMemberPath="Label"
+                                  SelectedValuePath="Value"
+                                  SelectedValue="{Binding Shape, Mode=TwoWay}" />
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="_Material Size" Target="{Binding ElementName=SizeBox}">
+                        <TextBox x:Name="SizeBox"
+                                 Text="{Binding Text, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </controls:FieldRow>
+                    <controls:FieldRow Label="Now">
+                        <TextBlock Style="{DynamicResource ValueText}" TextWrapping="Wrap" Text="{Binding StoredMaterialSize, Mode=OneTime}" />
+                    </controls:FieldRow>
+                </controls:FormSection>
+
+                <!-- Why no size was worked out (too big for the list, or the part could not be read), kept visible while a typed size stands. -->
+                <TextBlock Style="{DynamicResource ErrorStatusText}" TextWrapping="Wrap" Text="{Binding ResultProblem, Mode=OneWay}" />
+                <!-- What the stock workbook reported, one per line. -->
+                <TextBlock Style="{DynamicResource MutedText}" TextWrapping="Wrap" Text="{Binding WorkbookProblemsText, Mode=OneTime}" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <controls:DialogFooter Grid.Row="2">
+            <Button Style="{DynamicResource PrimaryButton}"
+                    Content="_OK"
+                    IsDefault="True"
+                    IsEnabled="{Binding CanWrite, Mode=OneWay}"
+                    Click="OnOk" />
+            <Button Content="Cancel" IsCancel="True" />
+        </controls:DialogFooter>
+    </Grid>
+</Window>
