@@ -184,69 +184,6 @@ public sealed class BatchPrintPlan
     public static string PdfNotWrittenMessage(string pdfFullFileName) =>
         $"Could not write {pdfFullFileName}. If it is open in a PDF viewer, close it and try again.";
 
-    /// <summary>
-    /// True when <paramref name="path"/> is inside one of <paramref name="folders"/> (the project's library paths), ignoring
-    /// case and slash direction. Blank folders are ignored. Used for the assembly itself, whose own library state Inventor
-    /// does not report.
-    /// </summary>
-    public static bool IsUnderAnyFolder(string path, IEnumerable<string> folders)
-    {
-        ArgumentNullException.ThrowIfNull(folders);
-        string p = Key(path);
-        foreach (string folder in folders)
-        {
-            if (string.IsNullOrWhiteSpace(folder))
-                continue;
-            string f = Key(folder).TrimEnd('\\') + "\\";
-            if (p.StartsWith(f, StringComparison.OrdinalIgnoreCase))
-                return true;
-        }
-
-        return false;
-    }
-
-    /// <summary>
-    /// A project path as an absolute folder: a rooted path (drive letter, UNC or leading slash) is kept; a relative one is taken
-    /// from the folder of <paramref name="projectFileFullName"/> (the .ipj), with "." and ".." segments resolved. Works on Windows
-    /// paths on any platform.
-    /// </summary>
-    public static string ResolveProjectFolder(string projectFileFullName, string folder) =>
-        ResolveProjectFolderCore(projectFileFullName, folder);
-
-    private const char Bs = '\\';
-    private const char Slash = '/';
-    private const char Colon = ':';
-
-    private static string ResolveProjectFolderCore(string projectFileFullName, string folder)
-    {
-        string f = (folder ?? string.Empty).Trim().Replace(Slash, Bs);
-        if (f.Length == 0)
-            return string.Empty;
-        bool rooted = f.StartsWith(Bs) || (f.Length >= 2 && f[1] == Colon);
-        string combined = f;
-        if (!rooted)
-        {
-            string project = (projectFileFullName ?? string.Empty).Trim().Replace(Slash, Bs);
-            int slash = project.LastIndexOf(Bs);
-            combined = (slash >= 0 ? project[..(slash + 1)] : string.Empty) + f;
-        }
-
-        string prefix = combined.StartsWith(@"\\") ? @"\\" : string.Empty;
-        var parts = new List<string>();
-        foreach (string part in combined[prefix.Length..].Split(Bs, StringSplitOptions.RemoveEmptyEntries))
-        {
-            if (part == ".")
-                continue;
-            if (part == ".." && parts.Count > 0 && !parts[^1].EndsWith(Colon))
-                parts.RemoveAt(parts.Count - 1);
-            else if (part != "..")
-                parts.Add(part);
-        }
-
-        string joined = string.Join(Bs, parts);
-        return combined.StartsWith(Bs) && prefix.Length == 0 ? "\\" + joined : prefix + joined;
-    }
-
     /// <summary>Shown when the PDFs could not be joined or written for a reason other than a locked file.</summary>
     public static string PdfMergeFailedMessage(string pdfFullFileName) =>
         $"Could not make {pdfFullFileName}. An existing PDF was left as it was. See the log for details.";

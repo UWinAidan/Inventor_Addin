@@ -619,3 +619,5 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-27 | Round bar diameter: the larger of the two smaller sides plus the allowance, up to the next listed diameter; too big for the list gives no text and a message, and the user may type one | Default | task 205 |
 | 2026-11-27 | Stock Size declines sheet metal parts with a message and writes nothing (with no flat pattern, it says to create one) (spec 05 question 42) | Default | task 206 |
 | 2026-11-27 | Stock Size: small button on the part ribbon's Properties panel after Material Finish; shape is a Plate or Round bar dropdown; kFilePropertyEditCmdType; cancel or no change opens no transaction | Default | task 206 |
+| 2026-11-27 | Make/Buy: library or Content Center wins over an AWB number (BUY); a well-formed AWB number is MAKE; anything else blank; cell text upper case MAKE and BUY | Default | task 207 |
+| 2026-11-27 | One library-folder rule (LibraryFolderRule, whole folders, relative .ipj paths resolved) shared by Batch Print and Make/Buy | Default | task 207 |

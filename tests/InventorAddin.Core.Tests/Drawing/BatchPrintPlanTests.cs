@@ -202,28 +202,4 @@ public sealed class BatchPrintPlanTests
     {
         Assert.Equal("top.pdf already exists in this folder. Replace it?", BatchPrintPlan.ReplaceQuestion(@"C:\W\top.pdf"));
     }
-
-    [Theory]
-    [InlineData(@"C:\Lib\Std\bolt.ipt", @"C:\Lib", true)]
-    [InlineData("c:/lib/std/bolt.ipt", @"C:\LIB\", true)]
-    [InlineData(@"C:\Library2\bolt.ipt", @"C:\Lib", false)]
-    [InlineData(@"C:\Lib", @"C:\Lib", false)]
-    [InlineData(@"C:\W\top.iam", "", false)]
-    public void IsUnderAnyFolder_MatchesWholeFolders(string path, string folder, bool expected)
-    {
-        Assert.Equal(expected, BatchPrintPlan.IsUnderAnyFolder(path, new[] { folder }));
-    }
-
-    [Theory]
-    [InlineData(@"C:\Proj\a.ipj", @"Libs\Std", @"C:\Proj\Libs\Std")]
-    [InlineData(@"C:\Proj\a.ipj", @"..\Shared\Lib", @"C:\Shared\Lib")]
-    [InlineData(@"C:\Proj\a.ipj", @".\Lib", @"C:\Proj\Lib")]
-    [InlineData(@"C:\Proj\a.ipj", @"D:\Lib", @"D:\Lib")]
-    [InlineData(@"C:\Proj\a.ipj", @"\srv\share\Lib", @"\srv\share\Lib")]
-    [InlineData(@"C:\Proj\a.ipj", "Libs/Std", @"C:\Proj\Libs\Std")]
-    [InlineData(@"C:\Proj\a.ipj", "", "")]
-    public void ResolveProjectFolder_TakesRelativePathsFromTheProjectFolder(string project, string folder, string expected)
-    {
-        Assert.Equal(expected, BatchPrintPlan.ResolveProjectFolder(project, folder));
-    }
 }

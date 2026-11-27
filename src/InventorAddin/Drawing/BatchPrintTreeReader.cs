@@ -39,7 +39,7 @@ namespace InventorAddin.PrintViews
             {
                 ProjectPaths paths = app.DesignProjectManager.ActiveDesignProject.LibraryPaths;
                 foreach (ProjectPath p in paths)
-                    folders.Add(BatchPrintPlan.ResolveProjectFolder(projectFile, p.Path));
+                    folders.Add(LibraryFolderRule.ResolveProjectFolder(projectFile, p.Path));
             });
             return folders;
         }
@@ -73,7 +73,7 @@ namespace InventorAddin.PrintViews
         {
             if (ComSafe.Get(() => occ.Definition is PartComponentDefinition part && part.IsContentMember))
                 return true;
-            return BatchPrintPlan.IsUnderAnyFolder(path, libraryFolders);
+            return LibraryFolderRule.IsUnder(path, libraryFolders);
         }
     }
 }

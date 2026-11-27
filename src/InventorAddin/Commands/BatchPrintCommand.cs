@@ -48,7 +48,7 @@ namespace InventorAddin.Commands
 
             // Default (task 202): an assembly that is itself a library file is refused up front.
             IReadOnlyList<string> libraryFolders = BatchPrintTreeReader.LibraryFolders(InventorHost.App);
-            if (BatchPrintPlan.IsUnderAnyFolder(path, libraryFolders))
+            if (LibraryFolderRule.IsUnder(path, libraryFolders))
             {
                 Show(BatchPrintPlan.LibraryRootMessage, Forms.MessageBoxIcon.Information);
                 return;
