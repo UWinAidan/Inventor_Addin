@@ -608,7 +608,7 @@ The Core tasks (185, 189, 190, 194, 196, 198, 201, 203, 205, 207) each add their
 - [x] 205 Stock size: workbook, calculation and window model (Core)
 - [x] 206 Stock Size command
 - [x] 207 Parts list Make/Buy rule (Core)
-- [ ] 208 Update Parts List command
+- [x] 208 Update Parts List command
 - [x] 210 Part Properties: Status dropdown and Revise (Aidan, 2026-11-22)
 - [x] 211 Finish Spec property, written with the finish (Aidan, 2026-11-22; spec 05 question 23)
 - [ ] 212 Fix: the hole table's workbook warning (task 179 follow-up)

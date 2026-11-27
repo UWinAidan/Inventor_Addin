@@ -121,6 +121,10 @@ Each spec lists its own open questions in full. These are the ones that block pl
 
 ## Follow-ups from finished tasks
 
+- Task 208, Update Parts List:
+  - Only the active sheet's parts lists are updated; a row merging several files uses the first file only.
+  - Unconfirmed in Inventor: PartsListColumns.Add(kCustomProperty, "Make/Buy") appends a working column; ReferencedFileDescriptor.ReferencedDocument for unopened files; writing "" to a cell clears it.
+
 - Task 206, Stock Size command:
   - A sheet metal part with no flat pattern gets no Material Size from either Stock Size or Create Print until its flat pattern exists.
   - Stock Size window: check at 150% scale that the empty error and muted text blocks leave no blank gap under the form.

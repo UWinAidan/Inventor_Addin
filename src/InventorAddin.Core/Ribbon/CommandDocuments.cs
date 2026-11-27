@@ -46,6 +46,7 @@ public static class CommandDocuments
         [CommandNames.BatchPrint] = CommandDocument.Edited,
         [CommandNames.OverallRefDimensions] = CommandDocument.Edited,
         [CommandNames.StockSize] = CommandDocument.Edited,
+        [CommandNames.UpdatePartsList] = CommandDocument.Edited,
 
         // The selection is held by the top-level assembly, also while a sub-assembly is edited in place (task 060,
         // spike 052).

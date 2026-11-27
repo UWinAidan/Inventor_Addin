@@ -129,6 +129,9 @@ public static class CommandNames
     /// <summary>Stock Size (spec 05; task 206), on the part ribbon.</summary>
     public const string StockSize = Prefix + "StockSize";
 
+    /// <summary>Update Parts List (spec 05; task 208), on the drawing ribbon.</summary>
+    public const string UpdatePartsList = Prefix + "UpdatePartsList";
+
     /// <summary>
     /// Our Edit Feature for holes (task 092): put in place of Inventor's on the browser menu and the mini toolbar, with
     /// Inventor's icon. It has no ribbon button.

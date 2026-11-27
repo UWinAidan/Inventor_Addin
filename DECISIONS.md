@@ -621,3 +621,5 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-27 | Stock Size: small button on the part ribbon's Properties panel after Material Finish; shape is a Plate or Round bar dropdown; kFilePropertyEditCmdType; cancel or no change opens no transaction | Default | task 206 |
 | 2026-11-27 | Make/Buy: library or Content Center wins over an AWB number (BUY); a well-formed AWB number is MAKE; anything else blank; cell text upper case MAKE and BUY | Default | task 207 |
 | 2026-11-27 | One library-folder rule (LibraryFolderRule, whole folders, relative .ipj paths resolved) shared by Batch Print and Make/Buy | Default | task 207 |
+| 2026-11-27 | Update Parts List: MAKE/BUY written only when it differs; a blank decision clears a cell holding exactly MAKE or BUY and leaves other typed text; a row with no file counts as blank | Default | task 208 |
+| 2026-11-27 | Update Parts List: active sheet only; part number from the referenced document's Part Number, else the file name; the column is found by the Make/Buy custom property, else the MAKE/BUY heading, and added when missing | Default | task 208 |
