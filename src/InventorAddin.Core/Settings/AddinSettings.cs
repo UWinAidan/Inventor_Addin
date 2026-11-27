@@ -159,6 +159,18 @@ public sealed record AddinSettings
     private string _notesWorkbookPath = string.Empty;
 
     /// <summary>
+    /// The stock workbook (<c>.xlsx</c>) the Stock Size command reads (spec 05, "Added for M5", item 5). <c>""</c> by default, which
+    /// means the starter workbook shipped with the add-in (<see cref="Materials.LibraryPaths.StockWorkbook"/>). A null is stored as <c>""</c>.
+    /// </summary>
+    public string StockWorkbookPath
+    {
+        get => _stockWorkbookPath;
+        set => _stockWorkbookPath = value ?? string.Empty;
+    }
+
+    private string _stockWorkbookPath = string.Empty;
+
+    /// <summary>
     /// The highlight colour of part marking's leader and zone (<c>#RRGGBB</c>; spec 05, question 16). Blue
     /// <c>#0070C0</c> by default. Text that is not a 6-digit hex colour is stored as the default.
     /// </summary>
@@ -401,6 +413,7 @@ public sealed record AddinSettings
         && FinishListPath == other.FinishListPath
         && HoleWorkbookPath == other.HoleWorkbookPath
         && NotesWorkbookPath == other.NotesWorkbookPath
+        && StockWorkbookPath == other.StockWorkbookPath
         && PartMarkingColour == other.PartMarkingColour
         && PrintTemplateMetricPath == other.PrintTemplateMetricPath
         && PrintTemplateImperialPath == other.PrintTemplateImperialPath
@@ -439,6 +452,7 @@ public sealed record AddinSettings
         hash.Add(FinishListPath, StringComparer.Ordinal);
         hash.Add(HoleWorkbookPath, StringComparer.Ordinal);
         hash.Add(NotesWorkbookPath, StringComparer.Ordinal);
+        hash.Add(StockWorkbookPath, StringComparer.Ordinal);
         hash.Add(PartMarkingColour, StringComparer.Ordinal);
         hash.Add(PrintTemplateMetricPath, StringComparer.Ordinal);
         hash.Add(PrintTemplateImperialPath, StringComparer.Ordinal);

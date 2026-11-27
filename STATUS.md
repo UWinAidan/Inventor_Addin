@@ -6,22 +6,25 @@ Last updated: 2026-11-22
 
 ## Session handoff (ContextKeeper)
 
-- Updated: 2026-11-26 (end of session; Aidan paused the run after 199). Branch `claude/m5-drawing-tools`, latest commit is task 199, pushed.
+- Updated: 2026-11-27 09:07. Branch `claude/m5-drawing-tools`, latest commit `08cbcb7` (task 204), pushed.
 - Goal: Aidan's chunk 3 check fixes (242 to 245), then 194 onward (PLAN M5) in order, each implementer, then reviewer, one commit per task, push. At the end ONE checklist `docs/checklists/m5-chunk4.md` covering 242 to 245 and everything from 194 on checkable in Inventor (condense each task file's manual checklist, like `docs/checklists/m5-chunk3.md`), then the line "All tasks in this run are finished".
-- Done this run: 242 `de8c57b`, 243 `5f545f2`, 244 `e81b048`, 245 `efcf8ac`, 194 `53738c4`, 195 `f54ad84`, 196 `778e088`, 197 `6cd2ffd`, 198 `3f86bd6`, 199 (the commit after 198)., 200 (engraved part number), 201, 202, 203, 204
-- Next (do not start until Aidan says so):
-  1. 200, 201, 202, 203, 204, 205, 206, 207, 208, 212 in order, one at a time. 200 adds the engrave tick box to `PartMarkingWindow.xaml` (the view-model already has `EngraveFeature`, `CanEngraveFeature`). 205 and 206 should match 230's Material Size number format.
-  2. Write `docs/checklists/m5-chunk4.md` (include: Excel opens `AWB_Notes.xlsx` with no repair prompt; clear 231's dashes from test assemblies first; assembly Material filled by hand; watch for a false "could not all be pointed" warning), update STATUS, push, end with "All tasks in this run are finished".
-  - Commit helpers `todo.py`, `ctask.py` were in the job tmp folder and may be gone; recreate if needed (tick PLAN, append Default rows to DECISIONS, add TODO follow-ups and spec questions).
-- Current state: build 0 errors, Core tests 5699 at 199. Nothing from this run has been run in Inventor.
-- Spec 05 open questions added this run: 37 (Check Out of Bounds), 38 (notes placement); 15 and 16 extended. All in TODO "Waiting on Aidan: decisions".
+- Done this run: 242 `de8c57b`, 243 `5f545f2`, 244 `e81b048`, 245 `efcf8ac`, 194 `53738c4`, 195 `f54ad84`, 196 `778e088`, 197 `6cd2ffd`, 198 `3f86bd6`, 199 `382989f`, 200 `2c987c4`, 201 `1626972`, 202 `ea5818a` (adds PDFsharp 6.1.1, MIT; name it in the PR), 203 `b35cec9`, 204 `08cbcb7`., 205
+- In progress: 205 (stock size, Core) implementer running at handoff, uncommitted; must reuse task 230's Material Size number formatter. If the working tree has 205 changes, check them, run a reviewer, then commit.
+- Next:
+  1. Finish 205 (review, commit with `python $CLAUDE_JOB_DIR/tmp/todo.py` and `ctask.py`; recreate if gone: tick PLAN, append Default rows dated today to DECISIONS, add TODO follow-ups and "Q:" spec questions).
+  2. 206, 207, 208, 212 in order, one at a time (206 matches 230's Material Size format too).
+  3. Write `docs/checklists/m5-chunk4.md` (include: Excel opens `AWB_Notes.xlsx` with no repair prompt; clear 231's dashes from test assemblies first; assembly Material filled by hand; watch for a false "could not all be pointed" warning; Batch Print merge must show no FileLoadException for Microsoft.Extensions/PdfSharp; no hidden drawing left open after a failed Batch Print; REF on a slot part warns instead of placing). Update STATUS, push, end with "All tasks in this run are finished".
+- Current state: build 0 errors at 204; Core tests 5764 (only known flaky failures). Nothing from this run has been run in Inventor.
+- Spec 05 open questions added this run: 37, 38, 39 (REF text size, default 1.25x), 40 (REF to arc extremes; Inventor dimensions to the arc centre, so those are skipped with a warning); 15 and 16 extended. All in TODO "Waiting on Aidan: decisions".
 - Gotchas:
   - Flaky tests: RenamePlan, SaveAsCopyCreator, SaveAsReplacer, NewPartCreator, Numbering, RegisterStore probe timeouts. Rerun them.
   - Build with `-p:DeployToInventor=false` while Inventor is open. Run one implementer at a time (parallel builds clash in `obj/`).
   - COM probes: copies in `C:\AwbSpike\NNN\`; if Inventor is not running, `New-Object -ComObject Inventor.Application` and `Quit()` in the same script. The 199 probe left Inventor (PID 91812) running with no documents open; Aidan can close it.
   - Multi-line edits are easiest as a .py script in the job tmp folder; bash heredocs with apostrophes can break.
-  - Reviewers often find real must-fixes (194, 195, 197); send them back to the same implementer with SendMessage.
-- Key files: `docs/PLAN.md` (M5 list), `docs/tasks/199-*.md` onward, `docs/features/05-drawing-tools.md`, `DECISIONS.md` (2026-11-21 and 2026-11-26 rows).
+  - Reviewers often find real must-fixes (194, 195, 197, 199, 200, 202, 203); send them back to the same implementer with SendMessage.
+  - Agents sometimes stall ("no progress for 600s"); resume them with SendMessage, check `git status` first.
+  - Two visible Inventor windows (PIDs 14384, 103976, started 2026-11-27 ~8:55) were running; assumed Aidan's, left alone.
+- Key files: `docs/PLAN.md` (M5 list), `docs/tasks/205-*.md` onward, `docs/features/05-drawing-tools.md`, `DECISIONS.md` (2026-11-21, 2026-11-26 and 2026-11-27 rows).
 
 ## Big items
 

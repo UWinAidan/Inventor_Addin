@@ -53,10 +53,10 @@ public static class SettingsSummaries
     /// <summary>
     /// Material and finish: each file's name, or "starter library" and "starter finish list" when blank. For example
     /// "starter library, starter finish list" or "Materials.adsklib, finishes.csv". A print template chosen in Settings
-    /// adds its file name after them; a blank one adds nothing. A notes workbook chosen in Settings does the same, last.
+    /// adds its file name after them; a blank one adds nothing. A notes workbook and a stock workbook chosen in Settings do the same, last.
     /// </summary>
     public static string MaterialFinish(
-        string? materialLibraryPath, string? finishListPath, string? printTemplateMetricPath = null, string? printTemplateImperialPath = null, string? notesWorkbookPath = null)
+        string? materialLibraryPath, string? finishListPath, string? printTemplateMetricPath = null, string? printTemplateImperialPath = null, string? notesWorkbookPath = null, string? stockWorkbookPath = null)
     {
         var parts = new List<string>
         {
@@ -71,6 +71,8 @@ public static class SettingsSummaries
             parts.Add(FileNameOr(printTemplateImperialPath, string.Empty));
         if (PropertyValues.NormaliseText(notesWorkbookPath).Length > 0)
             parts.Add(FileNameOr(notesWorkbookPath, string.Empty));
+        if (PropertyValues.NormaliseText(stockWorkbookPath).Length > 0)
+            parts.Add(FileNameOr(stockWorkbookPath, string.Empty));
 
         return string.Join(Separator, parts);
     }

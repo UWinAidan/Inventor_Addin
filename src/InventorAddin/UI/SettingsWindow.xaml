@@ -190,6 +190,20 @@
                     <controls:FieldRow>
                         <TextBlock Style="{DynamicResource MutedText}" Text="{Binding NotesWorkbookHelp, Mode=OneTime}" />
                     </controls:FieldRow>
+                    <controls:FieldRow Label="Stoc_k data" Target="{Binding ElementName=StockWorkbookBox}">
+                        <DockPanel>
+                            <!-- Opens a file picker for an .xlsx and puts the chosen file in the box beside it (code-behind). -->
+                            <Button DockPanel.Dock="Right"
+                                    Style="{DynamicResource SideButton}"
+                                    Content="Browse..."
+                                    Click="OnBrowseStockWorkbook" />
+                            <TextBox x:Name="StockWorkbookBox"
+                                     Text="{Binding StockWorkbookPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </DockPanel>
+                    </controls:FieldRow>
+                    <controls:FieldRow>
+                        <TextBlock Style="{DynamicResource MutedText}" Text="{Binding StockWorkbookHelp, Mode=OneTime}" />
+                    </controls:FieldRow>
                 </controls:CollapsibleSection>
                 <controls:CollapsibleSection x:Name="HolesSection"
                                              Heading="Holes"

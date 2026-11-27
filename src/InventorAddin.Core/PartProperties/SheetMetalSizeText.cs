@@ -1,4 +1,3 @@
-using System.Globalization;
 using InventorAddin.Core.Drawing;
 
 namespace InventorAddin.Core.PartProperties;
@@ -11,9 +10,6 @@ namespace InventorAddin.Core.PartProperties;
 /// </summary>
 public static class SheetMetalSizeText
 {
-    private const double MmPerCm = 10.0;
-    private const double CmPerInch = 2.54;
-
     /// <summary>
     /// The text, or null when a size is not a usable number (null, NaN, infinite, zero or negative), so a part whose flat pattern could not
     /// be read is left alone.
@@ -56,10 +52,5 @@ public static class SheetMetalSizeText
 
     private static bool IsSize(double? value) => value is > 0 && !double.IsInfinity(value.Value);
 
-    private static string Number(double cm, bool imperial)
-    {
-        var value = imperial ? cm / CmPerInch : cm * MmPerCm;
-        return Math.Round(value, imperial ? 3 : 2, MidpointRounding.AwayFromZero)
-            .ToString(imperial ? "0.###" : "0.##", CultureInfo.InvariantCulture);
-    }
+    private static string Number(double cm, bool imperial) => MaterialSizeNumber.FromCm(cm, imperial);
 }

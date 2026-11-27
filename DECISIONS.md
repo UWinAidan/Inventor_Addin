@@ -614,3 +614,6 @@ The detail of each decision lives in the spec named in the last column. This fil
 | 2026-11-27 | REF dimensions: width text 10 mm below the view, height text 10 mm right of it; at an extreme a straight line beats an arc; other extremes need the extent fallback | Default | task 203 |
 | 2026-11-27 | REF dimensions: a dimension whose extreme is an arc, circle or sloped line is placed, checked against the planned span, and removed with a warning if it differs (spec 05 question 40) | Default | task 204 |
 | 2026-11-27 | REF dimensions view choice: the selected view, else the sheet's first base view, else its first view; REF text bold at 1.25 times the style's text height | Default | task 204 |
+| 2026-11-27 | Stock size uses task 230's Material Size number format with no unit suffix (spec 05 question 41) | Default | task 205 |
+| 2026-11-27 | Stock workbook: one allowance and one rounding step per units system; starter 1 mm and 5 mm, 0.04 in and 0.25 in; a result is at least one step | Default | task 205 |
+| 2026-11-27 | Round bar diameter: the larger of the two smaller sides plus the allowance, up to the next listed diameter; too big for the list gives no text and a message, and the user may type one | Default | task 205 |

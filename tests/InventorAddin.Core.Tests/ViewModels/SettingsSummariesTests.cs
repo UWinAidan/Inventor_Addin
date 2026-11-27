@@ -42,6 +42,13 @@ public sealed class SettingsSummariesTests
     }
 
     [Fact]
+    public void MaterialFinish_NamesAChosenStockWorkbook_AndNotABlankOne()
+    {
+        Assert.Equal("starter library, starter finish list, AWB_Stock.xlsx", SettingsSummaries.MaterialFinish("", "", null, null, null, @"D:\Libs\AWB_Stock.xlsx"));
+        Assert.Equal("starter library, starter finish list", SettingsSummaries.MaterialFinish("", "", null, null, null, "  "));
+    }
+
+    [Fact]
     public void MaterialFinish_NamesAChosenNotesWorkbook_AndNotABlankOne()
     {
         Assert.Equal("starter library, starter finish list, AWB_Notes.xlsx", SettingsSummaries.MaterialFinish("", "", null, null, @"D:\Libs\AWB_Notes.xlsx"));

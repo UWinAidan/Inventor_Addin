@@ -149,6 +149,18 @@ namespace InventorAddin.UI
                 _viewModel.NotesWorkbookPath = chosen;
         }
 
+        /// <summary>Browse beside the stock data: as <see cref="OnBrowseHoleWorkbook"/>, for the stock workbook.</summary>
+        private void OnBrowseStockWorkbook(object sender, RoutedEventArgs e)
+        {
+            var chosen = PickFile(
+                "Choose the stock workbook",
+                "Excel workbooks (*.xlsx)|*.xlsx",
+                _viewModel.StockWorkbookPath,
+                SettingsViewModel.ValidateStockWorkbookPath);
+            if (chosen is not null)
+                _viewModel.StockWorkbookPath = chosen;
+        }
+
         /// <summary>Browse beside the hole data: as <see cref="OnBrowseMaterialLibrary"/>, for an .xlsx file.</summary>
         private void OnBrowseHoleWorkbook(object sender, RoutedEventArgs e)
         {
